@@ -59,6 +59,8 @@ def test_health_names_the_app(client):
     body = client.get("/api/health").json()
     assert body["app"] == "OnPrem Media Studio"
     assert "gpu" in body and body["llm"] == "stopped"
+    assert body["queue"] == 0
+    assert body["memory"] is None or 0 < body["memory"]["available"] <= body["memory"]["total"]
 
 
 def test_app_name_is_configurable(settings, store, monkeypatch):

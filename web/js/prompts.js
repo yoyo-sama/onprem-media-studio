@@ -441,6 +441,13 @@
     }), onWarn);
   }
 
+  // The detailed_description of an H3 block: what a cut's re-enrichment rewrites before
+  // the block is assembled again (the whole text when it is not a block).
+  function h3CutBodyOf(text) {
+    const m = /detailed_description:\n([\s\S]*?)(?:\n\n[a-z_]+:\n|$)/.exec(String(text || ""));
+    return m ? m[1].trim() : String(text || "").trim();
+  }
+
   // ── Camera clause guard (H3 text and image to video) ───────────────────────
   // Gemma drops the brief's camera move when it ends the sentence ("; slow push-in.",
   // "static camera"), whatever the instruction says (LESSONS). When the BRIEF holds a
@@ -815,7 +822,8 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
   const isKrea2Workflow = wf => !!wf && KREA2_WORKFLOWS.has(wf.id);
   function briefEnrichSystem(wf) {
     if (isKrea2Workflow(wf)) return [KREA2_ENRICH_SYSTEM, "prompt"];
-    if (wf?.id === "h3_t2v" || wf?.id === "h3_i2v") return [H3_VIDEO_ENRICH_SYSTEM, "prompt"];
+    // The multi-image sequence renders H3 image-to-video segments (1.4 used LTX there).
+    if (wf?.id === "h3_t2v" || wf?.id === "h3_i2v" || wf?.id === "h3_sequence") return [H3_VIDEO_ENRICH_SYSTEM, "prompt"];
     if (wf?.id === "h3_r2v") return [R2V_BRIEF_ENRICH_SYSTEM, "brief"];
     if (wf?.id === "qwen_edit_i2i") return [QWEN_EDIT_INSTRUCTION_ENRICH_SYSTEM, "instruction"];
     if (wf?.pipeline === "storyboard") return [SHEET_BRIEF_ENRICH_SYSTEM, "brief"];
@@ -1032,17 +1040,18 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
                               emotion: "", extra: "", duration: seg.duration, subjects: [0] });
 
   // Legend of the stand-ins, built from h3CutSubjects, the function that numbers the
-  // subjects in the rendered prompt, so the two never disagree.
-  function relaySubjectLegend(locDesc) {
-    return h3CutSubjects(relayShot({ prompt: "" }), locDesc)
+  // subjects in the rendered prompt, so the two never disagree. `subjects`: those of
+  // relayShot (the main character), as for the segment's cut prompt.
+  function relaySubjectLegend(locDesc, subjects) {
+    return h3CutSubjects(subjects || [], locDesc)
       .map((sub, i) => `  ${H3_TOKEN_STUB(i + 1)} = ${sub.kind === "environment" ? "the location" : "the main character"}${sub.desc ? `, ${sub.desc}` : ""}`)
       .join("\n");
   }
 
   // Splits a scenario into at most `max` segment texts (Gemma may return one more or one
   // less than `n`: what it wrote is kept). Throws when nothing usable came back.
-  async function composeScenario(llm, text, n, locDesc, max) {
-    const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc)), text);
+  async function composeScenario(llm, text, n, locDesc, max, subjects) {
+    const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects)), text);
     const list = (Array.isArray(out.segments) ? out.segments : [])
       .map(seg => h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(seg)))))
       .filter(Boolean)
@@ -1060,7 +1069,7 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
     compileRelayKeyframePrompt, HOLD_MOTION,
     H3_PROMPT_CHARS, h3Subject, h3Picture, H3_TOKEN_STUB, H3_TOKEN_RE, h3TokensOut, h3TokensIn, h3NormalizeTokens,
     h3AssignSubjects, h3Summary, h3RefBody, buildH3RefPrompt, capH3Prompt, h3VideoFrames, h3RealDuration,
-    h3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, restoreCameraClause,
+    h3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, h3CutBodyOf, restoreCameraClause,
     normalizeShotList, fallbackShots,
     SHEET_CLEAN, SHEET_TEMPLATES, SHEET_SIZE, sheetWords, charsheetPromptFrom, locsheetPromptFrom,
     sheetSkeleton, stripSheetSkeleton, wrapSheetDesc,

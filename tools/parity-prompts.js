@@ -50,7 +50,8 @@ const STUDIO_NAMES = ["currentStyleId", "currentStyleText", "currentSheetTemplat
   "QWEN_EDIT_ENRICH_SYSTEM", "Q21_TOKEN_RE", "briefEnrichSystem", "enrichBrief", "stripKeyframeAnchor", "ensureKeyframeAnchor",
   "enrichKeyframeText", "SHEET_DESC_ENRICH_SYSTEM", "enrichSheetText", "SHOT_ACTION_ENRICH_SYSTEM", "enrichShotAction",
   "CUT_ENRICH_SYSTEM", "enrichCutText", "HOLD_MOTION", "REF_FIELD_KEYS", "REF_VISION_SYSTEM", "describeRefImage",
-  "compileRelayKeyframePrompt", "relayShot", "newRelaySegment", "H3_SCENARIO_SYSTEM", "relaySubjectLegend"];
+  "compileRelayKeyframePrompt", "relayShot", "newRelaySegment", "H3_SCENARIO_SYSTEM", "relaySubjectLegend",
+  "MAX_SHOT_SUBJECTS", "shotSubjectIdx", "shotSubjects", "h3CutSubjects", "h3CutBodyOf"];
 
 // Gemma is scripted: each test queues answers (an object, or an Error for a failed call)
 // and reads back the calls [system, user, images].
@@ -153,6 +154,9 @@ async function flow(group, answers, old, now, input, expectCall = true) {
 const STYLES = Object.keys(O.STYLE_PACKS);
 const CAMS = [...Object.keys(O.CAMERA_LIB), "bogus"], LIGHTS = [...Object.keys(O.LIGHTING_LIB), "bogus"];
 const HUMAN = "a weathered man in his sixties with a short grey beard, a dark navy wool sweater";
+// Relay: 1.4 reads the main character from its director, 2.0 takes it as an argument.
+const relayDirector = desc => S.setDirector({ chars: [{ fields: { face: desc }, variants: [], active: 0 }] });
+const relaySubs = desc => [{ desc: P.charDescFromFields({ face: desc }) }];
 const LION = "an adult male lion, a powerful quadruped with a thick dark mane";
 const LOC = "the lamp room at the top of an old stone lighthouse, brass fittings, worn wooden floor";
 const LONG = "very long description ".repeat(400).trim();
@@ -193,8 +197,10 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
   same("instructions", S.QWEN_EDIT_ENRICH_SYSTEM(1), P.QWEN_EDIT_ENRICH_SYSTEM(1, P.keyframeModelName("qwen-edit-2509")));
   for (const w of ["human", "other", "location", undefined]) same("instructions", S.SHEET_DESC_ENRICH_SYSTEM(w), P.SHEET_DESC_ENRICH_SYSTEM(w), w);
   for (const d of [[], [HUMAN], [HUMAN, LION], [HUMAN, LION, LOC]]) same("instructions", S.SHOT_ACTION_ENRICH_SYSTEM(d), P.SHOT_ACTION_ENRICH_SYSTEM(d), d);
+  relayDirector(HUMAN);
   for (const [n, loc] of product([1, 4, 8], [LOC, ""]))
-    same("instructions", S.H3_SCENARIO_SYSTEM(n, S.relaySubjectLegend(loc)), P.H3_SCENARIO_SYSTEM(n, P.relaySubjectLegend(loc)), [n, loc]);
+    same("instructions", S.H3_SCENARIO_SYSTEM(n, S.relaySubjectLegend(loc)), P.H3_SCENARIO_SYSTEM(n, P.relaySubjectLegend(loc, relaySubs(HUMAN))), [n, loc]);
+  S.setDirector(null);
 
   // Keyframes.
   for (const [shot, subjects, loc, style] of product(SHOTS, SUBJECT_SETS, [LOC, "", null], ["none", "cinematic", "noir", undefined]))
@@ -269,7 +275,13 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
   S.setDirector(null); S.setStyle("cinematic"); S.setTemplate("auto");
 
   // Relay legend.
-  for (const loc of [LOC, ""]) same("relaySubjectLegend", S.relaySubjectLegend(loc), P.relaySubjectLegend(loc), loc);
+  // In 1.4 the legend names the director's first subject (shotSubjects); 2.0 takes it
+  // as an argument.
+  for (const desc of ["", HUMAN]) {
+    relayDirector(desc);
+    for (const loc of [LOC, ""]) same("relaySubjectLegend", S.relaySubjectLegend(loc), P.relaySubjectLegend(loc, relaySubs(desc)), [desc, loc]);
+  }
+  S.setDirector(null);
 
   // ── Gemma flows ────────────────────────────────────────────────────────────
   const fail = () => new Error("unavailable");
@@ -320,6 +332,7 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
   for (const [descs, answer] of product([[HUMAN], [HUMAN, LION], []], [{ action: "He kneels and tightens the screw, 8k." }, { prompt: "tiny" }, fail()]))
     await flow("enrichShotAction", [answer], () => S.enrichShotAction("he fixes the lamp", descs), () => P.enrichShotAction(B.llm, "he fixes the lamp", descs, B.log), [descs, answer]);
   const cut = O.buildH3CutPrompt(SHOTS[2], SUBJECT_SETS[3], LOC, null, 5, null, false, "cinematic");
+  for (const text of [cut, "plain prose, no block", ""]) same("h3CutBodyOf", S.h3CutBodyOf(text), P.h3CutBodyOf(text), text);
   for (const answer of [{ prompt: "SUBJECTREF1 kneels by SUBJECTREF3 , masterpiece, as SUBJECTREF2 watches ." }, { prompt: "short" }, fail()])
     await flow("enrichCutText", [answer], () => S.enrichCutText(cut, "minimax_h3"), () => P.enrichCutText(B.llm, cut, B.log), answer);
   for (const answer of [{ subject: "a red umbrella", appearance: "open, 8k", materials: { a: "nylon" }, palette: "red" }, {}])
@@ -343,6 +356,7 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
   // Scenario: 1.4 did this inside a DOM handler; the same steps are applied to its functions.
   for (const [answer, n] of product([{ segments: ["SUBJECTREF1 walks to SUBJECTREF2 , 8k .", { a: "second" }, "", "third"] }, { segments: "x" }], [2, 3, 6])) {
     A.queue = [answer]; A.calls = [];
+    relayDirector(HUMAN);
     let a;
     try {
       const out = await O.gemmaJSON(S.H3_SCENARIO_SYSTEM(n, S.relaySubjectLegend(LOC)), "the scenario");
@@ -351,7 +365,8 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
     } catch (e) { a = { error: true }; }
     B.queue = [answer]; B.calls = [];
     let b;
-    try { b = await P.composeScenario(B.llm, "the scenario", n, LOC, 8); } catch (e) { b = { error: true }; }
+    try { b = await P.composeScenario(B.llm, "the scenario", n, LOC, 8, relaySubs(HUMAN)); } catch (e) { b = { error: true }; }
+    S.setDirector(null);
     same("composeScenario · result", a, b, [answer, n]);
     same("composeScenario · Gemma calls", A.calls, B.calls, [answer, n]);
   }

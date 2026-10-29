@@ -22,6 +22,10 @@ function pickLang() {
 
 export let LANG = pickLang();
 
+// Marks an English string for translation where it is not passed to t() or tx() at
+// once (label tables): tests/test_i18n.py collects these too.
+export const L = text => text;
+
 export function t(text, params) {
   let out = LANG === "en" ? text : DICT[text]?.[LANG] ?? text;
   if (params) out = out.replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m));

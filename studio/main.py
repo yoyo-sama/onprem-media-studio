@@ -50,6 +50,20 @@ def gpu_info() -> dict:
             "memory_free": free, "memory_total": total}
 
 
+def memory_info() -> dict | None:
+    """System memory from /proc/meminfo, in bytes (None elsewhere). On a GB10 the
+    GPU shares this memory, and CUDA's free figure leaves out the page cache the
+    kernel gives back on demand: the page reads `available` instead (LESSONS.md)."""
+    try:
+        lines = Path("/proc/meminfo").read_text().splitlines()
+    except OSError:
+        return None
+    kb = {k: int(v.split()[0]) for k, v in (line.split(":", 1) for line in lines if ":" in line)}
+    if "MemTotal" not in kb or "MemAvailable" not in kb:
+        return None
+    return {"total": kb["MemTotal"] * 1024, "available": kb["MemAvailable"] * 1024}
+
+
 def create_app(settings: Settings | None = None, models: ModelStore | None = None,
                pipelines: dict[str, Pipeline] | None = None, llm: LlamaServer | None = None,
                updater: update.Updater | None = None) -> FastAPI:
@@ -107,7 +121,8 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
 
     @app.get("/api/health")
     def health():
-        return {"app": settings.app_name, "version": APP_VERSION, "gpu": gpu_info(), "llm": llm.state}
+        return {"app": settings.app_name, "version": APP_VERSION, "gpu": gpu_info(), "memory": memory_info(),
+                "llm": llm.state, "queue": busy()}
 
     @app.get("/api/models")
     def list_models():
