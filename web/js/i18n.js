@@ -1,5 +1,5 @@
 // Interface translation: English source text is the key, French, Spanish and German
-// come from DICT (most of it carried over from 1.4). Text with parameters uses
+// come from DICT in i18n-dict.js (most of it carried over from 1.4). Text with parameters uses
 // {name} placeholders: t("Shot {n}/{total}", {n: 1, total: 6}).
 //
 // translateTree() translates the text nodes, placeholder, title and aria-label of a
@@ -9,6 +9,8 @@
 // txAttr()), which keeps the English text and its parameters on the element and
 // sets it again at each language change; other code-set text listens to the
 // "langchange" event.
+
+import { DICT } from "./i18n-dict.js";
 
 export const LANGS = ["en", "fr", "es", "de"];
 
@@ -101,7 +103,3 @@ export function setLang(lang) {
 
 // "87%" in English, "87 %" elsewhere.
 export const pct = n => t("{n}%", { n });
-
-// ── Dictionary ────────────────────────────────────────────────────────────────
-const DICT = {
-};

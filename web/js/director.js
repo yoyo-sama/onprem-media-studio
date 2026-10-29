@@ -9,7 +9,7 @@
 // blocks are re-appended by code; a shot holds at most two subjects.
 
 import { refURL } from "./api.js";
-import { L, t, translateTree, tx } from "./i18n.js";
+import { L, LANG, t, translateTree, tx } from "./i18n.js";
 import { $, LLM, MOBILE, log, openPromptEditor, promptLog, runJob, undoToast, warn } from "./ui.js";
 import { openLightbox } from "./gallery.js";
 import * as F from "./form.js";
@@ -155,7 +155,7 @@ export function refreshSessionBar() {
   const anchors = show && c?.status === "ready" && l?.status === "ready";
   box.hidden = !anchors;
   if (anchors) {
-    for (const [kind, v, label] of [["char", c, "Subject"], ["loc", l, "Setting"]]) {
+    for (const [kind, v, label] of [["char", c, L("Subject")], ["loc", l, L("Setting")]]) {
       const b = box.querySelector(`[data-kind="${kind}"]`);
       b.querySelector("img").src = refURL(v.ref);
       b.title = t(label);
@@ -1344,7 +1344,7 @@ export async function restoreProject() {
   renderMontage(); renderTimeline(); renderMontagePlayer();
   renderCutHint();
   updateGate();
-  log("ok", "Project restored (saved {date}): checking its files…", { date: new Date(p.savedAt).toLocaleString() });
+  log("ok", "Project restored (saved {date}): checking its files…", { date: new Date(p.savedAt).toLocaleString(LANG) });
   // Every file is checked; a missing one is marked, the rest of the project stays usable.
   const items = [...d.chars.map(activeVariant), locVariant(), ...(d.keyframes || []), ...(d.cuts || []),
                  ...d.relay.segments].filter(it => it?.ref && ["ready", "stale"].includes(it.status));

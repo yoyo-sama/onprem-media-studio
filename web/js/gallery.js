@@ -6,18 +6,18 @@
 // click, with Undo; "Use as input" and dragging a thumbnail only set an input.
 
 import { api, on } from "./api.js";
-import { LANG, t, translateTree, tx, txAttr } from "./i18n.js";
+import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
 import { $, log, notice, undoToast, warn } from "./ui.js";
 
 export const ENGINE_LABELS = {
   "krea2-t2i": "Krea 2", "qwen-edit-2509": "Qwen Edit 2509", "qwen-image-2.1": "Qwen Image 2.1",
-  "h3-t2v": "MiniMax H3 · text to video", "h3-i2v": "MiniMax H3 · image to video",
-  "h3-r2v": "MiniMax H3 · references", "video-concat": "Montage", "image-grid": "Contact sheet",
-  "video-frames": "Clip frames",
+  "h3-t2v": L("MiniMax H3 · text to video"), "h3-i2v": L("MiniMax H3 · image to video"),
+  "h3-r2v": L("MiniMax H3 · references"), "video-concat": L("Montage"), "image-grid": L("Contact sheet"),
+  "video-frames": L("Clip frames"),
 };
 export const ORIGIN_LABELS = {
-  studio: "Studio", campaign: "Campaign", markets: "Local versions", sequence: "Multi-image sequence",
-  storyboard: "Storyboard", relay: "Long take (Relay)", reference2video: "Reference to video", canvas: "Canvas",
+  studio: "Studio", campaign: L("Campaign"), markets: L("Local versions"), sequence: L("Multi-image sequence"),
+  storyboard: L("Storyboard"), relay: L("Long take (Relay)"), reference2video: L("Reference to video"), canvas: "Canvas",
 };
 
 const PAGE = 60;

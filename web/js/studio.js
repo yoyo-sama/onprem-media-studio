@@ -231,9 +231,9 @@ function renderSeqList() {
     const ctl = document.createElement("div");
     ctl.className = "seq-ctl";
     for (const [text, title, fn] of [
-      ["↑", "Move up", () => { if (i > 0) { [seqImages[i - 1], seqImages[i]] = [seqImages[i], seqImages[i - 1]]; renderSeqList(); } }],
-      ["↓", "Move down", () => { if (i < seqImages.length - 1) { [seqImages[i + 1], seqImages[i]] = [seqImages[i], seqImages[i + 1]]; renderSeqList(); } }],
-      ["✕", "Remove", () => { seqImages.splice(i, 1); renderSeqList(); }]]) {
+      ["↑", L("Move up"), () => { if (i > 0) { [seqImages[i - 1], seqImages[i]] = [seqImages[i], seqImages[i - 1]]; renderSeqList(); } }],
+      ["↓", L("Move down"), () => { if (i < seqImages.length - 1) { [seqImages[i + 1], seqImages[i]] = [seqImages[i], seqImages[i + 1]]; renderSeqList(); } }],
+      ["✕", L("Remove"), () => { seqImages.splice(i, 1); renderSeqList(); }]]) {
       const b = document.createElement("button");
       b.type = "button"; b.textContent = text; b.title = title; b.setAttribute("aria-label", title);
       b.addEventListener("click", fn);
@@ -358,7 +358,7 @@ function dropZone(el, { max = () => 1, count = () => 0, put, putAsset }) {
   const hint = document.createElement("span");
   hint.className = "drop-hint";
   hint.setAttribute("aria-hidden", "true");
-  hint.textContent = "Drop the image here";
+  tx(hint, "Drop the image here");
   el.appendChild(hint);
   translateTree(hint);
   let depth = 0, chain = Promise.resolve();
