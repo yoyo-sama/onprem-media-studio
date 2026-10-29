@@ -70,7 +70,7 @@ class ModelStore:
         try:
             info = self.api.model_info(entry["repo"], files_metadata=True, token=self.settings.hf_token)
         except Exception as exc:  # gated, offline, renamed repository
-            raise ModelError(f"Cannot read {entry['repo']}: {str(exc).rstrip(".")}.{_gated_hint(entry)}") from exc
+            raise ModelError(f"Cannot read {entry['repo']}: {str(exc).rstrip('.')}.{_gated_hint(entry)}") from exc
         files = [(s.rfilename, s.size or 0) for s in info.siblings if _matches(s.rfilename, entry)]
         if not files:
             raise ModelError(f"No file of {entry['repo']} matches {entry['allow']}")
@@ -108,7 +108,7 @@ class ModelStore:
                         # Metadata of a gated repository is public: without a token the
                         # failure only shows up here, on the first file.
                         raise ModelError(
-                            f"Cannot download {rel} from {entry['repo']}: {str(exc).rstrip(".")}.{_gated_hint(entry)}") from exc
+                            f"Cannot download {rel} from {entry['repo']}: {str(exc).rstrip('.')}.{_gated_hint(entry)}") from exc
                     done += size
                     self.downloading[model_id] = done / total
             finally:
