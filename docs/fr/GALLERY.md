@@ -45,8 +45,9 @@ Les métadonnées sont celles que les moteurs écrivent avec chaque sortie,
 `pipeline` est le moteur (`krea2-t2i`, `h3-r2v`…), `origin` la fonction du front qui a soumis le
 job (`storyboard`, `relay`, `canvas`…, envoyée dans le champ `origin` du job), `params` les
 paramètres validés du job (prompt, seed, LoRA…). La dernière image d'un clip
-(`role: "last-frame"`, nommée `<clip>-1.png`) est gardée pour l'enchaînement Relay mais masquée du
-périmètre `app` par défaut. Un fichier sans métadonnées est listé avec son dossier comme pipeline.
+(`role: "last-frame"`, nommée `<clip>-1.png`) et les images extraites d'un clip (`role: "frame"`,
+tâche `video-frames`) sont gardées pour l'enchaînement Relay mais masquées du périmètre `app` par
+défaut. Un fichier sans métadonnées est listé avec son dossier comme pipeline.
 
 La recherche (`q`) porte sur le prompt, la clé du fichier, le pipeline et l'origine, par préfixe de
 mot, tous les mots exigés.
@@ -81,8 +82,8 @@ cours de route répond 500 avec la liste de ce qui a déjà été déplacé.
 Un **Asset** : `key` (chemin POSIX sous le dossier de sorties, sans `/` initial), `filename`,
 `folder`, `type`, `url` (`/outputs/<clé>?v=<mtime>`), `ref` (`outputs/<clé>`, ce qu'un job prend
 comme référence d'image), `thumb`, `ts` (ms), `prompt` (400 caractères dans les listes),
-`pipeline`, `origin`, `loras`, `seed`, `w`, `h`, `duration`, `size`, `fav`, `tags`, `trash`
-(`{origKey, at}` ou null).
+`pipeline`, `origin`, `loras`, `seed`, `w`, `h`, `duration`, `size`, `fav`, `tags`, `app` (faux
+pour une image de travail masquée du périmètre `app`), `trash` (`{origKey, at}` ou null).
 
 Écarts avec la 1.4 : plus de graphe ComfyUI à parcourir (les métadonnées sont explicites), plus de
 facette `model` (le moteur le dit), une facette `origin` à la place des motifs de noms de fichiers

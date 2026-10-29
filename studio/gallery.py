@@ -396,7 +396,7 @@ class Gallery:
             "ts": version, "prompt": prompt if full or prompt is None else prompt[:PROMPT_EXCERPT],
             "pipeline": row["pipeline"], "origin": row["origin"], "loras": json.loads(row["loras"]),
             "seed": row["seed"], "w": row["w"], "h": row["h"], "duration": row["duration"], "size": row["size"],
-            "fav": bool(row["fav"]), "tags": tags.get(row["id"], []),
+            "fav": bool(row["fav"]), "tags": tags.get(row["id"], []), "app": bool(row["app"]),
             "trash": {"origKey": row["orig_key"], "at": row["trashed_at"]} if row["trashed_at"] is not None else None,
         }
 

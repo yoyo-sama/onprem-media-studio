@@ -41,7 +41,8 @@ Metadata is what the engines write with each output, `{"pipeline", "origin", "pa
 `pipeline` is the engine (`krea2-t2i`, `h3-r2v`…), `origin` the front-end feature that submitted
 the job (`storyboard`, `relay`, `canvas`…, sent as the job's `origin` field), `params` the
 validated job parameters (prompt, seed, LoRAs…). A clip's last frame (`role: "last-frame"`, named
-`<clip>-1.png`) is kept for Relay chaining but hidden from the default `app` scope. A file without
+`<clip>-1.png`) and the frames extracted from a clip (`role: "frame"`, `video-frames` job) are kept
+for Relay chaining but hidden from the default `app` scope. A file without
 metadata is listed with its folder as pipeline.
 
 Search (`q`) matches prompt, file key, pipeline and origin, word prefixes, all words required.
@@ -76,7 +77,8 @@ of what was already moved.
 An **Asset**: `key` (POSIX path under the output folder, no leading slash), `filename`, `folder`,
 `type`, `url` (`/outputs/<key>?v=<mtime>`), `ref` (`outputs/<key>`, what a job takes as an image
 reference), `thumb`, `ts` (ms), `prompt` (400 characters in lists), `pipeline`, `origin`,
-`loras`, `seed`, `w`, `h`, `duration`, `size`, `fav`, `tags`, `trash` (`{origKey, at}` or null).
+`loras`, `seed`, `w`, `h`, `duration`, `size`, `fav`, `tags`, `app` (false for a working image hidden from
+the `app` scope), `trash` (`{origKey, at}` or null).
 
 Changes from 1.4: no ComfyUI graph to walk (metadata is explicit), no `model` facet (the engine
 says it), an `origin` facet instead of the file-name patterns that guessed the pipeline, URLs

@@ -4,68 +4,506 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Studio</title>
-<style>
-  :root { --bg: #f6f5f2; --fg: #1d1d1b; --muted: #6b6b66; --line: #dddad3; --ok: #2f7d4a; --warn: #b26b00; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ecebe7; --muted: #9a9993; --line: #33322f; --ok: #6cc28b; --warn: #e3a64a; } }
-  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
-  main { max-width: 860px; margin: 0 auto; }
-  h1 { font-size: 22px; margin: 0 0 4px; }
-  p.sub { color: var(--muted); margin: 0 0 24px; }
-  #credits { margin: 24px 0 0; font-size: 13px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { color: var(--muted); font-weight: 500; font-size: 13px; }
-  .ok { color: var(--ok); } .warn { color: var(--warn); }
-  button { font: inherit; padding: 4px 10px; cursor: pointer; }
-</style>
+<link rel="stylesheet" href="css/studio.css">
 </head>
 <body>
-<main>
-  <h1 id="appName">…</h1>
-  <p class="sub">Backend status page. The full Studio and Canvas front end is ported in step 4 of the roadmap.</p>
-  <p id="gpu"></p>
-  <table>
-    <thead><tr><th>Model</th><th>Repository</th><th>License</th><th>State</th></tr></thead>
-    <tbody id="models"></tbody>
-  </table>
+<div class="app-shell">
+  <nav class="app-rail" aria-label="Studio navigation">
+    <div class="rail-top">
+      <button type="button" class="rail-btn active" data-panel="studio" title="Studio">
+        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 9V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/><path d="M8.5 4 6.5 9M14.5 4l-2 5"/></svg>
+        <span class="rail-name">Studio</span>
+      </button>
+      <a href="canvas.html" class="rail-btn rail-canvas" title="Canvas">
+        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M12 7.2 6.3 16.2M12 7.2l5.7 9M7.2 18h9.6"/></svg>
+        <span class="rail-name">Canvas</span>
+      </a>
+    </div>
+    <button type="button" class="rail-btn" data-panel="monitor" title="Monitor">
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6.5 4 13L16 12h5"/></svg>
+      <span class="rail-name">Monitor</span>
+    </button>
+    <div class="panel flyout" data-flyout="monitor" hidden>
+      <div class="panel-title"><span class="live-dot" id="nodeDot">Monitor</span><span id="nodeState">…</span></div>
+      <div class="gauge-grid">
+        <div class="gauge" style="--accent:#343ced;" id="gaugeMem"><div class="arc"></div><strong>—</strong><span>GPU memory</span></div>
+        <div class="gauge" style="--accent:#ef601b;" id="gaugeQueue"><div class="arc"></div><strong>—</strong><span>Queue</span></div>
+      </div>
+      <div class="metric-row"><span>Version</span><strong id="appVersion" data-raw>—</strong></div>
+      <div class="metric-row"><span>GPU</span><strong id="gpuName" data-raw>—</strong></div>
+      <div class="metric-row"><span>Prompt LLM</span><strong id="llmState">—</strong></div>
+      <div class="metric-row"><span>Last job</span><strong id="latency" data-raw>—</strong></div>
+      <div class="pipeline">
+        <h3 class="section-title">Pipeline flow</h3>
+        <div class="pipeline-flow">
+          <div class="step" id="stepEnrich"><strong>Prompt enrichment</strong><span>Gemma 4 E4B</span></div>
+          <div class="step active"><strong>Model selector</strong><span id="modelLabel" data-raw>—</span></div>
+          <div class="step" id="stepInference"><strong>Local inference</strong><span>Job queue</span></div>
+          <div class="step"><strong>Gallery</strong><span>Assets + export</span></div>
+        </div>
+      </div>
+      <div class="events" id="events" aria-live="polite"></div>
+    </div>
+    <button type="button" class="rail-btn" data-panel="models" title="Models">
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 21 7.5 12 12 3 7.5 12 3Z"/><path d="M3 12 12 16.5 21 12"/><path d="M3 16.5 12 21 21 16.5"/></svg>
+      <span class="rail-name">Models</span>
+    </button>
+    <div class="panel flyout" data-flyout="models" hidden>
+      <details class="right-card" open>
+        <summary class="panel-title"><span class="live-dot">Models</span><span id="mmState">…</span></summary>
+        <p>Weights are downloaded from Hugging Face on first use, or now with the button.</p>
+        <div class="model-list" id="modelList"></div>
+      </details>
+      <details class="right-card" open>
+        <summary class="panel-title"><span class="live-dot">LoRAs</span><span></span></summary>
+        <p>MiniMax H3 style LoRAs. Every file added here appears in the Style (LoRA) menus.</p>
+        <div class="model-list" id="loraList"></div>
+        <div class="form-stack">
+          <label>
+            LoRA file (.safetensors)
+            <input type="file" id="loraFile" accept=".safetensors">
+          </label>
+          <button type="button" class="control-btn primary" id="loraUploadBtn">Upload</button>
+          <span class="hint" id="loraUploadStatus"></span>
+        </div>
+      </details>
+      <details class="right-card" open>
+        <summary class="panel-title"><span class="live-dot">Update</span><span id="updateState">…</span></summary>
+        <p id="updateText"></p>
+        <button type="button" class="control-btn primary" id="updateBtn" hidden>Update and restart</button>
+      </details>
+    </div>
+  </nav>
+
+  <div class="app-content">
+  <header class="portal-header">
+    <div class="brand"></div>
+    <div class="title-block">
+      <h1 id="appName" data-raw>Studio</h1>
+      <div class="eyebrow">Local image and video studio</div>
+    </div>
+    <div class="powered">
+      <div class="header-controls">
+        <select id="langSelect" title="Language" aria-label="Language">
+          <option value="en" data-raw>EN</option>
+          <option value="fr" data-raw>FR</option>
+          <option value="es" data-raw>ES</option>
+          <option value="de" data-raw>DE</option>
+        </select>
+        <button id="themeBtn" type="button" title="Light / dark theme">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <section id="sessionBar" aria-label="Session state">
+    <div class="sb-anchors" id="sbAnchors" hidden>
+      <span class="sb-state">Identity anchored</span>
+      <button type="button" class="sb-thumb" data-kind="char"><img alt=""></button>
+      <button type="button" class="sb-thumb" data-kind="loc"><img alt=""></button>
+    </div>
+    <ol class="sb-steps" id="sbSteps" hidden></ol>
+    <span id="sbJobs" hidden></span>
+    <span id="sbGpu"><span>GPU memory</span> <strong data-raw>—</strong></span>
+  </section>
+
+  <main class="layout">
+    <section class="studio-main">
+      <div class="top-bar">
+        <p class="usecase-lead" id="usecaseLead">What do you want to make?</p>
+        <div class="usecases" role="group" aria-labelledby="usecaseLead">
+          <button type="button" class="usecase" data-scenario="campaign" data-pipeline="text2image" aria-pressed="true">
+            <strong>Poster / visual</strong>
+            <span>One polished still image from your description.</span>
+            <small>Art director / Motion designer</small>
+          </button>
+          <button type="button" class="usecase" data-scenario="campaign" data-pipeline="campaign" aria-pressed="false">
+            <strong>Short ad / campaign</strong>
+            <span>Posters, thumbnails and a video teaser from a single brief.</span>
+            <small>Social media / Marketing</small>
+          </button>
+          <button type="button" class="usecase" data-scenario="storyboard" data-pipeline="storyboard" aria-pressed="false">
+            <strong>Narrative trailer (several shots)</strong>
+            <span>You approve the character and setting sheets first, then each shot.</span>
+            <small>Director / Storyboard artist</small>
+          </button>
+          <button type="button" class="usecase" data-scenario="localization" data-pipeline="image2image" aria-pressed="false">
+            <strong>Local versions</strong>
+            <span>Adapts an existing image to several markets.</span>
+            <small>Editor / Post-production</small>
+          </button>
+        </div>
+      </div>
+
+      <div class="studio-body">
+        <section>
+          <h3 class="section-title">Creative control</h3>
+
+          <div class="generate-bar">
+            <label class="gb-prompt">
+              Prompt or brief
+              <textarea id="brief"></textarea>
+              <div class="subject-chips" id="subjectChips" hidden></div>
+            </label>
+            <label class="gb-field">
+              Pipeline
+              <select id="pipelineSelect"></select>
+            </label>
+            <label class="gb-field">
+              Engine
+              <select id="modelSelect"></select>
+            </label>
+            <label class="gb-field" id="styleWrap" hidden>
+              Style
+              <select id="styleSelect"></select>
+            </label>
+            <label class="gb-field" id="ratioWrap" hidden>
+              Ratio
+              <select id="ratioSelect">
+                <option data-raw>16:9</option>
+                <option data-raw>9:16</option>
+                <option data-raw>1:1</option>
+                <option data-raw>4:5</option>
+              </select>
+            </label>
+            <label class="gb-field" id="loraWrap" hidden>
+              Style (LoRA)
+              <select id="loraSelect"><option value="">None</option></select>
+            </label>
+            <div class="gb-field tpl-field" id="sheetTemplateWrap" hidden>
+              <span class="tpl-caption">Sheet layout</span>
+              <select id="sheetTemplateSelect" hidden></select>
+              <div class="tpl-grid" role="group" aria-label="Sheet layout"></div>
+            </div>
+            <label class="gb-field" id="variantsWrap" hidden>
+              Variants
+              <input type="number" id="variants" min="1" max="4" value="2">
+            </label>
+            <label class="gb-field" id="durationWrap" hidden>
+              Video length (s)
+              <input type="number" id="videoDuration" min="5" max="15" value="5">
+            </label>
+            <label class="gb-field" id="shotCountWrap" hidden>
+              Number of shots
+              <input type="number" id="shotCount" min="4" max="16" value="6">
+            </label>
+            <label class="gb-field" id="holdWrap" hidden>
+              Hold on the last shot (s), 0 for none
+              <input type="number" id="holdDuration" min="0" max="15" value="0">
+            </label>
+            <label class="gb-field">
+              Seed
+              <input type="text" id="seed" value="Auto">
+            </label>
+            <label class="gb-field gb-wide" id="imageInputWrap" hidden>
+              Input image
+              <input type="file" id="imageInput" accept="image/*">
+              <span class="input-chip" id="assetChip" hidden>
+                <span id="assetChipName" data-raw></span>
+                <button type="button" id="assetChipClear" title="Remove the selected asset">✕</button>
+              </span>
+            </label>
+            <label class="gb-field gb-wide" id="lastImageWrap" hidden>
+              Last frame (optional, FL2VA)
+              <input type="file" id="lastImageInput" accept="image/*" title="When set, the video ends on it; left empty, the clip starts from the first image only.">
+            </label>
+            <div class="gb-field gb-wide" id="marketsWrap" hidden>
+              <span>Target markets</span>
+              <div class="market-chips" id="marketChips"></div>
+              <p class="hint">One job per selected market, with the prompt adapted to it. None selected: the prompt as it is.</p>
+            </div>
+            <label id="skipSheetsWrap" class="check-row" hidden>
+              <input type="checkbox" id="skipSheetsToggle">
+              <span>Skip the sheets, use my references only: the first two images of “Extra references” become the character and the setting</span>
+            </label>
+            <button class="primary-btn gb-go" id="generateBtn">Generate</button>
+          </div>
+
+          <div class="generate-row">
+            <div class="gb-field gb-wide" id="resumeWrap" hidden>
+              <button type="button" class="secondary-btn" id="resumeProjectBtn" hidden>Resume the project</button>
+              <button type="button" class="secondary-btn" id="cancelProjectBtn" hidden>Cancel the project</button>
+            </div>
+          </div>
+
+          <details class="generate-more">
+            <summary>Advanced options</summary>
+            <div class="form-stack">
+              <p class="hint">No engine of this studio encodes a negative prompt: say every constraint positively in the brief.</p>
+              <div class="actions">
+                <button class="secondary-btn" id="enrichBtn" title="Rewrites your brief into a detailed prompt with the local LLM, once, without starting a render">✨ Enrich the brief</button>
+                <button class="secondary-btn" id="autoEnrichBtn" aria-pressed="false" title="Enriches the brief with Gemma 4 E4B before every render (except workflows that build their own prompts)">✨ Auto enrichment (Gemma 4 E4B): off</button>
+              </div>
+            </div>
+          </details>
+
+          <div class="form-stack" id="seqWrap" hidden>
+            <h3 class="section-title">Multi-image sequence (FL2VA)</h3>
+            <p class="hint">2 to 6 key images: the video starts on the first and ends on the last; each pair of images becomes a MiniMax H3 segment from the first to the last frame, 5 to 15 seconds long. The brief is the motion prompt.</p>
+            <input type="file" id="seqFiles" accept="image/*" multiple>
+            <div class="seq-list" id="seqList"></div>
+            <div class="hint" id="seqSummary"></div>
+          </div>
+
+          <div class="form-stack" id="refExtrasWrap" hidden>
+            <h3 class="section-title">Extra references</h3>
+            <p class="hint r2v-only">In addition to the character and setting sheets. None required.</p>
+            <p class="hint sb-only" hidden>Added to every Qwen Image 2.1 shot image, after the sheets: &lt;image3&gt;, &lt;image4&gt;… (one rank further in a two-subject shot). Name them in the shot's action.</p>
+            <p class="hint i2i-only" hidden>Qwen Image 2.1 takes up to 10 images in all. The input image is &lt;image1&gt;; your references are &lt;image2&gt;, &lt;image3&gt;… in the order of the list below. Cite them in your instruction, for example: “put the character of &lt;image1&gt; in the setting of &lt;image2&gt;”. The result keeps the input image's size; each reference makes the render longer.</p>
+            <div class="form-stack" id="refDropZone">
+              <label>
+                <span id="refCapLabel">Extra reference images</span>
+                <input type="file" id="refImagesInput" accept="image/*" multiple>
+              </label>
+              <p class="hint r2v-only">Each image gets a subject number, used automatically in the prompt.</p>
+              <div class="ref-subjects" id="refSubjects"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="output-panel">
+          <details class="job-queue" id="jobQueue" open>
+            <summary><span id="jobQueueTitle">Job queue (0)</span><span class="status error" id="jobQueueErr" hidden>Error</span></summary>
+            <div class="job-list" id="jobList"></div>
+          </details>
+
+          <div id="galleryBlock">
+            <div class="gallery-header">
+              <h3 class="section-title">Gallery</h3>
+              <div class="gallery-tabs">
+                <button class="gallery-tab active" id="tabImages" data-tab="image">Images (0)</button>
+                <button class="gallery-tab" id="tabVideos" data-tab="video">Videos (0)</button>
+              </div>
+            </div>
+            <div class="gallery-note" id="galleryNote" role="status" hidden></div>
+            <div class="gallery-tools">
+              <input type="search" id="gallerySearch" placeholder="Search (prompt, file)" aria-label="Search the gallery">
+              <select id="galleryPipeline" aria-label="Filter by engine"><option value="">All engines</option></select>
+              <button type="button" class="secondary-btn" id="galleryFavBtn" aria-pressed="false">★ Favourites</button>
+              <button type="button" class="secondary-btn" id="gallerySelectBtn" aria-pressed="false">Select</button>
+              <label class="gallery-size">Size <input type="range" id="galleryThumb" min="96" max="320" step="8" value="160"></label>
+            </div>
+            <div class="gallery-tools">
+              <button type="button" class="secondary-btn" id="galleryScopeBtn" aria-pressed="false">Show everything</button>
+              <button type="button" class="secondary-btn" id="galleryTrashBtn" aria-pressed="false">Trash (0)</button>
+              <select id="galleryOrigin" aria-label="Filter by feature"><option value="">All features</option></select>
+              <select id="galleryTag" aria-label="Filter by tag"><option value="">All tags</option></select>
+              <label class="gallery-size">From <input type="date" id="galleryFrom"></label>
+              <label class="gallery-size">To <input type="date" id="galleryTo"></label>
+              <select id="galleryDateUnit" aria-label="Group by">
+                <option value="day">Day</option><option value="week">Week</option><option value="month">Month</option>
+              </select>
+              <select id="galleryGoto" aria-label="Go to…"><option value="">Go to…</option></select>
+            </div>
+            <p class="gallery-trash-help" id="galleryTrashHelp" hidden>Deleted items are moved to output/.trash/: the studio never erases them for good, purging is done by hand.</p>
+            <div class="gallery-selbar" id="gallerySelBar" hidden>
+              <span id="gallerySelCount" role="status" aria-live="polite"></span>
+              <button type="button" class="secondary-btn" id="gallerySelTag" aria-expanded="false">🏷 Tag…</button>
+              <form id="gallerySelTagForm" hidden>
+                <input type="text" id="gallerySelTagInput" list="galleryTagList" maxlength="40" autocomplete="off" aria-label="Tag name" placeholder="Tag name">
+                <button type="submit" class="secondary-btn">Add</button>
+              </form>
+              <button type="button" class="secondary-btn" id="gallerySelFav">★ Favourite</button>
+              <button type="button" class="secondary-btn" id="gallerySelDel">🗑 Delete</button>
+              <button type="button" class="secondary-btn" id="gallerySelRestore" hidden>↩ Restore</button>
+              <button type="button" class="secondary-btn" id="gallerySelNone">Clear the selection</button>
+            </div>
+            <div class="gallery" id="galleryGrid"></div>
+            <div class="gallery-empty" id="galleryEmpty" hidden></div>
+            <div id="gallerySentinel"></div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <section id="studioShell" hidden>
+    <nav id="studioNav">
+      <h3 class="section-title">Director mode</h3>
+      <button type="button" class="studio-nav-btn active" data-section="character">Character</button>
+      <button type="button" class="studio-nav-btn" data-section="location">Setting</button>
+      <button type="button" class="studio-nav-btn locked" data-section="storyboard" disabled>Storyboard</button>
+      <button type="button" class="studio-nav-btn locked" data-section="montage" disabled>Montage</button>
+      <button type="button" class="studio-nav-btn locked" data-section="relay" disabled>Long take (Relay)</button>
+      <button type="button" class="studio-nav-btn locked" data-section="video" disabled hidden>Video</button>
+      <div class="studio-nav-foot">
+        <button type="button" class="primary-btn" id="directorValidateBtn" disabled>Approve the sheets</button>
+        <div class="studio-project-actions">
+          <button type="button" class="secondary-btn" id="studioCancelBtn" hidden>Cancel the project</button>
+          <button type="button" class="secondary-btn" id="studioNewBtn">New project</button>
+          <button type="button" class="secondary-btn" id="studioExitBtn">Leave the studio</button>
+        </div>
+      </div>
+    </nav>
+
+    <div id="studioPanel">
+      <section id="studioCharacter" class="studio-section">
+        <h3 class="section-title">Character sheet</h3>
+        <p class="hint">Edit the fields then regenerate to make a new variant; click a thumbnail to choose the active sheet.</p>
+        <div class="subject-tabs" id="subjectTabs" hidden></div>
+        <div class="subject-tabs" id="charKindToggle" hidden>
+          <span class="kind-label">Subject type</span>
+          <button type="button" class="subject-tab" data-kind="human">Human</button>
+          <button type="button" class="subject-tab" data-kind="other">Other (animal, creature, robot, object…)</button>
+        </div>
+        <div class="sheet-layout">
+          <div class="form-stack">
+            <div class="sheet-fields"></div>
+            <div class="sheet-actions">
+              <button type="button" class="secondary-btn sheet-regen">🔄 Regenerate the sheet</button>
+              <button type="button" class="secondary-btn sheet-prompt">✎ Prompt</button>
+              <button type="button" class="secondary-btn sheet-import">📥 Import an image</button>
+              <input type="file" class="sheet-import-input" accept="image/*" hidden>
+            </div>
+          </div>
+          <div class="sheet-right">
+            <div class="sheet-preview"><img alt="" hidden><div class="thumb-missing" hidden></div><div class="sheet-status hint"></div></div>
+            <div class="variant-strip"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="studioLocation" class="studio-section" hidden>
+        <h3 class="section-title">Setting sheet</h3>
+        <p class="hint">Edit the fields then regenerate to make a new variant; click a thumbnail to choose the active sheet.</p>
+        <div class="sheet-layout">
+          <div class="form-stack">
+            <div class="sheet-fields"></div>
+            <div class="sheet-actions">
+              <button type="button" class="secondary-btn sheet-regen">🔄 Regenerate the sheet</button>
+              <button type="button" class="secondary-btn sheet-prompt">✎ Prompt</button>
+              <button type="button" class="secondary-btn sheet-import">📥 Import an image</button>
+              <input type="file" class="sheet-import-input" accept="image/*" hidden>
+            </div>
+          </div>
+          <div class="sheet-right">
+            <div class="sheet-preview"><img alt="" hidden><div class="thumb-missing" hidden></div><div class="sheet-status hint"></div></div>
+            <div class="variant-strip"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="studioStoryboard" class="studio-section" hidden>
+        <h3 class="section-title">Storyboard</h3>
+        <div class="form-stack">
+          <div class="shot-strip" id="shotStrip" role="group" aria-label="Shots overview" hidden></div>
+          <div class="shot-edit-list" id="shotEditList" hidden></div>
+          <button type="button" class="secondary-btn" id="directorKeyframesBtn" hidden>Generate the shot images</button>
+        </div>
+      </section>
+
+      <section id="studioMontage" class="studio-section" hidden>
+        <h3 class="section-title">Montage</h3>
+        <p class="hint">Generate the cuts, reorder or regenerate each shot, then assemble the animatic. Reordering starts nothing.</p>
+        <p class="hint" id="cutEngineHint"></p>
+        <button type="button" class="primary-btn" id="directorLaunchBtn" disabled>Generate the cuts</button>
+        <div class="montage-list" id="montageList"></div>
+        <button type="button" class="primary-btn" id="directorAssembleBtn" disabled>Assemble the animatic</button>
+        <div id="montagePlayer"></div>
+      </section>
+
+      <section id="studioRelay" class="studio-section" hidden>
+        <h3 class="section-title">Long take (Relay)</h3>
+        <p class="hint">A chain of short video segments instead of one long shot: each segment has its prompt and length, and consistency comes from the chaining. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.</p>
+        <div class="relay-composer" id="relayComposer">
+          <label class="composer-lbl">Screenplay
+            <textarea id="relayScenario" rows="4" spellcheck="false" placeholder="The whole screenplay of the sequence, written in one go."></textarea>
+          </label>
+          <div class="composer-row">
+            <label>Segments <input type="number" id="relaySegCount" min="1" max="10" value="6"></label>
+            <label>Length per segment (s) <input type="number" id="relaySegDur" min="5" max="15" value="5"></label>
+            <button type="button" class="secondary-btn" id="relayComposeBtn" disabled>✨ Split the screenplay</button>
+          </div>
+          <p class="hint">The screenplay is split into as many consecutive shots, each written for the MiniMax H3 grammar, the subjects named by the number the studio gives them. Nothing renders: read and fix each segment before starting the chain.</p>
+        </div>
+        <div class="relay-list" id="relayList"></div>
+        <div class="relay-foot">
+          <button type="button" class="secondary-btn" id="relayAddBtn">＋ Add a segment</button>
+          <button type="button" class="primary-btn" id="relayRunBtn" disabled>Generate the chain</button>
+          <button type="button" class="primary-btn" id="relayAssembleBtn" disabled>Assemble the sequence</button>
+        </div>
+        <div id="relayPlayer"></div>
+      </section>
+
+      <section id="studioVideoR2V" class="studio-section" hidden>
+        <h3 class="section-title">Video</h3>
+        <p class="hint" id="studioVideoR2VStatus">Approve the character and setting sheets to enable the launch.</p>
+        <button type="button" class="primary-btn" id="directorR2VLaunchBtn" disabled>Start the video</button>
+      </section>
+    </div>
+
+    <footer id="studioTimeline"></footer>
+  </section>
+
   <!-- The MiniMax H3 licence asks products built on it to show its name. -->
-  <p class="sub" id="credits">Video and audio generation: MiniMax H3 (FastH3, run by FastVideo).</p>
-</main>
-<script>
-// Status page only: listing models never downloads anything; the button does.
-const $ = (id) => document.getElementById(id);
+  <p class="credits">Video and audio generation: MiniMax H3 (FastH3, run by FastVideo).</p>
+  </div>
+</div>
 
-async function refresh() {
-  const health = await (await fetch("/api/health")).json();
-  $("appName").textContent = health.app;
-  document.title = health.app;
-  $("gpu").textContent = health.gpu.available
-    ? `GPU: ${health.gpu.name} (sm ${health.gpu.capability})`
-    : `GPU: none (${health.gpu.reason})`;
-  const models = await (await fetch("/api/models")).json();
-  $("models").replaceChildren(...models.map((m) => {
-    const tr = document.createElement("tr");
-    const state = m.installed ? "installed"
-      : m.progress != null ? `downloading ${Math.round(m.progress * 100)} %` : "";
-    for (const text of [m.label, m.repo, m.license, state]) {
-      const td = document.createElement("td");
-      td.textContent = text;
-      tr.append(td);
-    }
-    if (!m.installed && m.progress == null) {
-      const btn = document.createElement("button");
-      btn.textContent = "Download";
-      btn.onclick = () => fetch(`/api/models/${m.id}/download`, { method: "POST" }).then(refresh);
-      tr.lastChild.append(btn);
-    }
-    tr.lastChild.className = m.installed ? "ok" : "warn";
-    return tr;
-  }));
-}
+<div id="promptModal" hidden>
+  <div class="prompt-dialog" role="dialog" aria-modal="true" aria-labelledby="promptModalTitle">
+    <h4 id="promptModalTitle">Prompt</h4>
+    <p class="hint" id="promptModalHint"></p>
+    <textarea id="promptModalText" spellcheck="false"></textarea>
+    <div class="prompt-actions">
+      <button type="button" class="secondary-btn spacer" id="promptModalEnrich">✨ Enrich again</button>
+      <button type="button" class="secondary-btn" id="promptModalReset">↩ Original prompt</button>
+      <button type="button" class="secondary-btn" id="promptModalCancel">Cancel</button>
+      <button type="button" class="primary-btn" id="promptModalApply">Apply and regenerate</button>
+    </div>
+  </div>
+</div>
 
-refresh();
-const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/ws`);
-ws.onmessage = (e) => { if (JSON.parse(e.data).type === "model") refresh(); };
-</script>
+<div class="undo-toast" id="undoToast" role="status" aria-live="polite">
+  <div class="undo-toast-box" id="undoToastBox" hidden><span id="undoToastMsg"></span><button type="button" id="undoToastBtn">Undo</button></div>
+</div>
+<div class="undo-toast drop-toast" id="dropToast" role="status" aria-live="polite">
+  <div class="undo-toast-box" id="dropToastBox" hidden><span id="dropToastMsg"></span></div>
+</div>
+
+<datalist id="galleryTagList"></datalist>
+<div id="lightbox" hidden role="dialog" aria-modal="true" aria-label="Details">
+  <button id="lightboxClose">✕ Close</button>
+  <div id="lightboxBody">
+    <div id="lightboxContent"></div>
+    <aside id="lightboxMeta" hidden aria-label="Details">
+      <section>
+        <div class="lb-head"><span>Prompt</span><button type="button" id="lightboxCopy">📋 Copy the prompt</button></div>
+        <div id="lbPrompt" data-raw tabindex="0"></div>
+      </section>
+      <dl id="lbFacts">
+        <dt>Seed</dt><dd id="lbSeed" data-raw></dd>
+        <dt>Engine</dt><dd id="lbPipeline" data-raw></dd>
+        <dt>LoRA</dt><dd id="lbLoras" data-raw></dd>
+        <dt>Size</dt><dd id="lbDims" data-raw></dd>
+        <dt id="lbDurT">Length</dt><dd id="lbDur" data-raw></dd>
+        <dt>Weight</dt><dd id="lbWeight" data-raw></dd>
+        <dt>Date</dt><dd id="lbDate" data-raw></dd>
+        <dt>Path</dt><dd id="lbPath" data-raw></dd>
+      </dl>
+      <div class="lb-actions">
+        <button type="button" class="secondary-btn" id="lbUse">→ Use as input</button>
+        <button type="button" class="secondary-btn" id="lbReuse">↺ Reuse the prompt</button>
+        <button type="button" class="secondary-btn" id="lbRenameBtn">✎ Rename</button>
+      </div>
+      <form class="lb-form" id="lbRenameForm" hidden>
+        <input type="text" id="lbRenameInput" maxlength="150" autocomplete="off" aria-label="New file name">
+        <span id="lbRenameExt" data-raw></span>
+        <button type="submit" class="primary-btn">Rename</button>
+        <button type="button" class="secondary-btn" id="lbRenameCancel">Cancel</button>
+      </form>
+      <div id="lbMsg" role="alert"></div>
+      <section>
+        <div class="lb-head"><span>Tags</span></div>
+        <div id="lbTags" data-raw></div>
+        <form class="lb-form" id="lbTagForm">
+          <input type="text" id="lbTagInput" list="galleryTagList" maxlength="40" autocomplete="off" aria-label="Add a tag" placeholder="Add a tag (Enter)">
+        </form>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script src="js/prompts.js"></script>
+<script type="module" src="js/studio.js"></script>
 </body>
 </html>
