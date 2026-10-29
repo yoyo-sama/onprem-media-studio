@@ -3,7 +3,7 @@
 #
 # The NGC PyTorch image is multi-arch and ships CUDA 13, nvcc and a PyTorch
 # build that knows Blackwell; bump BASE_IMAGE only after a real render passes.
-ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:25.09-py3
+ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:25.11-py3
 
 FROM ${BASE_IMAGE} AS llama
 # Pinned llama.cpp release; GB10 is compute capability 12.1.
