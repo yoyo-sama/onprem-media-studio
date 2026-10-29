@@ -17,6 +17,11 @@ export const DICT = {
     es: "+ Añadir un sujeto",
     de: "+ Motiv hinzufügen",
   },
+  "+ New card": {
+    fr: "+ Nouvelle carte",
+    es: "+ Nueva tarjeta",
+    de: "+ Neue Karte",
+  },
   "2 to 6 key images: the video starts on the first and ends on the last; each pair of images becomes a MiniMax H3 segment from the first to the last frame, 5 to 15 seconds long. The brief is the motion prompt.": {
     fr: "2 à 6 images clés : la vidéo part de la première et finit sur la dernière ; chaque paire d'images devient un segment MiniMax H3 de la première à la dernière frame, de 5 à 15 secondes. Le brief sert de prompt de mouvement.",
     es: "De 2 a 6 imágenes clave: el vídeo empieza en la primera y termina en la última; cada par de imágenes se convierte en un segmento MiniMax H3 del primer al último fotograma, de 5 a 15 segundos. El brief es el prompt de movimiento.",
@@ -36,6 +41,16 @@ export const DICT = {
     fr: "Une nouvelle version est disponible ({from} → {to}). Le serveur redémarre après la mise à jour.",
     es: "Hay una nueva versión disponible ({from} → {to}). El servidor se reinicia tras la actualización.",
     de: "Eine neue Version ist verfügbar ({from} → {to}). Der Server startet nach dem Update neu.",
+  },
+  "A polished still image, from a simple description.": {
+    fr: "Une image fixe soignée, à partir d'une simple description.",
+    es: "Una imagen fija cuidada, a partir de una simple descripción.",
+    de: "Ein sorgfältiges Standbild, aus einer einfachen Beschreibung.",
+  },
+  "A video shot of a few seconds, ready to publish.": {
+    fr: "Un plan vidéo de quelques secondes, prêt à diffuser.",
+    es: "Un plano de vídeo de unos segundos, listo para difundir.",
+    de: "Eine Videoeinstellung von wenigen Sekunden, sendefertig.",
   },
   "Accessories": {
     fr: "Accessoires",
@@ -97,6 +112,11 @@ export const DICT = {
     es: "Se añaden a cada imagen de plano de Qwen Image 2.1, después de las láminas: <image3>, <image4>… (un puesto más allá en un plano con dos sujetos). Nómbralas en la acción del plano.",
     de: "Werden jedem Einstellungsbild von Qwen Image 2.1 nach den Bögen hinzugefügt: <image3>, <image4>… (in einer Einstellung mit zwei Motiven eine Stelle weiter). Nenne sie in der Aktion der Einstellung.",
   },
+  "Advanced mode (pick a card type)": {
+    fr: "Mode avancé (choisir un type de carte)",
+    es: "Modo avanzado (elegir un tipo de tarjeta)",
+    de: "Erweiterter Modus (Kartentyp wählen)",
+  },
   "Advanced options": {
     fr: "Options avancées",
     es: "Opciones avanzadas",
@@ -131,6 +151,11 @@ export const DICT = {
     fr: "Bloc d'ancrage remis dans le prompt de l'image du plan (il manquait).",
     es: "Bloque de anclaje añadido de nuevo al prompt de la imagen del plano (faltaba).",
     de: "Verankerungsblock wieder in den Prompt des Einstellungsbilds eingefügt (er fehlte).",
+  },
+  "Animatic · hard cuts": {
+    fr: "Animatic · cuts francs",
+    es: "Animatic · cortes secos",
+    de: "Animatic · harte Schnitte",
   },
   "Anime": {
     fr: "Anime",
@@ -177,6 +202,11 @@ export const DICT = {
     es: "Asia",
     de: "Asien",
   },
+  "Aspect ratio": {
+    fr: "Ratio",
+    es: "Proporción",
+    de: "Seitenverhältnis",
+  },
   "Assemble the animatic": {
     fr: "Assembler l'animatic",
     es: "Ensamblar el animatic",
@@ -196,6 +226,11 @@ export const DICT = {
     fr: "{max} images au plus ici : les autres ont été ignorées.",
     es: "Aquí caben {max} imágenes como máximo: las demás se han ignorado.",
     de: "Hier höchstens {max} Bilder: Die übrigen wurden ignoriert.",
+  },
+  "Auto": {
+    fr: "Auto",
+    es: "Auto",
+    de: "Automatisch",
   },
   "Auto (follows the subject)": {
     fr: "Auto (selon le sujet)",
@@ -217,10 +252,20 @@ export const DICT = {
     es: "Enriquecimiento automático activado ({llm}).",
     de: "Automatische Anreicherung an ({llm}).",
   },
+  "Auto: the AI tells whether the subject is human. Choose yourself if it gets it wrong.": {
+    fr: "Auto : l'IA détecte si le sujet est humain. Choisis toi-même si elle se trompe.",
+    es: "Auto: la IA detecta si el sujeto es humano. Elige tú si se equivoca.",
+    de: "Automatisch: Die KI erkennt, ob das Subjekt ein Mensch ist. Wähle selbst, wenn sie sich irrt.",
+  },
   "Available": {
     fr: "Disponible",
     es: "Disponible",
     de: "Verfügbar",
+  },
+  "Brief": {
+    fr: "Brief",
+    es: "Brief",
+    de: "Briefing",
   },
   "Camera": {
     fr: "Caméra",
@@ -252,10 +297,20 @@ export const DICT = {
     es: "Cancelar el proyecto",
     de: "Projekt abbrechen",
   },
+  "Cancelled": {
+    fr: "Annulé",
+    es: "Cancelado",
+    de: "Abgebrochen",
+  },
   "Canvas": {
     fr: "Canvas",
     es: "Canvas",
     de: "Canvas",
+  },
+  "Card": {
+    fr: "Carte",
+    es: "Tarjeta",
+    de: "Karte",
   },
   "Character": {
     fr: "Personnage",
@@ -272,6 +327,16 @@ export const DICT = {
     es: "Lámina de personaje",
     de: "Figurenbogen",
   },
+  "Character sheet (Krea 2)…": {
+    fr: "Planche personnage (Krea 2)…",
+    es: "Lámina de personaje (Krea 2)…",
+    de: "Charakterblatt (Krea 2)…",
+  },
+  "Character sheet: {llm}…": {
+    fr: "Fiche personnage : {llm}…",
+    es: "Ficha de personaje: {llm}…",
+    de: "Charakterblatt: {llm}…",
+  },
   "Choose an input image (a file, or a gallery image with “→ Use as input”).": {
     fr: "Choisis une image d'entrée (un fichier, ou une image de la galerie avec « → Utiliser en entrée »).",
     es: "Elige una imagen de entrada (un archivo, o una imagen de la galería con «→ Usar como entrada»).",
@@ -281,6 +346,11 @@ export const DICT = {
     fr: "Cinématique",
     es: "Cinematográfico",
     de: "Filmisch",
+  },
+  "Clear the canvas": {
+    fr: "Vider le canvas",
+    es: "Vaciar el lienzo",
+    de: "Leinwand leeren",
   },
   "Clear the selection": {
     fr: "Vider la sélection",
@@ -307,6 +377,11 @@ export const DICT = {
     es: "Hoja de contactos",
     de: "Kontaktbogen",
   },
+  "Contact sheet…": {
+    fr: "Planche contact…",
+    es: "Hoja de contactos…",
+    de: "Kontaktbogen…",
+  },
   "Creative control": {
     fr: "Contrôle créatif",
     es: "Control creativo",
@@ -327,6 +402,11 @@ export const DICT = {
     es: "Prompt del corte enriquecido por {model} (instrucción MiniMax H3).",
     de: "Cut-Prompt angereichert von {model} (MiniMax-H3-Anweisung).",
   },
+  "Cuts ({k}/{n} submitted)…": {
+    fr: "Cuts ({k}/{n} soumis)…",
+    es: "Cortes ({k}/{n} enviados)…",
+    de: "Schnitte ({k}/{n} übermittelt)…",
+  },
   "Date": {
     fr: "Date",
     es: "Fecha",
@@ -336,6 +416,11 @@ export const DICT = {
     fr: "Jour",
     es: "Día",
     de: "Tag",
+  },
+  "Delete every card on the canvas? This cannot be undone.": {
+    fr: "Supprimer toutes les cartes du canvas ? Cette action est irréversible.",
+    es: "¿Eliminar todas las tarjetas del lienzo? Esta acción es irreversible.",
+    de: "Alle Karten der Leinwand löschen? Das kann nicht rückgängig gemacht werden.",
   },
   "Delete from the gallery": {
     fr: "Supprimer de la galerie",
@@ -412,6 +497,31 @@ export const DICT = {
     es: "Documental",
     de: "Dokumentarisch",
   },
+  "Done": {
+    fr: "Terminé",
+    es: "Terminado",
+    de: "Fertig",
+  },
+  "Done: {name}. H3 prompt cut to 7,000 characters (model limit).": {
+    fr: "Terminé : {name}. Prompt H3 tronqué à 7 000 caractères (plafond du modèle).",
+    es: "Terminado: {name}. Prompt H3 truncado a 7 000 caracteres (límite del modelo).",
+    de: "Fertig: {name}. H3-Prompt auf 7.000 Zeichen gekürzt (Modellgrenze).",
+  },
+  "Done: {n} cuts ready.": {
+    fr: "Terminé : {n} cuts prêts.",
+    es: "Terminado: {n} cortes listos.",
+    de: "Fertig: {n} Schnitte bereit.",
+  },
+  "Done: {n} cuts ready. H3 prompt cut to 7,000 characters (model limit).": {
+    fr: "Terminé : {n} cuts prêts. Prompt H3 tronqué à 7 000 caractères (plafond du modèle).",
+    es: "Terminado: {n} cortes listos. Prompt H3 truncado a 7 000 caracteres (límite del modelo).",
+    de: "Fertig: {n} Schnitte bereit. H3-Prompt auf 7.000 Zeichen gekürzt (Modellgrenze).",
+  },
+  "Done: {n} shot images ready.": {
+    fr: "Terminé : {n} images de plans prêtes.",
+    es: "Terminado: {n} imágenes de planos listas.",
+    de: "Fertig: {n} Einstellungsbilder bereit.",
+  },
   "Download": {
     fr: "Télécharger",
     es: "Descargar",
@@ -437,6 +547,21 @@ export const DICT = {
     es: "Suelta la imagen aquí",
     de: "Bild hier ablegen",
   },
+  "Duplicate": {
+    fr: "Dupliquer",
+    es: "Duplicar",
+    de: "Duplizieren",
+  },
+  "Duration (s)": {
+    fr: "Durée (s)",
+    es: "Duración (s)",
+    de: "Dauer (s)",
+  },
+  "Duration / shot (s)": {
+    fr: "Durée / plan (s)",
+    es: "Duración / plano (s)",
+    de: "Dauer / Einstellung (s)",
+  },
   "Each image gets a subject number, used automatically in the prompt.": {
     fr: "Chaque image reçoit un numéro de sujet, utilisé automatiquement dans le prompt.",
     es: "Cada imagen recibe un número de sujeto, usado automáticamente en el prompt.",
@@ -446,6 +571,11 @@ export const DICT = {
     fr: "Modifie les champs puis régénère pour créer une variante ; clique sur une vignette pour choisir la planche active.",
     es: "Edita los campos y regenera para crear una variante; haz clic en una miniatura para elegir la lámina activa.",
     de: "Bearbeite die Felder und generiere neu, um eine Variante zu erstellen; klicke auf ein Vorschaubild, um den aktiven Bogen zu wählen.",
+  },
+  "Editing instruction": {
+    fr: "Instruction d'édition",
+    es: "Instrucción de edición",
+    de: "Bearbeitungsanweisung",
   },
   "Editor / Post-production": {
     fr: "Monteur / Post-production",
@@ -517,6 +647,11 @@ export const DICT = {
     es: "Enriquecimiento descartado: faltaban en la respuesta de Gemma las menciones <Subject N> de tu prompt. Se conserva tu prompt.",
     de: "Anreicherung verworfen: Die <Subject N>-Erwähnungen deines Prompts fehlten in Gemmas Ausgabe. Dein Prompt bleibt erhalten.",
   },
+  "Enrichment failed: {error}": {
+    fr: "Enrichissement impossible : {error}",
+    es: "Enriquecimiento imposible: {error}",
+    de: "Anreicherung fehlgeschlagen: {error}",
+  },
   "Enrichment ignored: Gemma's answer lacks the expected field. Your prompt is kept.": {
     fr: "Enrichissement ignoré : la réponse de Gemma ne contient pas le champ attendu. Ton prompt est conservé.",
     es: "Enriquecimiento ignorado: la respuesta de Gemma no contiene el campo esperado. Se conserva tu prompt.",
@@ -531,6 +666,71 @@ export const DICT = {
     fr: "Erreur",
     es: "Error",
     de: "Fehler",
+  },
+  "Error: connect a card that has produced an image to the input.": {
+    fr: "Erreur : connecte à l'entrée une carte qui a produit une image.",
+    es: "Error: conecta a la entrada una tarjeta que haya producido una imagen.",
+    de: "Fehler: Verbinde den Eingang mit einer Karte, die ein Bild erzeugt hat.",
+  },
+  "Error: connect a card that has produced an image to the top input.": {
+    fr: "Erreur : connecte à l'entrée du haut une carte qui a produit une image.",
+    es: "Error: conecta a la entrada superior una tarjeta que haya producido una imagen.",
+    de: "Fehler: Verbinde den oberen Eingang mit einer Karte, die ein Bild erzeugt hat.",
+  },
+  "Error: describe the character first.": {
+    fr: "Erreur : décris d'abord le personnage.",
+    es: "Error: describe primero el personaje.",
+    de: "Fehler: Beschreibe zuerst den Charakter.",
+  },
+  "Error: describe the setting first.": {
+    fr: "Erreur : décris d'abord le décor.",
+    es: "Error: describe primero el escenario.",
+    de: "Fehler: Beschreibe zuerst die Kulisse.",
+  },
+  "Error: run the character and setting sheets connected to this card first.": {
+    fr: "Erreur : lance d'abord les fiches personnage et décor connectées à cette carte.",
+    es: "Error: lanza primero las fichas de personaje y escenario conectadas a esta tarjeta.",
+    de: "Fehler: Starte zuerst das Charakter- und das Kulissenblatt, die mit dieser Karte verbunden sind.",
+  },
+  "Error: run the character sheet connected to this card first.": {
+    fr: "Erreur : lance d'abord la fiche personnage connectée à cette carte.",
+    es: "Error: lanza primero la ficha de personaje conectada a esta tarjeta.",
+    de: "Fehler: Starte zuerst das Charakterblatt, das mit dieser Karte verbunden ist.",
+  },
+  "Error: run the setting sheet connected to this card first.": {
+    fr: "Erreur : lance d'abord la fiche décor connectée à cette carte.",
+    es: "Error: lanza primero la ficha de escenario conectada a esta tarjeta.",
+    de: "Fehler: Starte zuerst das Kulissenblatt, das mit dieser Karte verbunden ist.",
+  },
+  "Error: run the storyboard connected to this card first.": {
+    fr: "Erreur : lance d'abord le storyboard connecté à cette carte.",
+    es: "Error: lanza primero el storyboard conectado a esta tarjeta.",
+    de: "Fehler: Starte zuerst das Storyboard, das mit dieser Karte verbunden ist.",
+  },
+  "Error: run the video generation connected to this card first.": {
+    fr: "Erreur : lance d'abord la génération vidéo connectée à cette carte.",
+    es: "Error: lanza primero la generación de vídeo conectada a esta tarjeta.",
+    de: "Fehler: Starte zuerst die Videogenerierung, die mit dieser Karte verbunden ist.",
+  },
+  "Error: write the brief first.": {
+    fr: "Erreur : écris d'abord le brief.",
+    es: "Error: escribe primero el brief.",
+    de: "Fehler: Schreibe zuerst das Briefing.",
+  },
+  "Error: write the editing instruction first.": {
+    fr: "Erreur : écris d'abord l'instruction d'édition.",
+    es: "Error: escribe primero la instrucción de edición.",
+    de: "Fehler: Schreibe zuerst die Bearbeitungsanweisung.",
+  },
+  "Error: write the prompt first.": {
+    fr: "Erreur : écris d'abord le prompt.",
+    es: "Error: escribe primero el prompt.",
+    de: "Fehler: Schreibe zuerst den Prompt.",
+  },
+  "Error: {error}": {
+    fr: "Erreur : {error}",
+    es: "Error: {error}",
+    de: "Fehler: {error}",
   },
   "Europe": {
     fr: "Europe",
@@ -612,10 +812,20 @@ export const DICT = {
     es: "Filtrar la galería por esta etiqueta",
     de: "Galerie nach diesem Tag filtern",
   },
+  "Final video": {
+    fr: "Vidéo finale",
+    es: "Vídeo final",
+    de: "Finales Video",
+  },
   "Firelight": {
     fr: "Feu",
     es: "Fuego",
     de: "Feuerschein",
+  },
+  "Fit the view to the cards": {
+    fr: "Recadrer la vue sur les cartes",
+    es: "Encuadrar la vista en las tarjetas",
+    de: "Ansicht an Karten anpassen",
   },
   "Form": {
     fr: "Forme",
@@ -626,6 +836,11 @@ export const DICT = {
     fr: "Du",
     es: "Desde",
     de: "Von",
+  },
+  "From the gallery": {
+    fr: "Depuis la galerie",
+    es: "Desde la galería",
+    de: "Aus der Galerie",
   },
   "Full campaign (posters + thumbnails + teaser)": {
     fr: "Campagne complète (affiches + miniatures + teaser)",
@@ -752,6 +967,11 @@ export const DICT = {
     es: "Agrupar por",
     de: "Gruppieren nach",
   },
+  "H3 style (LoRA)": {
+    fr: "Style H3 (LoRA)",
+    es: "Estilo H3 (LoRA)",
+    de: "H3-Stil (LoRA)",
+  },
   "Hair": {
     fr: "Cheveux",
     es: "Cabello",
@@ -782,6 +1002,16 @@ export const DICT = {
     es: "Humano",
     de: "Mensch",
   },
+  "I already have an image to animate": {
+    fr: "J'ai déjà une image à animer",
+    es: "Ya tengo una imagen para animar",
+    de: "Ich habe schon ein Bild zum Animieren",
+  },
+  "I start from character and setting sheets": {
+    fr: "Je pars de fiches personnage et décor",
+    es: "Parto de fichas de personaje y escenario",
+    de: "Ich starte von Charakter- und Kulissenblättern",
+  },
   "Identity anchored": {
     fr: "Identité ancrée",
     es: "Identidad anclada",
@@ -797,15 +1027,40 @@ export const DICT = {
     es: "Imagen",
     de: "Bild",
   },
+  "Image creation": {
+    fr: "Création d'image",
+    es: "Creación de imagen",
+    de: "Bilderstellung",
+  },
+  "Image editing": {
+    fr: "Édition d'image",
+    es: "Edición de imagen",
+    de: "Bildbearbeitung",
+  },
   "Image editing (Image2Image)": {
     fr: "Retouche d'image (Image2Image)",
     es: "Retoque de imagen (Image2Image)",
     de: "Bildbearbeitung (Image2Image)",
   },
+  "Image file": {
+    fr: "Fichier image",
+    es: "Archivo de imagen",
+    de: "Bilddatei",
+  },
   "Image from a text (Text2Image)": {
     fr: "Image à partir d'un texte (Text2Image)",
     es: "Imagen a partir de un texto (Text2Image)",
     de: "Bild aus einem Text (Text2Image)",
+  },
+  "Image import": {
+    fr: "Import d'image",
+    es: "Importar imagen",
+    de: "Bild-Import",
+  },
+  "Images": {
+    fr: "Images",
+    es: "Imágenes",
+    de: "Bilder",
   },
   "Images (0)": {
     fr: "Images (0)",
@@ -816,6 +1071,11 @@ export const DICT = {
     fr: "Images ({n})",
     es: "Imágenes ({n})",
     de: "Bilder ({n})",
+  },
+  "Imported: {name}": {
+    fr: "Importé : {name}",
+    es: "Importado: {name}",
+    de: "Importiert: {name}",
   },
   "In addition to the character and setting sheets. None required.": {
     fr: "En plus des planches personnage et décor. Aucune obligatoire.",
@@ -852,6 +1112,11 @@ export const DICT = {
     es: "Interior",
     de: "Innenraum",
   },
+  "It starts with the 2 sheets: character and setting.": {
+    fr: "On commence par les 2 planches : personnage et décor.",
+    es: "Empezamos por las 2 láminas: personaje y escenario.",
+    de: "Es beginnt mit den 2 Blättern: Charakter und Kulisse.",
+  },
   "Job queue": {
     fr: "File de jobs",
     es: "Cola de trabajos",
@@ -876,6 +1141,11 @@ export const DICT = {
     fr: "Job {k}/{n} · {time}",
     es: "Trabajo {k}/{n} · {time}",
     de: "Job {k}/{n} · {time}",
+  },
+  "Joining {n} cuts…": {
+    fr: "Assemblage de {n} cuts…",
+    es: "Ensamblando {n} cortes…",
+    de: "{n} Schnitte werden zusammengefügt…",
   },
   "Keyframe prompt enriched by {model} (Qwen Edit instruction).": {
     fr: "Prompt de l'image du plan enrichi par {model} (consigne Qwen Edit).",
@@ -1037,6 +1307,11 @@ export const DICT = {
     es: "Plano medio",
     de: "Halbtotale",
   },
+  "Menu": {
+    fr: "Menu",
+    es: "Menú",
+    de: "Menü",
+  },
   "Middle East": {
     fr: "Moyen-Orient",
     es: "Oriente Medio",
@@ -1052,6 +1327,11 @@ export const DICT = {
     es: "MiniMax H3 de imagen a vídeo, gramática del MiniMax H3 Prompt Composer. Un corte de {asked} s dura {real} s (rejilla de 17n+5 fotogramas).",
     de: "MiniMax H3 Bild zu Video, Grammatik des MiniMax H3 Prompt Composer. Ein Cut von {asked} s ergibt {real} s (17n+5-Bilder-Raster).",
   },
+  "MiniMax H3 r2v running…": {
+    fr: "MiniMax H3 r2v en cours…",
+    es: "MiniMax H3 r2v en curso…",
+    de: "MiniMax H3 r2v läuft…",
+  },
   "MiniMax H3 renders on a 17n+5 frame grid": {
     fr: "MiniMax H3 rend sur une grille de 17n+5 images",
     es: "MiniMax H3 renderiza en una rejilla de 17n+5 fotogramas",
@@ -1061,6 +1341,11 @@ export const DICT = {
     fr: "LoRA de style MiniMax H3. Chaque fichier ajouté ici apparaît dans les menus Style (LoRA).",
     es: "LoRA de estilo de MiniMax H3. Cada archivo añadido aquí aparece en los menús Estilo (LoRA).",
     de: "Stil-LoRAs für MiniMax H3. Jede hier hinzugefügte Datei erscheint in den Menüs Stil (LoRA).",
+  },
+  "MiniMax H3 {engine} · {d} s/shot · {n} cuts": {
+    fr: "MiniMax H3 {engine} · {d} s/plan · {n} cuts",
+    es: "MiniMax H3 {engine} · {d} s/plano · {n} cortes",
+    de: "MiniMax H3 {engine} · {d} s/Einst. · {n} Schnitte",
   },
   "MiniMax H3 · first and last frames": {
     fr: "MiniMax H3 · première et dernière images",
@@ -1192,6 +1477,11 @@ export const DICT = {
     es: "Ningún motor seleccionado.",
     de: "Keine Engine ausgewählt.",
   },
+  "no file": {
+    fr: "aucun fichier",
+    es: "sin archivo",
+    de: "keine Datei",
+  },
   "No GPU": {
     fr: "Pas de GPU",
     es: "Sin GPU",
@@ -1277,6 +1567,11 @@ export const DICT = {
     es: "Otro (animal, criatura, robot, objeto…)",
     de: "Anderes (Tier, Wesen, Roboter, Objekt…)",
   },
+  "Other (animal, object…)": {
+    fr: "Autre (animal, objet…)",
+    es: "Otro (animal, objeto…)",
+    de: "Anderes (Tier, Objekt …)",
+  },
   "Outfit": {
     fr: "Tenue",
     es: "Vestuario",
@@ -1316,6 +1611,11 @@ export const DICT = {
     fr: "Point de vue",
     es: "Punto de vista",
     de: "Point of View",
+  },
+  "Poster / product visual": {
+    fr: "Affiche / visuel produit",
+    es: "Cartel / visual de producto",
+    de: "Poster / Produktvisual",
   },
   "Poster / visual": {
     fr: "Affiche / visuel",
@@ -1367,6 +1667,11 @@ export const DICT = {
     es: "Prompt",
     de: "Prompt",
   },
+  "Prompt (motion)": {
+    fr: "Prompt (mouvement)",
+    es: "Prompt (movimiento)",
+    de: "Prompt (Bewegung)",
+  },
   "Prompt copied into the brief.": {
     fr: "Prompt copié dans le brief.",
     es: "Prompt copiado en el brief.",
@@ -1396,6 +1701,16 @@ export const DICT = {
     fr: "Prompt ou brief",
     es: "Prompt o brief",
     de: "Prompt oder Briefing",
+  },
+  "Properties": {
+    fr: "Propriétés",
+    es: "Propiedades",
+    de: "Eigenschaften",
+  },
+  "Properties · selected card": {
+    fr: "Propriétés · carte sélectionnée",
+    es: "Propiedades · tarjeta seleccionada",
+    de: "Eigenschaften · ausgewählte Karte",
   },
   "Queue": {
     fr: "File",
@@ -1427,6 +1742,16 @@ export const DICT = {
     es: "Qwen Image 2.1 admite hasta 10 imágenes en total. La imagen de entrada es <image1>; tus referencias son <image2>, <image3>… en el orden de la lista de abajo. Cítalas en tu instrucción, por ejemplo: «pon al personaje de <image1> en el decorado de <image2>». El resultado conserva el tamaño de la imagen de entrada; cada referencia alarga el render.",
     de: "Qwen Image 2.1 nimmt insgesamt bis zu 10 Bilder. Das Eingabebild ist <image1>; deine Referenzen sind <image2>, <image3>… in der Reihenfolge der Liste unten. Nenne sie in deiner Anweisung, zum Beispiel: „setze die Figur aus <image1> in den Schauplatz aus <image2>“. Das Ergebnis behält die Größe des Eingabebilds; jede Referenz verlängert das Rendering.",
   },
+  "Qwen Image 2.1 · {n} image(s) · size of image 1": {
+    fr: "Qwen Image 2.1 · {n} image(s) · taille de l'image 1",
+    es: "Qwen Image 2.1 · {n} imagen(es) · tamaño de la imagen 1",
+    de: "Qwen Image 2.1 · {n} Bild(er) · Größe von Bild 1",
+  },
+  "Qwen Image 2.1 · {n} shots · {d} s/shot": {
+    fr: "Qwen Image 2.1 · {n} plans · {d} s/plan",
+    es: "Qwen Image 2.1 · {n} planos · {d} s/plano",
+    de: "Qwen Image 2.1 · {n} Einstellungen · {d} s/Einst.",
+  },
   "Ratio": {
     fr: "Ratio",
     es: "Proporción",
@@ -1456,6 +1781,16 @@ export const DICT = {
     fr: "Référence {n}",
     es: "Referencia {n}",
     de: "Referenz {n}",
+  },
+  "Reference2Video": {
+    fr: "Reference2Video",
+    es: "Reference2Video",
+    de: "Reference2Video",
+  },
+  "Regenerate": {
+    fr: "Régénérer",
+    es: "Regenerar",
+    de: "Neu generieren",
   },
   "Relay · transition frames": {
     fr: "Relay · images de transition",
@@ -1577,6 +1912,21 @@ export const DICT = {
     es: "Reescribe tu brief como un prompt detallado con el LLM local, una vez, sin lanzar ningún render",
     de: "Schreibt dein Briefing einmal mit dem lokalen LLM zu einem detaillierten Prompt um, ohne ein Rendering zu starten",
   },
+  "Run after: {names}": {
+    fr: "À lancer après : {names}",
+    es: "Lanzar después de: {names}",
+    de: "Danach starten: {names}",
+  },
+  "Running": {
+    fr: "En cours",
+    es: "En curso",
+    de: "Läuft",
+  },
+  "Running {n}%": {
+    fr: "En cours {n} %",
+    es: "En curso {n} %",
+    de: "Läuft {n} %",
+  },
   "Saved project ignored (unknown format).": {
     fr: "Projet enregistré ignoré (format inconnu).",
     es: "Proyecto guardado ignorado (formato desconocido).",
@@ -1616,6 +1966,11 @@ export const DICT = {
     fr: "Seed",
     es: "Semilla",
     de: "Seed",
+  },
+  "Seed (0 = auto)": {
+    fr: "Seed (0 = auto)",
+    es: "Semilla (0 = auto)",
+    de: "Seed (0 = automatisch)",
   },
   "seed {seed} · {real} s rendered · {status}": {
     fr: "seed {seed} · {real} s rendues · {status}",
@@ -1682,6 +2037,11 @@ export const DICT = {
     es: "Lámina de decorado",
     de: "Schauplatzbogen",
   },
+  "Setting sheet (Krea 2)…": {
+    fr: "Planche décor (Krea 2)…",
+    es: "Lámina de escenario (Krea 2)…",
+    de: "Kulissenblatt (Krea 2)…",
+  },
   "Setting sheet imported: {name}.": {
     fr: "Planche décor importée : {name}.",
     es: "Lámina de decorado importada: {name}.",
@@ -1696,6 +2056,11 @@ export const DICT = {
     fr: "Planche décor rédigée par {model}.",
     es: "Lámina de decorado redactada por {model}.",
     de: "Schauplatzbogen geschrieben von {model}.",
+  },
+  "Setting sheet: {llm}…": {
+    fr: "Fiche décor : {llm}…",
+    es: "Ficha de escenario: {llm}…",
+    de: "Kulissenblatt: {llm}…",
   },
   "Sheet description enriched by {model} (template layout kept).": {
     fr: "Description de la planche enrichie par {model} (mise en page du gabarit conservée).",
@@ -1717,6 +2082,11 @@ export const DICT = {
     es: "Anuncio corto / campaña",
     de: "Kurzer Spot / Kampagne",
   },
+  "Short ad / teaser": {
+    fr: "Pub courte / teaser",
+    es: "Anuncio corto / teaser",
+    de: "Kurzer Werbespot / Teaser",
+  },
   "Shot action enriched by {model} ({count} subject(s) taken into account).": {
     fr: "Action du plan enrichie par {model} ({count} sujet(s) pris en compte).",
     es: "Acción del plano enriquecida por {model} ({count} sujeto(s) tenido(s) en cuenta).",
@@ -1731,6 +2101,11 @@ export const DICT = {
     fr: "Prompt de l'image du plan",
     es: "Prompt de la imagen del plano",
     de: "Prompt des Bildes der Einstellung",
+  },
+  "Shot images ({k}/{n} submitted)…": {
+    fr: "Images des plans ({k}/{n} soumises)…",
+    es: "Imágenes de los planos ({k}/{n} enviadas)…",
+    de: "Einstellungsbilder ({k}/{n} übermittelt)…",
   },
   "Shot images: Qwen Image 2.1": {
     fr: "Images des plans : Qwen Image 2.1",
@@ -1837,6 +2212,11 @@ export const DICT = {
     es: "Storyboard · hoja de contactos",
     de: "Storyboard · Kontaktbogen",
   },
+  "Storyboard: {n} shots with {llm}…": {
+    fr: "Storyboard : {n} plans avec {llm}…",
+    es: "Storyboard: {n} planos con {llm}…",
+    de: "Storyboard: {n} Einstellungen mit {llm}…",
+  },
   "Studio": {
     fr: "Studio",
     es: "Estudio",
@@ -1932,6 +2312,11 @@ export const DICT = {
     es: "Mercados objetivo",
     de: "Zielmärkte",
   },
+  "That image is set in motion as it is.": {
+    fr: "Cette image est mise en mouvement telle quelle.",
+    es: "Esa imagen se pone en movimiento tal cual.",
+    de: "Dieses Bild wird unverändert in Bewegung gesetzt.",
+  },
   "The browser refused the copy (clipboard).": {
     fr: "Le navigateur a refusé la copie (presse-papiers).",
     es: "El navegador ha rechazado la copia (portapapeles).",
@@ -1942,10 +2327,25 @@ export const DICT = {
     es: "El movimiento de cámara de tu prompt se ha vuelto a poner en el prompt enriquecido.",
     de: "Die Kamerabewegung deines Prompts wurde wieder in den angereicherten Prompt eingesetzt.",
   },
+  "The job returned no image.": {
+    fr: "Le job n'a rendu aucune image.",
+    es: "El job no ha devuelto ninguna imagen.",
+    de: "Der Job hat kein Bild geliefert.",
+  },
+  "The job returned no video.": {
+    fr: "Le job n'a rendu aucune vidéo.",
+    es: "El job no ha devuelto ningún vídeo.",
+    de: "Der Job hat kein Video geliefert.",
+  },
   "The project could not be saved: {error}": {
     fr: "Le projet n'a pas pu être enregistré : {error}",
     es: "No se ha podido guardar el proyecto: {error}",
     de: "Das Projekt konnte nicht gespeichert werden: {error}",
+  },
+  "The saved canvas could not be read: the canvas starts empty.": {
+    fr: "L'état sauvegardé du canvas était illisible : le canvas repart vide.",
+    es: "El lienzo guardado no se ha podido leer: el lienzo empieza vacío.",
+    de: "Die gespeicherte Leinwand war unlesbar: Die Leinwand startet leer.",
   },
   "The screenplay is split into as many consecutive shots, each written for the MiniMax H3 grammar, the subjects named by the number the studio gives them. Nothing renders: read and fix each segment before starting the chain.": {
     fr: "Le scénario est découpé en autant de plans consécutifs, chacun écrit dans la grammaire MiniMax H3, les sujets nommés par le numéro que leur donne le studio. Rien ne part en rendu : relis et corrige chaque segment avant de lancer la chaîne.",
@@ -1961,6 +2361,11 @@ export const DICT = {
     fr: "Le serveur n'est pas revenu : vérifie le service sur la machine.",
     es: "El servidor no ha vuelto: comprueba el servicio en la máquina.",
     de: "Der Server ist nicht zurückgekommen: Prüfe den Dienst auf dem Rechner.",
+  },
+  "The shot is composed from your reference sheets.": {
+    fr: "Le plan est composé depuis tes planches de référence.",
+    es: "El plano se compone a partir de tus láminas de referencia.",
+    de: "Die Einstellung wird aus deinen Referenzblättern komponiert.",
   },
   "The trash is empty.": {
     fr: "La corbeille est vide.",
@@ -2006,6 +2411,11 @@ export const DICT = {
     fr: "À régénérer",
     es: "Por regenerar",
     de: "Neu zu generieren",
+  },
+  "Top input: the image to edit, <image1>. The inputs below: extra references, <image2>, <image3>… in order, to cite in the instruction.": {
+    fr: "Entrée du haut : l'image à éditer, <image1>. Entrées du dessous : références supplémentaires, <image2>, <image3>… dans l'ordre, à citer dans l'instruction.",
+    es: "Entrada superior: la imagen que se edita, <image1>. Entradas de abajo: referencias adicionales, <image2>, <image3>… en orden, para citarlas en la instrucción.",
+    de: "Oberer Eingang: das zu bearbeitende Bild, <image1>. Eingänge darunter: zusätzliche Referenzen, <image2>, <image3>… der Reihe nach, in der Anweisung zu nennen.",
   },
   "Tracking shot": {
     fr: "Travelling",
@@ -2072,6 +2482,11 @@ export const DICT = {
     es: "Subir",
     de: "Hochladen",
   },
+  "Uploading the file…": {
+    fr: "Envoi du fichier…",
+    es: "Subiendo el archivo…",
+    de: "Datei wird hochgeladen…",
+  },
   "Variants": {
     fr: "Variantes",
     es: "Variantes",
@@ -2097,6 +2512,11 @@ export const DICT = {
     es: "Generación de vídeo y audio: MiniMax H3 (FastH3, ejecutado por FastVideo).",
     de: "Video- und Audiogenerierung: MiniMax H3 (FastH3, ausgeführt von FastVideo).",
   },
+  "Video engine": {
+    fr: "Moteur vidéo",
+    es: "Motor de vídeo",
+    de: "Video-Engine",
+  },
   "Video from a text (Text2Video)": {
     fr: "Vidéo à partir d'un texte (Text2Video)",
     es: "Vídeo a partir de un texto (Text2Video)",
@@ -2106,6 +2526,11 @@ export const DICT = {
     fr: "Vidéo à partir d'une image (Image2Video)",
     es: "Vídeo a partir de una imagen (Image2Video)",
     de: "Video aus einem Bild (Image2Video)",
+  },
+  "Video generation": {
+    fr: "Génération vidéo",
+    es: "Generación de vídeo",
+    de: "Videogenerierung",
   },
   "Video length (s)": {
     fr: "Durée vidéo (s)",
@@ -2117,6 +2542,11 @@ export const DICT = {
     es: "Vídeo listo: {name}.",
     de: "Video fertig: {name}.",
   },
+  "Videos": {
+    fr: "Vidéos",
+    es: "Vídeos",
+    de: "Videos",
+  },
   "Videos (0)": {
     fr: "Vidéos (0)",
     es: "Vídeos (0)",
@@ -2126,6 +2556,11 @@ export const DICT = {
     fr: "Vidéos ({n})",
     es: "Vídeos ({n})",
     de: "Videos ({n})",
+  },
+  "Waiting": {
+    fr: "En attente",
+    es: "En espera",
+    de: "Wartend",
   },
   "Week": {
     fr: "Semaine",
@@ -2181,6 +2616,11 @@ export const DICT = {
     fr: "{count} plans (caméra, lumière, action) rédigés par {model}.",
     es: "{count} planos (cámara, luz, acción) redactados por {model}.",
     de: "{count} Einstellungen (Kamera, Licht, Aktion) geschrieben von {model}.",
+  },
+  "{engine} running…": {
+    fr: "{engine} en cours…",
+    es: "{engine} en curso…",
+    de: "{engine} läuft…",
   },
   "{id} downloaded.": {
     fr: "{id} téléchargé.",
@@ -2441,6 +2881,11 @@ export const DICT = {
     fr: "✨ Enrichir",
     es: "✨ Enriquecer",
     de: "✨ Anreichern",
+  },
+  "✨ Enrich ({llm})": {
+    fr: "✨ Enrichir ({llm})",
+    es: "✨ Enriquecer ({llm})",
+    de: "✨ Anreichern ({llm})",
   },
   "✨ Enrich again": {
     fr: "✨ Enrichir à nouveau",

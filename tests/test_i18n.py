@@ -1,10 +1,10 @@
-"""Every English interface string of the Studio has its French, Spanish and German
-translation in web/js/i18n-dict.js, with the same {placeholders}.
+"""Every English interface string of the Studio and the Canvas has its French, Spanish
+and German translation in web/js/i18n-dict.js, with the same {placeholders}.
 
 The strings are collected without a browser: the text and translated attributes of
-web/index.html outside [data-raw], and the string literals the scripts pass to the
-functions that translate them (t, tx, txAttr, L, log, notice, say, undoToast and a few
-local helpers, both branches of a ternary among them), the values of the `label`,
+web/index.html and web/canvas.html outside [data-raw], and the string literals the
+scripts pass to the functions that translate them (t, tx, txAttr, L, log, notice, say,
+undoToast and a few local helpers, both branches of a ternary among them), the values of the `label`,
 `sub`, `title`, `hint` and `applyLabel` keys (runJob, the prompt editor), literals set
 as textContent, title or placeholder, and the markup set through innerHTML."""
 
@@ -21,10 +21,10 @@ LANGS = ("fr", "es", "de")
 ATTRS = ("placeholder", "title", "aria-label")
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 
-# Call name -> indexes of the arguments that hold English text (the last three are
-# local helpers of director.js, gallery.js and studio.js).
+# Call name -> indexes of the arguments that hold English text (from "tab" on: local
+# helpers of director.js, gallery.js, studio.js and canvas-nodes.js).
 CALLS = {"t": (0,), "L": (0,), "tx": (1,), "txAttr": (2,), "log": (1,), "notice": (1,), "say": (2,),
-         "undoToast": (0,), "tab": (1,), "button": (0, 1), "txAria": (1,)}
+         "undoToast": (0,), "tab": (1,), "button": (0, 1), "txAria": (1,), "setStatus": (2,), "done": (2,)}
 CALL_RE = re.compile(r"(?<![\w$.])(" + "|".join(CALLS) + r")\(")
 # Object keys whose value (or first array item) is English text: runJob's `label` and
 # `sub`, the prompt editor's `title`, `hint` and `applyLabel`.
@@ -202,10 +202,11 @@ def scripts() -> dict[str, str]:
 def collect() -> dict[str, str]:
     """English string -> where it was first found."""
     found: dict[str, str] = {}
-    page = _Page()
-    page.feed((WEB / "index.html").read_text(encoding="utf-8"))
-    for text in page.found:
-        found.setdefault(text, "index.html")
+    for name in ("index.html", "canvas.html"):
+        page = _Page()
+        page.feed((WEB / name).read_text(encoding="utf-8"))
+        for text in page.found:
+            found.setdefault(text, name)
     for name, src in scripts().items():
         if name == "i18n.js":
             continue
