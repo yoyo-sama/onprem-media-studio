@@ -28,11 +28,14 @@ class FakeApi:
 
 
 class FakeFetch:
-    def __init__(self):
+    def __init__(self, fail: Exception | None = None):
+        self.fail = fail
         self.calls = []
 
     def __call__(self, repo_id, filename, revision, local_dir, token):
         self.calls.append(filename)
+        if self.fail:
+            raise self.fail
         (local_dir / filename).write_bytes(b"x" * FILES[filename])
 
 
@@ -40,6 +43,9 @@ class FakeFetch:
 def settings(tmp_path, monkeypatch):
     monkeypatch.setenv("STUDIO_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("STUDIO_DISK_RESERVE_GB", "0")
+    # The Docker image sets these; tests must not depend on where they run.
+    monkeypatch.delenv("STUDIO_LLAMA_SERVER", raising=False)
+    monkeypatch.delenv("HF_TOKEN", raising=False)
     return Settings()
 
 
