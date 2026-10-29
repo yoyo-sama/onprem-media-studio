@@ -34,6 +34,16 @@ docker compose up -d --build
 Modèles et rendus vont dans `./data` (à changer avec `STUDIO_DATA=/chemin` dans `.env`). Si le
 port 8090 est déjà pris (AI Content Studio 1.4 l'utilise), mettre `STUDIO_HOST_PORT=8096` dans `.env`.
 
+## Installer en bare metal (DGX OS, Ubuntu)
+
+```bash
+scripts/install.sh --check     # vérifie pilote, toolkit CUDA 13, GPU, Python, disque
+scripts/install.sh             # compile et démarre le service systemd « studio »
+```
+
+Voir [docs/fr/INSTALL.md](docs/fr/INSTALL.md). Le bare metal est la seule installation mise à jour
+depuis l'interface.
+
 ## Lancer sans Docker (développement)
 
 ```bash
@@ -54,6 +64,9 @@ dans le `PATH` ou dans `STUDIO_LLAMA_SERVER`.
   qualification
 - [Moteurs vidéo](docs/fr/H3.md) : jobs MiniMax H3, référence vers vidéo en deux passes, repli de
   précision, pile de LoRA, qualification
+- [Installation bare metal](docs/fr/INSTALL.md) : `scripts/install.sh`, service, mises à jour
+- [Galerie, mise à jour, LoRA](docs/fr/GALLERY.md) : index des sorties, corbeille, mise à jour
+  depuis l'interface
 - [Leçons de la 1.4](docs/fr/LESSONS.md) : règles apprises à la dure, à lire avant de toucher un
   prompt ou un moteur
 - [ADR 0001](docs/fr/adr/0001-inference-stack.md) : pourquoi diffusers, FastVideo et llama.cpp

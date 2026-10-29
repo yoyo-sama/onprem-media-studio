@@ -31,6 +31,16 @@ open http://localhost:8090
 Models and renders go to `./data` (change with `STUDIO_DATA=/path` in `.env`). If port 8090 is
 already taken (AI Content Studio 1.4 uses it), set `STUDIO_HOST_PORT=8096` in `.env`.
 
+## Install on bare metal (DGX OS, Ubuntu)
+
+```bash
+scripts/install.sh --check     # checks driver, CUDA 13 toolkit, GPU, Python, disk
+scripts/install.sh             # builds and starts the "studio" systemd service
+```
+
+See [docs/INSTALL.md](docs/INSTALL.md). Bare metal is the only installation updated from the
+interface.
+
 ## Run without Docker (development)
 
 ```bash
@@ -49,6 +59,8 @@ the `PATH` or in `STUDIO_LLAMA_SERVER`.
 - [Image engines](docs/IMAGE-ENGINES.md): Krea 2 and Qwen Edit jobs, image references, qualification
 - [Video engines](docs/H3.md): MiniMax H3 jobs, the two-pass reference-to-video, precision
   fallback, LoRA stack, qualification
+- [Bare-metal install](docs/INSTALL.md): `scripts/install.sh`, service, updates
+- [Gallery, update, LoRA upload](docs/GALLERY.md): output index, trash, in-app update
 - [Lessons from 1.4](docs/LESSONS.md): rules learned the hard way, read before changing a prompt
   or an engine
 - [ADR 0001](docs/adr/0001-inference-stack.md): why diffusers, FastVideo and llama.cpp
