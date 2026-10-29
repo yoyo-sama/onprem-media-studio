@@ -19,8 +19,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
-# Image engines. torch is not listed: it comes from the NGC base image (Docker)
-# or from the platform's own build (bare metal), never from a generic wheel.
+# Image engines. torch and torchvision (the Qwen processors need it) are not
+# listed: they come from the NGC base image (Docker) or from the platform's own
+# build (bare metal), never from a generic wheel.
 # diffusers is pinned: 0.42 is the first release with Krea2Pipeline and
 # QwenImage21Pipeline, and a pipeline's defaults can change between releases.
 inference = [
