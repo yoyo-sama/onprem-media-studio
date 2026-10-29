@@ -1427,11 +1427,6 @@ export const DICT = {
     es: "Qwen Image 2.1 admite hasta 10 imágenes en total. La imagen de entrada es <image1>; tus referencias son <image2>, <image3>… en el orden de la lista de abajo. Cítalas en tu instrucción, por ejemplo: «pon al personaje de <image1> en el decorado de <image2>». El resultado conserva el tamaño de la imagen de entrada; cada referencia alarga el render.",
     de: "Qwen Image 2.1 nimmt insgesamt bis zu 10 Bilder. Das Eingabebild ist <image1>; deine Referenzen sind <image2>, <image3>… in der Reihenfolge der Liste unten. Nenne sie in deiner Anweisung, zum Beispiel: „setze die Figur aus <image1> in den Schauplatz aus <image2>“. Das Ergebnis behält die Größe des Eingabebilds; jede Referenz verlängert das Rendering.",
   },
-  "Qwen-Edit 2509": {
-    fr: "Qwen-Edit 2509",
-    es: "Qwen-Edit 2509",
-    de: "Qwen-Edit 2509",
-  },
   "Ratio": {
     fr: "Ratio",
     es: "Proporción",
@@ -1741,11 +1736,6 @@ export const DICT = {
     fr: "Images des plans : Qwen Image 2.1",
     es: "Imágenes de los planos: Qwen Image 2.1",
     de: "Bilder der Einstellungen: Qwen Image 2.1",
-  },
-  "Shot images: Qwen-Edit 2509": {
-    fr: "Images des plans : Qwen-Edit 2509",
-    es: "Imágenes de los planos: Qwen-Edit 2509",
-    de: "Bilder der Einstellungen: Qwen-Edit 2509",
   },
   "Shot list unavailable from the LLM ({error}): fallback presets used.": {
     fr: "Liste de plans indisponible auprès du LLM ({error}) : préréglages de repli utilisés.",

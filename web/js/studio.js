@@ -477,7 +477,7 @@ async function generatePlain(wf, seed) {
   const specs = markets.length
     ? markets.map(id => ({ prompt: withStyle(marketPrompt(id)), label: ["{workflow} · {market}", { workflow: t(wf.label), market: t(MARKETS[id].label) }] }))
     : [{ prompt: withStyle(F.brief()), label: [wf.label] }];
-  const [width, height] = F.RATIOS[$("ratioSelect").value];
+  const [width, height] = (wf.engine === "qwen-image-2.1" ? F.QWEN21_RATIOS : F.RATIOS)[$("ratioSelect").value];
   const count = clampInt($("variants").value, 1, 4, 1), duration = F.formDuration(), loras = F.formLoras();
   let image = null, last = null, refs = [];
   if (wf.pipeline === "image2image" || wf.pipeline === "image2video") image = await inputImageRef();
@@ -491,9 +491,6 @@ async function generatePlain(wf, seed) {
     if (wf.id === "krea2_t2i" || wf.id === "qwen21_t2i") {
       params = { prompt: spec.prompt, width, height, count, seed: s };
       info = `${width}×${height}`;
-    } else if (wf.id === "qwen_edit_i2i") {
-      params = { prompt: spec.prompt, images: [image], seed: s };
-      info = "Qwen-Edit 2509";
     } else if (wf.id === "qwen21_i2i") {
       // The size follows the input image (~1 MP): the ratio control plays no part here.
       params = { prompt: spec.prompt, images: [image, ...refs], seed: s };

@@ -11,6 +11,8 @@ export const P = window.Prompts;
 export const llm = llmJSON;
 
 export const RATIOS = { "16:9": [1280, 720], "9:16": [720, 1280], "1:1": [1024, 1024], "4:5": [832, 1040] };
+// Qwen Image 2.1 refuses sizes that are not multiples of 32 (diffusers would floor them).
+export const QWEN21_RATIOS = { "16:9": [1344, 768], "9:16": [768, 1344], "1:1": [1024, 1024], "4:5": [896, 1120] };
 
 // One entry per engine choice of a pipeline. `enrich: "builtin"`: never enriched
 // automatically (the storyboard and Ref2VA flows write their own prompts; their ✨
@@ -18,13 +20,10 @@ export const RATIOS = { "16:9": [1280, 720], "9:16": [720, 1280], "1:1": [1024, 
 export const WORKFLOWS = [
   { id: "krea2_t2i", pipeline: "text2image", label: "Krea 2 Turbo", engine: "krea2-t2i" },
   { id: "qwen21_t2i", pipeline: "text2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1" },
-  { id: "qwen_edit_i2i", pipeline: "image2image", label: "Qwen-Edit 2509", engine: "qwen-edit-2509" },
   { id: "qwen21_i2i", pipeline: "image2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1" },
   { id: "h3_t2v", pipeline: "text2video", label: L("MiniMax H3 · native audio"), engine: "h3-t2v" },
   { id: "h3_i2v", pipeline: "image2video", label: L("MiniMax H3 · native audio"), engine: "h3-i2v" },
   { id: "h3_sequence", pipeline: "sequence", label: L("MiniMax H3 · first and last frames"), engine: "h3-i2v" },
-  { id: "storyboard", pipeline: "storyboard", label: L("Shot images: Qwen-Edit 2509"),
-    keyframes: "qwen-edit-2509", enrich: "builtin" },
   { id: "storyboard_qwen21", pipeline: "storyboard", label: L("Shot images: Qwen Image 2.1"),
     keyframes: "qwen-image-2.1", enrich: "builtin" },
   { id: "h3_r2v", pipeline: "reference2video", label: L("MiniMax H3 · references"), engine: "h3-r2v", enrich: "builtin" },

@@ -1,6 +1,6 @@
 // Director: the step-by-step review of the storyboard and reference-to-video
 // pipelines, in the full-screen studio. Sheets (Krea 2) → approval → shot images
-// (Qwen Edit 2509 or Qwen Image 2.1) → cuts (MiniMax H3 image to video) → animatic;
+// (Qwen Image 2.1) → cuts (MiniMax H3 image to video) → animatic;
 // the Relay builds a long take out of chained segments. Reference to video stops after
 // the sheets: one H3 Ref2VA job.
 //
@@ -82,15 +82,12 @@ function sheetJob(kind, prompt, seed) {
     sub: ["{info} · seed {seed}", { info: "Krea 2", seed }] });
 }
 
-// Shot image: subjects (1 or 2 sheets, or the previous frame for a Relay cut) and the
-// setting sheet; Qwen Image 2.1 also takes the extra references and the ratio.
+// Shot image: subjects (1 or 2 sheets, or the previous frame for a Relay cut), the
+// setting sheet and the extra references, at the project's ratio.
 async function keyframeJob(subjectRefs, prompt, seed, label) {
-  const engine = d.wf.keyframes, params = { prompt, subjects: subjectRefs, setting: locVariant().ref, seed };
-  if (engine === "qwen-image-2.1") {
-    params.references = await F.refRefs("sb");
-    [params.width, params.height] = F.RATIOS[d.ratio];
-  }
-  return runJob(engine, params, { origin: origin(), label, sub: ["{info} · seed {seed}", { info: keyframeEngineName(), seed }] });
+  const [width, height] = F.QWEN21_RATIOS[d.ratio];
+  const params = { prompt, subjects: subjectRefs, setting: locVariant().ref, references: await F.refRefs("sb"), width, height, seed };
+  return runJob(d.wf.keyframes, params, { origin: origin(), label, sub: ["{info} · seed {seed}", { info: keyframeEngineName(), seed }] });
 }
 
 // Cut: H3 image to video from a shot image (FL2VA with an end image).
@@ -1322,7 +1319,8 @@ export async function restoreProject() {
   $("seed").value = String(p.seed);
   const revive = it => it && { ...it, status: !it.status || it.status === "missing" ? (it.ref ? "ready" : "error") : it.status };
   d = {
-    ...p, wf: F.workflow(p.wfId), validated: !!p.validated,
+    // A project saved with an engine since dropped (Qwen Edit 2509) takes the pipeline's engine.
+    ...p, wf: F.workflow(p.wfId) || F.WORKFLOWS.find(w => w.pipeline === p.pipeline), validated: !!p.validated,
     chars: p.chars.map(c => newChar(c.fields, c.variants.map(revive), c.active ?? 0)),
     locVariants: p.locVariants.map(revive),
     keyframes: p.keyframes ? p.keyframes.map(revive) : null,
