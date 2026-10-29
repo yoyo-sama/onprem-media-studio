@@ -9,8 +9,9 @@ FastH3, Gemma 4 E4B pour l'enrichissement des prompts.
 
 > État : étape 3 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
 > modèles, la file de jobs et le pont LLM sont en place ; les moteurs d'image (Krea 2, Qwen Image
-> 2.1) et les moteurs vidéo MiniMax H3 (texte, image, première/dernière image et
-> références vers vidéo) sont écrits mais pas encore qualifiés sur GPU.
+> 2.1) ont rendu sur le GB10 mais ne sont pas encore comparés à la 1.4, et les moteurs vidéo
+> MiniMax H3 (texte, image, première/dernière image et références vers vidéo) sont écrits mais pas
+> encore qualifiés sur GPU.
 
 English version: [README.md](README.md).
 

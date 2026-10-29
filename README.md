@@ -7,9 +7,9 @@ Successor of AI Content Studio 1.4. Engines: Krea 2, Qwen Image 2.1, MiniMax H3
 through FastH3, Gemma 4 E4B for prompt enrichment.
 
 > Status: step 3 of the [roadmap](docs/ROADMAP.md). The server, model downloads, job queue and
-> LLM bridge are in place; the image engines (Krea 2, Qwen Image 2.1) and the MiniMax H3
-> video engines (text, image, first/last image and references to video) are written but not yet
-> qualified on a GPU.
+> LLM bridge are in place; the image engines (Krea 2, Qwen Image 2.1) have rendered on the GB10
+> but are not yet compared with 1.4, and the MiniMax H3 video engines (text, image, first/last
+> image and references to video) are written but not yet qualified on a GPU.
 
 Version française : [README.fr.md](README.fr.md).
 

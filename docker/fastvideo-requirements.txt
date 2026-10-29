@@ -14,7 +14,8 @@ requests>=2.32.2
 transformers>=5.17
 sentencepiece>=0.2.0
 timm>=1.0.11
-peft>=0.17
+# Same cap as pyproject.toml: peft 0.19+ refuses the torchao 0.14 of NGC 25.11 on any LoRA load.
+peft>=0.17,<0.19
 diffusers==0.42.1
 flashinfer-python
 accelerate>=1.0
