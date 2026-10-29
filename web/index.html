@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio</title>
+<style>
+  :root { --bg: #f6f5f2; --fg: #1d1d1b; --muted: #6b6b66; --line: #dddad3; --ok: #2f7d4a; --warn: #b26b00; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161615; --fg: #ecebe7; --muted: #9a9993; --line: #33322f; --ok: #6cc28b; --warn: #e3a64a; } }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0 0 24px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 13px; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); }
+  button { font: inherit; padding: 4px 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="appName">…</h1>
+  <p class="sub">Backend status page. The full Studio and Canvas front end is ported in step 4 of the roadmap.</p>
+  <p id="gpu"></p>
+  <table>
+    <thead><tr><th>Model</th><th>Repository</th><th>License</th><th>State</th></tr></thead>
+    <tbody id="models"></tbody>
+  </table>
+</main>
+<script>
+// Status page only: listing models never downloads anything; the button does.
+const $ = (id) => document.getElementById(id);
+
+async function refresh() {
+  const health = await (await fetch("/api/health")).json();
+  $("appName").textContent = health.app;
+  document.title = health.app;
+  $("gpu").textContent = health.gpu.available
+    ? `GPU: ${health.gpu.name} (sm ${health.gpu.capability})`
+    : `GPU: none (${health.gpu.reason})`;
+  const models = await (await fetch("/api/models")).json();
+  $("models").replaceChildren(...models.map((m) => {
+    const tr = document.createElement("tr");
+    const state = m.installed ? "installed"
+      : m.progress != null ? `downloading ${Math.round(m.progress * 100)} %` : "";
+    for (const text of [m.label, m.repo, m.license, state]) {
+      const td = document.createElement("td");
+      td.textContent = text;
+      tr.append(td);
+    }
+    if (!m.installed && m.progress == null) {
+      const btn = document.createElement("button");
+      btn.textContent = "Download";
+      btn.onclick = () => fetch(`/api/models/${m.id}/download`, { method: "POST" }).then(refresh);
+      tr.lastChild.append(btn);
+    }
+    tr.lastChild.className = m.installed ? "ok" : "warn";
+    return tr;
+  }));
+}
+
+refresh();
+const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/api/ws`);
+ws.onmessage = (e) => { if (JSON.parse(e.data).type === "model") refresh(); };
+</script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+# docker compose up -d --build   →   http://<host>:8090
+services:
+  studio:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: studio:dev
+    container_name: studio
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    environment:
+      # Optional, needed for gated models (Krea 2). Put it in .env, never here.
+      HF_TOKEN: ${HF_TOKEN:-}
+      STUDIO_APP_NAME: ${STUDIO_APP_NAME:-OnPrem Media Studio}
+    volumes:
+      # Models (hundreds of GB) and renders live outside the image.
+      - ${STUDIO_DATA:-./data}:/data
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
