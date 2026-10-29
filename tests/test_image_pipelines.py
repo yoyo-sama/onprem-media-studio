@@ -82,7 +82,8 @@ def rejected(client, pipeline, params):
 
 def test_engines_are_registered(client):
     ids = {p["id"] for p in client.get("/api/pipelines").json()}
-    assert {"krea2-t2i", "qwen-edit-2509", "qwen-image-2.1"} <= ids
+    assert {"krea2-t2i", "qwen-image-2.1"} <= ids
+    assert "qwen-edit-2509" not in ids  # dropped on 2026-10-29: Qwen Image 2.1 covers every edit
 
 
 def test_no_job_without_a_submission(client, fake):
@@ -106,7 +107,7 @@ def test_upload_rejects_non_images(client):
 
 @pytest.mark.parametrize("ref", ["inputs/../catalog.json", "models/x.png", "outputs/missing.png", 3, "x"])
 def test_bad_references_are_rejected_before_queueing(client, ref):
-    detail = rejected(client, "qwen-edit-2509", {"prompt": "p", "images": [ref]})
+    detail = rejected(client, "qwen-image-2.1", {"prompt": "p", "images": [ref]})
     assert detail.startswith(("Not a file reference", "No such file"))
     assert client.get("/api/jobs").json() == []
 
@@ -153,55 +154,36 @@ def test_cancel_during_render(client, fake):
     assert wait_for(client, job["id"])["status"] == "cancelled"
 
 
-# ── Qwen-Image-Edit 2509 ─────────────────────────────────────────────────────
+# ── Qwen Image 2.1 ───────────────────────────────────────────────────────────
 
-def test_2509_shot_orders_subjects_then_setting_and_sizes_from_image_1(client, fake):
+def test_21_text_to_image(client, fake):
+    run(client, "qwen-image-2.1", {"prompt": "p", "width": 1344, "height": 768, "count": 3})
+    call = fake.calls[-1]
+    assert call["image"] is None and (call["width"], call["height"]) == (1344, 768)
+    assert call["num_images_per_prompt"] == 3 and call["num_inference_steps"] == 25
+    assert call["true_cfg_scale"] == 1.0 and "negative_prompt" not in call
+
+
+def test_21_shot_orders_subjects_then_setting_and_sizes_from_image_1(client, fake):
     subject_a, subject_b = upload(client, 192, 108, "red"), upload(client, 100, 100, "green")
     setting = upload(client, 90, 160, "blue")  # different ratio: the size must not follow it
-    run(client, "qwen-edit-2509", {"prompt": "p", "subjects": [subject_a, subject_b], "setting": setting})
+    run(client, "qwen-image-2.1", {"prompt": "p", "subjects": [subject_a, subject_b], "setting": setting})
     call = fake.calls[-1]
     assert [img.getpixel((0, 0)) for img in call["image"]] == [(255, 0, 0), (0, 128, 0), (0, 0, 255)]
     assert (call["width"], call["height"]) == common.fit_area(192, 108) == (1376, 768)
-    assert call["num_inference_steps"] == 4 and call["true_cfg_scale"] == 1.0
-    assert fake.loaded[-1] == "qwen-edit-2509"
+    assert fake.loaded[-1] == "qwen-image-2.1"
 
 
-def test_2509_image_to_image(client, fake):
+def test_21_image_to_image_follows_image_1(client, fake):
     ref = upload(client, 80, 60)
-    run(client, "qwen-edit-2509", {"prompt": "Replace the sign text with HOLA", "images": [ref]})
+    run(client, "qwen-image-2.1", {"prompt": "Replace the sign text with HOLA", "images": [ref]})
     assert len(fake.calls[-1]["image"]) == 1
     assert (fake.calls[-1]["width"], fake.calls[-1]["height"]) == common.fit_area(80, 60)
 
 
 def test_at_most_two_subjects_per_shot(client):
     refs = [upload(client, 10 + i, 10) for i in range(4)]
-    for pipeline in ("qwen-edit-2509", "qwen-image-2.1"):
-        rejected(client, pipeline, {"prompt": "p", "subjects": refs[:3], "setting": refs[3]})
-
-
-@pytest.mark.parametrize("params", [
-    {"prompt": "p"},                                           # 2509 always edits
-    {"prompt": "p", "subjects": ["A"]},                        # no setting
-    {"prompt": "p", "images": ["A"], "subjects": ["A"], "setting": "A"},
-    {"prompt": "p", "subjects": ["A"], "setting": "A", "references": ["A"]},  # 2.1 only
-    {"prompt": "p", "images": ["A", "A", "A", "A"]},           # three images at most
-    {"prompt": "p", "images": ["A"], "width": 1024, "height": 1024},  # size follows image 1
-    {"prompt": "p", "images": ["A"], "negative": "blurry"},
-])
-def test_2509_parameter_errors(client, params):
-    ref = upload(client, 20, 20)
-    params = json.loads(json.dumps(params).replace('"A"', json.dumps(ref)))
-    rejected(client, "qwen-edit-2509", params)
-
-
-# ── Qwen Image 2.1 ───────────────────────────────────────────────────────────
-
-def test_21_text_to_image(client, fake):
-    run(client, "qwen-image-2.1", {"prompt": "p", "width": 1280, "height": 720, "count": 3})
-    call = fake.calls[-1]
-    assert call["image"] is None and (call["width"], call["height"]) == (1280, 720)
-    assert call["num_images_per_prompt"] == 3 and call["num_inference_steps"] == 25
-    assert call["true_cfg_scale"] == 1.0 and "negative_prompt" not in call
+    rejected(client, "qwen-image-2.1", {"prompt": "p", "subjects": refs[:3], "setting": refs[3]})
 
 
 def test_21_shot_with_references(client, fake):
@@ -223,10 +205,13 @@ def test_21_edit_with_explicit_shot_size(client, fake):
 
 
 @pytest.mark.parametrize("params", [
+    {"prompt": "p", "subjects": ["A"]},                        # no setting
+    {"prompt": "p", "images": ["A"], "subjects": ["A"], "setting": "A"},
     {"prompt": "p", "images": ["A"], "count": 2},              # no batch with references
     {"prompt": "p", "images": ["A"] * 11},                     # ten images at most
     {"prompt": "p", "subjects": ["A"], "setting": "A", "references": ["A"] * 8},
     {"prompt": "p", "width": 1024},                            # width without height
+    {"prompt": "p", "width": 1280, "height": 720},             # 720 would render as 704
     {"prompt": "p", "negative_prompt": "blurry"},
 ])
 def test_21_parameter_errors(client, params):
@@ -239,9 +224,9 @@ def test_a_sheet_rendered_by_one_job_feeds_the_next(client, fake):
     """The storyboard chain: Krea 2 sheets, then a shot that uses them as references."""
     sheet = run(client, "krea2-t2i", {"prompt": "subject sheet", "width": 1920, "height": 1088})["outputs"][0]
     setting = run(client, "krea2-t2i", {"prompt": "setting sheet", "width": 1920, "height": 1088})["outputs"][0]
-    run(client, "qwen-edit-2509", {"prompt": "shot", "subjects": [sheet], "setting": setting})
+    run(client, "qwen-image-2.1", {"prompt": "shot", "subjects": [sheet], "setting": setting})
     assert len(fake.calls[-1]["image"]) == 2
-    assert fake.loaded == ["krea2-t2i", "krea2-t2i", "qwen-edit-2509"]
+    assert fake.loaded == ["krea2-t2i", "krea2-t2i", "qwen-image-2.1"]
 
 
 def test_qualification_cases_are_valid_jobs(settings):

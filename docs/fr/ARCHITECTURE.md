@@ -30,7 +30,7 @@ requête LLM.
 | `studio/jobs.py` | `JobQueue` : soumission, worker unique, progression, annulation, événements |
 | `studio/files.py` | `FileStore` : images envoyées, références `inputs/…` et `outputs/…` |
 | `studio/pipelines/` | Contrat `Pipeline` et registre ; une sous-classe par moteur |
-| `studio/pipelines/krea2.py`, `qwen.py` | Moteurs d'image (Krea 2, Qwen Edit 2509, Qwen Image 2.1) : [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
+| `studio/pipelines/krea2.py`, `qwen.py` | Moteurs d'image (Krea 2, Qwen Image 2.1) : [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/common.py` | Contrôle des paramètres, pipeline unique en mémoire, progression par étape, sortie PNG |
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |
 | `studio/llm.py` | `LlamaServer` : démarrage à la demande, appel chat OpenAI, vision par images base64 |

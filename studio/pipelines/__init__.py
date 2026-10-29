@@ -1,4 +1,4 @@
-"""Pipeline contract. Each generation engine (Krea 2, Qwen Edit, H3) is one
+"""Pipeline contract. Each generation engine (Krea 2, Qwen Image 2.1, H3) is one
 Pipeline subclass registered in REGISTRY; the job queue knows nothing else.
 
 Pipelines receive final prompts: prompt compilation (sheet templates, shot

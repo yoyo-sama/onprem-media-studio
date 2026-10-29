@@ -29,7 +29,7 @@ request.
 | `studio/files.py` | `FileStore`: uploads, `inputs/…` and `outputs/…` references |
 | `studio/jobs.py` | `JobQueue`: submission, single worker, progress, cancellation, events |
 | `studio/pipelines/` | `Pipeline` contract and registry; one subclass per engine |
-| `studio/pipelines/krea2.py`, `qwen.py` | Image engines (Krea 2, Qwen Edit 2509, Qwen Image 2.1): [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
+| `studio/pipelines/krea2.py`, `qwen.py` | Image engines (Krea 2, Qwen Image 2.1): [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/common.py` | Parameter checks, the single resident pipeline, step progress, PNG output |
 | `tools/qualify/` | Qualification cases built from the 1.4 prompt compilers, and their runner |
 | `studio/llm.py` | `LlamaServer`: start on demand, OpenAI chat call, vision via base64 images |

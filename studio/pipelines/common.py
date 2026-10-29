@@ -69,7 +69,7 @@ def fit_area(width: int, height: int, area: int = 1024 * 1024, multiple: int = 3
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
 
-# One pipeline in memory at a time: Krea 2, Qwen Edit 2509 and Qwen Image 2.1 in
+# One pipeline in memory at a time: Krea 2 and Qwen Image 2.1 in
 # bf16 do not fit together next to the LLM, even in the 128 GB of a GB10.
 _resident: dict[str, object] = {}
 

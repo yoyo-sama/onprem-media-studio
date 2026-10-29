@@ -3,17 +3,16 @@
 French version: [fr/IMAGE-ENGINES.md](fr/IMAGE-ENGINES.md). Lessons behind each rule:
 [LESSONS.md](LESSONS.md) § 4–5.
 
-Three engines, each a job pipeline (`studio/pipelines/`), all on diffusers 0.42.1 with the
-official weights:
+Two engines, each a job pipeline (`studio/pipelines/`), both on diffusers 0.42.1 with the
+official weights. Qwen-Image-Edit 2509 was dropped on 2026-10-29 (not required): Qwen Image 2.1
+covers every edit the 1.4 did with 2509.
 
 | Pipeline id | Model (catalog id) | diffusers class | Fixed settings |
 |---|---|---|---|
 | `krea2-t2i` | Krea 2 Turbo (`krea2-turbo`) | `Krea2Pipeline` | 8 steps, `guidance_scale=0` |
-| `qwen-edit-2509` | Qwen-Image-Edit 2509 + Lightning 4-step LoRA (`qwen-image-edit-2509`, `qwen-image-edit-2509-lightning`) | `QwenImageEditPlusPipeline` | 4 steps, `true_cfg_scale=1`, Lightning scheduler (shift 3), LoRA fused at load |
 | `qwen-image-2.1` | Qwen Image 2.1 (`qwen-image-2.1`) | `QwenImage21Pipeline` | 25 steps, `true_cfg_scale=1`, condition images at 1024 |
 
-These are the settings qualified in 1.4 (`workflows/api/krea2_t2i.json`, `qwen_edit_dual.json`,
-`qwen21_*.json`). Steps and guidance are not parameters: a distilled model breaks colour first
+These are the settings qualified in 1.4 (`workflows/api/krea2_t2i.json`, `qwen21_*.json`). Steps and guidance are not parameters: a distilled model breaks colour first
 when under-stepped (LESSONS #2), and nobody asked to tune them.
 
 Only one engine stays in GPU memory: starting a job on another engine unloads the previous one.
@@ -29,18 +28,18 @@ the 1.4 `js/engine.js` in step 4. The engines own what is true of the model what
 | Nothing renders without a click (#5) | Only `POST /api/jobs` creates a job; an upload creates none |
 | Prompt sent verbatim (#6) | Engines pass `prompt` untouched: never stripped, rewritten or completed |
 | Krea 2 never encodes a negative (#18) | `guidance_scale=0` (no unconditional pass); `negative` is refused with 422 |
-| No negative with Qwen at cfg 1 | Refused with 422 on both Qwen engines, rather than silently dropped |
+| No negative with Qwen at cfg 1 | Refused with 422, rather than silently dropped |
 | Subject sheet is image 1 (#21) | Shot form `subjects` + `setting`: the engine orders the slots |
 | Output size follows image 1 (#21) | Computed by the engine from image 1 and passed explicitly (see below) |
-| Two subjects per shot at most (#24) | `subjects` takes 1 or 2 sheets, on both engines |
+| Two subjects per shot at most (#24) | `subjects` takes 1 or 2 sheets |
 | Anchoring block on every path (#7), setting named twice (#22), no "storyboard" words (#20), sheet template by kind (#25) | Front end (prompt compilers), step 4 |
 
-**Output size of an edit.** In 1.4 the 2509 graph took its latent from image 1 (the subject
-sheet), so the shot had the sheet's ratio. diffusers sizes the output from the **last** image by
-default, which in a shot is the setting sheet. The engines therefore compute the size from
-image 1 themselves: about 1 MP at its ratio, multiples of 32 (the 1.4 formula
-`round(sqrt(1024²·r)/32)·32`). Qwen-Image-Edit 2509 always does so, as qualified; Qwen Image 2.1
-accepts an explicit `width`/`height` (1.4 rendered its keyframes at the shot ratio, 1344×768).
+**Output size of an edit.** In 1.4 an image-to-image edit kept the ratio of its input image.
+diffusers sizes the output from the **last** image by default, which in a shot is the setting
+sheet. Without an explicit `width`/`height`, the engine therefore computes the size from image 1
+itself: about 1 MP at its ratio, multiples of 32 (the 1.4 formula `round(sqrt(1024²·r)/32)·32`).
+Shots are usually given an explicit size (1.4 rendered its Qwen 2.1 keyframes at the shot ratio,
+1344×768).
 
 ## Images: upload and references
 
@@ -69,15 +68,11 @@ Every PNG carries the job's pipeline and parameters as JSON in a `studio` text c
 | `width`, `height` | 1024 | 256–2048, multiple of 16 |
 | `count` | 1 | 1–4 images of one seed (1.4 "variants") |
 
-### `qwen-edit-2509`
-
-Either `images` (image to image: 1 to 3 images, in the order the prompt cites them) or the shot
-form `subjects` (1–2 subject sheets) + `setting` (the setting sheet). No size and no count: the
-output follows image 1 and 1.4 never batched this engine.
-
 ### `qwen-image-2.1`
 
-Without images it is text to image (`width`/`height` default 1024, `count` 1–4). With `images`
+Without images it is text to image (`width`/`height` default 1024, `count` 1–4). Sizes are
+multiples of **32** (256–2048): diffusers floors 2.1 sizes to 32, so 1280×720 would come out
+1280×704; use 1344×768 for 16:9, 768×1344 for 9:16. With `images`
 (1–10) or the shot form `subjects` (1–2) + `setting` + `references` (0–7 extra images after the
 setting, as in 1.4: 2 sheets + 7), it edits: `count` is 1, size from image 1 unless `width` and
 `height` are both given. The prompt cites images as `<image1>`, `<image2>`… in slot order.
@@ -86,19 +81,19 @@ setting, as in 1.4: 2 sheets + 7), it edits: `count` is 1, size from image 1 unl
 
 | 1.4 feature | Jobs |
 |---|---|
-| Text2Image | `krea2-t2i` (or `qwen-image-2.1` without images), ratio table 16:9 1280×720, 9:16 720×1280, 1:1 1024², 4:5 832×1040 |
-| Image2Image / localisation | `qwen-edit-2509` with `images`, or `qwen-image-2.1` with `images` (input image + up to 9 references); one job per market |
+| Text2Image | `krea2-t2i`, ratio table 16:9 1280×720, 9:16 720×1280, 1:1 1024², 4:5 832×1040; or `qwen-image-2.1` without images, at multiples of 32 (16:9 1344×768) |
+| Image2Image / localisation | `qwen-image-2.1` with `images` (input image + up to 9 references); one job per market |
 | Campaign images | `krea2-t2i`: poster 832×1216 and thumbnail 1280×720 (variants), social 1024×1024 (1), seeds `seed+200`, `+201`, `+202`; the teaser video comes with step 3 |
 | Subject and setting sheets | `krea2-t2i` at 1920×1088, one image each |
-| Shot images (keyframes) | `qwen-edit-2509` or `qwen-image-2.1` with `subjects` = the subject sheet(s), `setting` = the setting sheet |
+| Shot images (keyframes) | `qwen-image-2.1` with `subjects` = the subject sheet(s), `setting` = the setting sheet |
 
 ## Qualification
 
 An engine is qualified only by a real render whose images were looked at (LESSONS #1), on the
-GB10, against 1.4. `tools/qualify/image_cases.json` holds 14 cases built from the 1.4 prompt
+GB10, against 1.4. `tools/qualify/image_cases.json` holds 12 cases built from the 1.4 prompt
 compilers themselves (`node tools/qualify/export_1_4_prompts.js ../dellaicontent`): Text2Image,
-the three campaign formats, human, non-human and setting sheets, one- and two-subject shots on
-both Qwen engines, image to image on both, and Qwen 2.1 text to image.
+the three campaign formats, human, non-human and setting sheets, one- and two-subject shots,
+image to image with and without an extra reference, and Qwen 2.1 text to image.
 
 ```bash
 docker compose up -d --build
@@ -112,17 +107,16 @@ render of the same prompt, with the checks of LESSONS #2 (edges, gradients, satu
 - sheets: one subject, nothing written on the image, the lion on four legs and unclothed (#25);
 - shots: the subject's identity and costume from the sheet, the setting recognisable (#22), one
   instance of each subject, no collage of the sheets (#7), a film still and not a board (#20);
-- shot size: the ratio of the subject sheet (2509) or 1344×768 (2.1).
+- shot size: 1344×768.
 
 Only then set `"qualified": true` for the model in `studio/catalog.json`. Seeds do not reproduce
 1.4 pixels (different runtime and weights format); compare quality, not pixels.
 
 ## Known gaps
 
-- **Not run on a GPU yet.** The engines are unit-tested with a fake diffusers pipeline and
-  smoke-tested on CPU with tiny random diffusers models; the first real render happens on the GB10.
-- **Krea 2 repository layout unverified:** the repository is gated, so its `model_index.json` was
-  not readable from here. If `Krea2Pipeline.from_pretrained` fails on it, the catalog `allow`
-  patterns are the first thing to check.
+- **First GPU run (gb10-demo, 2026-10-29):** every Krea 2 (7/7) and Qwen Image 2.1 (4/4) case
+  rendered. `qualified` stays `false` until the images have been compared with 1.4 as above.
+- **LoRA loading on NGC 25.11:** peft 0.19+ refuses its torchao 0.14, so peft is pinned below 0.19.
 - **Style LoRAs** (1.4 Krea 2 and sheet LoRAs) are not ported yet.
-- **Qwen Image 2.1 licence:** Qwen Research License, non-commercial use only.
+- **Qwen Image 2.1 licence:** Qwen Research License, non-commercial use only. Since 2509
+  (Apache-2.0) was dropped, every edit and every shot image depends on it.

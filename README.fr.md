@@ -4,12 +4,12 @@
 Ollama, ni cloud : l'application fait tourner les modèles elle-même et télécharge les poids
 nécessaires à la première utilisation.
 
-Successeur d'AI Content Studio 1.4. Moteurs : Krea 2, Qwen Image Edit (2509, 2.1), MiniMax H3 via
+Successeur d'AI Content Studio 1.4. Moteurs : Krea 2, Qwen Image 2.1, MiniMax H3 via
 FastH3, Gemma 4 E4B pour l'enrichissement des prompts.
 
 > État : étape 2 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
-> modèles, la file de jobs et le pont LLM sont en place, et les moteurs d'image (Krea 2, Qwen Edit
-> 2509 et 2.1) sont écrits mais pas encore qualifiés sur GPU ; les moteurs vidéo arrivent à
+> modèles, la file de jobs et le pont LLM sont en place, et les moteurs d'image (Krea 2, Qwen Image
+> 2.1) sont écrits mais pas encore qualifiés sur GPU ; les moteurs vidéo arrivent à
 > l'étape 3.
 
 English version: [README.md](README.md).
@@ -49,7 +49,7 @@ dans le `PATH` ou dans `STUDIO_LLAMA_SERVER`.
 
 - [Architecture](docs/fr/ARCHITECTURE.md) : composants, API, cycle de vie d'un job, configuration,
   changement de nom
-- [Moteurs d'image](docs/fr/IMAGE-ENGINES.md) : jobs Krea 2 et Qwen Edit, références d'images,
+- [Moteurs d'image](docs/fr/IMAGE-ENGINES.md) : jobs Krea 2 et Qwen Image 2.1, références d'images,
   qualification
 - [Leçons de la 1.4](docs/fr/LESSONS.md) : règles apprises à la dure, à lire avant de toucher un
   prompt ou un moteur
@@ -66,8 +66,7 @@ Ce dépôt ne contient aucun poids de modèle. Chaque modèle garde sa licence, 
   l'interface d'un produit commercial. Voir [NOTICE](NOTICE).
 - **Krea 2** : accès restreint sur Hugging Face, licence acceptée par chaque utilisateur.
 - **Qwen Image 2.1** : Qwen Research License, **usage non commercial uniquement** ; un usage
-  commercial demande une licence de Qwen. Qwen-Image-Edit 2509 et sa LoRA Lightning sont sous
-  Apache-2.0.
+  commercial demande une licence de Qwen. Toutes les retouches et images de plan l'utilisent.
 
 Maestro et WanGP ont inspiré l'approche ; aucun code n'en a été repris (leur licence est non
 commerciale).

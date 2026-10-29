@@ -1,7 +1,7 @@
 """Render the image qualification cases on a running server, one after the other.
 
     python tools/qualify/run_image_cases.py                    # every case, http://localhost:8090
-    python tools/qualify/run_image_cases.py --only sheet-human shot-2509-solo
+    python tools/qualify/run_image_cases.py --only sheet-human sheet-setting shot-21-solo
 
 Each case is a job posted to /api/jobs, exactly as a client click would post it;
 '@<id>' in a case is replaced by the first output of that earlier case (a shot

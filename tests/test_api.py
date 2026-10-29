@@ -113,7 +113,7 @@ def test_nothing_runs_without_a_submission(client):
 
 def test_models_endpoint_lists_catalog(client):
     ids = {m["id"] for m in client.get("/api/models").json()}
-    assert {"gemma4-e4b", "krea2-turbo", "qwen-image-edit-2509", "fasth3-omniref-nvfp4"} <= ids
+    assert {"gemma4-e4b", "krea2-turbo", "qwen-image-2.1", "fasth3-omniref-nvfp4"} <= ids
 
 
 def test_llm_chat(client):
