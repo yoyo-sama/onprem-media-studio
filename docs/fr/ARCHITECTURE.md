@@ -11,6 +11,9 @@ navigateur ──HTTP/WS──> studio (FastAPI, :8090)
                           ├─ /api/inputs   envoi d'image → référence pour les jobs
                           ├─ /api/jobs     file → un worker GPU → pipelines (diffusers, FastVideo)
                           ├─ /api/llm      llama-server (Gemma 4 E4B, 127.0.0.1:8095)
+                          ├─ /api/gallery  index des sorties : recherche, miniatures, tags, corbeille
+                          ├─ /api/update   mise à jour d'un dépôt git depuis l'interface
+                          ├─ /api/loras    liste et téléversement de LoRA
                           ├─ /api/ws       événements de jobs et de téléchargements
                           ├─ /inputs       images envoyées
                           ├─ /outputs      fichiers rendus
@@ -37,13 +40,17 @@ requête LLM.
 | `studio/pipelines/common.py` | Contrôle des paramètres, pipeline unique en mémoire, progression par étape, sortie PNG |
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |
 | `studio/llm.py` | `LlamaServer` : démarrage à la demande, appel chat OpenAI, vision par images base64 |
+| `studio/gallery.py` | `Gallery` : index SQLite/FTS5 des sorties, miniatures, tags, favoris, renommage, corbeille : [GALLERY.md](GALLERY.md) |
+| `studio/update.py`, `loras.py` | Mise à jour depuis l'interface (avance rapide git, redémarrage sur place) et téléversement de LoRA : [GALLERY.md](GALLERY.md) |
+| `studio/guard.py` | Contrôle de même origine des routes qui déplacent ou écrivent des fichiers |
 | `studio/main.py` | API HTTP/WebSocket et fichiers statiques |
 | `web/` | Front end (page d'état aujourd'hui ; portage Studio et Canvas à l'étape 4) |
 | `docker/Dockerfile` | Base NGC PyTorch + llama.cpp compilé pour sm_121 + FastVideo et ses noyaux compilés pour sm_121a |
 
 ## Cycle de vie d'un job
 
-1. Le client poste `{"pipeline": id, "params": {...}}`. `Pipeline.validate` rejette une entrée
+1. Le client poste `{"pipeline": id, "params": {...}, "origin": fonction}` (`origin`, facultatif,
+   nomme la fonction du front pour la galerie et n'est jamais lu par un pipeline). `Pipeline.validate` rejette une entrée
    invalide (paramètre inconnu, référence d'image absente) en 422 avant toute mise en file, et
    renvoie les paramètres que le job conserve, valeurs par défaut remplies et graine tirée.
 2. Le worker prend les jobs dans l'ordre. Les modèles manquants (`Pipeline.needs(settings)`,
@@ -56,7 +63,8 @@ requête LLM.
    arrête donc un rendu en une étape au plus. Les moteurs vidéo interrompent directement
    FastVideo (H3.md).
 4. Statut : `queued → running → done | error | cancelled`. Chaque changement est poussé sur
-   `/api/ws`.
+   `/api/ws` ; les sorties d'un job terminé sont dans la galerie avant l'envoi de son événement
+   `done`.
 
 Aucun chemin de code ne crée un job de lui-même.
 
@@ -70,6 +78,9 @@ input/<hash>.<ext>          images envoyées (référence inputs/<hash>.<ext>)
 output/<pipeline>/...       rendus (référence outputs/<pipeline>/...)
 loras/h3/<fichier>.safetensors   LoRA H3, désignées par leur nom de fichier
 cache/h3-loras/...          piles de LoRA fusionnées
+cache/thumbs/...            miniatures de la galerie
+gallery.db                  index de la galerie, tags et favoris
+output/.trash/...           corbeille de la galerie (purge manuelle)
 ```
 
 ## Configuration
@@ -84,6 +95,8 @@ cache/h3-loras/...          piles de LoRA fusionnées
 | `STUDIO_LLM_PORT` | `8095` | Port local de llama-server |
 | `STUDIO_DISK_RESERVE_GB` | `20` | Espace libre conservé après tout téléchargement |
 | `STUDIO_H3_PRECISION` | `auto` | MiniMax H3 : `auto` (NVFP4, FP8 si NVFP4 échoue), `nvfp4` ou `fp8` (H3.md) |
+| `STUDIO_GALLERY_SCAN` | `60` | Secondes entre deux scans du dossier de sorties par la galerie |
+| `STUDIO_UPDATE_BRANCH` | `main` | Branche suivie par la mise à jour depuis l'interface (dépôt git seulement) |
 
 ## Changer le nom du produit
 

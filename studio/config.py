@@ -29,6 +29,10 @@ class Settings:
     # MiniMax H3 precision: auto (NVFP4, falling back to FP8 if NVFP4 fails on
     # this GPU), nvfp4 or fp8.
     h3_precision: str = field(default_factory=lambda: os.environ.get("STUDIO_H3_PRECISION", "auto"))
+    # Seconds between two scans of the output folder by the gallery.
+    gallery_scan: float = field(default_factory=lambda: float(os.environ.get("STUDIO_GALLERY_SCAN", "60")))
+    # Branch the in-app update follows (bare-metal git checkout only).
+    update_branch: str = field(default_factory=lambda: os.environ.get("STUDIO_UPDATE_BRANCH", "main"))
     # Free disk space kept after any download, in bytes.
     disk_reserve: int = field(default_factory=lambda: int(os.environ.get("STUDIO_DISK_RESERVE_GB", "20")) * 1024**3)
 

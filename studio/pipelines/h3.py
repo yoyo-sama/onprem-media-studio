@@ -219,14 +219,17 @@ def _video_path(ctx) -> Path:
 
 
 def _outputs(result, path: Path, ctx, params: dict) -> list[Path]:
-    """The MP4 FastVideo wrote, and the clip's last frame as a PNG."""
+    """The MP4 FastVideo wrote, tagged with the job's metadata, and the clip's
+    last frame as a PNG named after it (hidden from the gallery's default view)."""
     from PIL import Image
     video = Path(result.video_path) if result.video_path else path
     if not video.is_file():
         raise RuntimeError("FastVideo reported success but wrote no video (LESSONS.md #1)")
     if not result.frames:
         raise RuntimeError("FastVideo returned no frames")
-    return [video, *common.save_images([Image.fromarray(result.frames[-1])], ctx, params)]
+    common.tag_video(video, ctx, params)
+    last = common.save_images([Image.fromarray(result.frames[-1])], ctx, params, role="last-frame", stem=video.stem)
+    return [video, *last]
 
 
 def _reference(path: Path):
