@@ -161,8 +161,9 @@ def extract(path: Path, key: str) -> dict:
             for field in ("pipeline", "origin"):
                 if isinstance(meta.get(field), str):
                     out[field] = meta[field]
-            # The last frame of a clip is kept for chaining (Relay), not shown by default.
-            if meta.get("role") == "last-frame":
+            # A clip's last frame and extracted frames are kept for chaining (Relay),
+            # not shown by default.
+            if meta.get("role") in ("last-frame", "frame"):
                 out["app"] = 0
     except Exception:  # damaged file: listed anyway, retried only once it changes
         out["meta_ok"] = 0
