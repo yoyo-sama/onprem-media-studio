@@ -33,7 +33,8 @@ final prompts; prompt compilers belong to the front end (ADR 0001).
   environment prefix `STUDIO_`.
 - **WanGP and Maestro are references only** (non-commercial licence): read them to understand,
   never copy code from them and never depend on them.
-- **Models in scope**: Krea 2, Qwen Image Edit 2509 / 2.1, MiniMax H3 through FastH3, Gemma 4 E4B
+- **Models in scope**: Krea 2, Qwen Image 2.1 (Qwen-Image-Edit 2509 dropped on 2026-10-29),
+  MiniMax H3 through FastH3, Gemma 4 E4B
   as the only prompt LLM. No LTX.
 - **Nothing renders without a click**: no code path submits a job on its own.
 - **The user's prompt is sent verbatim**; graph invariants (anchoring blocks) are re-appended by

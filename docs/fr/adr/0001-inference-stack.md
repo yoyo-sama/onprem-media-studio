@@ -11,7 +11,7 @@ faire tourner chaque modèle elle-même, télécharger automatiquement les poids
 la couverture fonctionnelle de la 1.4, et s'installer dans un seul conteneur Docker sur un GB10
 (DGX OS, ARM64) d'abord, puis en bare metal, sur Ubuntu, Omarchy et Windows 11.
 
-Modèles concernés : Krea 2, Qwen Image Edit (2509 et 2.1), MiniMax H3 via FastH3 (OmniRef pour la
+Modèles concernés : Krea 2, Qwen Image 2.1 (Qwen-Image-Edit 2509 retiré le 2026-10-29), MiniMax H3 via FastH3 (OmniRef pour la
 référence vers vidéo). LTX 2.5 est abandonné ; H3 reprend tous les chemins vidéo. Gemma 4 E4B
 reste le seul LLM de prompt.
 
@@ -24,7 +24,7 @@ copié et aucun n'est une dépendance.
 | Sujet | Choix | Pourquoi |
 |---|---|---|
 | Serveur | Python, FastAPI, un processus, un thread worker GPU | Même langage que tous les moteurs ; les jobs passent dans l'ordre sur un seul GPU |
-| Krea 2, Qwen Edit | Pipelines `diffusers` de Hugging Face, poids officiels | Les dépôts officiels sont au format diffusers (`model_index.json`) ; bibliothèque Apache-2.0 |
+| Krea 2, Qwen Image 2.1 | Pipelines `diffusers` de Hugging Face, poids officiels | Les dépôts officiels sont au format diffusers (`model_index.json`) ; bibliothèque Apache-2.0 |
 | MiniMax H3 / FastH3 | `FastVideo` (Apache-2.0) | Publie les poids FastH3 OmniRef NVFP4 QAD avec une recette DGX Spark ; les noyaux NVFP4 et VSA sont son travail, pas le nôtre |
 | LLM de prompt | `llama-server` de llama.cpp, Gemma 4 E4B en GGUF + mmproj | Même approche que Maestro ; API compatible OpenAI ; vision via mmproj |
 | Téléchargement | `huggingface_hub`, fichier par fichier, marqueur `.complete` | Reprise possible, contrôle de l'espace disque, dépôts restreints via `HF_TOKEN` |

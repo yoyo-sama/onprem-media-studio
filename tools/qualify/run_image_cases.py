@@ -1,7 +1,7 @@
 """Render the qualification cases on a running server, one after the other.
 
     python tools/qualify/run_image_cases.py                    # image cases, http://localhost:8090
-    python tools/qualify/run_image_cases.py --only sheet-human shot-2509-solo
+    python tools/qualify/run_image_cases.py --only sheet-human shot-21-solo
     python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.json
 
 Each case is a job posted to /api/jobs, exactly as a client click would post it;

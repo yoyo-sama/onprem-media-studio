@@ -28,7 +28,9 @@ inference = [
     "diffusers==0.42.1",
     "transformers>=5.17",
     "accelerate>=1.0",
-    "peft>=0.17",
+    # peft 0.19+ refuses torchao < 0.16 on any LoRA load, and NGC 25.11 ships
+    # torchao 0.14 (found on the GB10, 2026-10-29); 0.18 accepts it.
+    "peft>=0.17,<0.19",
     "safetensors>=0.4",
 ]
 # MiniMax H3 runs on FastVideo, which is not on PyPI in a GB10 build: the Docker

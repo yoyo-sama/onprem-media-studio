@@ -3,11 +3,11 @@
 **Private AI image and video studio that runs entirely on your own machine.** No ComfyUI, no
 Ollama, no cloud: the app runs the models itself and downloads the weights it needs on first use.
 
-Successor of AI Content Studio 1.4. Engines: Krea 2, Qwen Image Edit (2509, 2.1), MiniMax H3
+Successor of AI Content Studio 1.4. Engines: Krea 2, Qwen Image 2.1, MiniMax H3
 through FastH3, Gemma 4 E4B for prompt enrichment.
 
 > Status: step 3 of the [roadmap](docs/ROADMAP.md). The server, model downloads, job queue and
-> LLM bridge are in place; the image engines (Krea 2, Qwen Edit 2509 and 2.1) and the MiniMax H3
+> LLM bridge are in place; the image engines (Krea 2, Qwen Image 2.1) and the MiniMax H3
 > video engines (text, image, first/last image and references to video) are written but not yet
 > qualified on a GPU.
 
@@ -56,7 +56,7 @@ the `PATH` or in `STUDIO_LLAMA_SERVER`.
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md): components, API, job lifecycle, configuration, renaming
-- [Image engines](docs/IMAGE-ENGINES.md): Krea 2 and Qwen Edit jobs, image references, qualification
+- [Image engines](docs/IMAGE-ENGINES.md): Krea 2 and Qwen Image 2.1 jobs, image references, qualification
 - [Video engines](docs/H3.md): MiniMax H3 jobs, the two-pass reference-to-video, precision
   fallback, LoRA stack, qualification
 - [Bare-metal install](docs/INSTALL.md): `scripts/install.sh`, service, updates
@@ -78,7 +78,7 @@ This repository does not contain model weights. Each model keeps its own licence
   this project's.
 - **Krea 2**: gated on Hugging Face, licence accepted per user.
 - **Qwen Image 2.1**: Qwen Research License, **non-commercial use only**; commercial use needs a
-  licence from Qwen. Qwen-Image-Edit 2509 and its Lightning LoRA are Apache-2.0.
+  licence from Qwen. Every image edit and shot image uses it.
 
 Maestro and WanGP inspired the approach; no code was taken from them (their licence is
 non-commercial).
