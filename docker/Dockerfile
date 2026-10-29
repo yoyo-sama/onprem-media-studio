@@ -20,9 +20,11 @@ RUN cmake -B build -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=${CUDA_ARCHS} \
 
 FROM ${BASE_IMAGE} AS fastvideo
 # FastVideo (Apache-2.0) runs MiniMax H3. Pinned commit; its CUDA kernels are
-# built here for the GB10 (sm_121a: no GPU is visible during a build). FastVideo
-# pins torch==2.12.0: it is installed without its dependencies so the base
-# image's torch stays, and docker/fastvideo-requirements.txt lists the rest.
+# built here for the GB10 (sm_121a: no GPU is visible during a build), against
+# the base image's torch. FastVideo pins torch==2.12.0 while NGC 25.11 ships
+# 2.10: it is installed without its dependencies so the base image's torch
+# stays (docs/H3.md § Torch version), and docker/fastvideo-requirements.txt
+# lists the rest.
 ARG FASTVIDEO_REF=7203b4976eefcd70a52728ca1281797ce96734eb
 ARG FASTVIDEO_KERNEL_ARCH=12.1a
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
@@ -46,13 +48,20 @@ COPY --from=fastvideo /wheels /wheels
 WORKDIR /app
 COPY docker/fastvideo-requirements.txt ./docker/
 # torch comes from the base image: never let pip replace it with a generic wheel.
-RUN pip install --no-cache-dir --no-deps /wheels/*.whl \
+# The pip installs below are constrained to the torch, torchvision and triton
+# builds the base image ships (on top of any constraint the base image sets).
+RUN pip list --format=freeze | grep -iE '^(torch|torchvision|torchaudio|triton|pytorch-triton)==' \
+        > /etc/studio-base-constraints.txt \
+ && cat /etc/studio-base-constraints.txt
+RUN export PIP_CONSTRAINT="${PIP_CONSTRAINT:+$PIP_CONSTRAINT }/etc/studio-base-constraints.txt" \
+ && pip install --no-cache-dir --no-deps /wheels/*.whl \
  && pip install --no-cache-dir -r docker/fastvideo-requirements.txt \
  && rm -rf /wheels
 COPY pyproject.toml ./
 COPY studio ./studio
 COPY web ./web
-RUN pip install --no-cache-dir ".[inference]"
+RUN export PIP_CONSTRAINT="${PIP_CONSTRAINT:+$PIP_CONSTRAINT }/etc/studio-base-constraints.txt" \
+ && pip install --no-cache-dir ".[inference]"
 EXPOSE 8090
 VOLUME ["/data"]
 CMD ["python", "-m", "studio"]
