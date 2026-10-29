@@ -11,7 +11,7 @@ model itself, download the weights it needs automatically, keep the 1.4 feature 
 install as one Docker container on a GB10 (DGX OS, ARM64) first, then bare metal, Ubuntu,
 Omarchy and Windows 11.
 
-Models in scope: Krea 2, Qwen Image Edit (2509 and 2.1), MiniMax H3 through FastH3 (OmniRef for
+Models in scope: Krea 2, Qwen Image 2.1 (Qwen-Image-Edit 2509 dropped on 2026-10-29), MiniMax H3 through FastH3 (OmniRef for
 reference-to-video). LTX 2.5 is dropped; H3 takes over every video path. Gemma 4 E4B stays the
 only prompt LLM.
 
@@ -24,7 +24,7 @@ is a dependency.
 | Concern | Choice | Why |
 |---|---|---|
 | Server | Python, FastAPI, one process, one GPU worker thread | Same language as every model runtime; jobs run in order on one GPU |
-| Krea 2, Qwen Edit | Hugging Face `diffusers` pipelines, official weights | Official repositories are in diffusers layout (`model_index.json`); Apache-2.0 library |
+| Krea 2, Qwen Image 2.1 | Hugging Face `diffusers` pipelines, official weights | Official repositories are in diffusers layout (`model_index.json`); Apache-2.0 library |
 | MiniMax H3 / FastH3 | `FastVideo` (Apache-2.0) | Publishes the FastH3 OmniRef NVFP4 QAD weights with a DGX Spark recipe; NVFP4 and VSA kernels are its job, not ours |
 | Prompt LLM | `llama-server` from llama.cpp, Gemma 4 E4B GGUF + mmproj | Same as Maestro's approach; OpenAI-compatible API; vision through mmproj |
 | Model download | `huggingface_hub`, per-file, `.complete` marker | Resumable, disk-space check, gated repositories through `HF_TOKEN` |
