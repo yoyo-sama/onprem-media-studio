@@ -15,9 +15,12 @@ docker compose up -d --build                       # full image (GB10 / ARM64 + 
 curl -s localhost:8090/api/health                  # app, GPU, LLM state
 python tools/qualify/run_image_cases.py            # image qualification renders (GB10, server running)
 node tools/qualify/export_1_4_prompts.js ../dellaicontent > tools/qualify/image_cases.json  # rebuild cases from 1.4
+node tools/qualify/export_1_4_video_prompts.js ../dellaicontent > tools/qualify/video_cases.json
+python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.json   # image + video renders
 ```
 
-Image engines, their parameters and what they guarantee: `docs/IMAGE-ENGINES.md`. Pipelines get
+Image engines, their parameters and what they guarantee: `docs/IMAGE-ENGINES.md`; MiniMax H3
+video engines (FastVideo, two-pass Ref2VA, FP8 fallback, LoRA stack): `docs/H3.md`. Pipelines get
 final prompts; prompt compilers belong to the front end (ADR 0001).
 
 ## Rules set by the project owner
