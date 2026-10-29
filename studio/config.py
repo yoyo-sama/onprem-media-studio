@@ -34,5 +34,9 @@ class Settings:
         return self.data_dir / "models"
 
     @property
+    def input_dir(self) -> Path:
+        return self.data_dir / "input"
+
+    @property
     def output_dir(self) -> Path:
         return self.data_dir / "output"

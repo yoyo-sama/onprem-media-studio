@@ -38,7 +38,7 @@
       "repo": "lightx2v/Qwen-Image-Lightning",
       "allow": ["Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors"],
       "gated": false,
-      "license": "unverified",
+      "license": "apache-2.0",
       "qualified": false
     },
     {
@@ -46,9 +46,9 @@
       "label": "Qwen Image 2.1",
       "role": "image",
       "repo": "Qwen/Qwen-Image-2.1",
-      "allow": ["*"],
+      "allow": ["model_index.json", "processor/*", "scheduler/*", "text_encoder/*", "transformer/*", "vae/*"],
       "gated": false,
-      "license": "unverified",
+      "license": "Qwen Research License (non-commercial use only; commercial use needs a licence from Qwen)",
       "qualified": false
     },
     {

@@ -13,9 +13,10 @@ class Echo(Pipeline):
     id = "echo"
     models = ["gemma4-e4b"]
 
-    def validate(self, params):
+    def validate(self, params, files):
         if not params.get("prompt"):
             raise ValueError("prompt is required")
+        return params
 
     def run(self, params, models, ctx):
         assert models["gemma4-e4b"].is_dir()
@@ -73,7 +74,8 @@ def test_job_downloads_missing_models_then_renders(client, fetch, settings):
     done = wait_for(client, job["id"])
     assert done["status"] == "done", done
     assert "gemma-4-E4B-it-Q8_0.gguf" in fetch.calls
-    assert open(done["outputs"][0]).read() == "hello"
+    assert done["outputs"][0] == f"outputs/{job['id']}.txt"
+    assert client.get("/" + done["outputs"][0]).text == "hello"
 
 
 def test_websocket_streams_job_events(client):

@@ -6,8 +6,9 @@ Ollama, no cloud: the app runs the models itself and downloads the weights it ne
 Successor of AI Content Studio 1.4. Engines: Krea 2, Qwen Image Edit (2509, 2.1), MiniMax H3
 through FastH3, Gemma 4 E4B for prompt enrichment.
 
-> Status: step 1 of the [roadmap](docs/ROADMAP.md). The server, model downloads, job queue and
-> LLM bridge are in place; image and video engines arrive in steps 2 and 3.
+> Status: step 2 of the [roadmap](docs/ROADMAP.md). The server, model downloads, job queue and
+> LLM bridge are in place, and the image engines (Krea 2, Qwen Edit 2509 and 2.1) are written but
+> not yet qualified on a GPU; video engines arrive in step 3.
 
 Version française : [README.fr.md](README.fr.md).
 
@@ -32,7 +33,7 @@ Models and renders go to `./data` (change with `STUDIO_DATA=/path` in `.env`).
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
-pip install -e ".[dev]"
+pip install -e ".[dev]"                     # add ,inference to run the engines (torch installed separately)
 python -m pytest
 STUDIO_DATA_DIR=./data python -m studio      # http://localhost:8090
 ```
@@ -43,6 +44,7 @@ the `PATH` or in `STUDIO_LLAMA_SERVER`.
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md): components, API, job lifecycle, configuration, renaming
+- [Image engines](docs/IMAGE-ENGINES.md): Krea 2 and Qwen Edit jobs, image references, qualification
 - [Lessons from 1.4](docs/LESSONS.md): rules learned the hard way, read before changing a prompt
   or an engine
 - [ADR 0001](docs/adr/0001-inference-stack.md): why diffusers, FastVideo and llama.cpp
@@ -57,6 +59,8 @@ This repository does not contain model weights. Each model keeps its own licence
   the United Kingdom, South Korea and the United States**, and requires "MiniMax H3" to be shown
   in the interface of a commercial product. See [NOTICE](NOTICE).
 - **Krea 2**: gated on Hugging Face, licence accepted per user.
+- **Qwen Image 2.1**: Qwen Research License, **non-commercial use only**; commercial use needs a
+  licence from Qwen. Qwen-Image-Edit 2509 and its Lightning LoRA are Apache-2.0.
 
 Maestro and WanGP inspired the approach; no code was taken from them (their licence is
 non-commercial).

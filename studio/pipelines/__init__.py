@@ -1,7 +1,9 @@
 """Pipeline contract. Each generation engine (Krea 2, Qwen Edit, H3) is one
 Pipeline subclass registered in REGISTRY; the job queue knows nothing else.
 
-Real pipelines arrive in steps 2 (image) and 3 (video) of the roadmap.
+Pipelines receive final prompts: prompt compilation (sheet templates, shot
+anchoring blocks) belongs to the front end (ADR 0001). A pipeline owns what is
+true of its model whatever the prompt: steps, guidance, image slot order, size.
 """
 
 from pathlib import Path
@@ -11,8 +13,11 @@ class Pipeline:
     id: str = ""
     models: list[str] = []  # catalog ids, downloaded before run() if missing
 
-    def validate(self, params: dict) -> None:
-        """Reject bad parameters at submission time, before the job is queued."""
+    def validate(self, params: dict, files) -> dict:
+        """Reject bad parameters at submission time, before the job is queued, and
+        return them normalised (defaults filled in, seed drawn) as the job keeps them.
+        `files` is the FileStore that resolves image references."""
+        return params
 
     def run(self, params: dict, models: dict[str, Path], ctx) -> list[Path]:
         """Render and return the files written under ctx.output_dir."""
@@ -25,3 +30,6 @@ REGISTRY: dict[str, Pipeline] = {}
 def register(pipeline: Pipeline) -> Pipeline:
     REGISTRY[pipeline.id] = pipeline
     return pipeline
+
+
+from . import krea2, qwen  # noqa: E402,F401  (each module registers its engines)

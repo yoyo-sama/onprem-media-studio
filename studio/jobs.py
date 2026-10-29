@@ -13,6 +13,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from .files import FileStore
 from .models import ModelStore
 from .pipelines import Pipeline
 
@@ -48,6 +49,7 @@ class JobContext:
         self.job = job
         self._queue = queue_
         self.models = queue_.models
+        self.files: FileStore = queue_.files
         self.output_dir: Path = queue_.output_dir
 
     def progress(self, frac: float, message: str = "") -> None:
@@ -65,10 +67,11 @@ class JobContext:
 
 
 class JobQueue:
-    def __init__(self, pipelines: dict[str, Pipeline], models: ModelStore, output_dir: Path):
+    def __init__(self, pipelines: dict[str, Pipeline], models: ModelStore, files: FileStore):
         self.pipelines = pipelines
         self.models = models
-        self.output_dir = output_dir
+        self.files = files
+        self.output_dir: Path = files.roots["outputs"]
         self.jobs: dict[str, Job] = {}
         self.cancel_requests: set[str] = set()
         self.listeners: list[Listener] = []
@@ -90,7 +93,7 @@ class JobQueue:
     def submit(self, pipeline: str, params: dict) -> Job:
         if pipeline not in self.pipelines:
             raise KeyError(f"Unknown pipeline: {pipeline}")
-        self.pipelines[pipeline].validate(params)
+        params = self.pipelines[pipeline].validate(params, self.files)
         job = Job(id=f"job-{next(self._ids)}", pipeline=pipeline, params=params)
         self.jobs[job.id] = job
         self._pending.put(job.id)
@@ -119,7 +122,7 @@ class JobQueue:
                 # Missing models are fetched on first use, inside the job, so the
                 # user sees the download in the same progress bar as the render.
                 paths = self.models.ensure(pipeline.models, ctx.progress, ctx.cancelled)
-                job.outputs = [str(p) for p in pipeline.run(job.params, paths, ctx)]
+                job.outputs = [self.files.ref(p) for p in pipeline.run(job.params, paths, ctx)]
                 job.status, job.progress = "done", 1.0
             except Cancelled:
                 job.status = "cancelled"

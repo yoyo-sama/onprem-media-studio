@@ -13,7 +13,12 @@ pip install -e ".[dev]" && python -m pytest        # unit tests, no GPU needed
 STUDIO_DATA_DIR=./data python -m studio            # dev server on :8090
 docker compose up -d --build                       # full image (GB10 / ARM64 + CUDA)
 curl -s localhost:8090/api/health                  # app, GPU, LLM state
+python tools/qualify/run_image_cases.py            # image qualification renders (GB10, server running)
+node tools/qualify/export_1_4_prompts.js ../dellaicontent > tools/qualify/image_cases.json  # rebuild cases from 1.4
 ```
+
+Image engines, their parameters and what they guarantee: `docs/IMAGE-ENGINES.md`. Pipelines get
+final prompts; prompt compilers belong to the front end (ADR 0001).
 
 ## Rules set by the project owner
 
@@ -34,6 +39,8 @@ curl -s localhost:8090/api/health                  # app, GPU, LLM state
 - **Never trust a `success` status**: an engine is qualified only by a real render whose frames and
   audio were inspected on the target hardware; then, and only then, set `"qualified": true` in
   `studio/catalog.json`.
+- **An engine never silently ignores a parameter**: unknown keys and a negative prompt the model
+  would not use are refused with 422.
 - Secrets (`HF_TOKEN`, cloud keys) come from the environment, are never logged and never written
   to the repository.
 
@@ -42,5 +49,6 @@ curl -s localhost:8090/api/health                  # app, GPU, LLM state
 1. Add the catalog entry (`studio/catalog.json`): exact repository, `allow` patterns, licence as
    read from the model card (or `"unverified"`), `gated`, `"qualified": false`.
 2. Write a `Pipeline` subclass in `studio/pipelines/`, `register()` it, list its catalog ids in
-   `models`, validate parameters in `validate()`.
+   `models`, validate parameters in `validate()` (and return them normalised), import its module
+   at the bottom of `studio/pipelines/__init__.py`. Import torch and diffusers inside functions.
 3. Unit-test the parameter handling without a GPU; qualify the render on the GB10.
