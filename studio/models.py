@@ -30,6 +30,13 @@ def _matches(path: str, entry: dict) -> bool:
     return any(fnmatch(path, p) for p in entry["allow"])
 
 
+def _gated_hint(entry: dict) -> str:
+    if not entry.get("gated"):
+        return ""
+    return (f" This repository is gated: set HF_TOKEN and accept its license at "
+            f"https://huggingface.co/{entry['repo']}.")
+
+
 class ModelStore:
     def __init__(self, settings: Settings, api: HfApi | None = None, fetch=hf_hub_download):
         self.settings = settings
@@ -63,11 +70,7 @@ class ModelStore:
         try:
             info = self.api.model_info(entry["repo"], files_metadata=True, token=self.settings.hf_token)
         except Exception as exc:  # gated, offline, renamed repository
-            hint = ""
-            if entry.get("gated"):
-                hint = (f" This repository is gated: set HF_TOKEN and accept its license at "
-                        f"https://huggingface.co/{entry['repo']}.")
-            raise ModelError(f"Cannot read {entry['repo']}: {exc}.{hint}") from exc
+            raise ModelError(f"Cannot read {entry['repo']}: {exc}.{_gated_hint(entry)}") from exc
         files = [(s.rfilename, s.size or 0) for s in info.siblings if _matches(s.rfilename, entry)]
         if not files:
             raise ModelError(f"No file of {entry['repo']} matches {entry['allow']}")
@@ -98,8 +101,14 @@ class ModelStore:
                     if cancelled and cancelled():
                         raise ModelError(f"Download of {entry['label']} cancelled")
                     progress(done / total, f"Downloading {entry['label']}: {rel}")
-                    self.fetch(repo_id=entry["repo"], filename=rel, revision=revision,
-                               local_dir=target, token=self.settings.hf_token)
+                    try:
+                        self.fetch(repo_id=entry["repo"], filename=rel, revision=revision,
+                                   local_dir=target, token=self.settings.hf_token)
+                    except Exception as exc:
+                        # Metadata of a gated repository is public: without a token the
+                        # failure only shows up here, on the first file.
+                        raise ModelError(
+                            f"Cannot download {rel} from {entry['repo']}: {exc}.{_gated_hint(entry)}") from exc
                     done += size
                     self.downloading[model_id] = done / total
             finally:
