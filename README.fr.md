@@ -7,11 +7,12 @@ nécessaires à la première utilisation.
 Successeur d'AI Content Studio 1.4. Moteurs : Krea 2, Qwen Image 2.1, MiniMax H3 via
 FastH3, Gemma 4 E4B pour l'enrichissement des prompts.
 
-> État : étape 3 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
-> modèles, la file de jobs et le pont LLM sont en place ; les moteurs d'image (Krea 2, Qwen Image
-> 2.1) ont rendu sur le GB10 mais ne sont pas encore comparés à la 1.4, et les moteurs vidéo
-> MiniMax H3 (texte, image, première/dernière image et références vers vidéo) sont écrits mais pas
-> encore qualifiés sur GPU.
+> État : étapes 3 et 4 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le
+> téléchargement des modèles, la file de jobs et le pont LLM sont en place ; les moteurs d'image
+> (Krea 2, Qwen Image 2.1) ont rendu sur le GB10 mais ne sont pas encore comparés à la 1.4, et les
+> moteurs vidéo MiniMax H3 (texte, image, première/dernière image et références vers vidéo) sont
+> écrits mais pas encore qualifiés sur GPU. Les pages Studio et Canvas sont portées de la 1.4
+> ([interface](docs/fr/FRONTEND.md)) et testées avec des rendus simulés.
 
 English version: [README.md](README.md).
 
@@ -65,6 +66,8 @@ dans le `PATH` ou dans `STUDIO_LLAMA_SERVER`.
   qualification
 - [Moteurs vidéo](docs/fr/H3.md) : jobs MiniMax H3, référence vers vidéo en deux passes, repli de
   précision, pile de LoRA, qualification
+- [Interface](docs/fr/FRONTEND.md) : pages Studio et Canvas, cartes du Canvas, différences avec
+  la 1.4, tests du front
 - [Installation bare metal](docs/fr/INSTALL.md) : `scripts/install.sh`, service, mises à jour
 - [Galerie, mise à jour, LoRA](docs/fr/GALLERY.md) : index des sorties, corbeille, mise à jour
   depuis l'interface

@@ -10,6 +10,8 @@ Hugging Face on first use. Start with `docs/ARCHITECTURE.md`, `docs/LESSONS.md`,
 
 ```bash
 pip install -e ".[dev]" && python -m pytest        # unit tests, no GPU needed
+node tools/parity-prompts.js                       # prompt compilers equal to 1.4 (needs ../dellaicontent)
+NODE_PATH=$(npm root -g) node tools/prompt-systems.js   # Gemma instruction per engine, both pages headless
 STUDIO_DATA_DIR=./data python -m studio            # dev server on :8090
 docker compose up -d --build                       # full image (GB10 / ARM64 + CUDA)
 curl -s localhost:8090/api/health                  # app, GPU, LLM state
@@ -20,7 +22,8 @@ python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.jso
 ```
 
 Image engines, their parameters and what they guarantee: `docs/IMAGE-ENGINES.md`; MiniMax H3
-video engines (FastVideo, two-pass Ref2VA, FP8 fallback, LoRA stack): `docs/H3.md`. Pipelines get
+video engines (FastVideo, two-pass Ref2VA, FP8 fallback, LoRA stack): `docs/H3.md`; Studio and
+Canvas front end, its rules and tests: `docs/FRONTEND.md`. Pipelines get
 final prompts; prompt compilers belong to the front end (ADR 0001).
 
 ## Rules set by the project owner

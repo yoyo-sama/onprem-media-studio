@@ -37,14 +37,17 @@ requête LLM.
 | `studio/pipelines/h3.py` | Moteurs vidéo (MiniMax H3 : texte, image, première/dernière image et références vers vidéo), géométrie et plan d'affinage : [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | Adaptateur FastVideo : recettes Spark, profils NVFP4/FP8, sortie latente et réglages de la passe d'affinage, annulation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | Upscaler latent H3 (convolutions 3D, checkpoint LBH v1) et pile de LoRA (fusion exacte en une seule branche parallèle) |
+| `studio/pipelines/montage.py` | Jobs CPU sur des fichiers rendus, avec ffmpeg et Pillow : `video-concat` (clips bout à bout), `image-grid` (planche contact), `video-frames` (images proches de la fin d'un clip, pour les transitions du Relay) |
 | `studio/pipelines/common.py` | Contrôle des paramètres, pipeline unique en mémoire, progression par étape, sortie PNG |
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |
 | `studio/llm.py` | `LlamaServer` : démarrage à la demande, appel chat OpenAI, vision par images base64 |
 | `studio/gallery.py` | `Gallery` : index SQLite/FTS5 des sorties, miniatures, tags, favoris, renommage, corbeille : [GALLERY.md](GALLERY.md) |
 | `studio/update.py`, `loras.py` | Mise à jour depuis l'interface (avance rapide git, redémarrage sur place) et téléversement de LoRA : [GALLERY.md](GALLERY.md) |
 | `studio/guard.py` | Contrôle de même origine des routes qui déplacent ou écrivent des fichiers |
-| `studio/main.py` | API HTTP/WebSocket et fichiers statiques |
-| `web/` | Front end (page d'état aujourd'hui ; portage Studio et Canvas à l'étape 4) |
+| `studio/main.py` | API HTTP/WebSocket et fichiers statiques ; `/api/health` donne l'application, le GPU, la mémoire, l'état du LLM et le nombre de jobs en file |
+| `web/index.html`, `web/canvas.html` | Front end : le Studio et le Canvas, portés de la 1.4, sans étape de build : [FRONTEND.md](FRONTEND.md) |
+| `web/js/prompts.js` | Compilateurs de prompts et consignes Gemma de la 1.4, une seule copie pour les deux pages (les prompts sont compilés côté front, ADR 0001) |
+| `tools/parity-prompts.js`, `tools/prompt-systems.js` | Tests de non-régression du front contre la 1.4 : parité des prompts et consigne Gemma par moteur : [FRONTEND.md](FRONTEND.md#tests) |
 | `docker/Dockerfile` | Base NGC PyTorch + llama.cpp compilé pour sm_121 + FastVideo et ses noyaux compilés pour sm_121a |
 
 ## Cycle de vie d'un job

@@ -36,14 +36,17 @@ request.
 | `studio/pipelines/h3.py` | Video engines (MiniMax H3: text, image, first/last image and references to video), geometry and refine schedule: [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | FastVideo adapter: Spark recipes, NVFP4/FP8 profiles, latent output and refine-pass overrides, cancellation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | H3 latent upscaler (3D conv, LBH v1 checkpoint) and LoRA stack (exact merge into one side branch) |
+| `studio/pipelines/montage.py` | CPU jobs on rendered files with ffmpeg and Pillow: `video-concat` (clips end to end), `image-grid` (contact sheet), `video-frames` (frames near a clip's end, for Relay transitions) |
 | `studio/pipelines/common.py` | Parameter checks, the single resident pipeline, step progress, PNG output |
 | `tools/qualify/` | Qualification cases built from the 1.4 prompt compilers, and their runner |
 | `studio/llm.py` | `LlamaServer`: start on demand, OpenAI chat call, vision via base64 images |
 | `studio/gallery.py` | `Gallery`: SQLite/FTS5 index of the outputs, thumbnails, tags, favourites, rename, trash: [GALLERY.md](GALLERY.md) |
 | `studio/update.py`, `loras.py` | In-app update (git fast-forward, restart in place) and LoRA upload: [GALLERY.md](GALLERY.md) |
 | `studio/guard.py` | Same-origin check of the routes that move or write files |
-| `studio/main.py` | HTTP/WebSocket API and static files |
-| `web/` | Front end (status page today; Studio and Canvas port in step 4) |
+| `studio/main.py` | HTTP/WebSocket API and static files; `/api/health` gives the app, GPU, memory, LLM state and the number of jobs in the queue |
+| `web/index.html`, `web/canvas.html` | Front end: the Studio and the Canvas, ported from 1.4, no build step: [FRONTEND.md](FRONTEND.md) |
+| `web/js/prompts.js` | Prompt compilers and Gemma instructions of 1.4, one copy for both pages (prompts are compiled in the front end, ADR 0001) |
+| `tools/parity-prompts.js`, `tools/prompt-systems.js` | Front-end regression tests against 1.4: prompt parity and the Gemma instruction per engine: [FRONTEND.md](FRONTEND.md#tests) |
 | `docker/Dockerfile` | NGC PyTorch base + llama.cpp built for sm_121 + FastVideo and its kernels built for sm_121a |
 
 ## Job lifecycle
