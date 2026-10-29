@@ -52,13 +52,53 @@
       "qualified": false
     },
     {
+      "id": "fasth3-v2-nvfp4",
+      "label": "MiniMax H3 — FastH3 V2 NVFP4 (text or images to video)",
+      "role": "video",
+      "repo": "FastVideo/FastH3-QAD-v2",
+      "allow": ["fastvideo_inference.json", "model_index.json", "modular_model_index.json", "scheduler/*", "audio_scheduler/*", "text_encoder/*", "tokenizer/*", "processor/*", "vae/*", "audio_vae/*", "transformer/config.json", "transformer/diffusion_pytorch_model*", "transformer/nvfp4_weights.safetensors"],
+      "gated": false,
+      "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA; products must show \"MiniMax H3\")",
+      "qualified": false
+    },
+    {
+      "id": "fasth3-v2-fp8",
+      "label": "MiniMax H3 — FastH3 V2 FP8 (fallback)",
+      "role": "video",
+      "repo": "FastVideo/FastVideo-FastH3-8-Step-V2-FP8",
+      "allow": ["fastvideo_inference.json", "model_index.json", "modular_model_index.json", "scheduler/*", "audio_scheduler/*", "text_encoder/*", "tokenizer/*", "processor/*", "vae/*", "audio_vae/*", "transformer/*"],
+      "gated": false,
+      "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA; products must show \"MiniMax H3\")",
+      "qualified": false
+    },
+    {
       "id": "fasth3-omniref-nvfp4",
-      "label": "FastH3 OmniRef NVFP4 (MiniMax H3, reference to video)",
+      "label": "MiniMax H3 — FastH3 OmniRef NVFP4 (references to video)",
       "role": "video",
       "repo": "FastVideo/FastH3-OmniRef-NVFP4-QAD",
-      "allow": ["*"],
+      "allow": ["fastvideo_inference.json", "modular_model_index.json", "scheduler/*", "audio_scheduler/*", "text_encoder/*", "tokenizer/*", "processor/*", "vae/*", "audio_vae/*", "transformer_ref/*", "vae_decoder_nvfp4/*"],
       "gated": false,
-      "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA)",
+      "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA; products must show \"MiniMax H3\")",
+      "qualified": false
+    },
+    {
+      "id": "fasth3-omniref-fp8",
+      "label": "MiniMax H3 — FastH3 OmniRef FP8 (fallback)",
+      "role": "video",
+      "repo": "FastVideo/FastH3-OmniRef-FP8",
+      "allow": ["fastvideo_inference.json", "modular_model_index.json", "scheduler/*", "audio_scheduler/*", "text_encoder/*", "tokenizer/*", "processor/*", "vae/*", "audio_vae/*", "transformer_ref/*"],
+      "gated": false,
+      "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA; products must show \"MiniMax H3\")",
+      "qualified": false
+    },
+    {
+      "id": "h3-latent-upscaler",
+      "label": "MiniMax H3 latent upscaler (3D conv v1, LBH-123-AI)",
+      "role": "upscaler",
+      "repo": "LBH-123-AI/Minimax_h3_latent_Upscaler",
+      "allow": ["minimax_h3_latent_upscaler_3d_conv_v1/minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors"],
+      "gated": false,
+      "license": "apache-2.0",
       "qualified": false
     }
   ]

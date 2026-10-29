@@ -18,7 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "numpy"]
 # Image engines. torch and torchvision (the Qwen processors need it) are not
 # listed: they come from the NGC base image (Docker) or from the platform's own
 # build (bare metal), never from a generic wheel.
@@ -29,7 +29,10 @@ inference = [
     "transformers>=5.17",
     "accelerate>=1.0",
     "peft>=0.17",
+    "safetensors>=0.4",
 ]
+# MiniMax H3 runs on FastVideo, which is not on PyPI in a GB10 build: the Docker
+# image builds it from source (docker/Dockerfile, docker/fastvideo-requirements.txt).
 
 [tool.setuptools]
 packages = ["studio", "studio.pipelines"]

@@ -92,7 +92,8 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
 
 26. **La longueur suit la grille 17n+5 à 24 i/s**, pas la durée demandée (1 s → 39 images,
     1,625 s). Largeur et hauteur sont arrondies au multiple de 32 inférieur. Modulo à la Python
-    en portant la formule. [#11, #20]
+    en portant la formule. En 2.0, FastVideo limite aussi H3 à 5–15 s : un cut plus court est
+    refusé, pas allongé en silence (H3.md). [#11, #20]
 27. **La grammaire de prompt structurée est obligatoire** (6 champs Ref2VA). `<Picture N>` est
     l'entrée physique (à partir de 1), `<Subject N>` l'identité logique, liées une fois dans
     `subject_definitions` ; la prose n'emploie que `<Subject N>`. Plafond dur de 7 000 caractères,

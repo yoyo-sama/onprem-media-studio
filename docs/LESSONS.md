@@ -86,7 +86,8 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
 
 26. **Length follows the 17n+5 frame grid at 24 fps**, not the requested duration (1 s → 39
     frames, 1.625 s). Width and height round down to multiples of 32. Python-style modulo when
-    porting the formula. [#11, #20]
+    porting the formula. In 2.0, FastVideo also limits H3 to 5–15 s: a shorter cut is refused,
+    not silently lengthened (H3.md). [#11, #20]
 27. **Structured prompt grammar is mandatory** (6 Ref2VA fields). `<Picture N>` is the physical
     input (1-indexed), `<Subject N>` the logical identity, bound once in `subject_definitions`;
     prose uses `<Subject N>` only. Hard cap 7,000 characters, trimmed inside

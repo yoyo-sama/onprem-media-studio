@@ -11,6 +11,7 @@
   main { max-width: 860px; margin: 0 auto; }
   h1 { font-size: 22px; margin: 0 0 4px; }
   p.sub { color: var(--muted); margin: 0 0 24px; }
+  #credits { margin: 24px 0 0; font-size: 13px; }
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
   th { color: var(--muted); font-weight: 500; font-size: 13px; }
@@ -27,6 +28,8 @@
     <thead><tr><th>Model</th><th>Repository</th><th>License</th><th>State</th></tr></thead>
     <tbody id="models"></tbody>
   </table>
+  <!-- The MiniMax H3 licence asks products built on it to show its name. -->
+  <p class="sub" id="credits">Video and audio generation: MiniMax H3 (FastH3, run by FastVideo).</p>
 </main>
 <script>
 // Status page only: listing models never downloads anything; the button does.

@@ -1,0 +1,28 @@
+# FastVideo's runtime dependencies for MiniMax H3 inference, without torch,
+# torchvision and torchaudio (they come from the NGC base image) and without its
+# training, serving and experiment-tracking extras. From FastVideo's
+# pyproject.toml at the commit pinned in docker/Dockerfile.
+scipy>=1.14.1
+six>=1.16.0
+requests>=2.32.2
+transformers>=5.17
+tokenizers>=0.20.1,<0.23
+sentencepiece>=0.2.0
+timm>=1.0.11
+peft>=0.17
+diffusers==0.42.1
+flashinfer-python
+accelerate>=1.0
+opencv-python-headless>=4.10.0.84
+imageio>=2.36.0
+imageio-ffmpeg>=0.5.1
+einops
+loguru
+PyYAML>=6.0.1
+protobuf>=5.28.3
+huggingface_hub
+cloudpickle
+omegaconf
+aiohttp
+remote-pdb
+safetensors

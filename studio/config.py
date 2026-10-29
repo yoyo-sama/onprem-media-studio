@@ -26,6 +26,9 @@ class Settings:
     hf_token: str | None = field(default_factory=lambda: os.environ.get("HF_TOKEN") or None)
     llama_server: str = field(default_factory=lambda: os.environ.get("STUDIO_LLAMA_SERVER", "llama-server"))
     llm_port: int = field(default_factory=lambda: int(os.environ.get("STUDIO_LLM_PORT", "8095")))
+    # MiniMax H3 precision: auto (NVFP4, falling back to FP8 if NVFP4 fails on
+    # this GPU), nvfp4 or fp8.
+    h3_precision: str = field(default_factory=lambda: os.environ.get("STUDIO_H3_PRECISION", "auto"))
     # Free disk space kept after any download, in bytes.
     disk_reserve: int = field(default_factory=lambda: int(os.environ.get("STUDIO_DISK_RESERVE_GB", "20")) * 1024**3)
 
@@ -38,5 +41,13 @@ class Settings:
         return self.data_dir / "input"
 
     @property
+    def loras_dir(self) -> Path:
+        return self.data_dir / "loras"
+
+    @property
     def output_dir(self) -> Path:
         return self.data_dir / "output"
+
+    def __post_init__(self):
+        if self.h3_precision not in ("auto", "nvfp4", "fp8"):
+            raise ValueError(f"STUDIO_H3_PRECISION must be auto, nvfp4 or fp8, not {self.h3_precision!r}")
