@@ -73,7 +73,9 @@ def fit_area(width: int, height: int, area: int = 1024 * 1024, multiple: int = 3
 # and Qwen Image 2.1 together take about 65 GB next to the LLM, which fits in the
 # 128 GB of a GB10, and switching between them would otherwise reload ~30 GB each
 # time (about 3 min). The least recently used ones are freed when the next one does
-# not fit, typically when an H3 video engine comes in.
+# not fit. An H3 video engine is loaded alone: its peak (text encoder, references,
+# upscaler, VAE decode) goes far past its weights, and with Qwen kept next to it a
+# two-pass r2v left 11 GB free on the GB10.
 _resident: dict[object, object] = {}
 RESERVE = 16 * 1024**3  # left free next to the weights for the render's activations
 
@@ -103,15 +105,15 @@ def disk_size(path: Path) -> int:
     return sum(f.stat().st_size for f in Path(path).rglob("*") if f.is_file())
 
 
-def load(key, build, size: int = 0):
+def load(key, build, size: int = 0, alone: bool = False):
     """The resident pipeline for `key`, built on first use. Before building one,
     the least recently used pipelines are freed until `size` bytes (its weights)
-    plus RESERVE fit in free memory; when nothing is left to free, it is built
-    anyway."""
+    plus RESERVE fit in free memory, or all of them when it must run `alone`;
+    when nothing is left to free, it is built anyway."""
     if key in _resident:
         _resident[key] = _resident.pop(key)  # now the most recently used
         return _resident[key]
-    while _resident and free_memory() < size + RESERVE:
+    while _resident and (alone or free_memory() < size + RESERVE):
         _free(next(iter(_resident)))
     _resident[key] = build()
     return _resident[key]

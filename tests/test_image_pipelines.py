@@ -280,6 +280,16 @@ def test_pipelines_stay_resident_while_memory_allows(monkeypatch):
     assert closed == ["qwen", "krea2"] and list(common._resident) == ["h3"]
 
 
+def test_a_video_engine_is_loaded_alone(monkeypatch):
+    closed = []
+    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "free_memory", lambda: 200 * 1024**3)
+    common.load("krea2", lambda: Closable("krea2", closed), 34 * 1024**3)
+    common.load("qwen", lambda: Closable("qwen", closed), 30 * 1024**3)
+    common.load("h3", lambda: Closable("h3", closed), alone=True)
+    assert closed == ["krea2", "qwen"] and list(common._resident) == ["h3"]
+
+
 def test_a_pipeline_is_built_even_when_nothing_is_left_to_free(monkeypatch):
     monkeypatch.setattr(common, "_resident", {})
     monkeypatch.setattr(common, "free_memory", lambda: 0)
