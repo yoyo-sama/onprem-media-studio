@@ -39,8 +39,11 @@ copié et aucun n'est une dépendance.
   modèles dont il a besoin + `run()`.
 - Les pièces propres à ComfyUI du workflow OmniRef validé demandent un équivalent : l'upscaler
   latent 3D (nœud communautaire) et la « power LoRA stack » (LoRA en branche exacte sur un modèle
-  quantifié). L'étape 3 regarde ce que propose FastVideo avant d'écrire quoi que ce soit, et
-  vérifie la licence des poids de l'upscaler avant de les utiliser.
+  quantifié). Étape 3 (H3.md) : FastVideo n'offre ni l'un ni l'autre, les deux sont donc écrits
+  ici : l'upscaler comme module à nous qui charge le checkpoint de LBH-123-AI (poids Apache-2.0),
+  la pile comme un seul adaptateur fusionné que FastVideo exécute en branche parallèle. Les deux
+  passes passent par les options publiques de FastVideo (sortie latente, latents injectés, plan
+  PDD), sans le modifier.
 - Le front end parle à `/api/*` au lieu de `/comfy/*` et `/ollama/*` ; sa couche de construction
   de graphes est remplacée par des soumissions de jobs.
 
@@ -52,7 +55,14 @@ copié et aucun n'est une dépendance.
   licence de MiniMax.
 - **Krea 2 est à accès restreint :** l'utilisateur doit accepter sa licence sur Hugging Face et
   fournir `HF_TOKEN`.
-- **FastH3 en première/dernière image (I2V/FL2VA) :** OmniRef est validé ; les poids FastH3 FL2VA
-  restent à identifier et qualifier à l'étape 3.
+- **FastH3 en première/dernière image (I2V/FL2VA) :** OmniRef est validé. L'étape 3 utilise
+  FastH3 V2 (`FastVideo/FastH3-QAD-v2`, repli FP8 `FastVideo/FastVideo-FastH3-8-Step-V2-FP8`),
+  dont le pipeline accepte première et dernière images, mais l'amont ne documente pour lui que le
+  texte vers vidéo : à qualifier sur GB10.
+- **FastVideo exige torch 2.12** alors que l'image garde le torch de NGC 25.11 (2.10) ; FastVideo
+  est installé sans ses dépendances et pip est contraint au torch de la base. API et imports
+  passent sur 2.10 sans GPU, et les noyaux ont tourné sur le GB10 (2026-10-30), avec la pile CUDA
+  13.0 + torch 2.12 de FastVideo comme repli (`docs/fr/H3.md` § Version de torch).
+- **Les clips H3 font 5 à 15 s** dans FastVideo, là où la 1.4 acceptait des cuts plus courts.
 - **Le tag de l'image NGC et la révision de llama.cpp** sont figés mais pas encore compilés sur
   GB10 : le premier build sur la machine peut demander de les faire évoluer.

@@ -69,13 +69,20 @@ def fit_area(width: int, height: int, area: int = 1024 * 1024, multiple: int = 3
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
 
-# One pipeline in memory at a time: Krea 2 and Qwen Image 2.1 in
-# bf16 do not fit together next to the LLM, even in the 128 GB of a GB10.
-_resident: dict[str, object] = {}
+# One pipeline in memory at a time: Krea 2 and Qwen Image 2.1 in bf16 do not fit
+# together next to the LLM, even in the 128 GB of a GB10. The H3 video engines
+# share the same slot.
+_resident: dict[object, object] = {}
 
 
-def load(key: str, build):
+def load(key, build):
+    """The resident pipeline for `key`, built on first use. Building another one
+    first frees the current one (its close() is called when it has one: a
+    FastVideo generator owns resources that dropping a reference does not free)."""
     if key not in _resident:
+        for old in _resident.values():
+            if hasattr(old, "close"):
+                old.close()
         _resident.clear()
         gc.collect()
         import torch

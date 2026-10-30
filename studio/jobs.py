@@ -121,7 +121,7 @@ class JobQueue:
                 pipeline = self.pipelines[job.pipeline]
                 # Missing models are fetched on first use, inside the job, so the
                 # user sees the download in the same progress bar as the render.
-                paths = self.models.ensure(pipeline.models, ctx.progress, ctx.cancelled)
+                paths = self.models.ensure(pipeline.needs(self.models.settings), ctx.progress, ctx.cancelled)
                 job.outputs = [self.files.ref(p) for p in pipeline.run(job.params, paths, ctx)]
                 job.status, job.progress = "done", 1.0
             except Cancelled:

@@ -1,13 +1,15 @@
-"""Render the image qualification cases on a running server, one after the other.
+"""Render the qualification cases on a running server, one after the other.
 
-    python tools/qualify/run_image_cases.py                    # every case, http://localhost:8090
+    python tools/qualify/run_image_cases.py                    # image cases, http://localhost:8090
     python tools/qualify/run_image_cases.py --only sheet-human sheet-setting shot-21-solo
+    python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.json
 
 Each case is a job posted to /api/jobs, exactly as a client click would post it;
 '@<id>' in a case is replaced by the first output of that earlier case (a shot
-uses the sheets just rendered). The script only renders: a case is qualified
+uses the sheets just rendered), '@<id>:<n>' by its output n (a clip's last
+frame is output 1). The script only renders: a case is qualified
 when a person has looked at the images next to the 1.4 render of the same
-prompt (docs/IMAGE-ENGINES.md § Qualification), never because its job ended "done".
+prompt (docs/IMAGE-ENGINES.md and docs/H3.md § Qualification), never because its job ended "done".
 """
 
 import argparse
@@ -18,16 +20,18 @@ from pathlib import Path
 
 import httpx
 
-CASES = Path(__file__).with_name("image_cases.json")
+HERE = Path(__file__).parent
 
 
 def substitute(value, outputs):
     if isinstance(value, list):
         return [substitute(v, outputs) for v in value]
     if isinstance(value, str) and value.startswith("@"):
-        if not outputs.get(value[1:]):
-            raise SystemExit(f"Case needs {value[1:]}, which has no output in this run")
-        return outputs[value[1:]][0]
+        case, _, n = value[1:].partition(":")
+        index = int(n or 0)
+        if len(outputs.get(case) or []) <= index:
+            raise SystemExit(f"Case needs output {index} of {case}, which this run does not have")
+        return outputs[case][index]
     return value
 
 
@@ -35,10 +39,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", default="http://localhost:8090")
     parser.add_argument("--only", nargs="*", help="case ids (their '@' dependencies must be listed too)")
+    parser.add_argument("--cases", nargs="+", default=["image_cases.json"],
+                        help="case files in tools/qualify/, run in order")
     parser.add_argument("--report", default="qualify-images.json")
     args = parser.parse_args()
 
-    cases = json.loads(CASES.read_text())["cases"]
+    cases = [c for name in args.cases for c in json.loads((HERE / name).read_text())["cases"]]
     if args.only:
         cases = [c for c in cases if c["id"] in args.only]
     client = httpx.Client(base_url=args.server, timeout=30)

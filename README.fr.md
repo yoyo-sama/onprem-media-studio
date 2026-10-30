@@ -7,10 +7,11 @@ nécessaires à la première utilisation.
 Successeur d'AI Content Studio 1.4. Moteurs : Krea 2, Qwen Image 2.1, MiniMax H3 via
 FastH3, Gemma 4 E4B pour l'enrichissement des prompts.
 
-> État : étape 2 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
+> État : étape 3 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
 > modèles, la file de jobs et le pont LLM sont en place, et les moteurs d'image (Krea 2, Qwen Image
-> 2.1) sont écrits mais pas encore qualifiés sur GPU ; les moteurs vidéo arrivent à
-> l'étape 3.
+> 2.1), Gemma 4 et les moteurs vidéo MiniMax H3 en NVFP4 (texte, image, première/dernière image et
+> références vers vidéo) sont qualifiés sur le GB10 (2026-10-30). Le repli FP8 de H3 n'a pas encore
+> été rendu.
 
 English version: [README.md](README.md).
 
@@ -52,6 +53,8 @@ dans le `PATH` ou dans `STUDIO_LLAMA_SERVER`.
   changement de nom
 - [Moteurs d'image](docs/fr/IMAGE-ENGINES.md) : jobs Krea 2 et Qwen Image 2.1, références d'images,
   qualification
+- [Moteurs vidéo](docs/fr/H3.md) : jobs MiniMax H3, référence vers vidéo en deux passes, repli de
+  précision, pile de LoRA, qualification
 - [Leçons de la 1.4](docs/fr/LESSONS.md) : règles apprises à la dure, à lire avant de toucher un
   prompt ou un moteur
 - [ADR 0001](docs/fr/adr/0001-inference-stack.md) : pourquoi diffusers, FastVideo et llama.cpp
@@ -64,7 +67,9 @@ Ce dépôt ne contient aucun poids de modèle. Chaque modèle garde sa licence, 
 
 - **MiniMax H3** (et FastH3) : MiniMax H3 Community License. Elle **exclut l'Union européenne, le
   Royaume-Uni, la Corée du Sud et les États-Unis**, et impose d'afficher « MiniMax H3 » dans
-  l'interface d'un produit commercial. Voir [NOTICE](NOTICE).
+  l'interface d'un produit commercial (la page d'état l'affiche). Voir [NOTICE](NOTICE).
+- **Upscaler latent MiniMax H3** (LBH-123-AI) : poids sous Apache-2.0 ; le code qui les exécute
+  est celui de ce projet.
 - **Krea 2** : accès restreint sur Hugging Face, licence acceptée par chaque utilisateur.
 - **Qwen Image 2.1** : Qwen Research License, **usage non commercial uniquement** ; un usage
   commercial demande une licence de Qwen. Toutes les retouches et images de plan l'utilisent.

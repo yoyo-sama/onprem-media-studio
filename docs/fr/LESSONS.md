@@ -92,7 +92,8 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
 
 26. **La longueur suit la grille 17n+5 à 24 i/s**, pas la durée demandée (1 s → 39 images,
     1,625 s). Largeur et hauteur sont arrondies au multiple de 32 inférieur. Modulo à la Python
-    en portant la formule. [#11, #20]
+    en portant la formule. En 2.0, FastVideo limite aussi H3 à 5–15 s : un cut plus court est
+    refusé, pas allongé en silence (H3.md). [#11, #20]
 27. **La grammaire de prompt structurée est obligatoire** (6 champs Ref2VA). `<Picture N>` est
     l'entrée physique (à partir de 1), `<Subject N>` l'identité logique, liées une fois dans
     `subject_definitions` ; la prose n'emploie que `<Subject N>`. Plafond dur de 7 000 caractères,
@@ -119,12 +120,32 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     root. [#33]
 35. **Un modèle n'est référencé qu'après avoir vérifié sa présence sur disque** ; les fichiers
     sont renommés ou déplacés d'une version à l'autre. [#14]
+36. **Brider et conserver les compilations JIT de FlashInfer.** Le premier job H3 en NVFP4 compile
+    le `fp4_gemm_cutlass_sm120` de FlashInfer au moment du rendu. Sans `MAX_JOBS`, environ 22
+    processus nvcc tournaient en parallèle (~130 Go) : le GB10 a manqué de mémoire et aucun clip
+    n'est sorti. Avec `MAX_JOBS=4`, la compilation prend 2 min 50 et laisse plus de 91 Go
+    disponibles. Le cache doit vivre sur le volume de données
+    (`FLASHINFER_WORKSPACE_BASE=/data/cache`) ; sinon chaque nouveau conteneur recompile. L'image
+    règle les deux. (GB10, 2026-10-30)
+37. **Pas de torch.compile sur le VAE H3 dans un serveur qui dure.** La recette V2 de FastVideo
+    compile les tuiles du VAE en mode `reduce-overhead` (graphes CUDA). L'état des graphes CUDA est
+    propre à chaque thread, et FastVideo lance chaque requête dans un nouveau thread. Le deuxième
+    job sur le même générateur échouait donc au bout de 6 s (`assert torch._C._is_key_in_tls`
+    dans `cudagraph_trees.py`). Sans compilation, trois jobs d'affilée passent, et le premier job
+    ne paie plus 3 min 30 de compilation. Un test unitaire ne peut pas le voir : seul un deuxième
+    vrai job sur le GPU le montre. (GB10, 2026-10-30)
+38. **Dimensionner les références image H3 comme ComfyUI, pas comme FastVideo.** FastVideo agrandit
+    chaque référence image à 2048 px de petit côté et garde les références image denses dans son
+    attention creuse : le r2v avec deux planches 1920×1088 prenait 680 s, 2,6 fois ComfyUI. Le
+    `ref_image_size` « max » de ComfyUI ne fait que réduire à ce côté : environ 247 s, sans perte
+    visible. Envoyer des références plus petites n'y change rien, FastVideo les ré-agrandit.
+    (GB10, 2026-10-30)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
-36. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
+39. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
     passe par la fonction de traduction à l'écriture et de nouveau au changement de langue.
-37. Une garde sur un état possiblement nul se choisit pour le résultat qu'elle donne quand l'état
+40. Une garde sur un état possiblement nul se choisit pour le résultat qu'elle donne quand l'état
     est absent, pas pour sa symétrie apparente. [#18]
-38. Une capture headless avec budget de temps virtuel peut figer une image antérieure au DOM
+41. Une capture headless avec budget de temps virtuel peut figer une image antérieure au DOM
     final : confirmer par un dump du DOM. [#15]

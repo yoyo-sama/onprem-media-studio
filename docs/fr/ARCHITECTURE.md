@@ -31,25 +31,30 @@ requête LLM.
 | `studio/files.py` | `FileStore` : images envoyées, références `inputs/…` et `outputs/…` |
 | `studio/pipelines/` | Contrat `Pipeline` et registre ; une sous-classe par moteur |
 | `studio/pipelines/krea2.py`, `qwen.py` | Moteurs d'image (Krea 2, Qwen Image 2.1) : [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
+| `studio/pipelines/h3.py` | Moteurs vidéo (MiniMax H3 : texte, image, première/dernière image et références vers vidéo), géométrie et plan d'affinage : [H3.md](H3.md) |
+| `studio/pipelines/h3_runtime.py` | Adaptateur FastVideo : recettes Spark, profils NVFP4/FP8, sortie latente et réglages de la passe d'affinage, annulation |
+| `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | Upscaler latent H3 (convolutions 3D, checkpoint LBH v1) et pile de LoRA (fusion exacte en une seule branche parallèle) |
 | `studio/pipelines/common.py` | Contrôle des paramètres, pipeline unique en mémoire, progression par étape, sortie PNG |
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |
 | `studio/llm.py` | `LlamaServer` : démarrage à la demande, appel chat OpenAI, vision par images base64 |
 | `studio/main.py` | API HTTP/WebSocket et fichiers statiques |
 | `web/` | Front end (page d'état aujourd'hui ; portage Studio et Canvas à l'étape 4) |
-| `docker/Dockerfile` | Base NGC PyTorch + llama.cpp compilé pour sm_121 |
+| `docker/Dockerfile` | Base NGC PyTorch + llama.cpp compilé pour sm_121 + FastVideo et ses noyaux compilés pour sm_121a |
 
 ## Cycle de vie d'un job
 
 1. Le client poste `{"pipeline": id, "params": {...}}`. `Pipeline.validate` rejette une entrée
    invalide (paramètre inconnu, référence d'image absente) en 422 avant toute mise en file, et
    renvoie les paramètres que le job conserve, valeurs par défaut remplies et graine tirée.
-2. Le worker prend les jobs dans l'ordre. Les modèles manquants sont téléchargés d'abord, dans le
-   job, et le téléchargement apparaît dans la progression du job.
+2. Le worker prend les jobs dans l'ordre. Les modèles manquants (`Pipeline.needs(settings)`,
+   c'est-à-dire `models` sauf quand un réglage les choisit, comme la précision H3) sont
+   téléchargés d'abord, dans le job, et le téléchargement apparaît dans la progression du job.
 3. `Pipeline.run(params, chemins_modèles, ctx)` rend et renvoie les fichiers écrits dans
    `ctx.output_dir` ; le job les liste sous forme de références (`outputs/…`). `ctx.files` résout
    les références d'image. `ctx.progress()` publie la progression et lève une exception si le job
    a été annulé ; les moteurs d'image l'appellent à chaque étape de débruitage, une annulation
-   arrête donc un rendu en une étape au plus.
+   arrête donc un rendu en une étape au plus. Les moteurs vidéo interrompent directement
+   FastVideo (H3.md).
 4. Statut : `queued → running → done | error | cancelled`. Chaque changement est poussé sur
    `/api/ws`.
 
@@ -63,6 +68,8 @@ Aucun chemin de code ne crée un job de lui-même.
 models/<id catalogue>/...   poids, plus .complete une fois le téléchargement terminé
 input/<hash>.<ext>          images envoyées (référence inputs/<hash>.<ext>)
 output/<pipeline>/...       rendus (référence outputs/<pipeline>/...)
+loras/h3/<fichier>.safetensors   LoRA H3, désignées par leur nom de fichier
+cache/h3-loras/...          piles de LoRA fusionnées
 ```
 
 ## Configuration
@@ -76,6 +83,7 @@ output/<pipeline>/...       rendus (référence outputs/<pipeline>/...)
 | `STUDIO_LLAMA_SERVER` | `llama-server` | Chemin du binaire serveur de llama.cpp |
 | `STUDIO_LLM_PORT` | `8095` | Port local de llama-server |
 | `STUDIO_DISK_RESERVE_GB` | `20` | Espace libre conservé après tout téléchargement |
+| `STUDIO_H3_PRECISION` | `auto` | MiniMax H3 : `auto` (NVFP4, FP8 si NVFP4 échoue), `nvfp4` ou `fp8` (H3.md) |
 
 ## Changer le nom du produit
 

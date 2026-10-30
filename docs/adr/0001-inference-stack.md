@@ -38,8 +38,10 @@ is a dependency.
 - The backend never builds node graphs. A pipeline is a Python class: models it needs + `run()`.
 - The ComfyUI-only pieces of the validated OmniRef workflow need an equivalent: the 3D latent
   upscaler (community node) and the "power LoRA stack" (exact-branch LoRA on a quantised model).
-  Step 3 checks what FastVideo offers before writing anything, and the licence of the upscaler
-  weights before using them.
+  Step 3 (H3.md): FastVideo has neither, so both are written here: the upscaler as our own module
+  loading LBH-123-AI's checkpoint (Apache-2.0 weights), the stack as one merged adapter that
+  FastVideo runs as a side branch. The two passes run through FastVideo's public options
+  (latent output, injected latents, PDD plan) without forking it.
 - The front end talks to `/api/*` instead of `/comfy/*` and `/ollama/*`; its graph-building
   layer is replaced by job submissions.
 
@@ -50,7 +52,14 @@ is a dependency.
   commercial product. This already applied to 1.4. Use in excluded territories needs a licence
   from MiniMax.
 - **Krea 2 is gated:** the user must accept its licence on Hugging Face and provide `HF_TOKEN`.
-- **FastH3 for first/last frame (I2V/FL2VA):** OmniRef is validated; the FL2VA FastH3 weights
-  still have to be identified and qualified in step 3.
+- **FastH3 for first/last frame (I2V/FL2VA):** OmniRef is validated. Step 3 uses FastH3 V2
+  (`FastVideo/FastH3-QAD-v2`, FP8 fallback `FastVideo/FastVideo-FastH3-8-Step-V2-FP8`), whose
+  pipeline takes first and last images, but upstream records only text to video for it: to
+  qualify on GB10.
+- **FastVideo pins torch 2.12** while the image keeps the NGC 25.11 torch (2.10); FastVideo is
+  installed without its dependencies and pip is constrained to the base torch. API and imports
+  check out on 2.10 without a GPU, and the kernels ran on the GB10 (2026-10-30), with FastVideo's
+  own CUDA 13.0 + torch 2.12 stack as the fallback (`docs/H3.md` § Torch version).
+- **H3 clips are 5 to 15 s** in FastVideo, where 1.4 allowed shorter cuts.
 - **NGC image tag and llama.cpp revision** are pinned but not yet built on GB10: first build on
   the device may require a bump.

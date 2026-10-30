@@ -2,3 +2,10 @@ OnPrem Media Studio downloads third-party model weights at run time; they are no
 repository and each keeps its own licence (see studio/catalog.json).
 
 MiniMax H3 is licensed under the MiniMax H3 Community License Agreement, Copyright © 2026 MiniMax. All Rights Reserved.
+
+MiniMax H3 runs through FastVideo (https://github.com/hao-ai-lab/FastVideo), Apache License 2.0,
+installed in the Docker image; its code is not part of this repository.
+
+The MiniMax H3 latent upscaler weights (LBH-123-AI/Minimax_h3_latent_Upscaler) are licensed under
+the Apache License 2.0. The network that loads them (studio/pipelines/h3_upscaler.py) was written
+for this project.

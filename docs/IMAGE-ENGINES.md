@@ -114,8 +114,10 @@ Only then set `"qualified": true` for the model in `studio/catalog.json`. Seeds 
 
 ## Known gaps
 
-- **First GPU run (gb10-demo, 2026-10-29):** every Krea 2 (7/7) and Qwen Image 2.1 (4/4) case
-  rendered. `qualified` stays `false` until the images have been compared with 1.4 as above.
+- **Qualification (gb10-demo, 2026-10-29/30):** every Krea 2 (7/7) and Qwen Image 2.1 (4/4) case
+  rendered, and the project owner accepted the renders on 2026-10-30: both models are
+  `"qualified": true`. There was no side-by-side comparison with 1.4; a difference found later is
+  fixed then.
 - **LoRA loading on NGC 25.11:** peft 0.19+ refuses its torchao 0.14, so peft is pinned below 0.19.
 - **Style LoRAs** (1.4 Krea 2 and sheet LoRAs) are not ported yet.
 - **Qwen Image 2.1 licence:** Qwen Research License, non-commercial use only. Since 2509
