@@ -26,6 +26,7 @@ request.
 | `studio/config.py` | Settings from environment variables; **the display name lives here only** |
 | `studio/catalog.json` | Every downloadable model: repository, files, licence, gated, qualified |
 | `studio/models.py` | `ModelStore`: installed state, resumable per-file download, disk check |
+| `studio/import14.py` | `python -m studio.import14`: reuses the models and H3 LoRAs of a 1.4 install (identical files, shards rebuilt and checked by SHA-256) |
 | `studio/files.py` | `FileStore`: uploads, `inputs/…` and `outputs/…` references |
 | `studio/jobs.py` | `JobQueue`: submission, single worker, progress, cancellation, events |
 | `studio/pipelines/` | `Pipeline` contract and registry; one subclass per engine |
