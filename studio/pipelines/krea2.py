@@ -31,7 +31,8 @@ class Krea2TextToImage(Pipeline):
 
     def run(self, params, models, ctx):
         ctx.progress(0, "Loading Krea 2")
-        pipe = common.load(self.id, lambda: _build(models["krea2-turbo"]))
+        pipe = common.load(self.id, lambda: _build(models["krea2-turbo"]),
+                           common.disk_size(models["krea2-turbo"]))
         images = pipe(
             prompt=params["prompt"],
             width=params["width"],

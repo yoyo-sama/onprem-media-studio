@@ -17,7 +17,7 @@ from .gallery import Gallery
 from .jobs import JobQueue
 from .llm import LlamaServer, LlmError
 from .models import ModelError, ModelStore
-from .pipelines import REGISTRY, Pipeline
+from .pipelines import REGISTRY, Pipeline, common
 
 REPO_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = REPO_DIR / "web"
@@ -37,17 +37,6 @@ class ChatRequest(BaseModel):
     temperature: float = 0.7
 
 
-def available_memory(cuda_free: int, cuda_total: int, meminfo: str) -> int:
-    """Free GPU memory. On unified memory (GB10: GPU total within 5 % of RAM total), CUDA's
-    figure leaves out the reclaimable page cache, so MemAvailable is used instead (LESSONS #33)."""
-    fields = {k: int(v.split()[0]) * 1024 for k, v in
-              (line.split(":", 1) for line in meminfo.splitlines() if ":" in line)}
-    total, available = fields.get("MemTotal"), fields.get("MemAvailable")
-    if total and available is not None and abs(cuda_total - total) <= 0.05 * total:
-        return available
-    return cuda_free
-
-
 def gpu_info() -> dict:
     try:
         import torch
@@ -55,14 +44,9 @@ def gpu_info() -> dict:
         return {"available": False, "reason": "torch not installed"}
     if not torch.cuda.is_available():
         return {"available": False, "reason": "no CUDA device"}
-    free, total = torch.cuda.mem_get_info()
-    try:
-        free = available_memory(free, total, Path("/proc/meminfo").read_text())
-    except OSError:  # not Linux
-        pass
     return {"available": True, "name": torch.cuda.get_device_name(0),
             "capability": "%d.%d" % torch.cuda.get_device_capability(0),
-            "memory_free": free, "memory_total": total}
+            "memory_free": common.free_memory(), "memory_total": torch.cuda.mem_get_info()[1]}
 
 
 def memory_info() -> dict | None:
