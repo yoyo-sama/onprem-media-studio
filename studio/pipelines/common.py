@@ -1,5 +1,5 @@
-"""What the image engines share: parameter checks, the single pipeline kept in
-GPU memory, seeded generators, step progress and PNG output.
+"""What the image engines share: parameter checks, the pipelines kept in GPU
+memory, seeded generators, step progress and PNG output.
 
 torch and diffusers are imported inside functions so that the server and its
 unit tests run on a machine without them.
@@ -69,27 +69,70 @@ def fit_area(width: int, height: int, area: int = 1024 * 1024, multiple: int = 3
 
 # ── Runtime ──────────────────────────────────────────────────────────────────
 
-# One pipeline in memory at a time: Krea 2 and Qwen Image 2.1 in bf16 do not fit
-# together next to the LLM, even in the 128 GB of a GB10. The H3 video engines
-# share the same slot.
+# Pipelines stay resident while memory allows, as ComfyUI keeps its models: Krea 2
+# and Qwen Image 2.1 together take about 65 GB next to the LLM, which fits in the
+# 128 GB of a GB10, and switching between them would otherwise reload ~30 GB each
+# time (about 3 min). The least recently used ones are freed when the next one does
+# not fit. An H3 video engine is loaded alone: its peak (text encoder, references,
+# upscaler, VAE decode) goes far past its weights, and with Qwen kept next to it a
+# two-pass r2v left 11 GB free on the GB10.
 _resident: dict[object, object] = {}
+RESERVE = 16 * 1024**3  # left free next to the weights for the render's activations
 
 
-def load(key, build):
-    """The resident pipeline for `key`, built on first use. Building another one
-    first frees the current one (its close() is called when it has one: a
-    FastVideo generator owns resources that dropping a reference does not free)."""
-    if key not in _resident:
-        for old in _resident.values():
-            if hasattr(old, "close"):
-                old.close()
-        _resident.clear()
-        gc.collect()
-        import torch
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        _resident[key] = build()
+def available_memory(cuda_free: int, cuda_total: int, meminfo: str) -> int:
+    """Free GPU memory. On unified memory (GB10: GPU total within 5 % of RAM total), CUDA's
+    figure leaves out the reclaimable page cache, so MemAvailable is used instead (LESSONS #33)."""
+    fields = {k: int(v.split()[0]) * 1024 for k, v in
+              (line.split(":", 1) for line in meminfo.splitlines() if ":" in line)}
+    total, available = fields.get("MemTotal"), fields.get("MemAvailable")
+    if total and available is not None and abs(cuda_total - total) <= 0.05 * total:
+        return available
+    return cuda_free
+
+
+def free_memory() -> int:
+    import torch
+    free, total = torch.cuda.mem_get_info()
+    try:
+        return available_memory(free, total, Path("/proc/meminfo").read_text())
+    except OSError:  # not Linux
+        return free
+
+
+def disk_size(path: Path) -> int:
+    """Bytes of a model directory: what its weights take once loaded, near enough."""
+    return sum(f.stat().st_size for f in Path(path).rglob("*") if f.is_file())
+
+
+def load(key, build, size: int = 0, alone: bool = False):
+    """The resident pipeline for `key`, built on first use. Before building one,
+    the least recently used pipelines are freed until `size` bytes (its weights)
+    plus RESERVE fit in free memory, or all of them when it must run `alone`;
+    when nothing is left to free, it is built anyway."""
+    if key in _resident:
+        _resident[key] = _resident.pop(key)  # now the most recently used
+        return _resident[key]
+    while _resident and (alone or free_memory() < size + RESERVE):
+        _free(next(iter(_resident)))
+    _resident[key] = build()
     return _resident[key]
+
+
+def _free(key) -> None:
+    # close() when there is one: a FastVideo generator owns resources that dropping
+    # a reference does not free.
+    old = _resident.pop(key)
+    if hasattr(old, "close"):
+        old.close()
+    del old
+    gc.collect()
+    try:
+        import torch
+    except ImportError:
+        return
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def device() -> str:

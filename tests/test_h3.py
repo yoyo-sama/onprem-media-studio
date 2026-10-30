@@ -102,7 +102,8 @@ class FakeEngine:
 def engines(monkeypatch, settings):
     log = {"engines": []}
 
-    def load(key, build):
+    def load(key, build, size=0, alone=False):
+        assert alone
         assert key[0] == "h3"
         engine = FakeEngine(key[1], log)
         log["engines"].append(engine)

@@ -33,7 +33,7 @@ request.
 | `studio/pipelines/h3.py` | Video engines (MiniMax H3: text, image, first/last image and references to video), geometry and refine schedule: [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | FastVideo adapter: Spark recipes, NVFP4/FP8 profiles, latent output and refine-pass overrides, cancellation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | H3 latent upscaler (3D conv, LBH v1 checkpoint) and LoRA stack (exact merge into one side branch) |
-| `studio/pipelines/common.py` | Parameter checks, the single resident pipeline, step progress, PNG output |
+| `studio/pipelines/common.py` | Parameter checks, the pipelines kept in memory (least recently used freed when the next does not fit), step progress, PNG output |
 | `tools/qualify/` | Qualification cases built from the 1.4 prompt compilers, and their runner |
 | `studio/llm.py` | `LlamaServer`: start on demand, OpenAI chat call, vision via base64 images |
 | `studio/main.py` | HTTP/WebSocket API and static files |

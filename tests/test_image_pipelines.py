@@ -38,7 +38,7 @@ class FakeDiffusersPipeline:
 def fake(monkeypatch):
     pipe = FakeDiffusersPipeline()
     loaded = []
-    monkeypatch.setattr(common, "load", lambda key, build: loaded.append(key) or pipe)
+    monkeypatch.setattr(common, "load", lambda key, build, size=0: loaded.append(key) or pipe)
     monkeypatch.setattr(common, "generator", lambda seed: ("generator", seed))
     pipe.loaded = loaded
     return pipe
@@ -244,3 +244,53 @@ def test_qualification_cases_are_valid_jobs(settings):
             elif str(value).startswith("@"):
                 params[key] = ref
         REGISTRY[case["pipeline"]].validate(params, files)
+
+
+class Closable:
+    def __init__(self, name, log):
+        self.name, self.log = name, log
+
+    def close(self):
+        self.log.append(self.name)
+
+
+def test_pipelines_stay_resident_while_memory_allows(monkeypatch):
+    gb = 1024**3
+    free = {"bytes": 80 * gb}
+    closed = []
+    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "free_memory", lambda: free["bytes"])
+    krea = common.load("krea2", lambda: Closable("krea2", closed), 34 * gb)
+    free["bytes"] -= 34 * gb
+    qwen = common.load("qwen", lambda: Closable("qwen", closed), 30 * gb)
+    free["bytes"] -= 30 * gb
+    assert list(common._resident) == ["krea2", "qwen"] and closed == []
+    # Back to Krea 2: still resident, not rebuilt, and now the most recently used.
+    assert common.load("krea2", lambda: pytest.fail("rebuilt")) is krea
+    assert list(common._resident) == ["qwen", "krea2"]
+
+    def release(name, size):
+        def close():
+            closed.append(name)
+            free["bytes"] += size
+        return close
+    qwen.close, krea.close = release("qwen", 30 * gb), release("krea2", 34 * gb)
+    # A 64 GB video engine does not fit: the least recently used goes first, then the next.
+    common.load("h3", lambda: Closable("h3", closed), 64 * gb)
+    assert closed == ["qwen", "krea2"] and list(common._resident) == ["h3"]
+
+
+def test_a_video_engine_is_loaded_alone(monkeypatch):
+    closed = []
+    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "free_memory", lambda: 200 * 1024**3)
+    common.load("krea2", lambda: Closable("krea2", closed), 34 * 1024**3)
+    common.load("qwen", lambda: Closable("qwen", closed), 30 * 1024**3)
+    common.load("h3", lambda: Closable("h3", closed), alone=True)
+    assert closed == ["krea2", "qwen"] and list(common._resident) == ["h3"]
+
+
+def test_a_pipeline_is_built_even_when_nothing_is_left_to_free(monkeypatch):
+    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "free_memory", lambda: 0)
+    assert common.load("krea2", lambda: "pipe", 34 * 1024**3) == "pipe"
