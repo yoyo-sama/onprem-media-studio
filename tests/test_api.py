@@ -61,6 +61,20 @@ def test_health_names_the_app(client):
     assert "gpu" in body and body["llm"] == "stopped"
 
 
+MEMINFO = "MemTotal:       127535272 kB\nMemFree:         3500000 kB\nMemAvailable:   115000000 kB\n"
+
+
+def test_unified_memory_counts_reclaimable_cache():
+    from studio.main import available_memory
+    gb10_total = 127535272 * 1024  # CUDA total on a GB10 equals the RAM total
+    assert available_memory(3 * 1024**3, gb10_total, MEMINFO) == 115000000 * 1024
+
+
+def test_discrete_gpu_keeps_cuda_free_memory():
+    from studio.main import available_memory
+    assert available_memory(20 * 1024**3, 32 * 1024**3, MEMINFO) == 20 * 1024**3
+
+
 def test_app_name_is_configurable(settings, store, monkeypatch):
     monkeypatch.setenv("STUDIO_APP_NAME", "Renamed Studio")
     from studio.config import Settings
