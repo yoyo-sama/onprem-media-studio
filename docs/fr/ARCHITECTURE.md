@@ -14,6 +14,7 @@ navigateur ──HTTP/WS──> studio (FastAPI, :8090)
                           ├─ /api/gallery  index des sorties : recherche, miniatures, tags, corbeille
                           ├─ /api/update   mise à jour d'un dépôt git depuis l'interface
                           ├─ /api/loras    liste et téléversement de LoRA
+                          ├─ /api/instructions  consignes Gemma remplacées dans les paramètres
                           ├─ /api/ws       événements de jobs et de téléchargements
                           ├─ /inputs       images envoyées
                           ├─ /outputs      fichiers rendus
@@ -43,6 +44,7 @@ requête LLM.
 | `studio/llm.py` | `LlamaServer` : démarrage à la demande, appel chat OpenAI, vision par images base64 |
 | `studio/gallery.py` | `Gallery` : index SQLite/FTS5 des sorties, miniatures, tags, favoris, renommage, corbeille : [GALLERY.md](GALLERY.md) |
 | `studio/update.py`, `loras.py` | Mise à jour depuis l'interface (avance rapide git, redémarrage sur place) et téléversement de LoRA : [GALLERY.md](GALLERY.md) |
+| `studio/instructions.py` | Consignes Gemma remplacées depuis l'interface, gardées dans `STUDIO_DATA_DIR/instructions.json` (`/api/instructions`) ; celles par défaut vivent dans `web/js/prompts.js` |
 | `studio/guard.py` | Contrôle de même origine des routes qui déplacent ou écrivent des fichiers |
 | `studio/main.py` | API HTTP/WebSocket et fichiers statiques ; `/api/health` donne l'application, le GPU, la mémoire, l'état du LLM et le nombre de jobs en file |
 | `web/index.html`, `web/canvas.html` | Front end : le Studio et le Canvas, portés de la 1.4, sans étape de build : [FRONTEND.md](FRONTEND.md) |

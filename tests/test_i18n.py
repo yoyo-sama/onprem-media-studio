@@ -24,7 +24,7 @@ VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "met
 # Call name -> indexes of the arguments that hold English text (from "tab" on: local
 # helpers of director.js, gallery.js, studio.js and canvas-nodes.js).
 CALLS = {"t": (0,), "L": (0,), "tx": (1,), "txAttr": (2,), "log": (1,), "notice": (1,), "say": (2,),
-         "undoToast": (0,), "tab": (1,), "button": (0, 1), "txAria": (1,), "setStatus": (2,), "done": (2,)}
+         "undoToast": (0,), "tab": (1,), "button": (0, 1), "txAria": (1,), "setStatus": (2,), "done": (2,), "part": (0,)}
 CALL_RE = re.compile(r"(?<![\w$.])(" + "|".join(CALLS) + r")\(")
 # Object keys whose value (or first array item) is English text: runJob's `label` and
 # `sub`, the prompt editor's `title`, `hint` and `applyLabel`.

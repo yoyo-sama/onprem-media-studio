@@ -68,6 +68,23 @@
         </div>
       </details>
       <details class="right-card" open>
+        <summary class="panel-title"><span class="live-dot">Gemma instructions</span><span id="instrState"></span></summary>
+        <p>What Gemma is told when ✨ enriches a prompt, one instruction per engine, so the prompt follows each model's vocabulary and structure. Your text applies to the Studio and the Canvas.</p>
+        <div class="form-stack">
+          <label>
+            Engine
+            <select id="instrSelect"></select>
+          </label>
+          <textarea id="instrText" rows="12" spellcheck="false" aria-label="Instruction"></textarea>
+          <span class="hint" id="instrHint"></span>
+          <p class="model-notice" id="instrWarn" role="status" hidden></p>
+          <div class="instr-actions">
+            <button type="button" class="control-btn primary" id="instrSave">Save</button>
+            <button type="button" class="control-btn" id="instrReset">Restore the original</button>
+          </div>
+        </div>
+      </details>
+      <details class="right-card" open>
         <summary class="panel-title"><span class="live-dot">Update</span><span id="updateState">…</span></summary>
         <p id="updateText"></p>
         <button type="button" class="control-btn primary" id="updateBtn" hidden>Update and restart</button>

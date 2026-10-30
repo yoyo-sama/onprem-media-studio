@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import gallery as gallery_api
-from . import loras, update
+from . import instructions, loras, update
 from .config import APP_VERSION, Settings
 from .files import FileStore
 from .gallery import Gallery
@@ -133,6 +133,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     app.include_router(gallery_api.router(gallery))
     app.include_router(update.router(updater))
     app.include_router(loras.router(settings.loras_dir))
+    app.include_router(instructions.router(instructions.Instructions(settings.data_dir / "instructions.json")))
 
     @app.get("/api/health")
     def health():
@@ -142,6 +143,13 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     @app.get("/api/models")
     def list_models():
         return models.status()
+
+    @app.get("/api/models/{model_id}/size")
+    def model_size(model_id: str):
+        try:
+            return {"id": model_id, "bytes": models.pending_bytes(model_id)}
+        except ModelError as exc:
+            raise HTTPException(404 if model_id not in models.catalog else 502, str(exc))
 
     @app.post("/api/models/{model_id}/download", status_code=202)
     def download_model(model_id: str):

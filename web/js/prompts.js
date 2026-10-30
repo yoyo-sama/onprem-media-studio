@@ -820,15 +820,33 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
   // the user's negative prompt.
   const KREA2_WORKFLOWS = new Set(["krea2_t2i", "campaign"]);
   const isKrea2Workflow = wf => !!wf && KREA2_WORKFLOWS.has(wf.id);
-  function briefEnrichSystem(wf) {
-    if (isKrea2Workflow(wf)) return [KREA2_ENRICH_SYSTEM, "prompt"];
+  // The instructions the settings panel can replace, by name: [default, output key].
+  // A replaced text (setInstructionOverrides, from /api/instructions) only takes the
+  // default's place; the output key and the token checks of enrichBrief stay.
+  const ENRICH_INSTRUCTIONS = {
+    krea2: [KREA2_ENRICH_SYSTEM, "prompt"],
+    qwen21: [ENRICH_SYSTEM, "positive_prompt"],
+    h3_video: [H3_VIDEO_ENRICH_SYSTEM, "prompt"],
+    h3_r2v: [R2V_BRIEF_ENRICH_SYSTEM, "brief"],
+    storyboard: [SHEET_BRIEF_ENRICH_SYSTEM, "brief"],
+  };
+  let instructionOverrides = {};
+  function setInstructionOverrides(map) { instructionOverrides = { ...map }; }
+  function enrichRoute(wf) {
+    if (isKrea2Workflow(wf)) return "krea2";
     // The multi-image sequence renders H3 image-to-video segments (1.4 used LTX there).
-    if (wf?.id === "h3_t2v" || wf?.id === "h3_i2v" || wf?.id === "h3_sequence") return [H3_VIDEO_ENRICH_SYSTEM, "prompt"];
-    if (wf?.id === "h3_r2v") return [R2V_BRIEF_ENRICH_SYSTEM, "brief"];
-    if (wf?.id === "qwen_edit_i2i") return [QWEN_EDIT_INSTRUCTION_ENRICH_SYSTEM, "instruction"];
-    if (wf?.pipeline === "storyboard") return [SHEET_BRIEF_ENRICH_SYSTEM, "brief"];
+    if (wf?.id === "h3_t2v" || wf?.id === "h3_i2v" || wf?.id === "h3_sequence") return "h3_video";
+    if (wf?.id === "h3_r2v") return "h3_r2v";
+    if (wf?.pipeline === "storyboard") return "storyboard";
     if (wf?.enrich === "builtin") return null;
-    return [ENRICH_SYSTEM, "positive_prompt"];
+    return "qwen21";
+  }
+  function briefEnrichSystem(wf) {
+    if (wf?.id === "qwen_edit_i2i") return [QWEN_EDIT_INSTRUCTION_ENRICH_SYSTEM, "instruction"];
+    const name = enrichRoute(wf);
+    if (!name) return null;
+    const [text, key] = ENRICH_INSTRUCTIONS[name];
+    return [instructionOverrides[name] || text, key];
   }
 
   // <imageN> mentions of a Qwen Image 2.1 edit brief cross Gemma as bare words too.
@@ -870,7 +888,7 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
     }
     let text = krea2 ? stripPromptPadding(raw) : raw;
     let camera = false;
-    if (system === H3_VIDEO_ENRICH_SYSTEM) {
+    if (enrichRoute(wf) === "h3_video") {
       const fixed = restoreCameraClause(src, text);
       camera = fixed !== text;
       text = fixed;
@@ -1077,7 +1095,7 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
     KREA2_ENRICH_SYSTEM, H3_VIDEO_ENRICH_SYSTEM, R2V_BRIEF_ENRICH_SYSTEM, QWEN_EDIT_INSTRUCTION_ENRICH_SYSTEM,
     SHEET_BRIEF_ENRICH_SYSTEM, ENRICH_SYSTEM, QWEN_EDIT_ENRICH_SYSTEM, keyframeModelName, SHEET_DESC_ENRICH_SYSTEM,
     SHOT_ACTION_ENRICH_SYSTEM, CUT_ENRICH_SYSTEM, H3_SCENARIO_SYSTEM, REF_VISION_SYSTEM,
-    isKrea2Workflow, briefEnrichSystem, enrichBrief,
+    isKrea2Workflow, briefEnrichSystem, enrichBrief, ENRICH_INSTRUCTIONS, setInstructionOverrides,
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage,
     relayShot, relaySubjectLegend, composeScenario,

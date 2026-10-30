@@ -443,6 +443,8 @@ details.right-card:not([open]) > summary.panel-title::after { transform: rotate(
 }
 
 .form-stack { display: grid; gap: 14px; }
+#instrText { width: 100%; box-sizing: border-box; font: 12px/1.45 var(--mono); resize: vertical; }
+.instr-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 label {
   display: grid;

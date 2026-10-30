@@ -13,6 +13,7 @@ browser ──HTTP/WS──> studio (FastAPI, :8090)
                        ├─ /api/gallery  index of the outputs: search, thumbnails, tags, trash
                        ├─ /api/update   in-app update of a git checkout
                        ├─ /api/loras    LoRA list and upload
+                       ├─ /api/instructions  Gemma instructions replaced in the settings
                        ├─ /api/ws       job and download events
                        ├─ /inputs       uploaded images
                        ├─ /outputs      rendered files
@@ -42,6 +43,7 @@ request.
 | `studio/llm.py` | `LlamaServer`: start on demand, OpenAI chat call, vision via base64 images |
 | `studio/gallery.py` | `Gallery`: SQLite/FTS5 index of the outputs, thumbnails, tags, favourites, rename, trash: [GALLERY.md](GALLERY.md) |
 | `studio/update.py`, `loras.py` | In-app update (git fast-forward, restart in place) and LoRA upload: [GALLERY.md](GALLERY.md) |
+| `studio/instructions.py` | Gemma instructions replaced in the interface, kept in `STUDIO_DATA_DIR/instructions.json` (`/api/instructions`); the defaults live in `web/js/prompts.js` |
 | `studio/guard.py` | Same-origin check of the routes that move or write files |
 | `studio/main.py` | HTTP/WebSocket API and static files; `/api/health` gives the app, GPU, memory, LLM state and the number of jobs in the queue |
 | `web/index.html`, `web/canvas.html` | Front end: the Studio and the Canvas, ported from 1.4, no build step: [FRONTEND.md](FRONTEND.md) |

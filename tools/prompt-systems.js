@@ -9,7 +9,9 @@
 //   - the number of Gemma calls is the expected one;
 //   - the user content is the expected one (reference tokens replaced by stand-ins,
 //     Krea 2 style as PRIMARY_STYLE);
-//   - the enriched text is written back, and an automatic enrichment reaches the job.
+//   - the enriched text is written back, and an automatic enrichment reaches the job;
+//   - an instruction replaced in the settings (/api/instructions) is the one sent, for
+//     its engine only.
 // Port of 1.4's tools/prompt-systems.js without its mutants: the prompt texts
 // themselves are covered by tools/parity-prompts.js.
 //
@@ -38,6 +40,9 @@ const FP = {
   CHARACTER_SYSTEM: "4d78da3e105a0d0d31692a5578cfa35ca8982f8db8dab5684715ecbfec20f267",
   "CHARACTER_SYSTEM(forceKind=human)": "59ca22976439b39bdacad85e602757319e1f91d8fee4763dba34448e753c70e5",
 };
+// An instruction replaced in the settings panel, served by the /api/instructions stub.
+const MINE = 'My own instruction. Answer ONLY with JSON: {"prompt": "..."}.';
+FP.MINE = sha(MINE);
 const NAME = new Map(Object.entries(FP).map(([n, h]) => [h, n]));
 const nameOf = s => NAME.get(sha(s)) || `unknown instruction "${s.slice(0, 50).replace(/\n/g, " ")}…"`;
 
@@ -75,6 +80,7 @@ function stubs(rec) {
     if (p.startsWith("/api/jobs/")) return json(rec.done[p.split("/").pop()] || {}, rec.done[p.split("/").pop()] ? 200 : 404);
     if (p === "/api/inputs") return json({ ref: "inputs/test.png", width: 64, height: 64 }, 201);
     if (p === "/api/loras") return json({ h3: [] });
+    if (p === "/api/instructions") return json(rec.instructions);
     if (p === "/api/gallery/assets") return json({ items: [], next: null, counts: { image: 0, video: 0 } });
     if (p.startsWith("/outputs/") || p.startsWith("/inputs/")) return route.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") });
     return json({ detail: "not stubbed" }, 404);
@@ -104,6 +110,12 @@ const SCENARIOS = [
   // call writes the character sheet.
   studio("S-auto-storyboard", "storyboard", "storyboard", "storyboard_qwen21", "a fox hunts at dawn",
          ["CHARACTER_SYSTEM", null], { auto: true }),
+  // Instructions replaced in the settings: used for their engine, and for it only.
+  studio("S-mine-krea2", "campaign", "text2image", "krea2_t2i", "a red fox in the snow", ["MINE"], { instructions: { krea2: MINE } }),
+  studio("S-mine-other", "campaign", "text2image", "qwen21_t2i", "a red fox in the snow", ["ENRICH_SYSTEM"], { instructions: { krea2: MINE } }),
+  studio("S-mine-auto", "campaign", "text2image", "krea2_t2i", "a red fox in the snow", ["MINE"],
+         { instructions: { krea2: MINE }, auto: true, job: "krea2-t2i" }),
+  canvas("C-mine-video", "simple/video", { prompt: "the fox turns its head" }, "prompt", ["MINE"], { instructions: { h3_video: MINE } }),
   canvas("C-krea2", "simple/krea2", { engine: "krea2", prompt: "a red fox in the snow" }, "prompt", ["KREA2_ENRICH_SYSTEM"]),
   canvas("C-qwen21", "simple/krea2", { engine: "qwen21", prompt: "a red fox in the snow" }, "prompt", ["ENRICH_SYSTEM"]),
   canvas("C-edit", "simple/qwen_edit", { instruction: "put the fox of <image1> in <image2>" }, "instruction", ["ENRICH_SYSTEM"],
@@ -150,7 +162,7 @@ async function runCanvas(page, s) {
   for (const s of SCENARIOS) {
     if (only && !only.test(s.id)) continue;
     ran++;
-    const rec = { calls: [], jobs: [], done: {} }, errors = [];
+    const rec = { calls: [], jobs: [], done: {}, instructions: s.instructions || {} }, errors = [];
     const ctx = await browser.newContext();
     await ctx.route("**/api/**", stubs(rec));
     const page = await ctx.newPage();

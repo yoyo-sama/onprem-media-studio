@@ -877,6 +877,16 @@ export const DICT = {
     es: "Gemma 4 E4B",
     de: "Gemma 4 E4B",
   },
+  "Gemma instruction saved: {engine}.": {
+    fr: "Consigne Gemma enregistrée : {engine}.",
+    es: "Instrucción de Gemma guardada: {engine}.",
+    de: "Gemma-Anweisung gespeichert: {engine}.",
+  },
+  "Gemma instructions": {
+    fr: "Consignes Gemma",
+    es: "Instrucciones de Gemma",
+    de: "Gemma-Anweisungen",
+  },
   "Generate": {
     fr: "Générer",
     es: "Generar",
@@ -997,6 +1007,11 @@ export const DICT = {
     es: "Pausa en el último plano (s), 0 para ninguna",
     de: "Standbild auf der letzten Einstellung (s), 0 für keins",
   },
+  "Hugging Face access required (HF_TOKEN and the licence accepted).": {
+    fr: "Accès Hugging Face requis (HF_TOKEN et licence acceptée).",
+    es: "Se requiere acceso a Hugging Face (HF_TOKEN y licencia aceptada).",
+    de: "Hugging-Face-Zugang erforderlich (HF_TOKEN und akzeptierte Lizenz).",
+  },
   "Human": {
     fr: "Humain",
     es: "Humano",
@@ -1107,6 +1122,11 @@ export const DICT = {
     es: "Instalado · aún no cualificado",
     de: "Installiert · noch nicht qualifiziert",
   },
+  "Instruction": {
+    fr: "Consigne",
+    es: "Instrucción",
+    de: "Anweisung",
+  },
   "Interior": {
     fr: "Intérieur",
     es: "Interior",
@@ -1151,6 +1171,11 @@ export const DICT = {
     fr: "Prompt de l'image du plan enrichi par {model} (consigne Qwen Edit).",
     es: "Prompt de la imagen del plano enriquecido por {model} (instrucción Qwen Edit).",
     de: "Prompt des Einstellungsbilds angereichert von {model} (Qwen-Edit-Anweisung).",
+  },
+  "Krea 2 (image from a text, campaign)": {
+    fr: "Krea 2 (image à partir d'un texte, campagne)",
+    es: "Krea 2 (imagen a partir de un texto, campaña)",
+    de: "Krea 2 (Bild aus einem Text, Kampagne)",
   },
   "Krea 2 + MiniMax H3": {
     fr: "Krea 2 + MiniMax H3",
@@ -1317,6 +1342,11 @@ export const DICT = {
     es: "Oriente Medio",
     de: "Naher Osten",
   },
+  "MiniMax H3 (video from a text or an image, sequence)": {
+    fr: "MiniMax H3 (vidéo à partir d'un texte ou d'une image, séquence)",
+    es: "MiniMax H3 (vídeo a partir de un texto o una imagen, secuencia)",
+    de: "MiniMax H3 (Video aus einem Text oder Bild, Sequenz)",
+  },
   "MiniMax H3 block with fields: enriching again rewrites only detailed_description, the subject definitions stay in place.": {
     fr: "Bloc MiniMax H3 à champs : un nouvel enrichissement ne réécrit que detailed_description, les définitions de sujets restent en place.",
     es: "Bloque MiniMax H3 con campos: un nuevo enriquecimiento solo reescribe detailed_description, las definiciones de sujetos se mantienen.",
@@ -1331,6 +1361,11 @@ export const DICT = {
     fr: "MiniMax H3 r2v en cours…",
     es: "MiniMax H3 r2v en curso…",
     de: "MiniMax H3 r2v läuft…",
+  },
+  "MiniMax H3 references (consistent character + setting)": {
+    fr: "MiniMax H3 références (personnage + décor cohérents)",
+    es: "MiniMax H3 referencias (personaje + escenario coherentes)",
+    de: "MiniMax H3 Referenzen (konsistente Figur + Schauplatz)",
   },
   "MiniMax H3 renders on a 17n+5 frame grid": {
     fr: "MiniMax H3 rend sur une grille de 17n+5 images",
@@ -1537,6 +1572,11 @@ export const DICT = {
     es: "No descargado · acceso restringido (acepta la licencia en Hugging Face)",
     de: "Nicht heruntergeladen · zugangsbeschränkt (akzeptiere die Lizenz auf Hugging Face)",
   },
+  "Not saved yet.": {
+    fr: "Pas encore enregistrée.",
+    es: "Aún no guardada.",
+    de: "Noch nicht gespeichert.",
+  },
   "Number of shots": {
     fr: "Nombre de plans",
     es: "Número de planos",
@@ -1561,6 +1601,16 @@ export const DICT = {
     fr: "Une image fixe soignée à partir de ta description.",
     es: "Una imagen fija cuidada a partir de tu descripción.",
     de: "Ein ausgefeiltes Standbild aus deiner Beschreibung.",
+  },
+  "Original Gemma instruction restored: {engine}.": {
+    fr: "Consigne Gemma d'origine rétablie : {engine}.",
+    es: "Instrucción original de Gemma restablecida: {engine}.",
+    de: "Ursprüngliche Gemma-Anweisung wiederhergestellt: {engine}.",
+  },
+  "Original instruction.": {
+    fr: "Consigne d'origine.",
+    es: "Instrucción original.",
+    de: "Originalanweisung.",
   },
   "Other (animal, creature, robot, object…)": {
     fr: "Autre (animal, créature, robot, objet…)",
@@ -1737,6 +1787,11 @@ export const DICT = {
     es: "Qwen Image 2.1",
     de: "Qwen Image 2.1",
   },
+  "Qwen Image 2.1 (image from a text, image editing)": {
+    fr: "Qwen Image 2.1 (image à partir d'un texte, édition d'image)",
+    es: "Qwen Image 2.1 (imagen a partir de un texto, edición de imagen)",
+    de: "Qwen Image 2.1 (Bild aus einem Text, Bildbearbeitung)",
+  },
   "Qwen Image 2.1 takes up to 10 images in all. The input image is <image1>; your references are <image2>, <image3>… in the order of the list below. Cite them in your instruction, for example: “put the character of <image1> in the setting of <image2>”. The result keeps the input image's size; each reference makes the render longer.": {
     fr: "Qwen Image 2.1 prend jusqu'à 10 images en tout. L'image d'entrée est <image1> ; tes références sont <image2>, <image3>… dans l'ordre de la liste ci-dessous. Cite-les dans ta consigne, par exemple : « place le personnage de <image1> dans le décor de <image2> ». Le résultat garde la taille de l'image d'entrée ; chaque référence allonge le rendu.",
     es: "Qwen Image 2.1 admite hasta 10 imágenes en total. La imagen de entrada es <image1>; tus referencias son <image2>, <image3>… en el orden de la lista de abajo. Cítalas en tu instrucción, por ejemplo: «pon al personaje de <image1> en el decorado de <image2>». El resultado conserva el tamaño de la imagen de entrada; cada referencia alarga el render.",
@@ -1902,6 +1957,11 @@ export const DICT = {
     es: "Error al restaurar: {error}",
     de: "Wiederherstellung fehlgeschlagen: {error}",
   },
+  "Restore the original": {
+    fr: "Rétablir la consigne d'origine",
+    es: "Restablecer la original",
+    de: "Original wiederherstellen",
+  },
   "Resume the project": {
     fr: "Reprendre le projet",
     es: "Reanudar el proyecto",
@@ -1926,6 +1986,11 @@ export const DICT = {
     fr: "En cours {n} %",
     es: "En curso {n} %",
     de: "Läuft {n} %",
+  },
+  "Save": {
+    fr: "Enregistrer",
+    es: "Guardar",
+    de: "Speichern",
   },
   "Saved project ignored (unknown format).": {
     fr: "Projet enregistré ignoré (format inconnu).",
@@ -2207,6 +2272,11 @@ export const DICT = {
     es: "Storyboard + animatic (láminas, planos, cortes)",
     de: "Storyboard + Animatic (Bögen, Einstellungen, Cuts)",
   },
+  "Storyboard brief (sheets and shots)": {
+    fr: "Brief de storyboard (planches et plans)",
+    es: "Brief de storyboard (fichas y planos)",
+    de: "Storyboard-Briefing (Blätter und Einstellungen)",
+  },
   "Storyboard · contact sheet": {
     fr: "Storyboard · planche contact",
     es: "Storyboard · hoja de contactos",
@@ -2366,6 +2436,16 @@ export const DICT = {
     fr: "Le plan est composé depuis tes planches de référence.",
     es: "El plano se compone a partir de tus láminas de referencia.",
     de: "Die Einstellung wird aus deinen Referenzblättern komponiert.",
+  },
+  "The text no longer mentions SUBJECTREF: Gemma may drop the <Subject N> mentions, and the enrichment is then discarded.": {
+    fr: "Le texte ne mentionne plus SUBJECTREF : Gemma risque de perdre les mentions <Subject N>, et l'enrichissement est alors écarté.",
+    es: "El texto ya no menciona SUBJECTREF: Gemma puede perder las menciones <Subject N>, y el enriquecimiento se descarta entonces.",
+    de: "Der Text erwähnt SUBJECTREF nicht mehr: Gemma kann die <Subject N>-Erwähnungen verlieren, und die Anreicherung wird dann verworfen.",
+  },
+  "The text no longer names the answer key {key}: Gemma may answer without it, and the enrichment is then ignored.": {
+    fr: "Le texte ne nomme plus la clé de réponse {key} : Gemma risque de répondre sans elle, et l'enrichissement est alors ignoré.",
+    es: "El texto ya no nombra la clave de respuesta {key}: Gemma puede responder sin ella, y el enriquecimiento se ignora entonces.",
+    de: "Der Text nennt den Antwortschlüssel {key} nicht mehr: Gemma antwortet womöglich ohne ihn, und die Anreicherung wird dann ignoriert.",
   },
   "The trash is empty.": {
     fr: "La corbeille est vide.",
@@ -2587,6 +2667,11 @@ export const DICT = {
     es: "¿Qué quieres crear?",
     de: "Was möchtest du erstellen?",
   },
+  "What Gemma is told when ✨ enriches a prompt, one instruction per engine, so the prompt follows each model's vocabulary and structure. Your text applies to the Studio and the Canvas.": {
+    fr: "Ce que Gemma reçoit quand ✨ enrichit un prompt, une consigne par moteur, pour que le prompt suive le vocabulaire et la structure de chaque modèle. Ton texte s'applique au Studio et au Canvas.",
+    es: "Lo que recibe Gemma cuando ✨ enriquece un prompt, una instrucción por motor, para que el prompt siga el vocabulario y la estructura de cada modelo. Tu texto se aplica al Studio y al Canvas.",
+    de: "Was Gemma erhält, wenn ✨ einen Prompt anreichert, eine Anweisung pro Engine, damit der Prompt dem Vokabular und der Struktur jedes Modells folgt. Dein Text gilt für Studio und Canvas.",
+  },
   "What happens in this segment.": {
     fr: "Ce qui se passe dans ce segment.",
     es: "Lo que pasa en este segmento.",
@@ -2606,6 +2691,11 @@ export const DICT = {
     fr: "Tu valides d'abord les planches personnage et décor, puis chaque plan.",
     es: "Primero apruebas las láminas de personaje y decorado, y luego cada plano.",
     de: "Du gibst zuerst die Figuren- und Schauplatzbögen frei, dann jede Einstellung.",
+  },
+  "Your instruction (replaces the original).": {
+    fr: "Ta consigne (remplace celle d'origine).",
+    es: "Tu instrucción (reemplaza la original).",
+    de: "Deine Anweisung (ersetzt das Original).",
   },
   "{app} {version} ready.": {
     fr: "{app} {version} prêt.",
@@ -2662,15 +2752,15 @@ export const DICT = {
     es: "{name} elegida como imagen de entrada.",
     de: "{name} als Eingabebild gewählt.",
   },
+  "{name} is not installed: about {size} will be downloaded at the first render.": {
+    fr: "{name} n'est pas installé : environ {size} seront téléchargés au premier rendu.",
+    es: "{name} no está instalado: se descargarán unos {size} en el primer render.",
+    de: "{name} ist nicht installiert: Beim ersten Rendern werden etwa {size} heruntergeladen.",
+  },
   "{name} is not installed: it will be downloaded at the first render.": {
     fr: "{name} n'est pas installé : il sera téléchargé au premier rendu.",
     es: "{name} no está instalado: se descargará en el primer render.",
     de: "{name} ist nicht installiert: Es wird beim ersten Rendern heruntergeladen.",
-  },
-  "{name} is not installed: it will be downloaded at the first render. Hugging Face access required (HF_TOKEN and the licence accepted).": {
-    fr: "{name} n'est pas installé : il sera téléchargé au premier rendu. Accès Hugging Face requis (HF_TOKEN et licence acceptée).",
-    es: "{name} no está instalado: se descargará en el primer render. Se requiere acceso a Hugging Face (HF_TOKEN y licencia aceptada).",
-    de: "{name} ist nicht installiert: Es wird beim ersten Rendern heruntergeladen. Hugging-Face-Zugang erforderlich (HF_TOKEN und akzeptierte Lizenz).",
   },
   "{name} refused: a .safetensors file is required.": {
     fr: "{name} refusé : il faut un fichier .safetensors.",
@@ -2702,6 +2792,11 @@ export const DICT = {
     es: "{n} fotogramas antes del final",
     de: "{n} Bilder vor dem Ende",
   },
+  "{n} GB": {
+    fr: "{n} Go",
+    es: "{n} GB",
+    de: "{n} GB",
+  },
   "{n} image(s)": {
     fr: "{n} image(s)",
     es: "{n} imagen(es)",
@@ -2726,6 +2821,11 @@ export const DICT = {
     fr: "{n} Mo",
     es: "{n} MB",
     de: "{n} MB",
+  },
+  "{n} replaced": {
+    fr: "{n} remplacée(s)",
+    es: "{n} reemplazada(s)",
+    de: "{n} ersetzt",
   },
   "{n} segment(s)": {
     fr: "{n} segment(s)",

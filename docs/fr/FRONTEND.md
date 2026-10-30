@@ -23,7 +23,7 @@ inclus avec sa licence MIT dans `web/js/vendor/`.
 | `web/js/canvas.js` | Page Canvas : dessin, médias superposés, panneau Propriétés, cas d'usage, sauvegarde, thème, langue |
 | `web/js/canvas-nodes.js` | Cartes du Canvas : entrées, propriétés, champs du panneau et ce que Générer soumet |
 | `web/js/canvas-gallery.js` | Tiroir de galerie du Canvas (glisser une image sur une carte Import d'image) |
-| `web/js/model-notice.js` | Avertissement au-dessus de Générer (Studio) et dans le panneau Propriétés (Canvas) qui nomme les modèles que le moteur choisi doit encore télécharger (`/api/pipelines`, `/api/models`, tenu à jour par les événements `model` et la fin de chaque job) ; le serveur les télécharge dans le premier job |
+| `web/js/model-notice.js` | Avertissement au-dessus de Générer (Studio) et dans le panneau Propriétés (Canvas) qui nomme les modèles que le moteur choisi doit encore télécharger (`/api/pipelines`, `/api/models`, tenu à jour par les événements `model` et la fin de chaque job) ; avec la taille restant à télécharger quand Hugging Face la donne (`/api/models/{id}/size`) ; le serveur les télécharge dans le premier job |
 
 ## Règles
 
@@ -42,6 +42,13 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
   `R2V_BRIEF_ENRICH_SYSTEM`, briefs de storyboard et planches → `SHEET_BRIEF_ENRICH_SYSTEM`,
   Qwen Image 2.1 → la consigne générique `ENRICH_SYSTEM`. Les jetons `<Subject N>` et `<imageN>`
   traversent Gemma sous forme de substituts et sont vérifiés au retour.
+- **Ces cinq consignes peuvent être remplacées** dans le panneau Modèles du Studio (« Consignes
+  Gemma ») : le serveur garde les textes dans `STUDIO_DATA_DIR/instructions.json`
+  (`/api/instructions`), les deux pages les relisent avant chaque enrichissement, et « Rétablir la
+  consigne d'origine » retire le remplacement. Un texte remplacé ne fait que prendre la place de
+  celui par défaut : la clé de réponse et les vérifications de jetons restent dans le code, et le
+  panneau prévient quand le texte ne nomme plus la clé (ou SUBJECTREF, pour la référence vers
+  vidéo). Les consignes par défaut restent celles de la 1.4.
 - **Le texte d'interface est traduit, le journal aussi** ; noms de fichiers, prompts et données
   du serveur sont marqués `data-raw` et jamais traduits.
 
@@ -88,7 +95,7 @@ ajoute une carte Import d'image reliée à elle.
 |---|---|---|
 | `python -m pytest` | Serveur, paramètres des moteurs, galerie, et `tests/test_i18n.py` : chaque texte d'interface des deux pages a sa traduction française, espagnole et allemande avec les mêmes `{paramètres}`, et aucune entrée n'est inutilisée | Python, Node |
 | `node tools/parity-prompts.js` | Chaque compilateur de prompt et consigne donne, au caractère près, ce que donne la 1.4 (`234f37c`, lue dans `../dellaicontent`), avec des réponses de Gemma scriptées | Node, la copie de la 1.4 |
-| `node tools/prompt-systems.js` | Lance les deux pages sans affichage avec `/api` bouchonné : pour chaque moteur et bouton ✨ (et l'enrichissement automatique), la consigne reçue par Gemma a le sha256 de la 1.4, le nombre d'appels et le contenu sont justes, le texte revient dans le champ | Node, Playwright et son Chromium (`NODE_PATH=$(npm root -g)`) |
+| `node tools/prompt-systems.js` | Lance les deux pages sans affichage avec `/api` bouchonné : pour chaque moteur et bouton ✨ (et l'enrichissement automatique), la consigne reçue par Gemma a le sha256 de la 1.4 (ou est la consigne remplacée, pour son seul moteur), le nombre d'appels et le contenu sont justes, le texte revient dans le champ | Node, Playwright et son Chromium (`NODE_PATH=$(npm root -g)`) |
 
 Modifier un compilateur de prompt ou une consigne fait échouer les deux derniers ; si le
 changement est voulu, mettre à jour la référence dans le même commit et dire pourquoi.

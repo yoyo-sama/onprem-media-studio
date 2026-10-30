@@ -7,6 +7,13 @@ import { L } from "./i18n.js";
 import { $, LLM, clampInt, log } from "./ui.js";
 
 export const P = window.Prompts;
+
+// The Gemma instructions replaced in the settings panel, read again before each
+// enrichment so an edit made in another tab or page applies at once. Server
+// unreachable: the defaults.
+export async function loadInstructions() {
+  try { P.setInstructionOverrides(await api.instructions()); } catch { P.setInstructionOverrides({}); }
+}
 // The `llm` function the prompt compilers take.
 export const llm = llmJSON;
 

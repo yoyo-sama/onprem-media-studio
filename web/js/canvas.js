@@ -483,6 +483,7 @@ function addEnrichButton(row, node, f, input) {
     err.textContent = "";
     let warning = "";
     try {
+      await F.loadInstructions();
       const out = await P.enrichBrief(F.llm, F.workflow(wfId), input.value, "",
         (level, text, params) => { if (level === "warn") warning = t(text, params); });
       if (!out) throw new Error(warning);

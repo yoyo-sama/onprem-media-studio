@@ -23,7 +23,7 @@ in `web/js/vendor/`.
 | `web/js/canvas.js` | Canvas page: drawing, media overlays, properties panel, use cases, persistence, theme, language |
 | `web/js/canvas-nodes.js` | Canvas cards: inputs, properties, panel fields and what Generate submits |
 | `web/js/canvas-gallery.js` | Canvas gallery drawer (drag an image onto an Image import card) |
-| `web/js/model-notice.js` | Notice above Generate (Studio) and in the properties panel (Canvas) naming the models the chosen engine still has to download (`/api/pipelines`, `/api/models`, kept current by the `model` events and the end of each job); the server downloads them inside the first job |
+| `web/js/model-notice.js` | Notice above Generate (Studio) and in the properties panel (Canvas) naming the models the chosen engine still has to download (`/api/pipelines`, `/api/models`, kept current by the `model` events and the end of each job); with the size left to download when Hugging Face gives it (`/api/models/{id}/size`); the server downloads them inside the first job |
 
 ## Rules
 
@@ -42,6 +42,12 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
   `R2V_BRIEF_ENRICH_SYSTEM`, storyboard briefs and sheets → `SHEET_BRIEF_ENRICH_SYSTEM`,
   Qwen Image 2.1 → the generic `ENRICH_SYSTEM`. `<Subject N>` and `<imageN>` tokens cross Gemma
   as stand-ins and are checked on the way back.
+- **These five instructions can be replaced** in the Studio's Models panel ("Gemma
+  instructions"): the server keeps the texts in `STUDIO_DATA_DIR/instructions.json`
+  (`/api/instructions`), both pages read them again before each enrichment, and "Restore the
+  original" removes the replacement. A replaced text only takes the default's place: the answer
+  key and the token checks stay in the code, and the panel warns when the text stops naming the
+  key (or SUBJECTREF, for reference to video). The defaults stay those of 1.4.
 - **Interface text is translated, log lines too**; file names, prompts and server data are
   marked `data-raw` and never translated.
 
@@ -86,7 +92,7 @@ to it.
 |---|---|---|
 | `python -m pytest` | Server, engines' parameters, gallery, and `tests/test_i18n.py`: every interface string of both pages has its French, Spanish and German translation with the same `{placeholders}`, and no entry is unused | Python, Node |
 | `node tools/parity-prompts.js` | Every prompt compiler and instruction gives, character for character, what 1.4 (`234f37c`, read from `../dellaicontent`) gives, with scripted Gemma answers | Node, the 1.4 checkout |
-| `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256, the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
+| `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256 (or is the replaced one, for its engine only), the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
 
 Changing a prompt compiler or an instruction makes the last two fail; if the change is wanted,
 update the reference in the same commit and say why.

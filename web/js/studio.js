@@ -429,6 +429,7 @@ let autoEnrich = false;
 async function enrich(wf) {
   $("stepEnrich").classList.add("active");
   try {
+    await F.loadInstructions();
     const out = await P.enrichBrief(F.llm, wf, brief.value, P.styleTextFor(F.currentStyleId()), promptLog);
     // No engine of this studio encodes a negative prompt: only the brief is written back.
     if (out) brief.value = out.brief;
@@ -610,6 +611,54 @@ function onModelEvent(msg) {
   if (msg.progress >= 1) { log("ok", "{id} downloaded.", { id: msg.id }); loadModels(); }
 }
 
+// Gemma instructions: the default of each engine (web/js/prompts.js) or the user's text,
+// stored by the server (/api/instructions). Drafts survive switching engines until saved.
+const INSTRUCTION_LABELS = {
+  krea2: L("Krea 2 (image from a text, campaign)"),
+  qwen21: L("Qwen Image 2.1 (image from a text, image editing)"),
+  h3_video: L("MiniMax H3 (video from a text or an image, sequence)"),
+  h3_r2v: L("MiniMax H3 references (consistent character + setting)"),
+  storyboard: L("Storyboard brief (sheets and shots)"),
+};
+let instrSaved = {};
+const instrDrafts = {};
+async function loadInstructionPanel() {
+  try { instrSaved = await api.instructions(); } catch (err) { warn(err); return; }
+  fillSelect($("instrSelect"), Object.entries(INSTRUCTION_LABELS), $("instrSelect").value || "krea2");
+  showInstruction();
+}
+function showInstruction() {
+  const name = $("instrSelect").value;
+  $("instrText").value = instrDrafts[name] ?? instrSaved[name] ?? P.ENRICH_INSTRUCTIONS[name][0];
+  checkInstruction();
+}
+function checkInstruction() {
+  const name = $("instrSelect").value, [original, key] = P.ENRICH_INSTRUCTIONS[name], text = $("instrText").value;
+  if (text !== (instrSaved[name] ?? original)) instrDrafts[name] = text;
+  else delete instrDrafts[name];
+  tx($("instrState"), "{n} replaced", { n: Object.keys(instrSaved).length });
+  tx($("instrHint"), name in instrDrafts ? "Not saved yet."
+    : name in instrSaved ? "Your instruction (replaces the original)." : "Original instruction.");
+  // The code still reads the same key and checks the tokens: warn when the text stops asking for them.
+  const warns = [];
+  if (!text.includes(`"${key}"`)) warns.push([L("The text no longer names the answer key {key}: Gemma may answer without it, and the enrichment is then ignored."), { key: `"${key}"` }]);
+  if (name === "h3_r2v" && !text.includes("SUBJECTREF"))
+    warns.push([L("The text no longer mentions SUBJECTREF: Gemma may drop the <Subject N> mentions, and the enrichment is then discarded."), {}]);
+  $("instrWarn").replaceChildren(...warns.map(([msg, params]) => tx(document.createElement("span"), msg, params)));
+  $("instrWarn").hidden = !warns.length;
+}
+async function saveInstruction(reset) {
+  const name = $("instrSelect").value, text = $("instrText").value, original = P.ENRICH_INSTRUCTIONS[name][0];
+  const label = t(INSTRUCTION_LABELS[name]);
+  try {
+    // Saving the original text, or nothing, is the same as restoring it.
+    instrSaved = reset || !text.trim() || text === original ? await api.resetInstruction(name) : await api.setInstruction(name, text);
+    delete instrDrafts[name];
+    log("ok", name in instrSaved ? "Gemma instruction saved: {engine}." : "Original Gemma instruction restored: {engine}.", { engine: label });
+    showInstruction();
+  } catch (err) { warn(err); }
+}
+
 let h3Loras = [];
 async function loadLoras() {
   try { h3Loras = (await api.loras()).h3 || []; } catch (err) { warn(err); }
@@ -726,7 +775,7 @@ function initRail() {
     let open = false;
     document.querySelectorAll(".flyout").forEach(f => { f.hidden = f.dataset.flyout !== name; open ||= !f.hidden; });
     document.querySelector(".app-rail").classList.toggle("expanded", open);
-    if (name === "models") { loadModels(); loadLoras(); loadUpdate(); }
+    if (name === "models") { loadModels(); loadLoras(); loadInstructionPanel(); loadUpdate(); }
   }));
 }
 
@@ -774,6 +823,10 @@ function initForm() {
   $("cancelProjectBtn").addEventListener("click", () => cancelProject($("cancelProjectBtn")));
   $("studioCancelBtn").addEventListener("click", () => cancelProject($("studioCancelBtn")));
   $("loraUploadBtn").addEventListener("click", uploadLoraFile);
+  $("instrSelect").addEventListener("change", showInstruction);
+  $("instrText").addEventListener("input", checkInstruction);
+  $("instrSave").addEventListener("click", () => saveInstruction(false));
+  $("instrReset").addEventListener("click", () => saveInstruction(true));
   $("updateBtn").addEventListener("click", applyUpdate);
   $("langSelect").value = LANG;
   $("langSelect").addEventListener("change", () => setLang($("langSelect").value));
