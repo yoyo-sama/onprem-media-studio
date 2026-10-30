@@ -413,7 +413,7 @@ def test_refine_inputs_noise_to_the_first_refine_node(monkeypatch, tmp_path):
 
     class Up(torch.nn.Module):
         def forward(self, x, scale, height, width):
-            self.args = (scale, height, width)
+            self.args, self.x = (scale, height, width), x
             return torch.nn.functional.interpolate(x, size=(x.shape[2], height, width))
 
     up = Up()
@@ -425,6 +425,10 @@ def test_refine_inputs_noise_to_the_first_refine_node(monkeypatch, tmp_path):
                                               CONTRACTS["fasth3-omniref"], (736, 416), 7)
     assert latents.shape == (1, 24, 37, 46, 80) and audio_latents.shape == (2, 32, 200)
     assert up.args[1:] == (46, 80) and up.args[0] == pytest.approx(1.7557, abs=1e-3)
+    # The upscaler gets the DiT latents normalised a second time, as its ComfyUI node
+    # does ((2.5 - 0.5) / 2 = 1.0, then (1.0 - 0.5) / 2 = 0.25), and its output is
+    # denormalised once: fed DiT-space latents, it renders pink mush on the GB10.
+    assert torch.allclose(up.x.float(), torch.full_like(up.x.float(), 0.25))
     sv, sa = h3.node_sigma(19, 12.0), h3.node_sigma(19, 3.0)
     gen = torch.Generator("cpu").manual_seed(7)
     noise_v, noise_a = torch.randn(latents.shape, generator=gen), torch.randn(audio_latents.shape, generator=gen)

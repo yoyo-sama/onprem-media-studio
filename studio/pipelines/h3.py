@@ -368,28 +368,34 @@ def _stats(model_dir: Path, component: str):
 def refine_inputs(video, audio, model_dir: Path, upscaler_file: Path, terms: dict, pass1_size, seed: int):
     """Latents for the refine pass, from the first pass's (denormalised) output.
 
-    The video latents are normalised, enlarged by the latent upscaler, then
-    noised to the first refine node: x = (1 − σ)·latent + σ·ε, as a ComfyUI
-    sampler does at denoise < 1; the audio latents are noised the same way at
-    the audio sigma of that node. FastVideo multiplies the injected rows by the
-    node's sigma (it expects unit noise there), so x/σ is what is injected.
+    The video latents are normalised (DiT space), enlarged by the latent
+    upscaler, then noised to the first refine node. The upscaler works one
+    normalisation further: its ComfyUI node normalises its input again, though
+    that input is already in DiT space, and denormalises its output once, so the
+    same is done here (fed DiT-space latents, it renders pink mush). Noise:
+    x = (1 − σ)·latent + σ·ε, as a ComfyUI sampler does at denoise < 1; the
+    audio latents are noised the same way at the audio sigma of that node.
+    FastVideo multiplies the injected rows by the node's sigma (it expects unit
+    noise there), so x/σ is what is injected.
     """
     import torch
     from . import h3_upscaler
     vmean, vstd = _stats(model_dir, "vae")
     amean, astd = _stats(model_dir, "audio_vae")
     view_v = (1, -1, 1, 1, 1)
-    video = (video.float() - vmean.view(view_v)) / vstd.view(view_v)
+    vmean, vstd = vmean.view(view_v), vstd.view(view_v)
+    video = (video.float() - vmean) / vstd
     width, height, scale = upscale_target(*pass1_size)
     device = common.device()
     model = h3_upscaler.load(upscaler_file, device)
     try:
         with torch.inference_mode():
-            video = model(video.to(device, torch.bfloat16), scale, height // VAE_DOWNSAMPLE,
-                          width // VAE_DOWNSAMPLE).float().cpu()
+            video = model(((video - vmean) / vstd).to(device, torch.bfloat16), scale,
+                          height // VAE_DOWNSAMPLE, width // VAE_DOWNSAMPLE).float().cpu()
     finally:
         del model
         torch.cuda.empty_cache()
+    video = video * vstd + vmean
     view_a = (1, -1, 1)
     audio = (audio.float() - amean.view(view_a)) / astd.view(view_a)
 
