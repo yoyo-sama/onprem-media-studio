@@ -25,9 +25,10 @@ export const WORKFLOWS = [
   { id: "h3_i2v", pipeline: "image2video", label: L("MiniMax H3 · native audio"), engine: "h3-i2v" },
   { id: "h3_sequence", pipeline: "sequence", label: L("MiniMax H3 · first and last frames"), engine: "h3-i2v" },
   { id: "storyboard_qwen21", pipeline: "storyboard", label: L("Shot images: Qwen Image 2.1"),
-    keyframes: "qwen-image-2.1", enrich: "builtin" },
-  { id: "h3_r2v", pipeline: "reference2video", label: L("MiniMax H3 · references"), engine: "h3-r2v", enrich: "builtin" },
-  { id: "campaign", pipeline: "campaign", label: L("Krea 2 + MiniMax H3") },
+    keyframes: "qwen-image-2.1", enrich: "builtin", engines: ["krea2-t2i", "qwen-image-2.1", "h3-i2v"] },
+  { id: "h3_r2v", pipeline: "reference2video", label: L("MiniMax H3 · references"), engine: "h3-r2v", enrich: "builtin",
+    engines: ["krea2-t2i", "h3-r2v"] },
+  { id: "campaign", pipeline: "campaign", label: L("Krea 2 + MiniMax H3"), engines: ["krea2-t2i", "h3-t2v"] },
 ];
 
 // `scenario`: the goal cards a pipeline is offered under (none = all).
@@ -47,6 +48,8 @@ export const PIPELINES = [
     controls: ["duration", "variants", "style"] },
 ];
 
+// Every engine a workflow's buttons can submit to (sheets, shot images, cuts…).
+export const workflowEngines = wf => wf?.engines || (wf?.engine ? [wf.engine] : []);
 export const workflow = id => WORKFLOWS.find(w => w.id === id) || null;
 export const pipelineDef = id => PIPELINES.find(p => p.id === id) || null;
 export const currentPipeline = () => $("pipelineSelect").value;

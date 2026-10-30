@@ -2662,10 +2662,25 @@ export const DICT = {
     es: "{name} elegida como imagen de entrada.",
     de: "{name} als Eingabebild gewählt.",
   },
+  "{name} is not installed: it will be downloaded at the first render.": {
+    fr: "{name} n'est pas installé : il sera téléchargé au premier rendu.",
+    es: "{name} no está instalado: se descargará en el primer render.",
+    de: "{name} ist nicht installiert: Es wird beim ersten Rendern heruntergeladen.",
+  },
+  "{name} is not installed: it will be downloaded at the first render. Hugging Face access required (HF_TOKEN and the licence accepted).": {
+    fr: "{name} n'est pas installé : il sera téléchargé au premier rendu. Accès Hugging Face requis (HF_TOKEN et licence acceptée).",
+    es: "{name} no está instalado: se descargará en el primer render. Se requiere acceso a Hugging Face (HF_TOKEN y licencia aceptada).",
+    de: "{name} ist nicht installiert: Es wird beim ersten Rendern heruntergeladen. Hugging-Face-Zugang erforderlich (HF_TOKEN und akzeptierte Lizenz).",
+  },
   "{name} refused: a .safetensors file is required.": {
     fr: "{name} refusé : il faut un fichier .safetensors.",
     es: "{name} rechazado: se necesita un archivo .safetensors.",
     de: "{name} abgelehnt: Eine .safetensors-Datei ist erforderlich.",
+  },
+  "{name}: downloading ({pct}).": {
+    fr: "{name} : téléchargement en cours ({pct}).",
+    es: "{name}: descargando ({pct}).",
+    de: "{name}: wird heruntergeladen ({pct}).",
   },
   "{n} clip(s)": {
     fr: "{n} clip(s)",

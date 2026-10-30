@@ -134,6 +134,7 @@ const H3_DURATION = { min: 5, max: 15 };
 export const CARDS = {
   "adv/charsheet": {
     label: L("Character sheet"), tech: "charsheet", grad: ["#efe9ff", "#c9b8f5"], model: "Krea 2",
+    engines: () => ["krea2-t2i"],
     subject: "brief", preview: "brief",
     outputs: ["charsheet"], size: [340, 260],
     props: { brief: "", kind: "auto", style: "cinematic", seed: 0, charDesc: "", kindResolved: "" },
@@ -164,6 +165,7 @@ export const CARDS = {
   },
   "adv/locsheet": {
     label: L("Setting sheet"), tech: "locsheet", grad: ["#e6f1ff", "#b3d1f5"], model: "Krea 2",
+    engines: () => ["krea2-t2i"],
     subject: "brief", preview: "brief",
     outputs: ["locsheet"], size: [340, 260],
     props: { brief: "", style: "cinematic", seed: 0, locDesc: "" },
@@ -191,6 +193,7 @@ export const CARDS = {
   // second setting) can be connected; it is the third reference image of every shot.
   "adv/storyboard": {
     label: L("Storyboard"), tech: "storyboard", grad: ["#fdf1dd", "#e8cf9f"], model: "Qwen Image 2.1",
+    engines: () => ["qwen-image-2.1"],
     subject: "brief", preview: "brief",
     inputs: ["charsheet", "locsheet", SLOT_SHEET_REF], outputs: ["keyframes"], size: [360, 320],
     autogrow: [[SLOT_SHEET_REF, 1]],
@@ -238,6 +241,7 @@ export const CARDS = {
   // (two cards up, through the storyboard) and the shot image as references.
   "adv/cutvideo": {
     label: L("Video generation"), tech: "cutvideo", grad: ["#1d2a55", "#0d1430"], video: true,
+    engines: p => [p.engine === "r2v" ? "h3-r2v" : "h3-i2v"],
     modelProp: "engine", modelValues: [["i2v", "MiniMax H3"], ["r2v", "MiniMax H3 (r2v)"]],
     inputs: ["keyframes"], outputs: ["cuts"], size: [340, 260],
     props: { engine: "i2v", duration: 5, lora: "", seed: 0, cuts: [] },
@@ -295,6 +299,7 @@ export const CARDS = {
   // One H3 Ref2VA job: the two sheets and the extra images are its references.
   "adv/r2v": {
     label: L("Reference2Video"), tech: "r2v", grad: ["#1d2a55", "#0d1430"], video: true, model: "MiniMax H3",
+    engines: () => ["h3-r2v"],
     subject: "brief", preview: "brief",
     inputs: ["charsheet", "locsheet", SLOT_IMG_REF], outputs: ["video"], size: [360, 300],
     autogrow: [[SLOT_IMG_REF, F.REF_CAPS.r2v]],
@@ -329,6 +334,7 @@ export const CARDS = {
   },
   "simple/krea2": {
     label: L("Image creation"), tech: "t2i", grad: ["#fdf1dd", "#e8cf9f"],
+    engines: p => [p.engine === "qwen21" ? "qwen-image-2.1" : "krea2-t2i"],
     modelProp: "engine", modelValues: [["krea2", "Krea 2 Turbo"], ["qwen21", "Qwen Image 2.1"]],
     subject: "prompt", preview: "prompt",
     outputs: ["image"], size: [320, 240],
@@ -357,6 +363,7 @@ export const CARDS = {
   // in input order; the output keeps the size of image 1.
   "simple/qwen_edit": {
     label: L("Image editing"), tech: "i2i", grad: ["#fdf1dd", "#e8cf9f"], model: "Qwen Image 2.1",
+    engines: () => ["qwen-image-2.1"],
     subject: "instruction", preview: "instruction",
     inputs: ["image", SLOT_IMG_REF], outputs: ["image"], size: [340, 240],
     autogrow: [[SLOT_IMG_REF, F.REF_CAPS.i2i]],
@@ -380,6 +387,7 @@ export const CARDS = {
   // H3 image to video: the canvas follows the input image.
   "simple/video": {
     label: L("Video"), tech: "i2v", grad: ["#1d2a55", "#0d1430"], video: true, model: "MiniMax H3",
+    engines: () => ["h3-i2v"],
     subject: "prompt", preview: "prompt",
     inputs: ["image"], outputs: ["video"], size: [340, 260],
     props: { prompt: "", duration: 5, lora: "" },

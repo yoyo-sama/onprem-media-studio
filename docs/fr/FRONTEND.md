@@ -23,6 +23,7 @@ inclus avec sa licence MIT dans `web/js/vendor/`.
 | `web/js/canvas.js` | Page Canvas : dessin, médias superposés, panneau Propriétés, cas d'usage, sauvegarde, thème, langue |
 | `web/js/canvas-nodes.js` | Cartes du Canvas : entrées, propriétés, champs du panneau et ce que Générer soumet |
 | `web/js/canvas-gallery.js` | Tiroir de galerie du Canvas (glisser une image sur une carte Import d'image) |
+| `web/js/model-notice.js` | Avertissement au-dessus de Générer (Studio) et dans le panneau Propriétés (Canvas) qui nomme les modèles que le moteur choisi doit encore télécharger (`/api/pipelines`, `/api/models`, tenu à jour par les événements `model` et la fin de chaque job) ; le serveur les télécharge dans le premier job |
 
 ## Règles
 

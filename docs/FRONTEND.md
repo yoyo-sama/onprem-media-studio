@@ -23,6 +23,7 @@ in `web/js/vendor/`.
 | `web/js/canvas.js` | Canvas page: drawing, media overlays, properties panel, use cases, persistence, theme, language |
 | `web/js/canvas-nodes.js` | Canvas cards: inputs, properties, panel fields and what Generate submits |
 | `web/js/canvas-gallery.js` | Canvas gallery drawer (drag an image onto an Image import card) |
+| `web/js/model-notice.js` | Notice above Generate (Studio) and in the properties panel (Canvas) naming the models the chosen engine still has to download (`/api/pipelines`, `/api/models`, kept current by the `model` events and the end of each job); the server downloads them inside the first job |
 
 ## Rules
 

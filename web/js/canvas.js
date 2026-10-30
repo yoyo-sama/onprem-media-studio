@@ -8,6 +8,7 @@ import { LANG, L, setLang, t, tx } from "./i18n.js";
 import * as F from "./form.js";
 import { CARDS, STATUS_COLOR, SLOT_IMG_REF, importFile, onChange, setLoras, setStatus } from "./canvas-nodes.js";
 import { initGallery } from "./canvas-gallery.js";
+import { initModelNotice, showModelNotice } from "./model-notice.js";
 import { $, MOBILE, fillSelect, initTheme } from "./ui.js";
 
 const P = window.Prompts;
@@ -546,6 +547,7 @@ function showProps(node) {
   selected = node;
   $("props").hidden = !node;
   $("sheetProps").disabled = !node;
+  showModelNotice($("propsModelNotice"), node && skin(node).engines ? skin(node).engines(node.properties) : []);
   if (!node) {
     $("propsFields").replaceChildren();
     if (document.body.dataset.sheet === "props") setSheet("");
@@ -626,6 +628,7 @@ restore();
 graph._nodes.forEach(hideSlotLabels);
 setLang(LANG);
 initGallery({ graph, lgcanvas, save });
+initModelNotice();
 requestAnimationFrame(syncOverlays);
 if (MOBILE.matches) { setSheet(graph._nodes.length ? "" : "palette"); fitView(); }
 connect();

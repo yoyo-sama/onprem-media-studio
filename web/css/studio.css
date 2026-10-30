@@ -879,6 +879,9 @@ textarea:disabled, input:disabled, select:disabled { opacity: .45; cursor: not-a
 #galleryBlock .date-group > summary.folder-head span { margin-right: auto; }
 
 .hint { font-size: 12px; color: var(--text-2); }
+.model-notice { margin: 0; font-size: 12px; color: var(--warn-text); }
+.model-notice > span { display: block; }
+.generate-bar .model-notice { flex: 1 1 100%; }
 
 .check-row {
   display: flex;

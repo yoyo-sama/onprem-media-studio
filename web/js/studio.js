@@ -12,6 +12,7 @@ import {
   $, LLM, MOBILE, cancelAll, clampInt, fillSelect, initJobs, initPromptEditor, initTheme, initUndo,
   log, notice, onJobsChange, promptLog, runJob, runningJobs, undoToast, warn,
 } from "./ui.js";
+import { initModelNotice, showModelNotice } from "./model-notice.js";
 import { initGallery } from "./gallery.js";
 import * as F from "./form.js";
 import * as D from "./director.js";
@@ -90,6 +91,7 @@ function updateModelOptions() {
 function updateModelLabel() {
   const wf = F.currentWorkflow();
   $("modelLabel").textContent = wf ? t(wf.label) : "—";
+  showModelNotice($("modelNotice"), F.workflowEngines(wf));
   // The last frame (FL2VA) belongs to H3 image to video.
   $("lastImageWrap").hidden = wf?.id !== "h3_i2v";
   if ($("lastImageWrap").hidden) $("lastImageInput").value = "";
@@ -799,6 +801,7 @@ function boot() {
   refreshPipelineOptions();
   onJobsChange(updateCancelButton);
   on("model", onModelEvent);
+  initModelNotice();
   connect();
   initGallery({
     useAsInput: setSelectedAsset,

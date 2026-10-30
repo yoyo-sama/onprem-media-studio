@@ -37,6 +37,7 @@ const query = params => {
 export const api = {
   health: () => get("/api/health"),
   models: () => get("/api/models"),
+  pipelines: () => get("/api/pipelines"),
   downloadModel: id => post(`/api/models/${encodeURIComponent(id)}/download`),
   jobs: () => get("/api/jobs"),
   job: id => get(`/api/jobs/${encodeURIComponent(id)}`),
