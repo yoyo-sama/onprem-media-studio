@@ -8,7 +8,8 @@ services:
     container_name: studio
     restart: unless-stopped
     ports:
-      - "8090:8090"
+      # Host port: STUDIO_HOST_PORT in .env when 8090 is taken (AI Content Studio 1.4 uses it).
+      - "${STUDIO_HOST_PORT:-8090}:8090"
     environment:
       # Optional, needed for gated models (Krea 2). Put it in .env, never here.
       HF_TOKEN: ${HF_TOKEN:-}

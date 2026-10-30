@@ -32,7 +32,8 @@ docker compose up -d --build
 # puis http://localhost:8090
 ```
 
-Modèles et rendus vont dans `./data` (à changer avec `STUDIO_DATA=/chemin` dans `.env`).
+Modèles et rendus vont dans `./data` (à changer avec `STUDIO_DATA=/chemin` dans `.env`). Si le
+port 8090 est déjà pris (AI Content Studio 1.4 l'utilise), mettre `STUDIO_HOST_PORT=8096` dans `.env`.
 
 ## Lancer sans Docker (développement)
 

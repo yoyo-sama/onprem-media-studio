@@ -6,7 +6,7 @@ import pytest
 from studio import models as models_mod
 from studio.models import MARKER, ModelError, ModelStore
 
-from .conftest import FakeApi
+from .conftest import FakeApi, FakeFetch
 
 
 def test_catalog_entries_are_complete(store):
@@ -67,6 +67,16 @@ def test_gated_repository_error_tells_how_to_fix(settings, fetch):
     store = ModelStore(settings, api=FakeApi(fail=RuntimeError("401")), fetch=fetch)
     with pytest.raises(ModelError, match="HF_TOKEN"):
         store.download("krea2-turbo")
+
+
+def test_gated_file_error_is_a_model_error(settings):
+    # A gated repository answers model_info without a token, then refuses the files.
+    store = ModelStore(settings, api=FakeApi(), fetch=FakeFetch(fail=RuntimeError("401 gated")))
+    store.catalog["gemma4-e4b"]["gated"] = True
+    with pytest.raises(ModelError, match="HF_TOKEN"):
+        store.download("gemma4-e4b")
+    assert not store.installed("gemma4-e4b")
+    assert store.downloading == {}
 
 
 def test_unknown_model(store):
