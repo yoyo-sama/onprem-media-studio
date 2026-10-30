@@ -125,9 +125,10 @@ comparer la qualité, pas les pixels.
 
 ## Manques connus
 
-- **Premier passage sur GPU (gb10-demo, 2026-10-29) :** tous les cas Krea 2 (7/7) et Qwen Image
-  2.1 (4/4) ont rendu. `qualified` reste à `false` tant que les images n'ont pas été comparées à
-  la 1.4 comme ci-dessus.
+- **Qualification (gb10-demo, 2026-10-29/30) :** tous les cas Krea 2 (7/7) et Qwen Image 2.1 (4/4)
+  ont rendu, et le responsable du projet a validé les rendus le 2026-10-30 : les deux modèles sont
+  `"qualified": true`. Il n'y a pas eu de comparaison côte à côte avec la 1.4 ; un écart trouvé
+  plus tard sera corrigé à ce moment-là.
 - **Chargement de LoRA sur NGC 25.11 :** peft 0.19 et plus refuse son torchao 0.14, peft est donc
   épinglé sous 0.19.
 - **LoRA de style** (LoRA Krea 2 et de planche de la 1.4) pas encore portées.
