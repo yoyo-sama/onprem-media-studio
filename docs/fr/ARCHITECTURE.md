@@ -34,7 +34,7 @@ requête LLM.
 | `studio/pipelines/h3.py` | Moteurs vidéo (MiniMax H3 : texte, image, première/dernière image et références vers vidéo), géométrie et plan d'affinage : [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | Adaptateur FastVideo : recettes Spark, profils NVFP4/FP8, sortie latente et réglages de la passe d'affinage, annulation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | Upscaler latent H3 (convolutions 3D, checkpoint LBH v1) et pile de LoRA (fusion exacte en une seule branche parallèle) |
-| `studio/pipelines/common.py` | Contrôle des paramètres, pipeline unique en mémoire, progression par étape, sortie PNG |
+| `studio/pipelines/common.py` | Contrôle des paramètres, pipelines gardés en mémoire (le moins récemment utilisé libéré quand le suivant ne tient pas), progression par étape, sortie PNG |
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |
 | `studio/llm.py` | `LlamaServer` : démarrage à la demande, appel chat OpenAI, vision par images base64 |
 | `studio/main.py` | API HTTP/WebSocket et fichiers statiques |

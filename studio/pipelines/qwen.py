@@ -88,7 +88,8 @@ class QwenImage21(Pipeline):
         else:
             width, height = common.fit_area(*images[0].size)
         ctx.progress(0, "Loading Qwen Image 2.1")
-        pipe = common.load(self.id, lambda: _build_21(models["qwen-image-2.1"]))
+        pipe = common.load(self.id, lambda: _build_21(models["qwen-image-2.1"]),
+                           common.disk_size(models["qwen-image-2.1"]))
         out = pipe(
             prompt=params["prompt"],
             image=images or None,
