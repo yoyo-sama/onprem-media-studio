@@ -33,6 +33,23 @@ open http://localhost:8090
 Models and renders go to `./data` (change with `STUDIO_DATA=/path` in `.env`). If port 8090 is
 already taken (AI Content Studio 1.4 uses it), set `STUDIO_HOST_PORT=8096` in `.env`.
 
+### Reuse files from AI Content Studio 1.4
+
+On a machine where 1.4 is installed, this copies into `./data` what 2.0 can use from its ComfyUI
+models folder, so it is not downloaded again: the H3 latent upscaler (0.7 GB), the Qwen Image 2.1
+text encoder (17.5 GB, rebuilt into the Hugging Face shards) and your MiniMax H3 LoRAs. The other
+1.4 models are ComfyUI formats (fp8, int8, NVFP4 conversions) that 2.0 cannot load; they are
+downloaded on first use. A reused file is kept only if its SHA-256 equals the one Hugging Face
+publishes. Speed-up LoRAs (turbo, lightning, n-step) are left out: the H3 checkpoints of 2.0 are
+already distilled. The 1.4 folder is mounted read-only and never changed.
+
+```bash
+docker compose run --rm -v ~/comfyui-spark/basedir/models:/import:ro studio python -m studio.import14 /import
+```
+
+It prints what was reused, which LoRAs were imported or skipped and why, and what is still to
+download per model. The copies take new disk space: the 1.4 files stay where they are.
+
 ## Install on bare metal (DGX OS, Ubuntu)
 
 ```bash

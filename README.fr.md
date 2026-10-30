@@ -36,6 +36,25 @@ docker compose up -d --build
 Modèles et rendus vont dans `./data` (à changer avec `STUDIO_DATA=/chemin` dans `.env`). Si le
 port 8090 est déjà pris (AI Content Studio 1.4 l'utilise), mettre `STUDIO_HOST_PORT=8096` dans `.env`.
 
+### Réutiliser les fichiers d'AI Content Studio 1.4
+
+Sur une machine où la 1.4 est installée, cette commande copie dans `./data` ce que la 2.0 peut
+reprendre de son dossier de modèles ComfyUI, pour ne pas le retélécharger : l'upscaler latent H3
+(0,7 Go), l'encodeur de texte de Qwen Image 2.1 (17,5 Go, reconstruit en fragments Hugging Face) et
+les LoRA MiniMax H3. Les autres modèles de la 1.4 sont des formats ComfyUI (fp8, int8, conversions
+NVFP4) que la 2.0 ne sait pas charger ; ils sont téléchargés à la première utilisation. Un fichier
+repris n'est gardé que si son SHA-256 est celui que publie Hugging Face. Les LoRA d'accélération
+(turbo, lightning, n étapes) sont écartées : les checkpoints H3 de la 2.0 sont déjà distillés. Le
+dossier de la 1.4 est monté en lecture seule et n'est jamais modifié.
+
+```bash
+docker compose run --rm -v ~/comfyui-spark/basedir/models:/import:ro studio python -m studio.import14 /import
+```
+
+Elle affiche ce qui a été repris, les LoRA importées ou écartées avec la raison, et ce qu'il reste
+à télécharger par modèle. Les copies occupent de la place en plus : les fichiers de la 1.4 restent
+où ils sont.
+
 ## Installer en bare metal (DGX OS, Ubuntu)
 
 ```bash
