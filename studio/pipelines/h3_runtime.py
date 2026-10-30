@@ -14,6 +14,13 @@ table (it would bypass the LoRA on the AdaLN layers and only holds the
 timesteps of the trained schedule, not those of the refine pass), and any
 speed-up LoRA.
 
+One more departure, for Ref2VA only: FastVideo resizes every image reference
+to a 2048 px short edge, upscaling small ones, and keeps image references
+dense in its sparse attention. The validated ComfyUI workflow
+(ref_image_size "max") only ever downscales to that edge, so the same rule is
+installed here (reference_size): with two 1920×1088 sheets, r2v went from 680 s
+to about 247 s on the GB10 with no visible loss (LESSONS.md #38).
+
 The generator runs in-process (one GPU: FastVideo's uniproc executor), so a
 cancelled job interrupts it directly. FastVideo reads its environment when the
 generator is built, which is why a precision or LoRA change builds a new one.
@@ -65,6 +72,8 @@ _OMNIREF_ENV = {
 _ALL_KEYS = set(_SPARK_ENV) | set(_NVFP4_ENV) | set(_FP8_ENV) | set(_OMNIREF_ENV) | {
     "FASTVIDEO_H3_VAE_NVFP4_DECODER"}
 
+REFERENCE_SHORT_EDGE = 2048
+
 _FP4_ATTENTION = {"enabled": True, "prefix_precision": "fp8", "two_level_p": True, "smooth_k": True}
 
 
@@ -100,6 +109,24 @@ def experimental(spec: EngineSpec) -> dict:
     return out
 
 
+def reference_size(width: int, height: int, multiple: int = 32) -> tuple[int, int]:
+    """(height, width) of an image reference, by ComfyUI's ref_image_size "max":
+    down to a 2048 px short edge, never up, in multiples of the canvas step."""
+    if width <= 0 or height <= 0:
+        raise ValueError(f"A reference image must have a positive size, got {width}x{height}.")
+    if width > 4 * height or height > 4 * width:
+        raise ValueError(f"A reference image must be within 1:4 and 4:1, got {width}x{height}.")
+    scale = min(1.0, REFERENCE_SHORT_EDGE / min(width, height))
+    return (max(multiple, round(height * scale / multiple) * multiple),
+            max(multiple, round(width * scale / multiple) * multiple))
+
+
+def _size_references_like_comfyui() -> None:
+    from fastvideo.pipelines.basic.minimax_h3 import reference
+    step = reference.MINIMAX_H3_CANVAS_MULTIPLE
+    reference.resolve_reference_image_size = lambda width, height: reference_size(width, height, step)
+
+
 def _apply_env(env: dict[str, str]) -> None:
     for key in _ALL_KEYS - set(env):
         os.environ.pop(key, None)
@@ -120,6 +147,7 @@ class Engine:
         components = ComponentConfig(lora_path=str(spec.lora) if spec.lora else None, lora_strength=1.0)
         if spec.ref2va:
             components.override_pipeline_cls_name = "MiniMaxH3Ref2VAModularPipeline"
+            _size_references_like_comfyui()
         self.generator = VideoGenerator.from_config(GeneratorConfig(
             model_path=str(spec.model_dir),
             engine=EngineConfig(
@@ -128,7 +156,10 @@ class Engine:
                 # A GB10 keeps everything resident: 128 GB of unified memory.
                 offload=OffloadConfig(dit=False, dit_layerwise=False, text_encoder=False, image_encoder=False,
                                       vae=False, pin_cpu_memory=False, lazy_module_load=False),
-                compile=CompileConfig(enabled=False, vae_enabled=None if spec.ref2va else True),
+                # No torch.compile, VAE included: the V2 recipe compiles the VAE tiles with
+                # CUDA graphs, whose state is per thread, and FastVideo runs each request in
+                # a new thread, so a second job failed (LESSONS.md #37).
+                compile=CompileConfig(enabled=False, vae_enabled=False),
             ),
             pipeline=PipelineSelection(
                 workload_type="i2v" if spec.ref2va else "t2v",

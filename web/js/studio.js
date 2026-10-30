@@ -681,15 +681,13 @@ function setGauge(id, value, text) {
   g.querySelector("strong").textContent = text;
 }
 const LLM_STATES = { running: L("Ready"), stopped: L("Starts on first use"), exited: L("Stopped") };
-// On a GB10 the GPU shares the system memory, and CUDA's free figure leaves out the page
-// cache the kernel gives back on demand: there the gauge reads the system's available
-// memory instead (LESSONS).
+// On a GB10 the GPU shares the system memory: the server already reports the system's
+// available memory as the GPU's free memory there (LESSONS), the page only names it.
 function memoryUse(h) {
   const gpu = h.gpu || {}, mem = h.memory;
-  const unified = !!(gpu.available && mem && Math.abs(gpu.memory_total - mem.total) / mem.total < 0.05);
-  if (unified) return { unified, used: mem.total - mem.available, total: mem.total };
-  if (gpu.available) return { unified, used: gpu.memory_total - gpu.memory_free, total: gpu.memory_total };
-  return null;
+  if (!gpu.available) return null;
+  const unified = !!(mem && Math.abs(gpu.memory_total - mem.total) / mem.total < 0.05);
+  return { unified, used: gpu.memory_total - gpu.memory_free, total: gpu.memory_total };
 }
 async function pollMonitor() {
   if (document.hidden) return;

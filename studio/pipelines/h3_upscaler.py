@@ -3,9 +3,13 @@ latents between the two passes of the reference-to-video engine.
 
 Written for this project from the architecture of LBH-123-AI's published
 checkpoint (Apache-2.0 weights, `LBH-123-AI/Minimax_h3_latent_Upscaler`); the
-module names follow the checkpoint so its state dict loads strictly. It works
-on *normalised* latents (24 channels, the H3 video VAE statistics), and is
-conditioned on the upscale factor.
+module names follow the checkpoint so its state dict loads strictly. It is
+conditioned on the upscale factor and works on 24-channel latents normalised
+*twice* with the H3 video VAE statistics: its ComfyUI node normalises its input
+again although the DiT's latents already are. The caller does the same and
+denormalises the output once (h3.refine_inputs); fed the DiT latents directly,
+its output does not correlate with a trilinear upscale (r = -0.01 against 0.86
+on the GB10) and the refined clip comes out as pink mush.
 
 Long clips are processed in temporal chunks with an overlap equal to the
 temporal kernel size and a linear cross-fade, as the reference node does: the

@@ -58,8 +58,8 @@ is a dependency.
   qualify on GB10.
 - **FastVideo pins torch 2.12** while the image keeps the NGC 25.11 torch (2.10); FastVideo is
   installed without its dependencies and pip is constrained to the base torch. API and imports
-  check out on 2.10 without a GPU; the kernels are to confirm on GB10, with FastVideo's own CUDA
-  13.0 + torch 2.12 stack as the fallback (`docs/H3.md` § Torch version).
+  check out on 2.10 without a GPU, and the kernels ran on the GB10 (2026-10-30), with FastVideo's
+  own CUDA 13.0 + torch 2.12 stack as the fallback (`docs/H3.md` § Torch version).
 - **H3 clips are 5 to 15 s** in FastVideo, where 1.4 allowed shorter cuts.
 - **NGC image tag and llama.cpp revision** are pinned but not yet built on GB10: first build on
   the device may require a bump.

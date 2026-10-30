@@ -42,6 +42,11 @@ ENV PYTHONUNBUFFERED=1 \
     STUDIO_LLAMA_SERVER=/opt/llama/llama-server \
     LD_LIBRARY_PATH=/opt/llama:${LD_LIBRARY_PATH} \
     HF_HUB_ENABLE_HF_TRANSFER=0
+# FlashInfer JIT-compiles its NVFP4 GEMM on the first H3 job: bound nvcc's
+# parallelism (unbounded, it exhausted the GB10's memory) and keep the compiled
+# kernels on the data volume (docs/LESSONS.md #36).
+ENV MAX_JOBS=4 \
+    FLASHINFER_WORKSPACE_BASE=/data/cache
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 COPY --from=llama /opt/llama /opt/llama
 COPY --from=fastvideo /wheels /wheels

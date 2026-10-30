@@ -9,7 +9,7 @@
       "allow": ["gemma-4-E4B-it-Q8_0.gguf", "mmproj-gemma-4-E4B-it-Q8_0.gguf"],
       "gated": false,
       "license": "apache-2.0",
-      "qualified": false
+      "qualified": true
     },
     {
       "id": "krea2-turbo",
@@ -19,7 +19,7 @@
       "allow": ["model_index.json", "scheduler/*", "text_encoder/*", "tokenizer/*", "transformer/*", "vae/*"],
       "gated": true,
       "license": "Krea 2 license (LICENSE.pdf in the repository, accepted on Hugging Face)",
-      "qualified": false
+      "qualified": true
     },
     {
       "id": "qwen-image-2.1",
@@ -29,7 +29,7 @@
       "allow": ["model_index.json", "processor/*", "scheduler/*", "text_encoder/*", "transformer/*", "vae/*"],
       "gated": false,
       "license": "Qwen Research License (non-commercial use only; commercial use needs a licence from Qwen)",
-      "qualified": false
+      "qualified": true
     },
     {
       "id": "fasth3-v2-nvfp4",
@@ -39,7 +39,7 @@
       "allow": ["fastvideo_inference.json", "model_index.json", "modular_model_index.json", "scheduler/*", "audio_scheduler/*", "text_encoder/*", "tokenizer/*", "processor/*", "vae/*", "audio_vae/*", "transformer/config.json", "transformer/diffusion_pytorch_model*", "transformer/nvfp4_weights.safetensors"],
       "gated": false,
       "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA; products must show \"MiniMax H3\")",
-      "qualified": false
+      "qualified": true
     },
     {
       "id": "fasth3-v2-fp8",
@@ -59,7 +59,7 @@
       "allow": ["fastvideo_inference.json", "modular_model_index.json", "scheduler/*", "audio_scheduler/*", "text_encoder/*", "tokenizer/*", "processor/*", "vae/*", "audio_vae/*", "transformer_ref/*", "vae_decoder_nvfp4/*"],
       "gated": false,
       "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA; products must show \"MiniMax H3\")",
-      "qualified": false
+      "qualified": true
     },
     {
       "id": "fasth3-omniref-fp8",
@@ -79,7 +79,7 @@
       "allow": ["minimax_h3_latent_upscaler_3d_conv_v1/minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors"],
       "gated": false,
       "license": "apache-2.0",
-      "qualified": false
+      "qualified": true
     }
   ]
 }

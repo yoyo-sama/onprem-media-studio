@@ -111,12 +111,30 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
 34. **A container writing to a mounted repository runs with the owner's UID**, never root. [#33]
 35. **Models are referenced only after checking they are on disk**; files get renamed or moved
     between versions. [#14]
+36. **Bound and keep FlashInfer's JIT builds.** The first NVFP4 H3 job compiles FlashInfer's
+    `fp4_gemm_cutlass_sm120` at render time. With `MAX_JOBS` unset, about 22 nvcc processes ran in
+    parallel (~130 GB), the GB10 ran out of memory and no clip came out. With `MAX_JOBS=4` the
+    build takes 2 min 50 and leaves more than 91 GB available. The cache must live on the data
+    volume (`FLASHINFER_WORKSPACE_BASE=/data/cache`); otherwise every new container compiles again.
+    Both are set in the image. (GB10, 2026-10-30)
+37. **No torch.compile on the H3 VAE in a long-lived server.** FastVideo's V2 recipe compiles the
+    VAE tiles in `reduce-overhead` mode (CUDA graphs). CUDA graph state is per thread, and
+    FastVideo runs each request in a new thread. So the second job on the same generator failed
+    after 6 s (`assert torch._C._is_key_in_tls` in `cudagraph_trees.py`). With compilation off,
+    three jobs in a row pass, and the first job no longer pays a 3.5 min compile. A unit test
+    cannot catch this: only a second real job on the GPU shows it. (GB10, 2026-10-30)
+38. **Size H3 image references as ComfyUI does, not as FastVideo does.** FastVideo upscales every
+    image reference to a 2048 px short edge and keeps image references dense in its sparse
+    attention: r2v with two 1920×1088 sheets took 680 s, 2.6 times ComfyUI. ComfyUI's
+    `ref_image_size` "max" only ever downscales to that edge: about 247 s, with no visible loss.
+    Sending smaller references does not help, since FastVideo scales them back up. (GB10,
+    2026-10-30)
 
 ## 8. Front end (for the port in step 4)
 
-36. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes
+39. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes
     through the translation function at write time and again on language change.
-37. A guard on a possibly-null state must be chosen for the result it gives when the state is
+40. A guard on a possibly-null state must be chosen for the result it gives when the state is
     absent, not for its apparent symmetry. [#18]
-38. Headless screenshots with a virtual time budget can freeze an earlier frame than the final
+41. Headless screenshots with a virtual time budget can freeze an earlier frame than the final
     DOM: confirm with a DOM dump. [#15]

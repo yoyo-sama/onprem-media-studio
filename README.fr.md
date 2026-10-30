@@ -7,12 +7,12 @@ nécessaires à la première utilisation.
 Successeur d'AI Content Studio 1.4. Moteurs : Krea 2, Qwen Image 2.1, MiniMax H3 via
 FastH3, Gemma 4 E4B pour l'enrichissement des prompts.
 
-> État : étapes 3 et 4 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le
-> téléchargement des modèles, la file de jobs et le pont LLM sont en place ; les moteurs d'image
-> (Krea 2, Qwen Image 2.1) ont rendu sur le GB10 mais ne sont pas encore comparés à la 1.4, et les
-> moteurs vidéo MiniMax H3 (texte, image, première/dernière image et références vers vidéo) sont
-> écrits mais pas encore qualifiés sur GPU. Les pages Studio et Canvas sont portées de la 1.4
-> ([interface](docs/fr/FRONTEND.md)) et testées avec des rendus simulés.
+> État : étape 4 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
+> modèles, la file de jobs et le pont LLM sont en place, et les moteurs d'image (Krea 2, Qwen Image
+> 2.1), Gemma 4 et les moteurs vidéo MiniMax H3 en NVFP4 (texte, image, première/dernière image et
+> références vers vidéo) sont qualifiés sur le GB10 (2026-10-30). Le repli FP8 de H3 n'a pas encore
+> été rendu. Les pages Studio et Canvas sont portées de la 1.4 ([interface](docs/fr/FRONTEND.md))
+> et testées avec des rendus simulés ; leur premier passage sur le GB10 reste à faire.
 
 English version: [README.md](README.md).
 
