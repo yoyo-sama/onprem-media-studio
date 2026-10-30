@@ -127,12 +127,19 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     disponibles. Le cache doit vivre sur le volume de données
     (`FLASHINFER_WORKSPACE_BASE=/data/cache`) ; sinon chaque nouveau conteneur recompile. L'image
     règle les deux. (GB10, 2026-10-30)
+37. **Pas de torch.compile sur le VAE H3 dans un serveur qui dure.** La recette V2 de FastVideo
+    compile les tuiles du VAE en mode `reduce-overhead` (graphes CUDA). L'état des graphes CUDA est
+    propre à chaque thread, et FastVideo lance chaque requête dans un nouveau thread. Le deuxième
+    job sur le même générateur échouait donc au bout de 6 s (`assert torch._C._is_key_in_tls`
+    dans `cudagraph_trees.py`). Sans compilation, trois jobs d'affilée passent, et le premier job
+    ne paie plus 3 min 30 de compilation. Un test unitaire ne peut pas le voir : seul un deuxième
+    vrai job sur le GPU le montre. (GB10, 2026-10-30)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
-37. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
+38. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
     passe par la fonction de traduction à l'écriture et de nouveau au changement de langue.
-38. Une garde sur un état possiblement nul se choisit pour le résultat qu'elle donne quand l'état
+39. Une garde sur un état possiblement nul se choisit pour le résultat qu'elle donne quand l'état
     est absent, pas pour sa symétrie apparente. [#18]
-39. Une capture headless avec budget de temps virtuel peut figer une image antérieure au DOM
+40. Une capture headless avec budget de temps virtuel peut figer une image antérieure au DOM
     final : confirmer par un dump du DOM. [#15]

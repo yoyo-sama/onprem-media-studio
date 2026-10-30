@@ -128,7 +128,10 @@ class Engine:
                 # A GB10 keeps everything resident: 128 GB of unified memory.
                 offload=OffloadConfig(dit=False, dit_layerwise=False, text_encoder=False, image_encoder=False,
                                       vae=False, pin_cpu_memory=False, lazy_module_load=False),
-                compile=CompileConfig(enabled=False, vae_enabled=None if spec.ref2va else True),
+                # No torch.compile, VAE included: the V2 recipe compiles the VAE tiles with
+                # CUDA graphs, whose state is per thread, and FastVideo runs each request in
+                # a new thread, so a second job failed (LESSONS.md #37).
+                compile=CompileConfig(enabled=False, vae_enabled=False),
             ),
             pipeline=PipelineSelection(
                 workload_type="i2v" if spec.ref2va else "t2v",

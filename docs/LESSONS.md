@@ -117,12 +117,18 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     build takes 2 min 50 and leaves more than 91 GB available. The cache must live on the data
     volume (`FLASHINFER_WORKSPACE_BASE=/data/cache`); otherwise every new container compiles again.
     Both are set in the image. (GB10, 2026-10-30)
+37. **No torch.compile on the H3 VAE in a long-lived server.** FastVideo's V2 recipe compiles the
+    VAE tiles in `reduce-overhead` mode (CUDA graphs). CUDA graph state is per thread, and
+    FastVideo runs each request in a new thread. So the second job on the same generator failed
+    after 6 s (`assert torch._C._is_key_in_tls` in `cudagraph_trees.py`). With compilation off,
+    three jobs in a row pass, and the first job no longer pays a 3.5 min compile. A unit test
+    cannot catch this: only a second real job on the GPU shows it. (GB10, 2026-10-30)
 
 ## 8. Front end (for the port in step 4)
 
-37. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes
+38. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes
     through the translation function at write time and again on language change.
-38. A guard on a possibly-null state must be chosen for the result it gives when the state is
+39. A guard on a possibly-null state must be chosen for the result it gives when the state is
     absent, not for its apparent symmetry. [#18]
-39. Headless screenshots with a virtual time budget can freeze an earlier frame than the final
+40. Headless screenshots with a virtual time budget can freeze an earlier frame than the final
     DOM: confirm with a DOM dump. [#15]
