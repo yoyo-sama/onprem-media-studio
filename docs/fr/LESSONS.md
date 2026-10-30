@@ -134,12 +134,18 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     dans `cudagraph_trees.py`). Sans compilation, trois jobs d'affilée passent, et le premier job
     ne paie plus 3 min 30 de compilation. Un test unitaire ne peut pas le voir : seul un deuxième
     vrai job sur le GPU le montre. (GB10, 2026-10-30)
+38. **Dimensionner les références image H3 comme ComfyUI, pas comme FastVideo.** FastVideo agrandit
+    chaque référence image à 2048 px de petit côté et garde les références image denses dans son
+    attention creuse : le r2v avec deux planches 1920×1088 prenait 680 s, 2,6 fois ComfyUI. Le
+    `ref_image_size` « max » de ComfyUI ne fait que réduire à ce côté : environ 247 s, sans perte
+    visible. Envoyer des références plus petites n'y change rien, FastVideo les ré-agrandit.
+    (GB10, 2026-10-30)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
-38. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
+39. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
     passe par la fonction de traduction à l'écriture et de nouveau au changement de langue.
-39. Une garde sur un état possiblement nul se choisit pour le résultat qu'elle donne quand l'état
+40. Une garde sur un état possiblement nul se choisit pour le résultat qu'elle donne quand l'état
     est absent, pas pour sa symétrie apparente. [#18]
-40. Une capture headless avec budget de temps virtuel peut figer une image antérieure au DOM
+41. Une capture headless avec budget de temps virtuel peut figer une image antérieure au DOM
     final : confirmer par un dump du DOM. [#15]

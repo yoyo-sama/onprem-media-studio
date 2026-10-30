@@ -123,12 +123,18 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     after 6 s (`assert torch._C._is_key_in_tls` in `cudagraph_trees.py`). With compilation off,
     three jobs in a row pass, and the first job no longer pays a 3.5 min compile. A unit test
     cannot catch this: only a second real job on the GPU shows it. (GB10, 2026-10-30)
+38. **Size H3 image references as ComfyUI does, not as FastVideo does.** FastVideo upscales every
+    image reference to a 2048 px short edge and keeps image references dense in its sparse
+    attention: r2v with two 1920×1088 sheets took 680 s, 2.6 times ComfyUI. ComfyUI's
+    `ref_image_size` "max" only ever downscales to that edge: about 247 s, with no visible loss.
+    Sending smaller references does not help, since FastVideo scales them back up. (GB10,
+    2026-10-30)
 
 ## 8. Front end (for the port in step 4)
 
-38. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes
+39. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes
     through the translation function at write time and again on language change.
-39. A guard on a possibly-null state must be chosen for the result it gives when the state is
+40. A guard on a possibly-null state must be chosen for the result it gives when the state is
     absent, not for its apparent symmetry. [#18]
-40. Headless screenshots with a virtual time budget can freeze an earlier frame than the final
+41. Headless screenshots with a virtual time budget can freeze an earlier frame than the final
     DOM: confirm with a DOM dump. [#15]

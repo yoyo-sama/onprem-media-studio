@@ -335,6 +335,25 @@ def test_overrides_apply_to_one_request_then_restore(fake_fastvideo, tmp_path):
     assert gen.fastvideo_args.pipeline_config.pdd_step_indices == (0, 4, 32)
 
 
+def test_reference_size_follows_comfyui_max(monkeypatch):
+    """Image references only ever shrink to a 2048 px short edge, as in the validated
+    ComfyUI workflow; FastVideo's own rule upscales a 1344×768 image to 3584×2048."""
+    assert h3_runtime.reference_size(1344, 768) == (768, 1344)
+    assert h3_runtime.reference_size(4096, 3072) == (2048, 2720)
+    assert h3_runtime.reference_size(1000, 1000) == (992, 992)
+    with pytest.raises(ValueError, match="1:4"):
+        h3_runtime.reference_size(5000, 1000)
+    reference = SimpleNamespace(MINIMAX_H3_CANVAS_MULTIPLE=32,
+                                resolve_reference_image_size=lambda w, h: (2048, 3584))
+    for name in ("fastvideo", "fastvideo.pipelines", "fastvideo.pipelines.basic"):
+        monkeypatch.setitem(sys.modules, name, ModuleType(name))
+    package = ModuleType("fastvideo.pipelines.basic.minimax_h3")
+    package.reference = reference
+    monkeypatch.setitem(sys.modules, "fastvideo.pipelines.basic.minimax_h3", package)
+    h3_runtime._size_references_like_comfyui()
+    assert reference.resolve_reference_image_size(1344, 768) == (768, 1344)
+
+
 def test_cancel_interrupts_fastvideo(fake_fastvideo, tmp_path):
     gen = FakeGenerator(delay=5)
     ctx = FakeCtx()
