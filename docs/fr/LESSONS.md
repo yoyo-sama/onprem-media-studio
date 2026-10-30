@@ -120,12 +120,19 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     root. [#33]
 35. **Un modèle n'est référencé qu'après avoir vérifié sa présence sur disque** ; les fichiers
     sont renommés ou déplacés d'une version à l'autre. [#14]
+36. **Brider et conserver les compilations JIT de FlashInfer.** Le premier job H3 en NVFP4 compile
+    le `fp4_gemm_cutlass_sm120` de FlashInfer au moment du rendu. Sans `MAX_JOBS`, environ 22
+    processus nvcc tournaient en parallèle (~130 Go) : le GB10 a manqué de mémoire et aucun clip
+    n'est sorti. Avec `MAX_JOBS=4`, la compilation prend 2 min 50 et laisse plus de 91 Go
+    disponibles. Le cache doit vivre sur le volume de données
+    (`FLASHINFER_WORKSPACE_BASE=/data/cache`) ; sinon chaque nouveau conteneur recompile. L'image
+    règle les deux. (GB10, 2026-10-30)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
-36. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
+37. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
     passe par la fonction de traduction à l'écriture et de nouveau au changement de langue.
-37. Une garde sur un état possiblement nul se choisit pour le résultat qu'elle donne quand l'état
+38. Une garde sur un état possiblement nul se choisit pour le résultat qu'elle donne quand l'état
     est absent, pas pour sa symétrie apparente. [#18]
-38. Une capture headless avec budget de temps virtuel peut figer une image antérieure au DOM
+39. Une capture headless avec budget de temps virtuel peut figer une image antérieure au DOM
     final : confirmer par un dump du DOM. [#15]

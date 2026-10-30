@@ -111,12 +111,18 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
 34. **A container writing to a mounted repository runs with the owner's UID**, never root. [#33]
 35. **Models are referenced only after checking they are on disk**; files get renamed or moved
     between versions. [#14]
+36. **Bound and keep FlashInfer's JIT builds.** The first NVFP4 H3 job compiles FlashInfer's
+    `fp4_gemm_cutlass_sm120` at render time. With `MAX_JOBS` unset, about 22 nvcc processes ran in
+    parallel (~130 GB), the GB10 ran out of memory and no clip came out. With `MAX_JOBS=4` the
+    build takes 2 min 50 and leaves more than 91 GB available. The cache must live on the data
+    volume (`FLASHINFER_WORKSPACE_BASE=/data/cache`); otherwise every new container compiles again.
+    Both are set in the image. (GB10, 2026-10-30)
 
 ## 8. Front end (for the port in step 4)
 
-36. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes
+37. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes
     through the translation function at write time and again on language change.
-37. A guard on a possibly-null state must be chosen for the result it gives when the state is
+38. A guard on a possibly-null state must be chosen for the result it gives when the state is
     absent, not for its apparent symmetry. [#18]
-38. Headless screenshots with a virtual time budget can freeze an earlier frame than the final
+39. Headless screenshots with a virtual time budget can freeze an earlier frame than the final
     DOM: confirm with a DOM dump. [#15]
