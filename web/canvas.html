@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canvas</title>
+<!-- litegraph.js 0.7.18 (MIT), vendored: js/vendor/README.md -->
+<link rel="stylesheet" href="js/vendor/litegraph.css">
+<link rel="stylesheet" href="css/canvas.css">
+<!-- Theme set before the first paint: the saved choice (key shared with the Studio),
+     else the system preference. -->
+<script>
+  try {
+    document.documentElement.dataset.theme = localStorage.getItem("theme")
+      || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  } catch { document.documentElement.dataset.theme = "light"; }
+</script>
+</head>
+<body>
+
+<!-- ── Left panel: add cards ─────────────────────────────────────────────── -->
+<aside id="palette" class="panel glass">
+  <div class="rail-switch">
+    <a href="index.html" class="rail-pill rail-pill-outline" title="Studio">
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 9V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/><path d="M8.5 4 6.5 9M14.5 4l-2 5"/></svg>
+      Studio
+    </a>
+    <span class="rail-pill rail-pill-active" title="Canvas" aria-current="page">
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="18" r="2.2"/><circle cx="19" cy="18" r="2.2"/><path d="M12 7.2 6.3 16.2M12 7.2l5.7 9M7.2 18h9.6"/></svg>
+      Canvas
+    </span>
+  </div>
+  <p class="panel-title">What do you want to make?</p>
+  <div class="usecases">
+    <button type="button" class="usecase" id="ucPoster">
+      <strong>Poster / product visual</strong>
+      <span>A polished still image, from a simple description.</span>
+    </button>
+    <button type="button" class="usecase" id="ucTeaser" aria-expanded="false" aria-controls="ucTeaserOptions">
+      <strong>Short ad / teaser</strong>
+      <span>A video shot of a few seconds, ready to publish.</span>
+    </button>
+    <div class="usecase-sub" id="ucTeaserOptions" hidden>
+      <button type="button" class="usecase-opt" id="ucTeaserImage">
+        <strong>I already have an image to animate</strong>
+        <span>That image is set in motion as it is.</span>
+      </button>
+      <button type="button" class="usecase-opt" id="ucTeaserSheets">
+        <strong>I start from character and setting sheets</strong>
+        <span>The shot is composed from your reference sheets.</span>
+      </button>
+    </div>
+    <button type="button" class="usecase" id="ucTrailer">
+      <strong>Narrative trailer (several shots)</strong>
+      <span>It starts with the 2 sheets: character and setting.</span>
+    </button>
+  </div>
+
+  <div class="sep"></div>
+
+  <button type="button" class="disclosure" id="advToggle" aria-expanded="false" aria-controls="advBlock">
+    Advanced mode (pick a card type) <span id="advChevron" aria-hidden="true">▾</span>
+  </button>
+  <div id="advBlock" hidden>
+    <div class="field">
+      <div class="icon-row">
+        <button type="button" class="icon-btn open" id="advCatImage" aria-pressed="true">Image</button>
+        <button type="button" class="icon-btn" id="advCatVideo" aria-pressed="false">Video</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="pipelineSelect">Card</label>
+      <select id="pipelineSelect"></select>
+    </div>
+    <div class="field">
+      <label for="modelSelect">Engine</label>
+      <select id="modelSelect" data-raw></select>
+    </div>
+    <button type="button" id="addCard" class="btn-primary">+ New card</button>
+  </div>
+
+  <div class="sep"></div>
+  <div class="field">
+    <label for="langSelect">Language</label>
+    <select id="langSelect">
+      <option value="en" data-raw>English</option>
+      <option value="fr" data-raw>Français</option>
+      <option value="es" data-raw>Español</option>
+      <option value="de" data-raw>Deutsch</option>
+    </select>
+  </div>
+  <div class="icon-row">
+    <button type="button" class="icon-btn" id="themeBtn" title="Light / dark theme" aria-label="Light / dark theme">🌙</button>
+    <button type="button" class="icon-btn" id="btnFit" title="Fit the view to the cards" aria-label="Fit the view to the cards">⤢</button>
+    <button type="button" class="icon-btn" id="btnClear" title="Clear the canvas" aria-label="Clear the canvas">🗑</button>
+  </div>
+</aside>
+
+<!-- ── Right panel: the selected card ────────────────────────────────────── -->
+<aside id="props" class="panel glass" hidden>
+  <p class="panel-title">Properties · selected card</p>
+  <h2 id="propsCardTitle" data-raw></h2>
+  <p id="propsCardType" data-raw></p>
+  <p id="propsPreview" data-raw></p>
+  <p id="propsStatus" data-raw></p>
+  <div id="propsFields"></div>
+  <div class="model-notice" id="propsModelNotice" role="status" hidden></div>
+  <div class="actions">
+    <button type="button" id="btnRegen" class="btn-primary">Generate</button>
+    <button type="button" id="btnDup" class="btn-outline">Duplicate</button>
+  </div>
+</aside>
+
+<!-- Below 768 px the two panels become sheets, opened from this bar. -->
+<nav id="sheetBar">
+  <button type="button" id="sheetMenu" aria-expanded="false" aria-controls="palette">Menu</button>
+  <button type="button" id="sheetProps" aria-expanded="false" aria-controls="props" disabled>Properties</button>
+</nav>
+
+<div id="stage">
+  <canvas id="lgcanvas"></canvas>
+  <div id="mediaLayer"></div>
+</div>
+
+<!-- Gallery drawer: the latest renders, to drag onto an Image import card. -->
+<div id="cgDrawer">
+  <div id="cgBody">
+    <div class="cg-tabs">
+      <button type="button" class="cg-tab active" id="cgTabImages"><span>Images</span> <span class="cg-n" data-raw></span></button>
+      <button type="button" class="cg-tab" id="cgTabVideos"><span>Videos</span> <span class="cg-n" data-raw></span></button>
+    </div>
+    <div id="cgTrayImages" class="cg-tray" data-raw></div>
+    <div id="cgTrayVideos" class="cg-tray" data-raw hidden></div>
+  </div>
+  <button type="button" id="cgHandle" aria-expanded="false">
+    <span>Gallery</span>
+    <span class="cg-chevron" aria-hidden="true">▲</span>
+  </button>
+</div>
+
+<script src="js/vendor/litegraph.min.js"></script>
+<script src="js/prompts.js"></script>
+<script type="module" src="js/canvas.js"></script>
+</body>
+</html>

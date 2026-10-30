@@ -8,7 +8,10 @@ unit tests run on a machine without them.
 import gc
 import json
 import math
+import os
 import random
+import shutil
+import subprocess
 import time
 from pathlib import Path
 
@@ -161,18 +164,45 @@ def open_image(path: Path):
         return img.convert("RGB")
 
 
-def save_images(images, ctx, params: dict) -> list[Path]:
-    """PNG files under outputs/<pipeline>/, with the job's pipeline and parameters
-    in a `studio` text chunk (the gallery reads it back for "reuse prompt")."""
+def metadata(ctx, params: dict, role: str | None = None) -> str:
+    """What the gallery reads back from an output (search, "reuse prompt", filters)."""
+    meta = {"pipeline": ctx.job.pipeline, "origin": ctx.job.origin, "params": params}
+    if role:
+        meta["role"] = role
+    return json.dumps(meta)
+
+
+def save_images(images, ctx, params: dict, role: str | None = None, stem: str | None = None) -> list[Path]:
+    """PNG files under outputs/<pipeline>/, with the job's metadata in a `studio`
+    text chunk. `role` marks a technical image (a clip's last frame); `stem`
+    names the files after another output (the clip they come from)."""
     from PIL.PngImagePlugin import PngInfo
     folder = ctx.output_dir / ctx.job.pipeline
     folder.mkdir(parents=True, exist_ok=True)
     meta = PngInfo()
-    meta.add_text("studio", json.dumps({"pipeline": ctx.job.pipeline, "params": params}))
-    stamp = time.strftime("%Y%m%d-%H%M%S")
+    meta.add_text("studio", metadata(ctx, params, role))
+    stem = stem or f"{time.strftime('%Y%m%d-%H%M%S')}-{ctx.job.id}"
     paths = []
     for n, img in enumerate(images, 1):
-        path = folder / f"{stamp}-{ctx.job.id}-{n}.png"
+        path = folder / f"{stem}-{n}.png"
         img.save(path, pnginfo=meta)
         paths.append(path)
     return paths
+
+
+def tag_video(path: Path, ctx, params: dict) -> None:
+    """Write the job's metadata into an MP4 as a `studio` tag, remuxed without
+    re-encoding, before the job ends; skipped (with a log line) without ffmpeg.
+    The temporary file starts with a dot: the gallery never indexes it."""
+    if shutil.which("ffmpeg") is None:
+        print(f"ffmpeg not found: {path.name} keeps no metadata for the gallery")
+        return
+    tmp = path.with_name(f".{path.stem}.tagging{path.suffix}")
+    done = subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(path), "-map", "0", "-c", "copy",
+                           "-movflags", "use_metadata_tags", "-metadata", f"studio={metadata(ctx, params)}",
+                           str(tmp)], capture_output=True, timeout=120)
+    if done.returncode:
+        tmp.unlink(missing_ok=True)
+        print(f"Could not tag {path.name}: {done.stderr.decode(errors='replace')[-300:]}")
+        return
+    os.replace(tmp, path)

@@ -59,6 +59,8 @@ def test_health_names_the_app(client):
     body = client.get("/api/health").json()
     assert body["app"] == "OnPrem Media Studio"
     assert "gpu" in body and body["llm"] == "stopped"
+    assert body["queue"] == 0
+    assert body["memory"] is None or 0 < body["memory"]["available"] <= body["memory"]["total"]
 
 
 MEMINFO = "MemTotal:       127535272 kB\nMemFree:         3500000 kB\nMemAvailable:   115000000 kB\n"

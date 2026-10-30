@@ -10,6 +10,10 @@ browser ──HTTP/WS──> studio (FastAPI, :8090)
                        ├─ /api/inputs   image upload → reference for jobs
                        ├─ /api/jobs     queue → one GPU worker → pipelines (diffusers, FastVideo)
                        ├─ /api/llm      llama-server (Gemma 4 E4B, 127.0.0.1:8095)
+                       ├─ /api/gallery  index of the outputs: search, thumbnails, tags, trash
+                       ├─ /api/update   in-app update of a git checkout
+                       ├─ /api/loras    LoRA list and upload
+                       ├─ /api/instructions  Gemma instructions replaced in the settings
                        ├─ /api/ws       job and download events
                        ├─ /inputs       uploaded images
                        ├─ /outputs      rendered files
@@ -34,16 +38,24 @@ request.
 | `studio/pipelines/h3.py` | Video engines (MiniMax H3: text, image, first/last image and references to video), geometry and refine schedule: [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | FastVideo adapter: Spark recipes, NVFP4/FP8 profiles, latent output and refine-pass overrides, cancellation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | H3 latent upscaler (3D conv, LBH v1 checkpoint) and LoRA stack (exact merge into one side branch) |
+| `studio/pipelines/montage.py` | CPU jobs on rendered files with ffmpeg and Pillow: `video-concat` (clips end to end), `image-grid` (contact sheet), `video-frames` (frames near a clip's end, for Relay transitions) |
 | `studio/pipelines/common.py` | Parameter checks, the pipelines kept in memory (least recently used freed when the next does not fit), step progress, PNG output |
 | `tools/qualify/` | Qualification cases built from the 1.4 prompt compilers, and their runner |
 | `studio/llm.py` | `LlamaServer`: start on demand, OpenAI chat call, vision via base64 images |
-| `studio/main.py` | HTTP/WebSocket API and static files |
-| `web/` | Front end (status page today; Studio and Canvas port in step 4) |
+| `studio/gallery.py` | `Gallery`: SQLite/FTS5 index of the outputs, thumbnails, tags, favourites, rename, trash: [GALLERY.md](GALLERY.md) |
+| `studio/update.py`, `loras.py` | In-app update (git fast-forward, restart in place) and LoRA upload: [GALLERY.md](GALLERY.md) |
+| `studio/instructions.py` | Gemma instructions replaced in the interface, kept in `STUDIO_DATA_DIR/instructions.json` (`/api/instructions`); the defaults live in `web/js/prompts.js` |
+| `studio/guard.py` | Same-origin check of the routes that move or write files |
+| `studio/main.py` | HTTP/WebSocket API and static files; `/api/health` gives the app, GPU, memory, LLM state and the number of jobs in the queue |
+| `web/index.html`, `web/canvas.html` | Front end: the Studio and the Canvas, ported from 1.4, no build step: [FRONTEND.md](FRONTEND.md) |
+| `web/js/prompts.js` | Prompt compilers and Gemma instructions of 1.4, one copy for both pages (prompts are compiled in the front end, ADR 0001) |
+| `tools/parity-prompts.js`, `tools/prompt-systems.js` | Front-end regression tests against 1.4: prompt parity and the Gemma instruction per engine: [FRONTEND.md](FRONTEND.md#tests) |
 | `docker/Dockerfile` | NGC PyTorch base + llama.cpp built for sm_121 + FastVideo and its kernels built for sm_121a |
 
 ## Job lifecycle
 
-1. The client posts `{"pipeline": id, "params": {...}}`. `Pipeline.validate` rejects bad input
+1. The client posts `{"pipeline": id, "params": {...}, "origin": feature}` (`origin`, optional,
+   names the front-end feature for the gallery and is never read by a pipeline). `Pipeline.validate` rejects bad input
    (unknown parameter, missing image reference) with 422 before anything is queued, and returns
    the parameters the job keeps, defaults filled in and seed drawn.
 2. The worker picks jobs in order. Missing models (`Pipeline.needs(settings)`, which is `models`
@@ -54,7 +66,8 @@ request.
    references. `ctx.progress()` reports progress and raises if the job was cancelled; the image
    engines call it at every denoising step, so a cancel stops a render within one step. The video
    engines interrupt FastVideo directly (H3.md).
-4. Status: `queued → running → done | error | cancelled`. Every change is pushed on `/api/ws`.
+4. Status: `queued → running → done | error | cancelled`. Every change is pushed on `/api/ws`;
+   a finished job's outputs are in the gallery before its `done` event is sent.
 
 No code path creates a job by itself.
 
@@ -68,6 +81,9 @@ input/<hash>.<ext>        uploaded images (reference inputs/<hash>.<ext>)
 output/<pipeline>/...     renders (reference outputs/<pipeline>/...)
 loras/h3/<file>.safetensors   H3 LoRAs, referenced by file name
 cache/h3-loras/...        merged LoRA stacks
+cache/thumbs/...          gallery thumbnails
+gallery.db                gallery index, tags and favourites
+output/.trash/...         gallery trash (purged by hand)
 ```
 
 ## Configuration
@@ -82,6 +98,8 @@ cache/h3-loras/...        merged LoRA stacks
 | `STUDIO_LLM_PORT` | `8095` | Loopback port of llama-server |
 | `STUDIO_DISK_RESERVE_GB` | `20` | Free space kept after any download |
 | `STUDIO_H3_PRECISION` | `auto` | MiniMax H3: `auto` (NVFP4, FP8 if NVFP4 fails), `nvfp4` or `fp8` (H3.md) |
+| `STUDIO_GALLERY_SCAN` | `60` | Seconds between two gallery scans of the output folder |
+| `STUDIO_UPDATE_BRANCH` | `main` | Branch the in-app update follows (git checkout only) |
 
 ## Renaming the product
 

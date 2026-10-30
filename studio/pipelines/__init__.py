@@ -37,4 +37,4 @@ def register(pipeline: Pipeline) -> Pipeline:
     return pipeline
 
 
-from . import h3, krea2, qwen  # noqa: E402,F401  (each module registers its engines)
+from . import h3, krea2, montage, qwen  # noqa: E402,F401  (each module registers its engines)

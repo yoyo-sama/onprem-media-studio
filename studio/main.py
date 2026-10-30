@@ -9,19 +9,24 @@ from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconn
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from . import gallery as gallery_api
+from . import instructions, loras, update
 from .config import APP_VERSION, Settings
 from .files import FileStore
+from .gallery import Gallery
 from .jobs import JobQueue
 from .llm import LlamaServer, LlmError
 from .models import ModelError, ModelStore
 from .pipelines import REGISTRY, Pipeline, common
 
-WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+REPO_DIR = Path(__file__).resolve().parent.parent
+WEB_DIR = REPO_DIR / "web"
 
 
 class JobRequest(BaseModel):
     pipeline: str
     params: dict = {}
+    origin: str | None = None
 
 
 class ChatRequest(BaseModel):
@@ -44,13 +49,29 @@ def gpu_info() -> dict:
             "memory_free": common.free_memory(), "memory_total": torch.cuda.mem_get_info()[1]}
 
 
+def memory_info() -> dict | None:
+    """System memory from /proc/meminfo, in bytes (None elsewhere). On a GB10 the
+    GPU shares this memory, and CUDA's free figure leaves out the page cache the
+    kernel gives back on demand: the page reads `available` instead (LESSONS.md)."""
+    try:
+        lines = Path("/proc/meminfo").read_text().splitlines()
+    except OSError:
+        return None
+    kb = {k: int(v.split()[0]) for k, v in (line.split(":", 1) for line in lines if ":" in line)}
+    if "MemTotal" not in kb or "MemAvailable" not in kb:
+        return None
+    return {"total": kb["MemTotal"] * 1024, "available": kb["MemAvailable"] * 1024}
+
+
 def create_app(settings: Settings | None = None, models: ModelStore | None = None,
-               pipelines: dict[str, Pipeline] | None = None, llm: LlamaServer | None = None) -> FastAPI:
+               pipelines: dict[str, Pipeline] | None = None, llm: LlamaServer | None = None,
+               updater: update.Updater | None = None) -> FastAPI:
     settings = settings or Settings()
     files = FileStore(settings.input_dir, settings.output_dir)
     models = models or ModelStore(settings)
     llm = llm or LlamaServer(settings, models)
     jobs = JobQueue(REGISTRY if pipelines is None else pipelines, models, files)
+    gallery = Gallery(settings.output_dir, settings.data_dir, settings.gallery_scan)
     clients: set[asyncio.Queue] = set()
     loop: asyncio.AbstractEventLoop | None = None
 
@@ -60,27 +81,59 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
             for q in list(clients):
                 loop.call_soon_threadsafe(q.put_nowait, event)
 
-    jobs.listeners.append(broadcast)
+    def index_outputs(event: dict) -> None:
+        # A finished job's files enter the gallery at once, before the job event
+        # reaches the clients (listeners run in order), not at the next scan.
+        job = event["job"]
+        if job["status"] == "done":
+            for ref in job["outputs"]:
+                if ref.startswith("outputs/"):
+                    gallery.index_key(ref.removeprefix("outputs/"))
+
+    jobs.listeners += [index_outputs, broadcast]
+
+    def busy() -> int:
+        return sum(j.status in ("queued", "running") for j in list(jobs.jobs.values()))
+
+    def before_restart() -> None:
+        gallery.stop()
+        llm.stop()
+
+    updater = updater or update.Updater(REPO_DIR, settings.update_branch, busy, before_restart)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         nonlocal loop
         loop = asyncio.get_running_loop()
         jobs.start()
+        gallery.start()
         yield
+        gallery.stop()
         jobs.stop()
         llm.stop()
 
     app = FastAPI(title=settings.app_name, version=APP_VERSION, lifespan=lifespan)
-    app.state.jobs, app.state.models, app.state.llm = jobs, models, llm
+    app.state.jobs, app.state.models, app.state.llm, app.state.gallery = jobs, models, llm, gallery
+    app.include_router(gallery_api.router(gallery))
+    app.include_router(update.router(updater))
+    app.include_router(loras.router(settings.loras_dir))
+    app.include_router(instructions.router(instructions.Instructions(settings.data_dir / "instructions.json")))
 
     @app.get("/api/health")
     def health():
-        return {"app": settings.app_name, "version": APP_VERSION, "gpu": gpu_info(), "llm": llm.state}
+        return {"app": settings.app_name, "version": APP_VERSION, "gpu": gpu_info(), "memory": memory_info(),
+                "llm": llm.state, "queue": busy()}
 
     @app.get("/api/models")
     def list_models():
         return models.status()
+
+    @app.get("/api/models/{model_id}/size")
+    def model_size(model_id: str):
+        try:
+            return {"id": model_id, "bytes": models.pending_bytes(model_id)}
+        except ModelError as exc:
+            raise HTTPException(404 if model_id not in models.catalog else 502, str(exc))
 
     @app.post("/api/models/{model_id}/download", status_code=202)
     def download_model(model_id: str):
@@ -104,7 +157,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
 
     @app.get("/api/pipelines")
     def list_pipelines():
-        return [{"id": p.id, "models": p.models} for p in jobs.pipelines.values()]
+        return [{"id": p.id, "models": p.needs(settings)} for p in jobs.pipelines.values()]
 
     @app.post("/api/inputs", status_code=201)
     async def upload_input(request: Request):
@@ -121,7 +174,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     @app.post("/api/jobs", status_code=201)
     def submit_job(req: JobRequest):
         try:
-            return jobs.submit(req.pipeline, req.params).public()
+            return jobs.submit(req.pipeline, req.params, req.origin).public()
         except KeyError as exc:
             raise HTTPException(404, str(exc.args[0]))
         except ValueError as exc:

@@ -45,6 +45,7 @@ class ModelStore:
         self.catalog = {m["id"]: m for m in json.loads(CATALOG.read_text())["models"]}
         self._locks = {mid: threading.Lock() for mid in self.catalog}
         self.downloading: dict[str, float] = {}
+        self._sizes: dict[str, list[tuple[str, int]]] = {}
 
     def entry(self, model_id: str) -> dict:
         if model_id not in self.catalog:
@@ -75,6 +76,16 @@ class ModelStore:
         if not files:
             raise ModelError(f"No file of {entry['repo']} matches {entry['allow']}")
         return info.sha, files
+
+    def pending_bytes(self, model_id: str) -> int:
+        """Bytes still to download for a model (0 once installed). The file list is read
+        from Hugging Face once per model and kept: the interface shows it before a render."""
+        if self.installed(model_id):
+            return 0
+        if model_id not in self._sizes:
+            self._sizes[model_id] = self.remote_files(model_id)[1]
+        target = self.path(model_id)
+        return sum(size for rel, size in self._sizes[model_id] if not (target / rel).is_file())
 
     def download(self, model_id: str, progress: Progress | None = None,
                  cancelled: Callable[[], bool] | None = None) -> Path:

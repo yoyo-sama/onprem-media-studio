@@ -82,3 +82,14 @@ def test_gated_file_error_is_a_model_error(settings):
 def test_unknown_model(store):
     with pytest.raises(ModelError, match="Unknown model"):
         store.download("nope")
+
+
+def test_pending_bytes_counts_missing_files_only(store, fetch):
+    assert store.pending_bytes("gemma4-e4b") == 110
+    folder = store.path("gemma4-e4b")
+    folder.mkdir(parents=True)
+    (folder / "gemma-4-E4B-it-Q8_0.gguf").write_bytes(b"x" * 100)
+    assert store.pending_bytes("gemma4-e4b") == 10
+    store.download("gemma4-e4b")
+    assert store.pending_bytes("gemma4-e4b") == 0
+    assert fetch.calls == ["mmproj-gemma-4-E4B-it-Q8_0.gguf"]

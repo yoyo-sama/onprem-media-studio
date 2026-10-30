@@ -6,6 +6,7 @@ one on its own (LESSONS.md, "nothing renders without a click").
 
 import itertools
 import queue
+import re
 import threading
 import time
 import traceback
@@ -18,6 +19,7 @@ from .models import ModelStore
 from .pipelines import Pipeline
 
 Listener = Callable[[dict], None]
+ORIGIN = re.compile(r"[a-z0-9_-]{1,40}")
 
 
 class Cancelled(Exception):
@@ -29,6 +31,9 @@ class Job:
     id: str
     pipeline: str
     params: dict
+    # The front-end feature that submitted the job (storyboard, relay, canvas…),
+    # recorded with the outputs for the gallery; never read by a pipeline.
+    origin: str | None = None
     status: str = "queued"  # queued | running | done | error | cancelled
     progress: float = 0.0
     message: str = ""
@@ -90,11 +95,13 @@ class JobQueue:
         for listener in list(self.listeners):
             listener(event)
 
-    def submit(self, pipeline: str, params: dict) -> Job:
+    def submit(self, pipeline: str, params: dict, origin: str | None = None) -> Job:
         if pipeline not in self.pipelines:
             raise KeyError(f"Unknown pipeline: {pipeline}")
+        if origin is not None and not ORIGIN.fullmatch(origin):
+            raise ValueError("origin must be 1 to 40 lowercase letters, digits, '-' or '_'")
         params = self.pipelines[pipeline].validate(params, self.files)
-        job = Job(id=f"job-{next(self._ids)}", pipeline=pipeline, params=params)
+        job = Job(id=f"job-{next(self._ids)}", pipeline=pipeline, params=params, origin=origin)
         self.jobs[job.id] = job
         self._pending.put(job.id)
         self.emit(job)

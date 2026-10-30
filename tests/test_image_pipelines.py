@@ -132,7 +132,7 @@ def test_krea2_renders_the_prompt_verbatim_without_guidance(client, fake):
     assert call["generator"] == ("generator", job["params"]["seed"])
     with Image.open(io.BytesIO(client.get("/" + job["outputs"][0]).content)) as img:
         meta = json.loads(img.text["studio"])
-    assert meta == {"pipeline": "krea2-t2i", "params": job["params"]}
+    assert meta == {"pipeline": "krea2-t2i", "origin": None, "params": job["params"]}
 
 
 @pytest.mark.parametrize("params", [
