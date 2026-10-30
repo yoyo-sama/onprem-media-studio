@@ -27,6 +27,7 @@ requête LLM.
 | `studio/config.py` | Réglages lus dans les variables d'environnement ; **le nom affiché n'existe qu'ici** |
 | `studio/catalog.json` | Tous les modèles téléchargeables : dépôt, fichiers, licence, accès restreint, qualifié |
 | `studio/models.py` | `ModelStore` : état installé, téléchargement fichier par fichier avec reprise, contrôle du disque |
+| `studio/import14.py` | `python -m studio.import14` : reprend les modèles et les LoRA H3 d'une installation 1.4 (fichiers identiques, fragments reconstruits, contrôlés par SHA-256) |
 | `studio/jobs.py` | `JobQueue` : soumission, worker unique, progression, annulation, événements |
 | `studio/files.py` | `FileStore` : images envoyées, références `inputs/…` et `outputs/…` |
 | `studio/pipelines/` | Contrat `Pipeline` et registre ; une sous-classe par moteur |
