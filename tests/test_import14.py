@@ -59,8 +59,8 @@ def test_an_identical_file_is_reused_and_a_lookalike_is_not(settings, tmp_path):
 
 def test_a_shard_is_rebuilt_from_a_single_local_file_only_when_it_comes_out_identical(settings, tmp_path, monkeypatch):
     monkeypatch.setattr(import14, "MIN_REBUILD", 0)
-    weights = {"a": b"\x01" * 16, "b": b"\x02" * 8, "c": b"\x03" * 4}
-    shard = safetensors({"b": weights["b"], "a": weights["a"]})
+    weights = {"model.language_model.a": b"\x01" * 16, "lm_head.b": b"\x02" * 8, "c": b"\x03" * 4}
+    shard = safetensors({"lm_head.b": weights["lm_head.b"], "model.language_model.a": weights["model.language_model.a"]})
     other = safetensors({"c": weights["c"]})
     rel1, rel2 = "text_encoder/model-00001-of-00002.safetensors", "text_encoder/model-00002-of-00002.safetensors"
     remote = {rel1: shard, rel2: other}
@@ -69,9 +69,10 @@ def test_a_shard_is_rebuilt_from_a_single_local_file_only_when_it_comes_out_iden
     store = only(ModelStore(settings, api=Api(remote)), "qwen-image-2.1")
     root = tmp_path / "comfy"
     (root / "text_encoders").mkdir(parents=True)
-    # One ComfyUI file, its own header and order, holding every tensor of both shards.
-    (root / "text_encoders" / "qwen3vl_8b_bf16.safetensors").write_bytes(
-        safetensors({**weights, "c": b"\x09" * 4}, order=["c", "a", "b"]))
+    # One ComfyUI file, its own names, header and order, holding every tensor of both shards.
+    (root / "text_encoders" / "qwen3vl_8b_bf16.safetensors").write_bytes(safetensors(
+        {"model.a": weights["model.language_model.a"], "lm_head.b": weights["lm_head.b"], "c": b"\x09" * 4},
+        order=["c", "model.a", "lm_head.b"]))
     lines = []
     import14.import_models(root, store, lines.append)
     folder = store.path("qwen-image-2.1")

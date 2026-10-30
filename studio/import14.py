@@ -37,6 +37,19 @@ from .pipelines import h3_lora
 CHUNK = 64 * 1024**2
 MIN_REBUILD = 100 * 1024**2  # smaller files are not worth a header request
 SPEEDUP = re.compile(r"turbo|lightning|lightx2v|\d+[-_ ]?steps?", re.IGNORECASE)
+# Hugging Face name prefix -> ComfyUI one: the Qwen3-VL text encoder of Qwen Image 2.1 is
+# "model.language_model.layers…" in the transformers shards and "model.layers…" in ComfyUI.
+ALIASES = [("model.language_model.", "model.")]
+
+
+def local_name(name: str, local: dict) -> str | None:
+    """The name a Hugging Face tensor has in a local file, if it holds it."""
+    if name in local:
+        return name
+    for hf, comfy in ALIASES:
+        if name.startswith(hf) and comfy + name[len(hf):] in local:
+            return comfy + name[len(hf):]
+    return None
 
 
 def read_header(path: Path) -> tuple[dict, int]:
@@ -81,8 +94,9 @@ def rebuild(raw_header: bytes, sources: list[tuple[Path, dict, int]], dst: Path,
     header = json.loads(raw_header[8:])
     names = sorted((k for k in header if k != "__metadata__"), key=lambda k: header[k]["data_offsets"][0])
     for path, local, start in sources:
-        if all(local.get(k, {}).get("dtype") == header[k]["dtype"]
-               and local[k].get("shape") == header[k]["shape"] for k in names):
+        src_names = {k: local_name(k, local) for k in names}
+        if all(n and local[n].get("dtype") == header[k]["dtype"]
+               and local[n].get("shape") == header[k]["shape"] for k, n in src_names.items()):
             break
     else:
         return False
@@ -93,7 +107,7 @@ def rebuild(raw_header: bytes, sources: list[tuple[Path, dict, int]], dst: Path,
             out.write(raw_header)
             for k in names:
                 begin, stop = header[k]["data_offsets"]
-                lbegin, lstop = local[k]["data_offsets"]
+                lbegin, lstop = local[src_names[k]]["data_offsets"]
                 if begin != end or stop - begin != lstop - lbegin:
                     return False
                 src.seek(start + lbegin)
