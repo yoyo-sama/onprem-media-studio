@@ -5,11 +5,12 @@ import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .config import APP_VERSION, Settings
+from .files import FileStore
 from .jobs import JobQueue
 from .llm import LlamaServer, LlmError
 from .models import ModelError, ModelStore
@@ -62,10 +63,10 @@ def gpu_info() -> dict:
 def create_app(settings: Settings | None = None, models: ModelStore | None = None,
                pipelines: dict[str, Pipeline] | None = None, llm: LlamaServer | None = None) -> FastAPI:
     settings = settings or Settings()
-    settings.output_dir.mkdir(parents=True, exist_ok=True)
+    files = FileStore(settings.input_dir, settings.output_dir)
     models = models or ModelStore(settings)
     llm = llm or LlamaServer(settings, models)
-    jobs = JobQueue(REGISTRY if pipelines is None else pipelines, models, settings.output_dir)
+    jobs = JobQueue(REGISTRY if pipelines is None else pipelines, models, files)
     clients: set[asyncio.Queue] = set()
     loop: asyncio.AbstractEventLoop | None = None
 
@@ -121,6 +122,14 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     def list_pipelines():
         return [{"id": p.id, "models": p.models} for p in jobs.pipelines.values()]
 
+    @app.post("/api/inputs", status_code=201)
+    async def upload_input(request: Request):
+        """Raw image bytes in the body; the answer's `ref` goes in a job's image fields."""
+        try:
+            return files.save_input(await request.body())
+        except ValueError as exc:
+            raise HTTPException(422, str(exc))
+
     @app.get("/api/jobs")
     def list_jobs():
         return [j.public() for j in jobs.jobs.values()]
@@ -166,6 +175,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
         finally:
             clients.discard(q)
 
+    app.mount("/inputs", StaticFiles(directory=settings.input_dir), name="inputs")
     app.mount("/outputs", StaticFiles(directory=settings.output_dir), name="outputs")
     if WEB_DIR.is_dir():
         app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")

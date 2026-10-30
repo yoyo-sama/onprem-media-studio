@@ -31,7 +31,7 @@ COPY pyproject.toml ./
 COPY studio ./studio
 COPY web ./web
 # torch comes from the base image: never let pip replace it with a generic wheel.
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ".[inference]"
 EXPOSE 8090
 VOLUME ["/data"]
 CMD ["python", "-m", "studio"]

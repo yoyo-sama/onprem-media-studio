@@ -14,10 +14,24 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "huggingface_hub>=0.34",
     "httpx>=0.27",
+    "pillow>=10",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
+# Image engines. torch and torchvision (the Qwen processors need it) are not
+# listed: they come from the NGC base image (Docker) or from the platform's own
+# build (bare metal), never from a generic wheel.
+# diffusers is pinned: 0.42 is the first release with Krea2Pipeline and
+# QwenImage21Pipeline, and a pipeline's defaults can change between releases.
+inference = [
+    "diffusers==0.42.1",
+    "transformers>=5.17",
+    "accelerate>=1.0",
+    # peft 0.19+ refuses torchao < 0.16 on any LoRA load, and NGC 25.11 ships
+    # torchao 0.14 (found on the GB10, 2026-10-29); 0.18 accepts it.
+    "peft>=0.17,<0.19",
+]
 
 [tool.setuptools]
 packages = ["studio", "studio.pipelines"]

@@ -69,7 +69,9 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
 20. **No "storyboard / keyframe / panel" vocabulary** in an edit prompt: the model draws an
     annotated board. Say "one full-frame film still" positively. [#7]
 21. **In 2509, image 1 drives the starting latent, image 2 is conditioning only.** The subject
-    sheet must be image 1; the location goes in later slots. 2.1 has symmetric references. [#10]
+    sheet must be image 1; the location goes in later slots. 2.1 has symmetric references. 2.0
+    keeps only 2.1 (2509 dropped on 2026-10-29); diffusers sizes an edit from the *last* image
+    by default, so the engine computes the size from image 1 (IMAGE-ENGINES.md). [#10]
 22. **Name the setting in words**, twice (role sentence and after the action): a reference image
     that only feeds conditioning is not enough at cfg 1. [#28]
 23. **Strong camera angles are ignored** (overhead, worm's eye): the edit keeps the reference

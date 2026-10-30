@@ -75,7 +75,9 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     dessine une planche annotée. Dire positivement « une seule image de film plein cadre ». [#7]
 21. **En 2509, l'image 1 fixe le latent de départ, l'image 2 n'est que du conditioning.** La
     planche du sujet doit être l'image 1 ; le décor va dans les entrées suivantes. La 2.1 a des
-    références symétriques. [#10]
+    références symétriques. La 2.0 ne garde que la 2.1 (2509 retiré le 2026-10-29) ;
+    diffusers calcule par défaut la taille d'une retouche d'après la *dernière* image, le moteur
+    la calcule donc depuis l'image 1 (IMAGE-ENGINES.md). [#10]
 22. **Nommer le décor en toutes lettres**, deux fois (phrase de rôle et après l'action) : une image
     de référence qui ne nourrit que le conditioning ne suffit pas à cfg 1. [#28]
 23. **Les angles de caméra forts sont ignorés** (plongée zénithale, contre-plongée extrême) :

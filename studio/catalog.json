@@ -22,33 +22,13 @@
       "qualified": false
     },
     {
-      "id": "qwen-image-edit-2509",
-      "label": "Qwen-Image-Edit 2509",
-      "role": "image",
-      "repo": "Qwen/Qwen-Image-Edit-2509",
-      "allow": ["model_index.json", "processor/*", "scheduler/*", "text_encoder/*", "tokenizer/*", "transformer/*", "vae/*"],
-      "gated": false,
-      "license": "apache-2.0",
-      "qualified": false
-    },
-    {
-      "id": "qwen-image-edit-2509-lightning",
-      "label": "Qwen-Image-Edit 2509 Lightning LoRA (4 steps)",
-      "role": "lora",
-      "repo": "lightx2v/Qwen-Image-Lightning",
-      "allow": ["Qwen-Image-Edit-2509/Qwen-Image-Edit-2509-Lightning-4steps-V1.0-bf16.safetensors"],
-      "gated": false,
-      "license": "unverified",
-      "qualified": false
-    },
-    {
       "id": "qwen-image-2.1",
       "label": "Qwen Image 2.1",
       "role": "image",
       "repo": "Qwen/Qwen-Image-2.1",
-      "allow": ["*"],
+      "allow": ["model_index.json", "processor/*", "scheduler/*", "text_encoder/*", "transformer/*", "vae/*"],
       "gated": false,
-      "license": "unverified",
+      "license": "Qwen Research License (non-commercial use only; commercial use needs a licence from Qwen)",
       "qualified": false
     },
     {
