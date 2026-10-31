@@ -34,6 +34,8 @@ const CARDS = [
   card("C3", "video_from_image", { prompt: "slow push-in, waves", image: "C1#1", duration: 6 }, { warnings: ["duration 3 out of range, 5 used"] }),
   card("C4", "ask_choices", { question: "Which mood?", options: ["Sunny", "Night", "Autre…"] }),
   card("C5", "storyboard", { brief: "A detective enters a studio", shots: 5, duration: 5, ratio: "16:9" }),
+  card("C7", "storyboard", { brief: "A dwarf and an elf pick mushrooms", subject_sheets: ["C1#1", "A1"], setting_sheet: ["C1#1"],
+                             shots: 4, duration: 5, ratio: "16:9" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
 (async () => {
@@ -105,6 +107,8 @@ const CARDS = [
     if (p === "/api/gallery/assets") return json({ items: [], next: null, counts: { image: 0, video: 0 } });
     return json({ detail: "x" }, 404);
   });
+  // Images the director reads back (sheets handed over by a card).
+  await ctx.route(/\/(outputs|inputs)\//, route => route.fulfill({ status: 200, contentType: "image/png", body: Buffer.from(PNG, "base64") }));
   let socket = null;
   await ctx.routeWebSocket("**/api/ws", ws => { socket = ws; });
   const send = job => socket.send(JSON.stringify({ type: "job", job }));
@@ -225,6 +229,24 @@ const CARDS = [
   const back = await page.waitForFunction(() => !document.getElementById("generateBtn").textContent.includes("écrit les fiches"),
     null, { timeout: 20000 }).then(() => true, () => false);
   check(back, "Generate button label not restored");
+  // Sheets handed over by a storyboard card: the director keeps them, Gemma reads each
+  // one (vision), no sheet job is submitted and every shot starts with both subjects.
+  await page.click('.rail-mode[data-mode="assistant"]');
+  await page.click('.chat-card[data-card="C7"] .cc-actions button >> nth=1');
+  await page.waitForTimeout(300);
+  check(!(await page.isHidden("#givenSheetsWrap")) && (await page.$$("#givenSheets .ref-subject")).length === 3, "handed-over sheets not shown in the form");
+  const jobsBefore = jobs.length, llmBefore = llmBodies.length;
+  await page.click("#generateBtn");
+  const opened = await page.waitForFunction(() => document.body.dataset.studio === "1" && document.querySelectorAll("#subjectTabs .subject-tab:not(.add):not(.del)").length === 2,
+    null, { timeout: 20000 }).then(() => true, () => false);
+  check(opened, "director did not open with the two handed-over subjects");
+  const reads = llmBodies.slice(llmBefore).map(b => JSON.parse(b));
+  check(reads.filter(b => b.images?.length === 1).length === 3, "Gemma did not read the 3 sheets: " + reads.map(b => b.images?.length).join(","));
+  check(jobs.slice(jobsBefore).every(j => j.pipeline !== "krea2-t2i"), "a handed-over sheet was drawn again");
+  check(await page.isHidden("#givenSheetsWrap"), "handed-over sheets still shown once used");
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("studioProject") || "null"));
+  check(saved?.shots?.every(sh => JSON.stringify(sh.subjects) === "[0,1]"), "shots do not start with both subjects");
+  check(saved?.locVariants?.[0]?.source === "imported" && saved.chars.every(c => c.variants[0].source === "imported"), "sheets not kept as imported");
   // A reload opens on the welcome; the conversation stays in the list.
   await page.click('.rail-mode[data-mode="assistant"]');
   await page.reload({ waitUntil: "load" });

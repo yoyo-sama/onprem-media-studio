@@ -292,6 +292,34 @@ function renderRefs() {
   }));
   translateTree($("refSubjects"));
   renderSubjectChips();
+  renderGivenSheets();
+}
+
+// Sheets handed over by an assistant card, shown while the storyboard is chosen: the
+// director keeps them instead of drawing new ones. ✕ drops one.
+function renderGivenSheets() {
+  const given = D.sheetsGiven(), on = !!given && F.currentPipeline() === "storyboard";
+  $("givenSheetsWrap").hidden = !on;
+  if (!on) return;
+  const rows = [...given.subjects.map((img, i) => [img, [L("Subject sheet {n}"), { n: i + 1 }], () => given.subjects.splice(i, 1)]),
+                ...(given.setting ? [[given.setting, [L("Setting sheet"), {}], () => { given.setting = null; }]] : [])];
+  $("givenSheets").replaceChildren(...rows.map(([img, [label, params], drop]) => {
+    const row = document.createElement("div");
+    row.className = "ref-subject ref-removable";
+    const tag = tx(document.createElement("div"), label, params);
+    tag.className = "rs-tag";
+    const name = document.createElement("div");
+    name.className = "rs-name";
+    name.dataset.raw = "";
+    name.textContent = img.name;
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "rs-x"; x.textContent = "✕";
+    txAria(x, "Do not use this sheet");
+    x.addEventListener("click", () => { drop(); D.useSheets(given); renderGivenSheets(); });
+    row.append(tag, name, x);
+    return row;
+  }));
+  translateTree($("givenSheets"));
 }
 
 // Chips that insert a <Subject N> token at the cursor: the only way to tell H3 which
@@ -466,6 +494,7 @@ async function generate() {
   finally {
     clearInterval(timer);
     if (busy) refreshGenerateLabel();
+    renderGivenSheets();  // used by the director once its session opened
     btn.disabled = false;
   }
 }
@@ -520,6 +549,7 @@ const CARD_FORM = {
 };
 async function openCardInForm(tool, a, image, quiet = false) {
   setMode("studio");
+  D.exitStudio();  // the form, not a director session left open (it stays in the session bar)
   const [pipeline, wfId, text] = CARD_FORM[tool](a);
   const before = { brief: brief.value, scenario: activeScenario, pipeline: F.currentPipeline(), wf: $("modelSelect").value };
   const scenario = F.pipelineDef(pipeline).scenario?.[0] || (pipeline === "image2image" ? "localization" : "campaign");
@@ -541,6 +571,9 @@ async function openCardInForm(tool, a, image, quiet = false) {
     renderMarkets();
   }
   if (tool === "reference_video") F.refList("r2v").splice(0, Infinity, ...(a.references || []).map(img));
+  // Sheets of a storyboard card: the director keeps them (another card drops them).
+  D.useSheets(tool === "storyboard"
+    ? { subjects: (a.subject_sheets || []).map(img), setting: a.setting_sheet?.length ? img(a.setting_sheet[0]) : null } : null);
   if (tool === "image_sequence") { seqImages.splice(0, Infinity, ...a.images.map(id => ({ ...img(id), dur: a.duration }))); renderSeqList(); }
   renderRefs();
   brief.value = text;

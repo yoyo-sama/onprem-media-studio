@@ -60,12 +60,14 @@ const CARD_UI = {
   join_videos: { title: L("Joined clips"), images: ["clips"] },
   campaign: { title: L("Campaign"), text: "brief", fields: ["variants", "duration", "style"], form: true,
               enrich: () => "campaign" },
-  storyboard: { title: L("Storyboard"), text: "brief", fields: ["shots", "duration", "ratio"], form: true, director: true },
+  storyboard: { title: L("Storyboard"), text: "brief", images: ["subject_sheets", "setting_sheet"], fields: ["shots", "duration", "ratio"],
+                form: true, director: true },
   reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio"],
                      form: true, director: true },
 };
 const IMAGE_LABELS = {
   image: L("Image"), references: L("References"), last_image: L("Last frame"), images: L("Key images"), clips: L("Clips"),
+  subject_sheets: L("Subject sheets"), setting_sheet: L("Setting sheet"),
 };
 const FIELDS = {
   engine: { label: L("Engine"), options: () => [["krea2", "Krea 2 Turbo"], ["qwen", "Qwen Image 2.1"]] },

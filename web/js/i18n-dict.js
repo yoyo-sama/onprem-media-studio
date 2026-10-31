@@ -3562,4 +3562,39 @@ export const DICT = {
     es: "{llm} enriquece el brief… {time}",
     de: "{llm} reichert das Briefing an… {time}",
   },
+  "Subject sheets": {
+    fr: "Planches des sujets",
+    es: "Hojas de los sujetos",
+    de: "Motivblätter",
+  },
+  "Subject sheet {n}": {
+    fr: "Planche du sujet {n}",
+    es: "Hoja del sujeto {n}",
+    de: "Motivblatt {n}",
+  },
+  "Director: reading the sheets from the assistant with {llm} (vision)…": {
+    fr: "Réalisateur : lecture des planches de l'assistant par {llm} (vision)…",
+    es: "Director: {llm} lee las láminas del asistente (visión)…",
+    de: "Regie: {llm} liest die Bögen des Assistenten (Bilderkennung)…",
+  },
+  "{n} sheet(s) from the assistant kept: they are not drawn again.": {
+    fr: "{n} planche(s) de l'assistant reprise(s) : elles ne sont pas redessinées.",
+    es: "{n} lámina(s) del asistente conservada(s): no se vuelven a dibujar.",
+    de: "{n} Bogen/Bögen des Assistenten übernommen: sie werden nicht neu gezeichnet.",
+  },
+  "Sheets from the assistant": {
+    fr: "Planches venues de l'assistant",
+    es: "Láminas del asistente",
+    de: "Bögen aus dem Assistenten",
+  },
+  "The director keeps these sheets and draws only the missing ones.": {
+    fr: "Le réalisateur garde ces planches et ne dessine que celles qui manquent.",
+    es: "El director conserva estas láminas y solo dibuja las que faltan.",
+    de: "Die Regie behält diese Bögen und zeichnet nur die fehlenden.",
+  },
+  "Do not use this sheet": {
+    fr: "Ne pas utiliser cette planche",
+    es: "No usar esta lámina",
+    de: "Diesen Bogen nicht verwenden",
+  },
 };

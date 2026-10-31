@@ -134,6 +134,11 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 - « Lancer le Réalisateur » (cartes storyboard et référence vers vidéo) remplit le formulaire de
   la même façon, puis son clic vaut le clic sur Générer : la première étape du réalisateur démarre
   et chaque étape suivante attend l'accord de l'utilisateur, comme toujours.
+- Une carte storyboard porte les planches que la conversation contient déjà (`subject_sheets`,
+  sujet principal en premier, et `setting_sheet`). Le formulaire les liste sous « Planches venues
+  de l'assistant » (✕ en retire une) ; le réalisateur les garde comme variantes importées, fait
+  lire chacune par Gemma (vision) pour remplir ses champs, et ne dessine que les planches qui
+  manquent. Avec plusieurs sujets, chaque plan part avec les deux premiers.
 - Le navigateur signale ce qu'est devenue une carte (`POST /api/chats/{id}/cards/{card}` : en
   cours avec les réglages utilisés, terminée avec ses fichiers, erreur, annulée, ouverte, réalisateur
 lancé). Les

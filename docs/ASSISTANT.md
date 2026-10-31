@@ -130,6 +130,11 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 - "Launch the director" (storyboard and reference-to-video cards) fills the form the same way,
   then its click is the Generate click: the director's first step starts and every next step
   waits for the user's approval, as always.
+- A storyboard card carries the sheets the conversation already holds (`subject_sheets`, main
+  subject first, and `setting_sheet`). The form lists them under "Sheets from the assistant" (✕
+  drops one); the director keeps them as imported variants, has Gemma read each one (vision) to
+  fill its fields, and draws only the missing sheets. With several subjects, every shot starts
+  with the first two.
 - The browser reports what became of a card (`POST /api/chats/{id}/cards/{card}`: running with
   the settings it ran with, done with its files, error, cancelled, opened, director launched). The next turns see it:
   the results get ids **C3#1, C3#2…** (an H3 clip is followed by its last frame, C3#2), which
