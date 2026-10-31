@@ -2001,3 +2001,16 @@ body.library-open .assistant-chat { margin: 0; }
 .mascot[data-mood="sad"] .m-cheek { opacity: 0.2; }
 @keyframes m-droop { 50% { transform: translateY(2px) scale(1.02, 0.97); } }
 .mascot .m-arm { transition: transform 0.25s ease; }
+
+/* Costumes: one per shipped role (data-costume = the role id), the cap otherwise. */
+.mascot .c { display: none; }
+.mascot[data-costume="assistant"] .c-cap,
+.mascot:not([data-costume]) .c-cap,
+.mascot[data-costume="director"] .c-beret,
+.mascot[data-costume="casting"] .c-glasses,
+.mascot[data-costume="ad_director"] .c-shades,
+.mascot[data-costume="localisation"] .c-headset,
+.mascot[data-costume="campaign"] .c-bowtie,
+.mascot[data-costume="transitions"] .c-phones { display: inline; }
+.mascot .c-glasses circle { fill: rgba(255, 255, 255, 0.18); stroke: #1f2633; stroke-width: 2.2; }
+.mascot .c-glasses path { fill: none; stroke: #1f2633; stroke-width: 2.2; stroke-linecap: round; }

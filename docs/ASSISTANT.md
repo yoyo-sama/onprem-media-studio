@@ -20,7 +20,10 @@ renders before the user clicks Generate on a card.
   box, with Undo.
 - **Character**: a small animated character (`web/js/mascot.js`) welcomes the user and shows what
   the assistant is doing: it listens while the user types, thinks until the reply starts, talks
-  while it streams, jumps when cards arrive or a render ends, looks sad on an error. It is pure
+  while it streams, jumps when cards arrive or a render ends, looks sad on an error. It wears the
+  costume of the role answering: white cap (general assistant), beret (director), round glasses
+  (casting), sunglasses (ad art director), headset (localisation), bow tie (campaign), headphones
+  (transition editor); a role the user added keeps the cap. It is pure
   decoration (a click makes it jump) and stays still when the system asks for reduced motion.
 
 ## Model

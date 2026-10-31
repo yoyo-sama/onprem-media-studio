@@ -131,6 +131,7 @@ const CARDS = [
   check(jobs.length === 0, "jobs before any card click");
   check(await page.isDisabled('.chat-card[data-card="C3"] .primary-btn'), "C3 runnable before C1 has rendered");
   check((await page.textContent("#chatLog")).includes("prend le relais"), "handoff note missing");
+  check(await page.getAttribute(".chat-head .mascot", "data-costume") === "ad_director", "the character did not put on the role's costume");
   check((await page.textContent("#chatLog")).includes("Une proposition a été écartée"), "invalid card note missing");
   // Editing a card starts nothing.
   await page.fill('.chat-card[data-card="C1"] textarea', "a perfume bottle on wet black stone, morning mist");

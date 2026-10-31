@@ -10,7 +10,7 @@ import { api, chatStream, refURL } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
 import { $, LLM, MOBILE, fillSelect, log, notice, promptLog, runJob, undoToast, warn } from "./ui.js";
 import { openLightbox } from "./gallery.js";
-import { drawMascots, setMood } from "./mascot.js";
+import { drawMascots, setCostume, setMood } from "./mascot.js";
 import * as F from "./form.js";
 import * as G from "./generate.js";
 
@@ -441,6 +441,7 @@ function renderLog() {
 }
 
 function renderRole() {
+  setCostume(pinned || conv?.role || "assistant");
   const badge = $("chatRoleNow");
   if (pinned) tx(badge, "Role: {role} (your choice)", { role: roleName(pinned) });
   else if (conv) tx(badge, "Role: {role} (automatic)", { role: roleName(conv.role) });

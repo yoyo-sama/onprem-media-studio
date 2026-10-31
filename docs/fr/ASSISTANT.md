@@ -20,7 +20,10 @@ prompt et réglages remplis. Rien ne part en rendu avant le clic de l'utilisateu
 - **Personnage** : un petit personnage animé (`web/js/mascot.js`) accueille l'utilisateur et
   montre ce que fait l'assistant : il écoute pendant la saisie, réfléchit jusqu'au début de la
   réponse, parle pendant qu'elle arrive, saute quand des cartes arrivent ou qu'un rendu se
-  termine, a l'air triste sur une erreur. C'est une pure décoration (un clic le fait sauter) ; il
+  termine, a l'air triste sur une erreur. Il porte le costume du rôle qui répond : casquette
+  blanche (assistant général), béret (réalisateur), lunettes rondes (casting), lunettes de soleil
+  (DA publicité), micro-casque (localisation), nœud papillon (campagne), casque audio (monteur
+  transitions) ; un rôle ajouté par l'utilisateur garde la casquette. C'est une pure décoration (un clic le fait sauter) ; il
   reste immobile quand le système demande moins d'animations.
 
 ## Modèle
