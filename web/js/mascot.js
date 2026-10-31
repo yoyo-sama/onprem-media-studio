@@ -12,7 +12,7 @@ function svg() {
   return `<svg viewBox="0 0 120 120" aria-hidden="true">
   <defs>
     <radialGradient id="${g}" cx="40%" cy="30%" r="75%"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dfe5ef"/></radialGradient>
-    <linearGradient id="${c}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#343ced"/><stop offset="1" stop-color="#0b5cab"/></linearGradient>
+    <linearGradient id="${c}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d9dfe9"/></linearGradient>
   </defs>
   <ellipse class="m-shadow" cx="60" cy="113" rx="26" ry="4"/>
   <g class="m-all">
@@ -21,8 +21,9 @@ function svg() {
     <path class="m-body" d="M60 24C86 24 97 48 97 72C97 96 83 106 60 106C37 106 23 96 23 72C23 48 34 24 60 24Z" fill="url(#${g})"/>
     <g class="m-cap">
       <path d="M31 47C31 24 89 24 89 47C78 43 42 43 31 47Z" fill="url(#${c})"/>
-      <path d="M62 44C80 41 100 42 108 49C96 52 78 51 62 50Z" fill="#0b5cab"/>
-      <circle cx="60" cy="27.5" r="3" fill="#a9e0ff"/>
+      <path d="M60 29C60 35 60 40 60 44M45 33C48 37 50 41 51 45M75 33C72 37 70 41 69 45" fill="none" stroke="#c9d1de" stroke-width="1"/>
+      <path d="M62 44C80 41 100 42 108 49C96 52 78 51 62 50Z" fill="#eef1f6"/>
+      <circle cx="60" cy="27.5" r="3" fill="#ffffff"/>
     </g>
     <g class="m-face">
       <g class="m-eyes">
