@@ -96,7 +96,10 @@ with server-sent events:
 3. **Cards**: each tool call becomes a card; its arguments are checked (`assistant/tools.py`
    `normalize`): defaults filled, values out of range brought back with a warning shown on the
    card, unknown image ids flagged. A call that cannot become a card (missing prompt…) is set
-   aside and Gemma is told why in the next turn.
+   aside and Gemma is told why in the next turn. Gemma sometimes writes a call as JSON in its
+   text instead of calling the tool (a fenced block such as `{"type": "video_from_image",
+   "props": {…}}`): when the answer holds no card, such a block naming one of the role's tools
+   becomes that card and leaves the text (`text_tool_calls`); the instructions also forbid it.
 4. **Handoff**: the `handoff` tool passes the conversation to another role, which answers in the
    same turn (once per turn).
 

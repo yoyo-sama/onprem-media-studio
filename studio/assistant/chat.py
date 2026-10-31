@@ -364,7 +364,7 @@ class Assistant:
             next_role = None
             try:
                 system = system_prompt(self.roles, role, conv, self.app_name, opts["lang"], goal)
-                tools = T.specs(T.CONVERSATION_TOOLS + list(role.tools))
+                tools = T.specs(tools_of(role))
                 for kind, value in self.llm.stream([{"role": "system", "content": system}, *history(conv, self.files)],
                                                    tools):
                     if kind == "text":
@@ -379,6 +379,14 @@ class Assistant:
                         if card:
                             msg["cards"].append(card)
                             yield {"type": "card", "card": card}
+                # Gemma sometimes writes the call as JSON in its text instead of calling
+                # the tool: the block becomes the card it meant, and leaves the text.
+                if not msg["cards"] and next_role is None:
+                    calls, msg["text"] = text_tool_calls(msg["text"], [n for n in tools_of(role) if n != "handoff"])
+                    for call in calls:
+                        card = self._card(conv, call)
+                        msg["cards"].append(card)
+                        yield {"type": "card", "card": card}
             except (LlmError, ModelError) as exc:
                 yield {"type": "error", "message": str(exc)}
                 next_role = None
@@ -415,6 +423,43 @@ class Assistant:
             card["args"] = _json(call["arguments"])
         conv["next_card"] += 1
         return card
+
+
+def tools_of(role: Role) -> list[str]:
+    return T.CONVERSATION_TOOLS + list(role.tools)
+
+
+# A JSON object in a ```json fence, or alone at the end of the text.
+JSON_BLOCK = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```|(?:^|\n)(\{.*\})\s*$", re.S)
+NAME_KEYS = ("name", "tool", "type", "function")
+ARG_KEYS = ("arguments", "args", "parameters", "props", "input")
+
+
+def text_tool_calls(text: str, allowed: list[str]) -> tuple[list[dict], str]:
+    """Tool calls the model wrote as JSON in its text ({"type": "video_from_image",
+    "props": {...}} and the like), and the text without them. Only the tools of the
+    role; anything else stays text."""
+    calls, kept, last = [], [], 0
+    for m in JSON_BLOCK.finditer(text):
+        try:
+            data = json.loads(m.group(1) or m.group(2))
+        except ValueError:
+            continue
+        if not isinstance(data, dict):
+            continue
+        if isinstance(data.get("function"), dict):
+            data = data["function"]
+        name = next((data[k] for k in NAME_KEYS if isinstance(data.get(k), str) and data[k] in allowed), None)
+        args = next((data[k] for k in ARG_KEYS if k in data), None)
+        if isinstance(args, str):
+            args = _json(args)
+        if not name or not isinstance(args, dict):
+            continue
+        calls.append({"id": f"text_{len(calls) + 1}", "name": name, "arguments": args})
+        kept.append(text[last:m.start()])
+        last = m.end()
+    kept.append(text[last:])
+    return calls, "".join(kept).strip() if calls else text
 
 
 def _json(raw) -> dict:

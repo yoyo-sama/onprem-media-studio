@@ -97,7 +97,10 @@ des événements server-sent :
    (`assistant/tools.py` `normalize`) : valeurs par défaut remplies, valeurs hors bornes ramenées
    avec un avertissement affiché sur la carte, ids d'images inconnus signalés. Un appel qui ne
    peut pas devenir une carte (prompt manquant…) est écarté et Gemma apprend pourquoi au tour
-   suivant.
+   suivant. Gemma écrit parfois un appel en JSON dans son texte au lieu d'appeler l'outil (un
+   bloc comme `{"type": "video_from_image", "props": {…}}`) : quand la réponse n'a aucune carte,
+   un tel bloc qui nomme un outil du rôle devient cette carte et sort du texte
+   (`text_tool_calls`) ; la consigne l'interdit aussi.
 4. **Relais** : l'outil `handoff` passe la conversation à un autre rôle, qui répond dans le même
    tour (une fois par tour).
 
