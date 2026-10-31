@@ -25,6 +25,16 @@ REPO_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = REPO_DIR / "web"
 
 
+class FrontEnd(StaticFiles):
+    """The pages and scripts, revalidated on every load (ETag, so a 304 when unchanged):
+    after an update a browser never mixes a new page with a cached old script."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 class JobRequest(BaseModel):
     pipeline: str
     params: dict = {}
@@ -224,5 +234,5 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     app.mount("/inputs", StaticFiles(directory=settings.input_dir), name="inputs")
     app.mount("/outputs", StaticFiles(directory=settings.output_dir), name="outputs")
     if WEB_DIR.is_dir():
-        app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
+        app.mount("/", FrontEnd(directory=WEB_DIR, html=True), name="web")
     return app
