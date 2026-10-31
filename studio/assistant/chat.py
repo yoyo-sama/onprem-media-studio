@@ -33,7 +33,7 @@ MAX_ATTACHMENTS = 6
 MAX_IMAGES_SENT = 4           # images of the last user message sent to the LLM's vision
 HISTORY_CHARS = 60_000        # conversation sent to the LLM, newest first
 ROUTE_CONFIDENCE = 0.5        # below it, the current role keeps the conversation
-CARD_STATUSES = {"proposed", "running", "done", "error", "cancelled", "opened", "answered"}
+CARD_STATUSES = {"proposed", "running", "done", "error", "cancelled", "opened", "launched", "answered"}
 LANGUAGES = {"en": "English", "fr": "French", "es": "Spanish", "de": "German"}
 VIDEO = (".mp4", ".webm", ".mov")
 
@@ -195,6 +195,8 @@ def card_summary(card: dict) -> str:
         return text + ". Not run yet: the user starts it with a click."
     if status == "opened":
         return text + ". The user opened it in the Studio form to go on there."
+    if status == "launched":
+        return text + ". The user launched the director with it: the step-by-step review goes on in the Studio."
     if status == "running":
         return text + ". Rendering now."
     if status == "done":

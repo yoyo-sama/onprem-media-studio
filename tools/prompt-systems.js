@@ -167,7 +167,8 @@ async function runCanvas(page, s) {
     await ctx.route("**/api/**", stubs(rec));
     const page = await ctx.newPage();
     page.on("pageerror", e => errors.push(e.message));
-    await page.goto(base + s.page, { waitUntil: "load" });
+    // The Studio page opens on the assistant: the form is in the Studio mode.
+    await page.goto(base + s.page + (s.page === "index.html" ? "#studio" : ""), { waitUntil: "load" });
     await page.waitForFunction(() => document.readyState === "complete" && (window.__canvas || document.getElementById("brief")));
     const value = await (s.page === "index.html" ? runStudio(page, s) : runCanvas(page, s));
     // Wait for the expected calls (and the job), then a little more for extra calls.

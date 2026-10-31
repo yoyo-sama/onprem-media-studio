@@ -2,11 +2,26 @@
 
 French version: [fr/ASSISTANT.md](fr/ASSISTANT.md).
 
-A chat panel in the Studio (rail button "Assistant") that helps the user build their content.
+The first mode of the page (rail: Assistant, then Studio, then Canvas): a chat in the main area
+that helps the user build their content.
 Behind it, several **roles** (director, ad art director, casting…) each with its own instructions;
 the server picks the role best placed to answer. A role answers in words and with **cards**: one
 card per Studio pipeline it wants to run, with the prompt and the settings filled in. Nothing
 renders before the user clicks Generate on a card.
+
+## The page
+
+- **Modes**: Assistant and Studio are two modes of `index.html`; the address (`#assistant`,
+  `#studio`) or the last mode used chooses it at load, the assistant by default. The Canvas
+  offers the same three choices.
+- **Library**: the "Library" button opens the job queue and the gallery beside the chat (over it
+  on a phone). A gallery image used from the assistant ("→ Use as input", or dragged onto the
+  chat) becomes an attachment of the next message; "Reuse the prompt" copies it into the message
+  box, with Undo.
+- **Character**: a small animated character (`web/js/mascot.js`) welcomes the user and shows what
+  the assistant is doing: it listens while the user types, thinks until the reply starts, talks
+  while it streams, jumps when cards arrive or a render ends, looks sad on an error. It is pure
+  decoration (a click makes it jump) and stays still when the system asks for reduced motion.
 
 ## Model
 
@@ -95,17 +110,20 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 | `image_sequence` | Prompt, 2 to 6 key images, segment length | the multi-image sequence (H3 segments, then `video-concat`) |
 | `join_videos` | Clips | `video-concat` |
 | `campaign` | Brief, variants, length, style | the full campaign (posters, thumbnails, social image, teaser) |
-| `storyboard`, `reference_video` | Brief and settings | **nothing**: "Open in the Studio" fills the form; the step-by-step review starts there, as always |
+| `storyboard`, `reference_video` | Brief and settings | the director: "Launch the director" switches to the Studio, fills the form and starts the step-by-step review there, as the form's Generate does |
 | `ask_choices` | A question with 2 to 4 buttons and "Other…" | nothing: the choice is sent as the user's answer |
 
 - A card runs **only on the user's click**, through the same functions as the Studio form
   (`web/js/generate.js`): what a card submits is what the form would submit.
 - The prompt and the settings of a card can be edited before Generate; ✨ Enrich rewrites the
   card's prompt with the engine's own Gemma instruction (`Prompts.briefEnrichSystem`), with Undo.
-- "Open in the Studio" fills the form (pipeline, engine, settings, images, brief) and starts
-  nothing; Undo puts the brief and the pipeline back.
+- "Open in the Studio" switches to the Studio and fills the form (pipeline, engine, settings,
+  images, brief), starting nothing; Undo puts the brief and the pipeline back.
+- "Launch the director" (storyboard and reference-to-video cards) fills the form the same way,
+  then its click is the Generate click: the director's first step starts and every next step
+  waits for the user's approval, as always.
 - The browser reports what became of a card (`POST /api/chats/{id}/cards/{card}`: running with
-  the settings it ran with, done with its files, error, cancelled, opened). The next turns see it:
+  the settings it ran with, done with its files, error, cancelled, opened, director launched). The next turns see it:
   the results get ids **C3#1, C3#2…** (an H3 clip is followed by its last frame, C3#2), which
   later cards can use. A card that needs a result not rendered yet waits ("Waiting for C3#1").
 

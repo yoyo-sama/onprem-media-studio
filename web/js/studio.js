@@ -17,7 +17,7 @@ import { initGallery } from "./gallery.js";
 import * as F from "./form.js";
 import * as D from "./director.js";
 import * as G from "./generate.js";
-import { initChat, loadRolePanel } from "./chat.js";
+import { attachAsset, initChat, loadRolePanel, reusePrompt as chatReusePrompt, showAssistant } from "./chat.js";
 
 const P = F.P;
 const brief = $("brief");
@@ -503,7 +503,8 @@ const CARD_FORM = {
   storyboard: a => ["storyboard", "storyboard_qwen21", a.brief],
   reference_video: a => ["reference2video", "h3_r2v", a.brief],
 };
-async function openCardInForm(tool, a, image) {
+async function openCardInForm(tool, a, image, quiet = false) {
+  setMode("studio");
   const [pipeline, wfId, text] = CARD_FORM[tool](a);
   const before = { brief: brief.value, scenario: activeScenario, pipeline: F.currentPipeline(), wf: $("modelSelect").value };
   const scenario = F.pipelineDef(pipeline).scenario?.[0] || (pipeline === "image2image" ? "localization" : "campaign");
@@ -528,6 +529,7 @@ async function openCardInForm(tool, a, image) {
   if (tool === "image_sequence") { seqImages.splice(0, Infinity, ...a.images.map(id => ({ ...img(id), dur: a.duration }))); renderSeqList(); }
   renderRefs();
   brief.value = text;
+  if (quiet) return;
   log("sys", "Assistant card opened in the Studio form: nothing starts before Generate.");
   undoToast("Card opened in the Studio form.", {}, () => {
     brief.value = before.brief;
@@ -536,6 +538,43 @@ async function openCardInForm(tool, a, image) {
   });
   brief.scrollIntoView({ behavior: "smooth", block: "center" });
 }
+
+// A director card's own button: the form takes the card over, then its click is the
+// Generate click, which starts the step-by-step review (storyboard or references).
+async function launchDirector(tool, a, image) {
+  await openCardInForm(tool, a, image, true);
+  log("sys", "Director started from an assistant card.");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  generate();
+}
+
+// ── Modes ─────────────────────────────────────────────────────────────────────
+// Assistant (the first one) and Studio share the page; the Canvas is its own page. The
+// library (job queue and gallery) moves to the mode shown. The address (#assistant,
+// #studio) and the last mode used choose the mode at load.
+const MODES = ["assistant", "studio"];
+const MODE_KEY = "mode";
+function setMode(mode) {
+  if (!MODES.includes(mode)) mode = "assistant";
+  const was = document.body.dataset.mode;
+  document.body.dataset.mode = mode;
+  document.querySelectorAll(".rail-mode").forEach(b => {
+    b.classList.toggle("active", b.dataset.mode === mode);
+    if (b.dataset.mode === mode) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  const home = mode === "assistant" ? $("assistantLibraryBody") : document.querySelector(".output-panel");
+  home.append($("jobQueue"), $("galleryBlock"));
+  try { localStorage.setItem(MODE_KEY, mode); } catch { /* this page only */ }
+  if (location.hash !== `#${mode}`) history.replaceState(null, "", `#${mode}`);
+  if (mode === "assistant") showAssistant();
+  if (was && was !== mode) window.scrollTo({ top: 0 });
+}
+function initialMode() {
+  const hash = location.hash.slice(1);
+  if (MODES.includes(hash)) return hash;
+  try { return localStorage.getItem(MODE_KEY) || "assistant"; } catch { return "assistant"; }
+}
+const inAssistant = () => document.body.dataset.mode === "assistant";
 
 // ── Project buttons (resume, cancel) ──────────────────────────────────────────
 function updateResumeButton() {
@@ -757,9 +796,11 @@ async function pollMonitor() {
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 function initRail() {
+  document.querySelectorAll(".rail-mode").forEach(btn => btn.addEventListener("click", () => setMode(btn.dataset.mode)));
+  addEventListener("hashchange", () => { const m = location.hash.slice(1); if (MODES.includes(m)) setMode(m); });
   // One flyout at a time, open until its button is clicked again.
   document.querySelectorAll(".rail-btn[data-panel]").forEach(btn => btn.addEventListener("click", () => {
-    const name = btn.classList.contains("active") ? "studio" : btn.dataset.panel;
+    const name = btn.classList.contains("active") ? null : btn.dataset.panel;
     document.querySelectorAll(".rail-btn[data-panel]").forEach(b => b.classList.toggle("active", b.dataset.panel === name));
     let open = false;
     document.querySelectorAll(".flyout").forEach(f => { f.hidden = f.dataset.flyout !== name; open ||= !f.hidden; });
@@ -845,11 +886,14 @@ function boot() {
   on("model", onModelEvent);
   initModelNotice();
   connect();
-  initChat({ openInStudio: openCardInForm, useAsInput: setSelectedAsset });
+  initChat({ openInStudio: openCardInForm, launchDirector, useAsInput: a => { setMode("studio"); setSelectedAsset(a); } });
+  setMode(initialMode());
   initGallery({
-    useAsInput: setSelectedAsset,
+    // From the assistant, a gallery image goes to the chat; from the Studio, to the form.
+    useAsInput: a => (inAssistant() ? attachAsset(a) : setSelectedAsset(a)),
     addToSequence: a => { if (addSeqImage({ name: a.filename, ref: a.ref })) notice(true, "{name} added to the sequence ({n}/{max}).", { name: a.filename, n: seqImages.length, max: SEQ_MAX }); },
     reusePrompt: a => {
+      if (inAssistant()) { chatReusePrompt(a.prompt); return; }
       const before = brief.value;
       brief.value = a.prompt;
       undoToast("Prompt copied into the brief.", {}, () => { brief.value = before; });

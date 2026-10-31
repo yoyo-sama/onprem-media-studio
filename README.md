@@ -79,7 +79,7 @@ the `PATH` or in `STUDIO_LLAMA_SERVER`.
 - [Image engines](docs/IMAGE-ENGINES.md): Krea 2 and Qwen Image 2.1 jobs, image references, qualification
 - [Video engines](docs/H3.md): MiniMax H3 jobs, the two-pass reference-to-video, precision
   fallback, LoRA stack, qualification
-- [Creative assistant](docs/ASSISTANT.md): the chat panel, its roles, cards and model
+- [Creative assistant](docs/ASSISTANT.md): the assistant mode, its roles, cards and model
 - [Front end](docs/FRONTEND.md): Studio and Canvas pages, Canvas cards, differences from 1.4,
   front-end tests
 - [Bare-metal install](docs/INSTALL.md): `scripts/install.sh`, service, updates

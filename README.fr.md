@@ -86,7 +86,7 @@ dans le `PATH` ou dans `STUDIO_LLAMA_SERVER`.
   qualification
 - [Moteurs vidéo](docs/fr/H3.md) : jobs MiniMax H3, référence vers vidéo en deux passes, repli de
   précision, pile de LoRA, qualification
-- [Assistant de création](docs/fr/ASSISTANT.md) : le panneau de chat, ses rôles, ses cartes et son
+- [Assistant de création](docs/fr/ASSISTANT.md) : le mode Assistant, ses rôles, ses cartes et son
   modèle
 - [Interface](docs/fr/FRONTEND.md) : pages Studio et Canvas, cartes du Canvas, différences avec
   la 1.4, tests du front

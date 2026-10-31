@@ -3202,11 +3202,6 @@ export const DICT = {
     es: "Rellena el formulario del Studio con esta tarjeta, para seguir allí",
     de: "Füllt das Studio-Formular mit dieser Karte aus, um dort weiterzumachen",
   },
-  "Fills the Studio form; the step-by-step review starts there": {
-    fr: "Remplit le formulaire du Studio ; la revue étape par étape commence là-bas",
-    es: "Rellena el formulario del Studio; la revisión paso a paso empieza allí",
-    de: "Füllt das Studio-Formular aus; die schrittweise Prüfung beginnt dort",
-  },
   "General assistant": {
     fr: "Assistant général",
     es: "Asistente general",
@@ -3397,11 +3392,6 @@ export const DICT = {
     es: "Adjuntar imágenes (o suéltalas aquí, desde tu ordenador o la galería)",
     de: "Bilder anhängen (oder zieh sie hierher, vom Computer oder aus der Galerie)",
   },
-  "Close the assistant": {
-    fr: "Fermer l'assistant",
-    es: "Cerrar el asistente",
-    de: "Assistenten schließen",
-  },
   "Conversations": {
     fr: "Conversations",
     es: "Conversaciones",
@@ -3466,5 +3456,75 @@ export const DICT = {
     fr: "Carte ouverte dans le formulaire du Studio.",
     es: "Tarjeta abierta en el formulario del Studio.",
     de: "Karte im Studio-Formular geöffnet.",
+  },
+  "Makes this image the Studio's input image": {
+    fr: "Fait de cette image l'image d'entrée du Studio",
+    es: "Convierte esta imagen en la imagen de entrada del Studio",
+    de: "Macht dieses Bild zum Eingabebild des Studios",
+  },
+  "Director started": {
+    fr: "Réalisateur lancé",
+    es: "Director iniciado",
+    de: "Regie gestartet",
+  },
+  "Fills the Studio form without starting anything": {
+    fr: "Remplit le formulaire du Studio sans rien lancer",
+    es: "Rellena el formulario del Studio sin lanzar nada",
+    de: "Füllt das Studio-Formular aus, ohne etwas zu starten",
+  },
+  "Prompt copied into your message.": {
+    fr: "Prompt copié dans ton message.",
+    es: "Prompt copiado en tu mensaje.",
+    de: "Prompt in deine Nachricht kopiert.",
+  },
+  "Switches to the Studio and starts the step-by-step review with this brief": {
+    fr: "Passe au Studio et lance la revue étape par étape avec ce brief",
+    es: "Pasa al Studio e inicia la revisión paso a paso con este brief",
+    de: "Wechselt ins Studio und startet die schrittweise Prüfung mit diesem Briefing",
+  },
+  "{name} attached to your next message.": {
+    fr: "{name} joint à ton prochain message.",
+    es: "{name} adjuntado a tu próximo mensaje.",
+    de: "{name} an deine nächste Nachricht angehängt.",
+  },
+  "→ Use in the Studio": {
+    fr: "→ Utiliser dans le Studio",
+    es: "→ Usar en el Studio",
+    de: "→ Im Studio verwenden",
+  },
+  "🎬 Launch the director": {
+    fr: "🎬 Lancer le Réalisateur",
+    es: "🎬 Lanzar el Director",
+    de: "🎬 Regie starten",
+  },
+  "Close the library": {
+    fr: "Fermer la bibliothèque",
+    es: "Cerrar la biblioteca",
+    de: "Bibliothek schließen",
+  },
+  "Hello!": {
+    fr: "Coucou !",
+    es: "¡Hola!",
+    de: "Hallo!",
+  },
+  "Hi! What shall we make today?": {
+    fr: "Salut ! On crée quoi aujourd'hui ?",
+    es: "¡Hola! ¿Qué creamos hoy?",
+    de: "Hallo! Was erschaffen wir heute?",
+  },
+  "Library": {
+    fr: "Bibliothèque",
+    es: "Biblioteca",
+    de: "Bibliothek",
+  },
+  "Your images and videos, and the job queue": {
+    fr: "Tes images et vidéos, et la file de jobs",
+    es: "Tus imágenes y vídeos, y la cola de trabajos",
+    de: "Deine Bilder und Videos und die Job-Warteschlange",
+  },
+  "Director started from an assistant card.": {
+    fr: "Réalisateur lancé depuis une carte de l'assistant.",
+    es: "Director iniciado desde una tarjeta del asistente.",
+    de: "Regie über eine Assistenten-Karte gestartet.",
   },
 };

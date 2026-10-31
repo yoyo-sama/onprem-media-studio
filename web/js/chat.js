@@ -1,14 +1,16 @@
-// The creative assistant: a chat panel beside the Studio. The server picks the role
-// best placed to answer and streams its reply; every tool call the role makes arrives
-// as a card. A card runs only on the user's click, through the same functions as the
-// Studio form (generate.js), and its result is reported back so later turns can use
-// it (C3#1…). Storyboard and reference-to-video cards only fill the Studio form: the
-// step-by-step review stays the only way to run them.
+// The creative assistant: the page's first mode, a chat in the main area. The server
+// picks the role best placed to answer and streams its reply; every tool call the role
+// makes arrives as a card. A card runs only on the user's click, through the same
+// functions as the Studio form (generate.js), and its result is reported back so later
+// turns can use it (C3#1…). Storyboard and reference-to-video cards run the director:
+// their click switches to the Studio, fills the form and starts the step-by-step
+// review there, the only way to run them.
 
 import { api, chatStream, refURL } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
 import { $, LLM, MOBILE, fillSelect, log, notice, promptLog, runJob, undoToast, warn } from "./ui.js";
 import { openLightbox } from "./gallery.js";
+import { drawMascots, setMood } from "./mascot.js";
 import * as F from "./form.js";
 import * as G from "./generate.js";
 
@@ -16,7 +18,7 @@ const P = F.P;
 const MAX_ATTACHMENTS = 6;
 const ORIGIN = "assistant";
 const VIDEO = /\.(mp4|webm|mov)$/i;
-const CONV_KEY = "chatConversation", ROLE_KEY = "chatRole";
+const CONV_KEY = "chatConversation", ROLE_KEY = "chatRole", LIBRARY_KEY = "assistantLibrary";
 
 let hooks = {};
 let roles = [];             // the server's role records
@@ -39,7 +41,8 @@ const roleName = id => { const r = roles.find(x => x.id === id); return r ? t(r.
 // ── Cards ─────────────────────────────────────────────────────────────────────
 // `text`: the argument shown in the card's text box; `fields`: settings the user can
 // change; `images`: arguments holding image ids; `enrich`: the workflow whose Gemma
-// instruction ✨ uses; `form`: the Studio form can take the card over.
+// instruction ✨ uses; `form`: the Studio form can take the card over; `director`: the
+// card's Generate is the director's, in the Studio.
 const CARD_UI = {
   create_image: { title: L("Image"), text: "prompt", fields: ["engine", "ratio", "count", "style"], form: true,
                   enrich: a => (a.engine === "qwen" ? "qwen21_t2i" : "krea2_t2i") },
@@ -56,9 +59,9 @@ const CARD_UI = {
   join_videos: { title: L("Joined clips"), images: ["clips"] },
   campaign: { title: L("Campaign"), text: "brief", fields: ["variants", "duration", "style"], form: true,
               enrich: () => "campaign" },
-  storyboard: { title: L("Storyboard"), text: "brief", fields: ["shots", "duration", "ratio"], form: true, open: true },
+  storyboard: { title: L("Storyboard"), text: "brief", fields: ["shots", "duration", "ratio"], form: true, director: true },
   reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio"],
-                     form: true, open: true },
+                     form: true, director: true },
 };
 const IMAGE_LABELS = {
   image: L("Image"), references: L("References"), last_image: L("Last frame"), images: L("Key images"), clips: L("Clips"),
@@ -76,6 +79,7 @@ const FIELDS = {
 const STATUS = {
   proposed: ["", L("Proposed")], running: ["running", L("Running…")], done: ["done", L("Done")],
   error: ["error", L("Error")], cancelled: ["fallback", L("Cancelled")], opened: ["done", L("Opened in the Studio")],
+  launched: ["done", L("Director started")],
 };
 
 const findCard = id => {
@@ -244,10 +248,13 @@ function renderCard(card, live = false) {
 
   const actions = document.createElement("div");
   actions.className = "cc-actions";
-  if (ui.open) {
-    const b = button("Open in the Studio", "Fills the Studio form; the step-by-step review starts there", () => openInStudio(card), "primary-btn");
+  if (ui.director) {
+    const b = button("🎬 Launch the director", "Switches to the Studio and starts the step-by-step review with this brief",
+      () => openInStudio(card, true), "primary-btn");
     b.disabled = live || busy || missing.length > 0;
-    actions.appendChild(b);
+    const o = button("Open in the Studio", "Fills the Studio form without starting anything", () => openInStudio(card));
+    o.disabled = b.disabled;
+    actions.append(b, o);
   } else {
     const again = ["done", "error", "cancelled"].includes(st.status);
     const b = button(again ? "Generate again" : "Generate", null, () => runCard(card), "primary-btn");
@@ -279,7 +286,7 @@ function renderCard(card, live = false) {
       if (!VIDEO.test(ref) && i > 0 && VIDEO.test(outputs[i - 1])) return;
       const fig = thumb(ref, `${card.id}#${i + 1}`);
       if (!VIDEO.test(ref) && hooks.useAsInput) {
-        const use = button("→ Use as input", null, () => hooks.useAsInput({ ref, filename: fileName(ref) }));
+        const use = button("→ Use in the Studio", "Makes this image the Studio's input image", () => hooks.useAsInput({ ref, filename: fileName(ref) }));
         use.classList.add("cc-use");
         fig.appendChild(use);
       }
@@ -361,10 +368,11 @@ async function runCard(card) {
     if (failed && !outputs.length) throw failed.reason;
     running.delete(card.id);
     await report(cid, card, { status: "done", outputs });
+    setMood("happy", 2400);
   } catch (err) {
     running.delete(card.id);
     const cancelled = err.message === "cancelled" || err.message === t("Project cancelled.");
-    if (!cancelled) warn(err);
+    if (!cancelled) { warn(err); setMood("sad", 2400); }
     report(cid, card, { status: cancelled ? "cancelled" : "error", ...(cancelled ? {} : { error: err.message }) }).catch(warn);
   }
 }
@@ -387,13 +395,16 @@ async function enrichCard(card, area, btn) {
   finally { btn.disabled = false; }
 }
 
-async function openInStudio(card) {
-  const a = argsOf(card), images = {};
+// `launch`: a director card's own button, which starts the director once the form is
+// filled (the click is the user's Generate).
+async function openInStudio(card, launch = false) {
+  const a = argsOf(card), images = {}, cid = conv.id;
   try {
     for (const id of imageIds(card, a)) images[id] = { name: fileName(need(id)), ref: need(id) };
-    await hooks.openInStudio(card.tool, a, id => images[id] || null);
-    await report(conv.id, card, { status: "opened", args: a });
-    if (MOBILE.matches) closePanel();
+    const image = id => images[id] || null;
+    if (launch) await hooks.launchDirector(card.tool, a, image);
+    else await hooks.openInStudio(card.tool, a, image);
+    await report(cid, card, { status: launch ? "launched" : "opened", args: a });
   } catch (err) { warn(err); }
 }
 
@@ -490,7 +501,8 @@ async function send(text, answer = answerTo) {
   renderAnswering();
   streaming = new AbortController();
   setBusy(true);
-  let cid = conv?.id || null, bubble = null, textEl = null;
+  setMood("thinking");
+  let cid = conv?.id || null, bubble = null, textEl = null, failed = false;
   const box = $("chatLog");
   const scroll = () => { box.scrollTop = box.scrollHeight; };
   const ensureBubble = () => {
@@ -526,11 +538,14 @@ async function send(text, answer = answerTo) {
         ensureBubble();
         textEl.classList.remove("typing");
         textEl.textContent += ev.delta;
+        setMood("talking");
       } else if (ev.type === "card") {
         ensureBubble();
         textEl.classList.remove("typing");
         bubble.appendChild(renderCard(ev.card, true));
+        setMood("happy", 1600);
       } else if (ev.type === "error") {
+        failed = true;
         ensureBubble();
         textEl.classList.remove("typing");
         bubble.appendChild(tx(document.createElement("p"), "The assistant is unavailable: {error}", { error: ev.message })).className = "cc-warn";
@@ -539,6 +554,7 @@ async function send(text, answer = answerTo) {
     }, streaming.signal);
   } catch (err) {
     if (err.name !== "AbortError") {
+      failed = true;
       notice(false, "The assistant is unavailable: {error}", { error: err.message });
       // Refused before anything was stored: the message goes back to the input.
       if (!cid) { input.value = typed; attachments = atts; renderAttachments(); }
@@ -546,6 +562,8 @@ async function send(text, answer = answerTo) {
   } finally {
     streaming = null;
     setBusy(false);
+    setMood("idle");
+    if (failed) setMood("sad", 3000);
     if (cid) await openConversation(cid);
   }
 }
@@ -571,7 +589,7 @@ function renderAttachments() {
 }
 
 function initDrop() {
-  const panel = $("chatPanel");
+  const panel = $("assistantChat");
   const has = e => { const ty = e.dataTransfer?.types; return !!ty && (ty.includes("Files") || ty.includes("application/json")); };
   panel.addEventListener("dragover", e => { if (!has(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; panel.classList.add("drop-over"); });
   panel.addEventListener("dragleave", e => { if (!panel.contains(e.relatedTarget)) panel.classList.remove("drop-over"); });
@@ -604,21 +622,36 @@ const STARTERS = [
 ];
 
 let loaded = false;
-async function openPanel() {
-  document.body.dataset.chat = "1";
-  $("chatPanel").hidden = false;
-  $("railAssistant").classList.add("active");
+// Called each time the page switches to the assistant: the first time loads the roles
+// and the last conversation.
+export async function showAssistant() {
   if (!loaded) {
     loaded = true;
     await loadRoles();
     await openConversation(readLocal(CONV_KEY));
   }
-  $("chatInput").focus();
+  if (!MOBILE.matches) $("chatInput").focus();
 }
-function closePanel() {
-  delete document.body.dataset.chat;
-  $("chatPanel").hidden = true;
-  $("railAssistant").classList.remove("active");
+
+// A gallery image used from the assistant becomes an attachment of the next message.
+export function attachAsset(a) {
+  addAttachments([{ name: a.filename, ref: a.ref }]);
+  notice(true, "{name} attached to your next message.", { name: a.filename });
+}
+// A prompt taken from the gallery goes to the message box, with Undo.
+export function reusePrompt(text) {
+  const input = $("chatInput"), before = input.value;
+  input.value = text;
+  undoToast("Prompt copied into your message.", {}, () => { input.value = before; });
+  input.focus();
+}
+
+// The library (gallery and job queue) beside the chat, open or closed as last left.
+function setLibrary(open) {
+  $("assistantLibrary").hidden = !open;
+  $("libraryBtn").setAttribute("aria-pressed", String(open));
+  document.body.classList.toggle("library-open", open);
+  saveLocal(LIBRARY_KEY, open ? "1" : null);
 }
 
 async function loadRoles() {
@@ -665,12 +698,17 @@ async function saveRole(reset) {
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 // `h.openInStudio(tool, args, image)` fills the form (image(id) → {name, ref});
-// `h.useAsInput(asset)` makes an image the form's input.
+// `h.launchDirector(tool, args, image)` fills it and starts the director;
+// `h.useAsInput(asset)` makes an image the form's input (and shows the Studio).
 export function initChat(h) {
   hooks = h;
-  $("railAssistant").addEventListener("click", () => ($("chatPanel").hidden ? openPanel() : closePanel()));
-  $("chatCloseBtn").addEventListener("click", closePanel);
+  drawMascots();
+  setLibrary(readLocal(LIBRARY_KEY) === "1" && !MOBILE.matches);
+  $("libraryBtn").addEventListener("click", () => setLibrary($("assistantLibrary").hidden));
+  $("libraryCloseBtn").addEventListener("click", () => setLibrary(false));
   $("chatForm").addEventListener("submit", e => { e.preventDefault(); send($("chatInput").value); });
+  // The character listens while the user types.
+  $("chatInput").addEventListener("input", () => { if (!streaming) setMood($("chatInput").value.trim() ? "listening" : "idle"); });
   $("chatInput").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send($("chatInput").value); }
   });
@@ -691,16 +729,17 @@ export function initChat(h) {
     saveLocal(ROLE_KEY, pinned);
     renderRole();
   });
-  $("chatStarters").replaceChildren(...STARTERS.map(text => button(text, null, () => {
+  $("chatStarterList").replaceChildren(...STARTERS.map(text => button(text, null, () => {
     $("chatInput").value = t(text);
     $("chatInput").focus();
+    setMood("listening");
   })));
   $("roleEditSelect").addEventListener("change", showRole);
   $("roleEditSave").addEventListener("click", () => saveRole(false));
   $("roleEditReset").addEventListener("click", () => saveRole(true));
   initDrop();
   document.addEventListener("keydown", e => {
-    if (e.key === "Escape" && !$("chatPanel").hidden && MOBILE.matches && $("lightbox").hidden && $("promptModal").hidden) closePanel();
+    if (e.key === "Escape" && !$("assistantLibrary").hidden && MOBILE.matches && $("lightbox").hidden) setLibrary(false);
   });
-  document.addEventListener("langchange", () => { if (!$("chatPanel").hidden) renderLog(); });
+  document.addEventListener("langchange", () => { if (loaded) renderLog(); });
 }

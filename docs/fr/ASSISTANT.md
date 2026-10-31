@@ -2,11 +2,26 @@
 
 Version anglaise (de référence) : [../ASSISTANT.md](../ASSISTANT.md).
 
-Un panneau de chat dans le Studio (bouton « Assistant » du rail) qui aide l'utilisateur à
-construire son contenu. Derrière, plusieurs **rôles** (réalisateur, DA publicité, casting…),
+Le premier mode de la page (rail : Assistant, puis Studio, puis Canvas) : un chat dans la zone
+principale qui aide l'utilisateur à construire son contenu. Derrière, plusieurs **rôles** (réalisateur, DA publicité, casting…),
 chacun avec ses consignes ; le serveur choisit le rôle le mieux placé pour répondre. Un rôle
 répond par du texte et par des **cartes** : une carte par pipeline du Studio qu'il veut lancer,
 prompt et réglages remplis. Rien ne part en rendu avant le clic de l'utilisateur sur Générer.
+
+## La page
+
+- **Modes** : Assistant et Studio sont deux modes d'`index.html` ; l'adresse (`#assistant`,
+  `#studio`) ou le dernier mode utilisé le choisit au chargement, l'assistant par défaut. Le
+  Canvas propose les trois mêmes choix.
+- **Bibliothèque** : le bouton « Bibliothèque » ouvre la file de jobs et la galerie à côté du chat
+  (par-dessus sur un téléphone). Une image de la galerie utilisée depuis l'assistant (« → Utiliser
+  en entrée », ou glissée sur le chat) devient une pièce jointe du prochain message ; « Réutiliser
+  le prompt » le copie dans la zone de message, avec Annuler.
+- **Personnage** : un petit personnage animé (`web/js/mascot.js`) accueille l'utilisateur et
+  montre ce que fait l'assistant : il écoute pendant la saisie, réfléchit jusqu'au début de la
+  réponse, parle pendant qu'elle arrive, saute quand des cartes arrivent ou qu'un rendu se
+  termine, a l'air triste sur une erreur. C'est une pure décoration (un clic le fait sauter) ; il
+  reste immobile quand le système demande moins d'animations.
 
 ## Modèle
 
@@ -96,7 +111,7 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 | `image_sequence` | Prompt, 2 à 6 images clés, durée des segments | la séquence multi-images (segments H3, puis `video-concat`) |
 | `join_videos` | Clips | `video-concat` |
 | `campaign` | Brief, variantes, durée, style | la campagne complète (affiches, miniatures, image sociale, teaser) |
-| `storyboard`, `reference_video` | Brief et réglages | **rien** : « Ouvrir dans le Studio » remplit le formulaire ; la revue étape par étape commence là, comme toujours |
+| `storyboard`, `reference_video` | Brief et réglages | le réalisateur : « Lancer le Réalisateur » passe au Studio, remplit le formulaire et y lance la revue étape par étape, comme le fait Générer dans le formulaire |
 | `ask_choices` | Une question avec 2 à 4 boutons et « Autre… » | rien : le choix part comme réponse de l'utilisateur |
 
 - Une carte ne tourne **que sur le clic de l'utilisateur**, par les mêmes fonctions que le
@@ -105,10 +120,14 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 - Le prompt et les réglages d'une carte se modifient avant Générer ; ✨ Enrichir réécrit le prompt
   de la carte avec la consigne Gemma propre au moteur (`Prompts.briefEnrichSystem`), avec
   Annuler.
-- « Ouvrir dans le Studio » remplit le formulaire (pipeline, moteur, réglages, images, brief) et
-  ne lance rien ; Annuler remet le brief et le pipeline.
+- « Ouvrir dans le Studio » passe au Studio et remplit le formulaire (pipeline, moteur, réglages,
+  images, brief), sans rien lancer ; Annuler remet le brief et le pipeline.
+- « Lancer le Réalisateur » (cartes storyboard et référence vers vidéo) remplit le formulaire de
+  la même façon, puis son clic vaut le clic sur Générer : la première étape du réalisateur démarre
+  et chaque étape suivante attend l'accord de l'utilisateur, comme toujours.
 - Le navigateur signale ce qu'est devenue une carte (`POST /api/chats/{id}/cards/{card}` : en
-  cours avec les réglages utilisés, terminée avec ses fichiers, erreur, annulée, ouverte). Les
+  cours avec les réglages utilisés, terminée avec ses fichiers, erreur, annulée, ouverte, réalisateur
+lancé). Les
   tours suivants le voient : les résultats prennent les ids **C3#1, C3#2…** (un clip H3 est suivi
   de sa dernière image, C3#2), que les cartes suivantes peuvent utiliser. Une carte qui a besoin
   d'un résultat pas encore rendu attend (« En attente de C3#1 »).

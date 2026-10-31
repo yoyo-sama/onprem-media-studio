@@ -294,6 +294,8 @@ def test_chat_api(settings, store):
         assert c.get(f"/api/chats/{cid}").json()["title"] == "a fox"
         assert c.post(f"/api/chats/{cid}/cards/C1", json={"status": "running"}, headers=SAME_ORIGIN).json()["state"] == {"status": "running"}
         assert c.post(f"/api/chats/{cid}/cards/C7", json={"status": "running"}, headers=SAME_ORIGIN).status_code == 404
+        assert c.post(f"/api/chats/{cid}/cards/C1", json={"status": "launched"}, headers=SAME_ORIGIN).json()["state"] == {"status": "launched"}
+        assert c.post(f"/api/chats/{cid}/cards/C1", json={"status": "flying"}, headers=SAME_ORIGIN).status_code == 422
         assert [r["id"] for r in c.get("/api/roles").json()][:2] == ["ad_director", "assistant"]
         text = "---\nid: assistant\nname: Front desk\nwhen: anything\n---\nHello."
         roles = c.put("/api/roles/assistant", json={"text": text}, headers=SAME_ORIGIN).json()

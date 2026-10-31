@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 // NODE_PATH=$(npm root -g) node tools/assistant-ui.js [screenshot folder]
 //
-// The assistant panel in a headless Chromium (Playwright), with /api stubbed and a scripted
-// reply (a handoff, five cards and a question): opening the panel, a starter, an attachment,
-// sending, editing a card start no job; Generate on a card submits exactly one job with the
-// card's edited settings and reports it (running, then done with its files); a card that
-// needs another card's result waits for it; "Open in the Studio" fills the form and starts
-// nothing (Undo puts the brief back); a choice button answers the question. With a folder,
-// screenshots of the panel in light and dark at 390, 768, 1250 and 1440 px.
+// The assistant mode in a headless Chromium (Playwright), with /api stubbed and a scripted
+// reply (a handoff, five cards and a question): the page opens on the assistant; switching
+// modes, the library, a starter, an attachment, sending, editing a card start no job;
+// Generate on a card submits exactly one job with the card's edited settings and reports it
+// (running, then done with its files); a card that needs another card's result waits for
+// it; "Open in the Studio" switches to the Studio and fills the form, starting nothing (Undo
+// puts the brief back); a choice button answers the question; "Launch the director" switches
+// to the Studio, fills the form and starts the director. With a folder, screenshots of the
+// assistant in light and dark at 390, 768, 1250 and 1440 px.
 // Exit 0 = all green, 1 = a check failed.
 "use strict";
 const fs = require("fs"), path = require("path"), http = require("http");
@@ -40,7 +42,7 @@ const CARDS = [
   const browser = await chromium.launch();
   const fails = [], log = [];
   const check = (ok, msg) => { if (!ok) fails.push(msg); };
-  const jobs = [], done = {}, chatBodies = [], cardPosts = [];
+  const jobs = [], done = {}, chatBodies = [], cardPosts = [], llmBodies = [];
   let conv = null, n = 0;
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.route("**/api/**", async route => {
@@ -58,6 +60,7 @@ const CARDS = [
     if (p === "/api/loras") return json({ h3: [] });
     if (p === "/api/instructions") return json({});
     if (p === "/api/roles") return json(ROLES);
+    if (p === "/api/llm/chat") { llmBodies.push(req.postData()); return json({ detail: "LLM stubbed out" }, 503); }
     if (p === "/api/chats") return json(conv ? [{ id: conv.id, title: conv.title, updated: 1, role: conv.role }] : []);
     if (p === "/api/chat") {
       const body = JSON.parse(req.postData());
@@ -104,9 +107,20 @@ const CARDS = [
   await page.goto(base + "index.html", { waitUntil: "load" });
   await page.evaluate(() => localStorage.setItem("lang", "fr"));
   await page.reload({ waitUntil: "load" });
-  await page.click("#railAssistant");
-  await page.waitForSelector("#chatPanel:not([hidden])");
-  await page.click("#chatStarters button >> nth=0");
+  // The page opens on the assistant; the modes and the library start nothing.
+  await page.waitForSelector("#assistantView", { state: "visible" });
+  check(await page.isHidden("main.layout"), "Studio form shown in the assistant mode");
+  check(await page.$("#assistantLibraryBody #galleryBlock") !== null, "library not in the assistant");
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/assistant-welcome-1440.png` });
+  await page.click('.rail-mode[data-mode="studio"]');
+  check(await page.isVisible("main.layout") && await page.isHidden("#assistantView"), "Studio mode not shown");
+  check(await page.$(".output-panel #galleryBlock") !== null && new URL(page.url()).hash === "#studio", "gallery or address not back in the Studio");
+  await page.click('.rail-mode[data-mode="assistant"]');
+  await page.click("#libraryBtn");
+  check(await page.isVisible("#galleryBlock"), "library button does not show the gallery");
+  await page.click("#libraryBtn");
+  check(await page.isHidden("#assistantLibrary"), "library button does not close the library");
+  await page.click("#chatStarterList button >> nth=0");
   check((await page.inputValue("#chatInput")).length > 5, "starter did not fill the input");
   check(chatBodies.length === 0, "a starter sent a message");
   await page.setInputFiles("#chatFiles", { name: "bottle.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
@@ -122,13 +136,24 @@ const CARDS = [
   await page.fill('.chat-card[data-card="C1"] textarea', "a perfume bottle on wet black stone, morning mist");
   await page.selectOption('.chat-card[data-card="C1"] select >> nth=1', "1:1");
   check(jobs.length === 0, "a card edit submitted a job");
-  if (SHOTS) for (const theme of ["light", "dark"]) for (const w of [390, 768, 1250, 1440]) {
-    await page.evaluate(t => { document.documentElement.dataset.theme = t; }, theme);
-    await page.setViewportSize({ width: w, height: 900 });
-    await page.waitForTimeout(150);
-    await page.screenshot({ path: `${SHOTS}/chat-${theme}-${w}.png` });
+  if (SHOTS) {
+    for (const theme of ["light", "dark"]) for (const w of [390, 768, 1250, 1440]) {
+      await page.evaluate(t => { document.documentElement.dataset.theme = t; }, theme);
+      await page.setViewportSize({ width: w, height: 900 });
+      await page.waitForTimeout(150);
+      await page.screenshot({ path: `${SHOTS}/chat-${theme}-${w}.png` });
+    }
+    await page.evaluate(() => { document.documentElement.dataset.theme = "light"; });
+    await page.click("#libraryBtn");
+    for (const w of [390, 1440]) {
+      await page.setViewportSize({ width: w, height: 900 });
+      await page.waitForTimeout(150);
+      await page.screenshot({ path: `${SHOTS}/library-${w}.png` });
+    }
+    await page.click("#libraryCloseBtn");
   }
   await page.setViewportSize({ width: 1440, height: 900 });
+  check(jobs.length === 0, "a screenshot step submitted a job");
   await page.click('.chat-card[data-card="C1"] .primary-btn');
   await page.waitForSelector('.chat-card[data-card="C1"] .status.done');
   check(jobs.length === 1 && jobs[0].pipeline === "krea2-t2i", "C1 did not submit one krea2 job: " + JSON.stringify(jobs.map(j => j.pipeline)));
@@ -140,28 +165,39 @@ const CARDS = [
   await page.waitForSelector('.chat-card[data-card="C3"] .status.done');
   check(jobs.length === 2 && jobs[1].pipeline === "h3-i2v" && jobs[1].params.image === "outputs/job-1.png", "C3 job wrong: " + JSON.stringify(jobs[1]));
   check((await page.$$('.chat-card[data-card="C3"] .cc-outputs figure')).length === 1, "C3 should show the clip only (last frame hidden)");
-  // Open in the Studio: fills the form, starts nothing.
-  await page.click('.chat-card[data-card="C5"] .primary-btn');
+  // Open in the Studio: switches to the Studio, fills the form, starts nothing.
+  await page.click('.chat-card[data-card="C5"] .cc-actions button >> nth=1');
   await page.waitForTimeout(300);
+  check(await page.evaluate(() => document.body.dataset.mode) === "studio", "Open in the Studio did not switch to the Studio");
   check(await page.inputValue("#brief") === "A detective enters a studio", "storyboard brief not in the form");
   check(await page.inputValue("#pipelineSelect") === "storyboard" && await page.inputValue("#shotCount") === "5", "storyboard settings not in the form");
   check(jobs.length === 2, "Open in the Studio submitted a job");
   await page.click("#undoToastBtn");
   check(await page.inputValue("#brief") === "", "undo did not restore the brief");
   // C2 opened in the form: input image and market.
+  await page.click('.rail-mode[data-mode="assistant"]');
   await page.click('.chat-card[data-card="C2"] .cc-actions button >> nth=2');
   await page.waitForTimeout(300);
   check(await page.inputValue("#pipelineSelect") === "image2image" && await page.inputValue("#modelSelect") === "qwen21_i2i", "C2 pipeline");
   check(!(await page.isHidden("#assetChip")), "C2 input image not set");
   check((await page.$$(".market-chip.active")).length === 1, "C2 market not selected");
   // A question answered by a button.
-  await page.click("#railAssistant"); await page.click("#railAssistant");
+  await page.click('.rail-mode[data-mode="assistant"]');
   await page.click('.chat-question .cc-options button >> nth=1');
   await page.waitForTimeout(500);
   check(chatBodies[1]?.answer_to === "C4" && chatBodies[1].text === "Night", "answer not sent: " + JSON.stringify(chatBodies[1]));
   check(jobs.length === 2, "jobs after the answer");
+  // Launch the director: one click switches to the Studio, fills the form and starts the
+  // director (its first step asks Gemma for the sheets, stubbed out here).
+  check(llmBodies.length === 0, "Gemma called before the director was launched");
+  await page.click('.chat-card[data-card="C5"] .primary-btn');
+  await page.waitForTimeout(800);
+  check(await page.evaluate(() => document.body.dataset.mode) === "studio", "Launch the director did not switch to the Studio");
+  check(await page.inputValue("#brief") === "A detective enters a studio" && await page.inputValue("#pipelineSelect") === "storyboard", "director brief not in the form");
+  check(llmBodies.some(b => b.includes("A detective enters a studio")), "the director did not start");
+  check(cardPosts.some(([id, b]) => id === "C5" && b.status === "launched"), "launch not reported");
   check(!errs.length, "page errors: " + errs.join(" | "));
   await browser.close(); server.close();
-  console.log(fails.length ? "FAIL\n" + fails.join("\n") : "Assistant panel: all checks passed.");
+  console.log(fails.length ? "FAIL\n" + fails.join("\n") : "Assistant mode: all checks passed.");
   process.exit(fails.length ? 1 : 0);
 })();

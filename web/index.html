@@ -7,10 +7,19 @@
 <link rel="stylesheet" href="css/studio.css">
 </head>
 <body>
+<script>
+  // The mode before the first paint (studio.js keeps it up to date): no flash of the other one.
+  try { document.body.dataset.mode = /^#(assistant|studio)$/.test(location.hash) ? location.hash.slice(1) : localStorage.getItem("mode") || "assistant"; }
+  catch { document.body.dataset.mode = "assistant"; }
+</script>
 <div class="app-shell">
   <nav class="app-rail" aria-label="Studio navigation">
     <div class="rail-top">
-      <button type="button" class="rail-btn active" data-panel="studio" title="Studio">
+      <button type="button" class="rail-btn rail-mode active" data-mode="assistant" title="Assistant">
+        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4Z"/><path d="M8.5 9.5h7M8.5 12.5h4.5"/></svg>
+        <span class="rail-name">Assistant</span>
+      </button>
+      <button type="button" class="rail-btn rail-mode" data-mode="studio" title="Studio">
         <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M3 9V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3"/><path d="M8.5 4 6.5 9M14.5 4l-2 5"/></svg>
         <span class="rail-name">Studio</span>
       </button>
@@ -19,10 +28,6 @@
         <span class="rail-name">Canvas</span>
       </a>
     </div>
-    <button type="button" class="rail-btn rail-assistant" id="railAssistant" title="Assistant" aria-controls="chatPanel">
-      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4Z"/><path d="M8.5 9.5h7M8.5 12.5h4.5"/></svg>
-      <span class="rail-name">Assistant</span>
-    </button>
     <button type="button" class="rail-btn" data-panel="monitor" title="Monitor">
       <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6.5 4 13L16 12h5"/></svg>
       <span class="rail-name">Monitor</span>
@@ -141,6 +146,49 @@
     <ol class="sb-steps" id="sbSteps" hidden></ol>
     <span id="sbJobs" hidden></span>
     <span id="sbGpu"><span>GPU memory</span> <strong data-raw>—</strong></span>
+  </section>
+
+  <section class="assistant-view" id="assistantView" aria-label="Assistant">
+    <div class="assistant-chat" id="assistantChat">
+      <header class="chat-head">
+        <div class="mascot mascot-sm" title="Hello!"></div>
+        <div class="chat-head-text">
+          <strong class="chat-title">Assistant</strong>
+          <span class="hint" id="chatRoleNow"></span>
+        </div>
+        <label class="chat-role-pick"><span>Role</span> <select id="chatRoleSelect"></select></label>
+        <select id="chatConvSelect" aria-label="Conversations"></select>
+        <button type="button" class="secondary-btn" id="chatNewBtn" title="New conversation">＋</button>
+        <button type="button" class="secondary-btn" id="chatDeleteBtn" title="Delete this conversation">🗑</button>
+        <button type="button" class="secondary-btn" id="libraryBtn" aria-pressed="false" aria-controls="assistantLibrary" title="Your images and videos, and the job queue">🖼 <span class="lib-label">Library</span></button>
+      </header>
+      <div class="chat-log" id="chatLog" role="log"></div>
+      <div class="chat-welcome" id="chatStarters">
+        <div class="mascot mascot-lg" title="Hello!"></div>
+        <h2>Hi! What shall we make today?</h2>
+        <p class="hint">Say what you want to make: the assistant asks what it needs, then proposes cards. Nothing renders before you click Generate on a card.</p>
+        <div class="chat-starter-list" id="chatStarterList"></div>
+      </div>
+      <form class="chat-compose" id="chatForm">
+        <div class="chat-answering" id="chatAnswering" hidden></div>
+        <div class="chat-atts" id="chatAtts"></div>
+        <textarea id="chatInput" rows="2" maxlength="8000" placeholder="Describe what you want to make (Enter sends, Shift+Enter for a new line)" aria-label="Message"></textarea>
+        <div class="chat-compose-row">
+          <button type="button" class="secondary-btn" id="chatAttachBtn" title="Attach images (or drop them here, from your computer or the gallery)">📎</button>
+          <input type="file" id="chatFiles" accept="image/*" multiple hidden>
+          <span class="spacer"></span>
+          <button type="button" class="secondary-btn" id="chatStopBtn" hidden>Stop</button>
+          <button type="submit" class="primary-btn" id="chatSendBtn">Send</button>
+        </div>
+      </form>
+    </div>
+    <aside class="assistant-library" id="assistantLibrary" aria-label="Library" hidden>
+      <div class="library-head">
+        <h3 class="section-title">Library</h3>
+        <button type="button" class="secondary-btn" id="libraryCloseBtn" title="Close the library">✕</button>
+      </div>
+      <div class="library-body" id="assistantLibraryBody"></div>
+    </aside>
   </section>
 
   <main class="layout">
@@ -476,36 +524,6 @@
   <p class="credits">Video and audio generation: MiniMax H3 (FastH3, run by FastVideo).</p>
   </div>
 </div>
-
-<aside class="chat-panel" id="chatPanel" aria-label="Assistant" hidden>
-  <header class="chat-head">
-    <strong class="chat-title">Assistant</strong>
-    <select id="chatConvSelect" aria-label="Conversations"></select>
-    <button type="button" class="secondary-btn" id="chatNewBtn" title="New conversation">＋</button>
-    <button type="button" class="secondary-btn" id="chatDeleteBtn" title="Delete this conversation">🗑</button>
-    <button type="button" class="secondary-btn" id="chatCloseBtn" title="Close the assistant">✕</button>
-  </header>
-  <div class="chat-role-row">
-    <label>Role <select id="chatRoleSelect"></select></label>
-    <span class="hint" id="chatRoleNow"></span>
-  </div>
-  <div class="chat-log" id="chatLog" role="log"></div>
-  <div class="chat-starters" id="chatStarters">
-    <p class="hint">Say what you want to make: the assistant asks what it needs, then proposes cards. Nothing renders before you click Generate on a card.</p>
-  </div>
-  <form class="chat-compose" id="chatForm">
-    <div class="chat-answering" id="chatAnswering" hidden></div>
-    <div class="chat-atts" id="chatAtts"></div>
-    <textarea id="chatInput" rows="2" maxlength="8000" placeholder="Describe what you want to make (Enter sends, Shift+Enter for a new line)" aria-label="Message"></textarea>
-    <div class="chat-compose-row">
-      <button type="button" class="secondary-btn" id="chatAttachBtn" title="Attach images (or drop them here, from your computer or the gallery)">📎</button>
-      <input type="file" id="chatFiles" accept="image/*" multiple hidden>
-      <span class="spacer"></span>
-      <button type="button" class="secondary-btn" id="chatStopBtn" hidden>Stop</button>
-      <button type="submit" class="primary-btn" id="chatSendBtn">Send</button>
-    </div>
-  </form>
-</aside>
 
 <div id="promptModal" hidden>
   <div class="prompt-dialog" role="dialog" aria-modal="true" aria-labelledby="promptModalTitle">

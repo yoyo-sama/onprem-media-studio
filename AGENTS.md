@@ -12,7 +12,7 @@ Hugging Face on first use. Start with `docs/ARCHITECTURE.md`, `docs/LESSONS.md`,
 pip install -e ".[dev]" && python -m pytest        # unit tests, no GPU needed
 node tools/parity-prompts.js                       # prompt compilers equal to 1.4 (needs ../dellaicontent)
 NODE_PATH=$(npm root -g) node tools/prompt-systems.js   # Gemma instruction per engine, both pages headless
-NODE_PATH=$(npm root -g) node tools/assistant-ui.js     # assistant panel: no job without a click, one job per card
+NODE_PATH=$(npm root -g) node tools/assistant-ui.js     # assistant mode: no job without a click, one job per card
 STUDIO_DATA_DIR=./data python -m studio            # dev server on :8090
 docker compose up -d --build                       # full image (GB10 / ARM64 + CUDA)
 curl -s localhost:8090/api/health                  # app, GPU, LLM state
