@@ -14,16 +14,17 @@ async function call(method, url, body, raw) {
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch { /* not JSON: the status says enough */ }
-  if (!res.ok) {
-    const detail = data?.detail;
-    const err = new Error(typeof detail === "string" ? detail
-      : Array.isArray(detail) ? detail.map(d => d.msg || JSON.stringify(d)).join("; ")
-      : `HTTP ${res.status}`);
-    err.status = res.status;
-    err.data = data;
-    throw err;
-  }
+  if (!res.ok) throw httpError(res, data);
   return data;
+}
+function httpError(res, data) {
+  const detail = data?.detail;
+  const err = new Error(typeof detail === "string" ? detail
+    : Array.isArray(detail) ? detail.map(d => d.msg || JSON.stringify(d)).join("; ")
+    : `HTTP ${res.status}`);
+  err.status = res.status;
+  err.data = data;
+  return err;
 }
 const get = url => call("GET", url);
 const post = (url, body) => call("POST", url, body ?? {});
@@ -51,6 +52,14 @@ export const api = {
   upload: blob => call("POST", "/api/inputs", undefined, blob),
   chat: body => post("/api/llm/chat", body),
   loras: () => get("/api/loras"),
+  // The creative assistant: roles, conversations, card states (the turn itself streams: chatStream).
+  roles: () => get("/api/roles"),
+  setRole: (id, text) => call("PUT", `/api/roles/${encodeURIComponent(id)}`, { text }),
+  resetRole: id => call("DELETE", `/api/roles/${encodeURIComponent(id)}`),
+  chats: () => get("/api/chats"),
+  chatLoad: id => get(`/api/chats/${encodeURIComponent(id)}`),
+  chatDelete: id => call("DELETE", `/api/chats/${encodeURIComponent(id)}`),
+  chatCard: (id, card, body) => post(`/api/chats/${encodeURIComponent(id)}/cards/${encodeURIComponent(card)}`, body),
   updateStatus: () => get("/api/update/status"),
   updateApply: () => post("/api/update/apply"),
   gallery: {
@@ -139,6 +148,36 @@ export function waitJob(job) {
     // A job that ended between the submission and this call: read it once.
     api.job(job.id).then(settle, () => {});
   });
+}
+
+// One assistant turn: the server's events ({type: conversation | role | text | card |
+// error | done}) passed to `onEvent` as they arrive. `signal` stops reading.
+export async function chatStream(body, onEvent, signal) {
+  let res;
+  try {
+    res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+  } catch (err) {
+    if (err.name === "AbortError") throw err;
+    throw new Error(`server unreachable (${err.message})`);
+  }
+  if (!res.ok) {
+    let data = null;
+    try { data = await res.json(); } catch { /* the status says enough */ }
+    throw httpError(res, data);
+  }
+  const reader = res.body.getReader(), decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let end;
+    while ((end = buf.indexOf("\n\n")) >= 0) {
+      const data = buf.slice(0, end).split("\n").filter(l => l.startsWith("data: ")).map(l => l.slice(6)).join("\n");
+      buf = buf.slice(end + 2);
+      if (data) onEvent(JSON.parse(data));
+    }
+  }
 }
 
 // ── LLM ───────────────────────────────────────────────────────────────────────

@@ -11,6 +11,8 @@ from pydantic import BaseModel
 
 from . import gallery as gallery_api
 from . import instructions, loras, update
+from .assistant import chat as assistant_chat
+from .assistant.roles import Roles
 from .config import APP_VERSION, Settings
 from .files import FileStore
 from .gallery import Gallery
@@ -21,6 +23,16 @@ from .pipelines import REGISTRY, Pipeline, common
 
 REPO_DIR = Path(__file__).resolve().parent.parent
 WEB_DIR = REPO_DIR / "web"
+
+
+class FrontEnd(StaticFiles):
+    """The pages and scripts, revalidated on every load (ETag, so a 304 when unchanged):
+    after an update a browser never mixes a new page with a cached old script."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
 
 class JobRequest(BaseModel):
@@ -118,11 +130,18 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     app.include_router(update.router(updater))
     app.include_router(loras.router(settings.loras_dir))
     app.include_router(instructions.router(instructions.Instructions(settings.data_dir / "instructions.json")))
+    assistant = assistant_chat.Assistant(llm, Roles(settings.data_dir),
+                                         assistant_chat.Conversations(settings.data_dir / "chats"), files,
+                                         settings.app_name)
+    app.include_router(assistant_chat.router(assistant))
+    # A video engine that does not fit next to the LLM stops it; the next LLM request
+    # starts it again (about 20 s).
+    common.LOW_MEMORY.append(llm.stop)
 
     @app.get("/api/health")
     def health():
         return {"app": settings.app_name, "version": APP_VERSION, "gpu": gpu_info(), "memory": memory_info(),
-                "llm": llm.state, "queue": busy()}
+                "llm": llm.state, "llm_model": llm.model_id, "queue": busy()}
 
     @app.get("/api/models")
     def list_models():
@@ -215,5 +234,5 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     app.mount("/inputs", StaticFiles(directory=settings.input_dir), name="inputs")
     app.mount("/outputs", StaticFiles(directory=settings.output_dir), name="outputs")
     if WEB_DIR.is_dir():
-        app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
+        app.mount("/", FrontEnd(directory=WEB_DIR, html=True), name="web")
     return app

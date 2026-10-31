@@ -37,10 +37,11 @@ inference = [
 # image builds it from source (docker/Dockerfile, docker/fastvideo-requirements.txt).
 
 [tool.setuptools]
-packages = ["studio", "studio.pipelines"]
+packages = ["studio", "studio.pipelines", "studio.assistant"]
 
 [tool.setuptools.package-data]
 studio = ["catalog.json"]
+"studio.assistant" = ["roles/*.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

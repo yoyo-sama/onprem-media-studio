@@ -10,7 +10,8 @@ navigateur ──HTTP/WS──> studio (FastAPI, :8090)
                           ├─ /api/models   catalogue + téléchargement (huggingface_hub)
                           ├─ /api/inputs   envoi d'image → référence pour les jobs
                           ├─ /api/jobs     file → un worker GPU → pipelines (diffusers, FastVideo)
-                          ├─ /api/llm      llama-server (Gemma 4 E4B, 127.0.0.1:8095)
+                          ├─ /api/llm      llama-server (Gemma 4 26B-A4B, 127.0.0.1:8095)
+                          ├─ /api/chat     assistant de création : rôles, conversations, cartes
                           ├─ /api/gallery  index des sorties : recherche, miniatures, tags, corbeille
                           ├─ /api/update   mise à jour d'un dépôt git depuis l'interface
                           ├─ /api/loras    liste et téléversement de LoRA
@@ -42,9 +43,10 @@ requête LLM.
 | `studio/pipelines/montage.py` | Jobs CPU sur des fichiers rendus, avec ffmpeg et Pillow : `video-concat` (clips bout à bout), `image-grid` (planche contact), `video-frames` (images proches de la fin d'un clip, pour les transitions du Relay) |
 | `studio/pipelines/common.py` | Contrôle des paramètres, pipelines gardés en mémoire (le moins récemment utilisé libéré quand le suivant ne tient pas), progression par étape, sortie PNG |
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |
-| `studio/llm.py` | `LlamaServer` : démarrage à la demande, appel chat OpenAI, vision par images base64 |
+| `studio/llm.py` | `LlamaServer` : démarrage à la demande (contexte de 32k, un emplacement), appel chat OpenAI, appel en flux avec outils, vision par images base64 ; arrêté quand un moteur H3 a besoin de la mémoire |
 | `studio/gallery.py` | `Gallery` : index SQLite/FTS5 des sorties, miniatures, tags, favoris, renommage, corbeille : [GALLERY.md](GALLERY.md) |
 | `studio/update.py`, `loras.py` | Mise à jour depuis l'interface (avance rapide git, redémarrage sur place) et téléversement de LoRA : [GALLERY.md](GALLERY.md) |
+| `studio/assistant/` | Assistant de création : registre des rôles (`roles.py`, rôles livrés dans `roles/*.md`), outils et leurs vérifications (`tools.py`), routage, tours et conversations (`chat.py`, `/api/chat`, `/api/roles`, `/api/chats`) : [ASSISTANT.md](ASSISTANT.md) |
 | `studio/instructions.py` | Consignes Gemma remplacées depuis l'interface, gardées dans `STUDIO_DATA_DIR/instructions.json` (`/api/instructions`) ; celles par défaut vivent dans `web/js/prompts.js` |
 | `studio/guard.py` | Contrôle de même origine des routes qui déplacent ou écrivent des fichiers |
 | `studio/main.py` | API HTTP/WebSocket et fichiers statiques ; `/api/health` donne l'application, le GPU, la mémoire, l'état du LLM et le nombre de jobs en file |
@@ -86,6 +88,8 @@ loras/h3/<fichier>.safetensors   LoRA H3, désignées par leur nom de fichier
 cache/h3-loras/...          piles de LoRA fusionnées
 cache/thumbs/...            miniatures de la galerie
 gallery.db                  index de la galerie, tags et favoris
+chats/<id>.json             conversations de l'assistant
+roles/<id>.md               rôles de l'assistant remplacés ou ajoutés par l'utilisateur
 output/.trash/...           corbeille de la galerie (purge manuelle)
 ```
 
@@ -99,6 +103,7 @@ output/.trash/...           corbeille de la galerie (purge manuelle)
 | `HF_TOKEN` | — | Dépôts à accès restreint (Krea 2) ; jamais journalisé |
 | `STUDIO_LLAMA_SERVER` | `llama-server` | Chemin du binaire serveur de llama.cpp |
 | `STUDIO_LLM_PORT` | `8095` | Port local de llama-server |
+| `STUDIO_LLM_MODEL` | `gemma4-26b-a4b` | LLM de l'assistant et des enrichissements : `gemma4-26b-a4b` ou `gemma4-e4b` (machines plus petites) |
 | `STUDIO_DISK_RESERVE_GB` | `20` | Espace libre conservé après tout téléchargement |
 | `STUDIO_H3_PRECISION` | `auto` | MiniMax H3 : `auto` (NVFP4, FP8 si NVFP4 échoue), `nvfp4` ou `fp8` (H3.md) |
 | `STUDIO_GALLERY_SCAN` | `60` | Secondes entre deux scans du dossier de sorties par la galerie |

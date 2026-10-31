@@ -14,6 +14,8 @@ services:
       # Optional, needed for gated models (Krea 2). Put it in .env, never here.
       HF_TOKEN: ${HF_TOKEN:-}
       STUDIO_APP_NAME: ${STUDIO_APP_NAME:-OnPrem Media Studio}
+      # LLM of the assistant and the enrichments: gemma4-26b-a4b (default) or gemma4-e4b (smaller).
+      STUDIO_LLM_MODEL: ${STUDIO_LLM_MODEL:-gemma4-26b-a4b}
     volumes:
       # Models (hundreds of GB) and renders live outside the image.
       - ${STUDIO_DATA:-./data}:/data

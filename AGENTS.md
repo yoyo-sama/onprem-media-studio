@@ -12,6 +12,7 @@ Hugging Face on first use. Start with `docs/ARCHITECTURE.md`, `docs/LESSONS.md`,
 pip install -e ".[dev]" && python -m pytest        # unit tests, no GPU needed
 node tools/parity-prompts.js                       # prompt compilers equal to 1.4 (needs ../dellaicontent)
 NODE_PATH=$(npm root -g) node tools/prompt-systems.js   # Gemma instruction per engine, both pages headless
+NODE_PATH=$(npm root -g) node tools/assistant-ui.js     # assistant mode: no job without a click, one job per card
 STUDIO_DATA_DIR=./data python -m studio            # dev server on :8090
 docker compose up -d --build                       # full image (GB10 / ARM64 + CUDA)
 curl -s localhost:8090/api/health                  # app, GPU, LLM state
@@ -23,7 +24,8 @@ python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.jso
 
 Image engines, their parameters and what they guarantee: `docs/IMAGE-ENGINES.md`; MiniMax H3
 video engines (FastVideo, two-pass Ref2VA, FP8 fallback, LoRA stack): `docs/H3.md`; Studio and
-Canvas front end, its rules and tests: `docs/FRONTEND.md`. Pipelines get
+Canvas front end, its rules and tests: `docs/FRONTEND.md`; creative assistant (chat, roles in
+`studio/assistant/roles/*.md`, cards): `docs/ASSISTANT.md`. Pipelines get
 final prompts; prompt compilers belong to the front end (ADR 0001).
 
 ## Rules set by the project owner
@@ -37,8 +39,8 @@ final prompts; prompt compilers belong to the front end (ADR 0001).
 - **WanGP and Maestro are references only** (non-commercial licence): read them to understand,
   never copy code from them and never depend on them.
 - **Models in scope**: Krea 2, Qwen Image 2.1 (Qwen-Image-Edit 2509 dropped on 2026-10-29),
-  MiniMax H3 through FastH3, Gemma 4 E4B
-  as the only prompt LLM. No LTX.
+  MiniMax H3 through FastH3, Gemma 4 as the only LLM, for the prompts and the creative assistant
+  (26B-A4B by default, E4B as the `STUDIO_LLM_MODEL` setting for smaller machines). No LTX.
 - **Nothing renders without a click**: no code path submits a job on its own.
 - **The user's prompt is sent verbatim**; graph invariants (anchoring blocks) are re-appended by
   code. See `docs/LESSONS.md` § 2–3.

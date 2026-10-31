@@ -5,7 +5,8 @@ Ollama, ni cloud : l'application fait tourner les modèles elle-même et téléc
 nécessaires à la première utilisation.
 
 Successeur d'AI Content Studio 1.4. Moteurs : Krea 2, Qwen Image 2.1, MiniMax H3 via
-FastH3, Gemma 4 E4B pour l'enrichissement des prompts.
+FastH3, Gemma 4 26B-A4B pour l'enrichissement des prompts et l'assistant de création (un chat à
+rôles qui propose des cartes prêtes à lancer : [docs/fr/ASSISTANT.md](docs/fr/ASSISTANT.md)).
 
 > État : étape 4 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
 > modèles, la file de jobs et le pont LLM sont en place, et les moteurs d'image (Krea 2, Qwen Image
@@ -85,6 +86,8 @@ dans le `PATH` ou dans `STUDIO_LLAMA_SERVER`.
   qualification
 - [Moteurs vidéo](docs/fr/H3.md) : jobs MiniMax H3, référence vers vidéo en deux passes, repli de
   précision, pile de LoRA, qualification
+- [Assistant de création](docs/fr/ASSISTANT.md) : le mode Assistant, ses rôles, ses cartes et son
+  modèle
 - [Interface](docs/fr/FRONTEND.md) : pages Studio et Canvas, cartes du Canvas, différences avec
   la 1.4, tests du front
 - [Installation bare metal](docs/fr/INSTALL.md) : `scripts/install.sh`, service, mises à jour

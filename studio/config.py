@@ -26,6 +26,9 @@ class Settings:
     hf_token: str | None = field(default_factory=lambda: os.environ.get("HF_TOKEN") or None)
     llama_server: str = field(default_factory=lambda: os.environ.get("STUDIO_LLAMA_SERVER", "llama-server"))
     llm_port: int = field(default_factory=lambda: int(os.environ.get("STUDIO_LLM_PORT", "8095")))
+    # Catalog id of the LLM (prompt enrichment and the assistant): gemma4-26b-a4b or,
+    # with less memory, gemma4-e4b.
+    llm_model: str = field(default_factory=lambda: os.environ.get("STUDIO_LLM_MODEL", "gemma4-26b-a4b"))
     # MiniMax H3 precision: auto (NVFP4, falling back to FP8 if NVFP4 fails on
     # this GPU), nvfp4 or fp8.
     h3_precision: str = field(default_factory=lambda: os.environ.get("STUDIO_H3_PRECISION", "auto"))

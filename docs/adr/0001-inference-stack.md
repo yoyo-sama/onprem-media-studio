@@ -26,7 +26,7 @@ is a dependency.
 | Server | Python, FastAPI, one process, one GPU worker thread | Same language as every model runtime; jobs run in order on one GPU |
 | Krea 2, Qwen Image 2.1 | Hugging Face `diffusers` pipelines, official weights | Official repositories are in diffusers layout (`model_index.json`); Apache-2.0 library |
 | MiniMax H3 / FastH3 | `FastVideo` (Apache-2.0) | Publishes the FastH3 OmniRef NVFP4 QAD weights with a DGX Spark recipe; NVFP4 and VSA kernels are its job, not ours |
-| Prompt LLM | `llama-server` from llama.cpp, Gemma 4 E4B GGUF + mmproj | Same as Maestro's approach; OpenAI-compatible API; vision through mmproj |
+| Prompt LLM | `llama-server` from llama.cpp, Gemma 4 GGUF + mmproj (E4B at first; 26B-A4B since 2026-10-31, see below) | Same as Maestro's approach; OpenAI-compatible API; vision through mmproj |
 | Model download | `huggingface_hub`, per-file, `.complete` marker | Resumable, disk-space check, gated repositories through `HF_TOKEN` |
 | Prompt compilers | The 1.4 JavaScript engine (`js/engine.js`), ported to English | Single source shared by Studio and Canvas, already covered by parity tests; the backend stays inference-only |
 | Packaging | NGC PyTorch base image (multi-arch, CUDA 13) | Ships a PyTorch build for Blackwell/GB10; bare metal reuses the same Python package |
@@ -63,3 +63,14 @@ is a dependency.
 - **H3 clips are 5 to 15 s** in FastVideo, where 1.4 allowed shorter cuts.
 - **NGC image tag and llama.cpp revision** are pinned but not yet built on GB10: first build on
   the device may require a bump.
+
+## Amendment of 2026-10-31: one larger Gemma for prompts and the assistant
+
+The creative assistant (docs/ASSISTANT.md) needs a model that follows long role instructions and
+calls tools reliably. At the owner's request, one model serves both the assistant and the
+enrichments: Gemma 4 26B-A4B (`ggml-org/gemma-4-26B-A4B-it-GGUF`, Q4_0 14.6 GB + mmproj,
+Apache-2.0). It is a mixture of experts with about 4B active parameters per token, so its speed
+stays close to E4B's while its quality is that of a much larger model. Gemma 4 E4B stays
+available through `STUDIO_LLM_MODEL=gemma4-e4b`. Still the only LLM: one `llama-server`, stopped
+when an H3 engine needs the memory. To check on the GB10: tool calls through `--jinja`, speed,
+and the enrichments compared with E4B's.

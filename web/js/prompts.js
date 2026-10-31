@@ -15,7 +15,7 @@
 (function (global) {
   "use strict";
 
-  const LLM_NAME = "Gemma 4 E4B";
+  const LLM_NAME = "Gemma 4";
   const say = (log, level, text, params) => { if (log) log(level, text, params || {}); };
 
   // ── Shot libraries ──────────────────────────────────────────────────────────

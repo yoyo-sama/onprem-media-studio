@@ -31,6 +31,7 @@ class Echo(Pipeline):
 
 class FakeLlm:
     state = "stopped"
+    model_id = "gemma4-26b-a4b"
 
     def chat(self, system, prompt, images, json_mode, temperature):
         return '{"prompt": "%s"}' % prompt.upper()
@@ -135,3 +136,14 @@ def test_models_endpoint_lists_catalog(client):
 def test_llm_chat(client):
     resp = client.post("/api/llm/chat", json={"system": "s", "prompt": "cat"})
     assert resp.json() == {"content": '{"prompt": "CAT"}'}
+
+
+def test_front_end_is_revalidated(settings, store):
+    from studio.main import WEB_DIR
+    if not WEB_DIR.is_dir():
+        pytest.skip("no web/ folder")
+    with TestClient(create_app(settings, models=store, pipelines={}, llm=FakeLlm())) as client:
+        res = client.get("/js/studio.js")
+        assert res.status_code == 200 and res.headers["cache-control"] == "no-cache"
+        again = client.get("/js/studio.js", headers={"If-None-Match": res.headers["etag"]})
+        assert again.status_code == 304

@@ -6,6 +6,8 @@ from studio.config import Settings
 from studio.models import ModelStore
 
 FILES = {
+    "gemma-4-26B-A4B-it-Q4_0.gguf": 100,
+    "mmproj-gemma-4-26B-A4B-it-Q8_0.gguf": 10,
     "gemma-4-E4B-it-Q8_0.gguf": 100,
     "mmproj-gemma-4-E4B-it-Q8_0.gguf": 10,
     "README.md": 1,
@@ -45,6 +47,7 @@ def settings(tmp_path, monkeypatch):
     monkeypatch.setenv("STUDIO_DISK_RESERVE_GB", "0")
     # The Docker image sets these; tests must not depend on where they run.
     monkeypatch.delenv("STUDIO_LLAMA_SERVER", raising=False)
+    monkeypatch.delenv("STUDIO_LLM_MODEL", raising=False)
     monkeypatch.delenv("HF_TOKEN", raising=False)
     return Settings()
 
