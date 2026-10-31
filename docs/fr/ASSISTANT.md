@@ -122,6 +122,10 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 - Une carte ne tourne **que sur le clic de l'utilisateur**, par les mêmes fonctions que le
   formulaire du Studio (`web/js/generate.js`) : ce qu'une carte soumet est ce que le formulaire
   soumettrait.
+- Pendant son rendu, une carte montre son avancement : une barre (la moyenne de ses jobs), les
+  jobs terminés, le temps écoulé depuis le clic et le dernier message du moteur (téléchargement
+  d'un modèle, une étape…). Ses jobs sont marqués de l'id de la carte à l'envoi (`withJobTag` dans
+  `web/js/ui.js`).
 - Le prompt et les réglages d'une carte se modifient avant Générer ; ✨ Enrichir réécrit le prompt
   de la carte avec la consigne Gemma propre au moteur (`Prompts.briefEnrichSystem`), avec
   Annuler.

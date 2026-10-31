@@ -120,6 +120,9 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 
 - A card runs **only on the user's click**, through the same functions as the Studio form
   (`web/js/generate.js`): what a card submits is what the form would submit.
+- While a card renders, it shows its progress: a bar (the mean of its jobs), the jobs done, the
+  time since the click and the engine's last message (a model download, a step…). Its jobs are
+  tagged with the card's id when submitted (`withJobTag` in `web/js/ui.js`).
 - The prompt and the settings of a card can be edited before Generate; ✨ Enrich rewrites the
   card's prompt with the engine's own Gemma instruction (`Prompts.briefEnrichSystem`), with Undo.
 - "Open in the Studio" switches to the Studio and fills the form (pipeline, engine, settings,

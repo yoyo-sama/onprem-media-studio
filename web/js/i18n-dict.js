@@ -3532,4 +3532,19 @@ export const DICT = {
     es: "Volver a la bienvenida, para una nueva conversación",
     de: "Zurück zur Begrüßung, für eine neue Unterhaltung",
   },
+  "Waiting in the queue · {time}": {
+    fr: "En attente dans la file · {time}",
+    es: "En espera en la cola · {time}",
+    de: "Wartet in der Warteschlange · {time}",
+  },
+  "Rendering {pct}% · {done}/{n} done · {time}": {
+    fr: "Rendu {pct} % · {done}/{n} terminés · {time}",
+    es: "Renderizando {pct} % · {done}/{n} terminados · {time}",
+    de: "Rendering {pct} % · {done}/{n} fertig · {time}",
+  },
+  "Rendering {pct}% · {time}": {
+    fr: "Rendu {pct} % · {time}",
+    es: "Renderizando {pct} % · {time}",
+    de: "Rendering {pct} % · {time}",
+  },
 };

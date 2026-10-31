@@ -52,7 +52,9 @@ const CARDS = [
       const job = JSON.parse(req.postData()), jid = `job-${++n}`;
       jobs.push(job);
       const outs = job.pipeline.startsWith("h3-") ? [`outputs/${jid}.mp4`, `outputs/${jid}-last.png`] : [`outputs/${jid}.png`];
-      done[jid] = { id: jid, status: "done", outputs: outs };
+      // H3 jobs stay queued until the test sends their events on the socket.
+      done[jid] = job.pipeline.startsWith("h3-") ? { id: jid, status: "queued", progress: 0, outputs: [], later: outs }
+        : { id: jid, status: "done", outputs: outs };
       return json(done[jid], 201);
     }
     if (p.startsWith("/api/jobs/")) return json(done[p.split("/").pop()] || {});
@@ -99,6 +101,9 @@ const CARDS = [
     if (p === "/api/gallery/assets") return json({ items: [], next: null, counts: { image: 0, video: 0 } });
     return json({ detail: "x" }, 404);
   });
+  let socket = null;
+  await ctx.routeWebSocket("**/api/ws", ws => { socket = ws; });
+  const send = job => socket.send(JSON.stringify({ type: "job", job }));
   await ctx.route("**/outputs/**", r => r.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") }));
   await ctx.route("**/inputs/**", r => r.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") }));
   const page = await ctx.newPage();
@@ -163,7 +168,18 @@ const CARDS = [
   check(cardPosts[0]?.[1].status === "running" && cardPosts[0][1].args.ratio === "1:1", "running report lacks the edited args");
   await page.waitForSelector('.chat-card[data-card="C3"] .primary-btn:not([disabled])');
   await page.click('.chat-card[data-card="C3"] .primary-btn');
+  // The card shows its job's progress while it renders.
+  await page.waitForSelector('.chat-card[data-card="C3"] .cc-progress');
+  const h3 = Object.values(done).find(j => j.status === "queued");
+  send({ ...h3, status: "running", progress: 0.4, message: "Denoising step 4/10" });
+  await page.waitForTimeout(300);
+  const bar = await page.$eval('.chat-card[data-card="C3"] .cc-progress', b => [b.querySelector("progress").value, b.textContent]);
+  check(bar[0] === 40 && bar[1].includes("40") && bar[1].includes("Denoising step 4/10"), "card progress not shown: " + JSON.stringify(bar));
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/card-progress-1440.png` });
+  Object.assign(h3, { status: "done", progress: 1, outputs: h3.later });
+  send(h3);
   await page.waitForSelector('.chat-card[data-card="C3"] .status.done');
+  check(!(await page.$('.chat-card[data-card="C3"] .cc-progress')), "progress still shown after the render");
   check(jobs.length === 2 && jobs[1].pipeline === "h3-i2v" && jobs[1].params.image === "outputs/job-1.png", "C3 job wrong: " + JSON.stringify(jobs[1]));
   check((await page.$$('.chat-card[data-card="C3"] .cc-outputs figure')).length === 1, "C3 should show the clip only (last frame hidden)");
   // Open in the Studio: switches to the Studio, fills the form, starts nothing.
