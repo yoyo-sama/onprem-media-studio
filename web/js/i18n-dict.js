@@ -3547,4 +3547,19 @@ export const DICT = {
     es: "Renderizando {pct} % · {time}",
     de: "Rendering {pct} % · {time}",
   },
+  "{llm} is writing the sheets and the shot list… {time}": {
+    fr: "{llm} écrit les fiches et la liste des plans… {time}",
+    es: "{llm} escribe las fichas y la lista de planos… {time}",
+    de: "{llm} schreibt die Blätter und die Einstellungsliste… {time}",
+  },
+  "{llm} is preparing the director… {time}": {
+    fr: "{llm} prépare le réalisateur… {time}",
+    es: "{llm} prepara al director… {time}",
+    de: "{llm} bereitet die Regie vor… {time}",
+  },
+  "{llm} is enriching the brief… {time}": {
+    fr: "{llm} enrichit le brief… {time}",
+    es: "{llm} enriquece el brief… {time}",
+    de: "{llm} reichert das Briefing an… {time}",
+  },
 };

@@ -62,7 +62,11 @@ const CARDS = [
     if (p === "/api/loras") return json({ h3: [] });
     if (p === "/api/instructions") return json({});
     if (p === "/api/roles") return json(ROLES);
-    if (p === "/api/llm/chat") { llmBodies.push(req.postData()); return json({ detail: "LLM stubbed out" }, 503); }
+    if (p === "/api/llm/chat") {
+      llmBodies.push(req.postData());
+      await new Promise(r => setTimeout(r, 1500));  // Gemma takes its time
+      return json({ detail: "LLM stubbed out" }, 503);
+    }
     if (p === "/api/chats") return json(conv ? [{ id: conv.id, title: conv.title, updated: 1, role: conv.role }] : []);
     if (p === "/api/chat") {
       const body = JSON.parse(req.postData());
@@ -214,6 +218,13 @@ const CARDS = [
   check(await page.inputValue("#brief") === "A detective enters a studio" && await page.inputValue("#pipelineSelect") === "storyboard", "director brief not in the form");
   check(llmBodies.some(b => b.includes("A detective enters a studio")), "the director did not start");
   check(cardPosts.some(([id, b]) => id === "C5" && b.status === "launched"), "launch not reported");
+  // While Gemma prepares the director, the button says so; then it comes back.
+  const waiting = await page.textContent("#generateBtn");
+  check(waiting.includes("écrit les fiches"), "Generate button does not say Gemma is working: " + waiting);
+  // Each Gemma call of the first step waits 1.5 s here, then fails: the button comes back.
+  const back = await page.waitForFunction(() => !document.getElementById("generateBtn").textContent.includes("écrit les fiches"),
+    null, { timeout: 20000 }).then(() => true, () => false);
+  check(back, "Generate button label not restored");
   // A reload opens on the welcome; the conversation stays in the list.
   await page.click('.rail-mode[data-mode="assistant"]');
   await page.reload({ waitUntil: "load" });

@@ -438,6 +438,17 @@ async function generate() {
   }
   const btn = $("generateBtn");
   btn.disabled = true;
+  // The director's first step and the auto enrichment wait on Gemma before any job:
+  // the button says so, with the time spent.
+  const busy = wf.pipeline === "storyboard" ? L("{llm} is writing the sheets and the shot list… {time}")
+    : wf.pipeline === "reference2video" ? L("{llm} is preparing the director… {time}")
+    : autoEnrich && wf.enrich !== "builtin" ? L("{llm} is enriching the brief… {time}") : null;
+  const start = Date.now();
+  const tick = () => {
+    const s = Math.floor((Date.now() - start) / 1000);
+    tx(btn, busy, { llm: LLM, time: `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` });
+  };
+  const timer = busy ? (tick(), setInterval(tick, 1000)) : 0;
   try {
     if (autoEnrich && wf.enrich !== "builtin") {
       log("req", "Auto enrichment of the brief with {llm}…", { llm: LLM });
@@ -452,7 +463,11 @@ async function generate() {
     else if (wf.pipeline === "campaign") generateCampaign(seed);
     else await generatePlain(wf, seed);
   } catch (err) { warn(err); }
-  finally { btn.disabled = false; }
+  finally {
+    clearInterval(timer);
+    if (busy) refreshGenerateLabel();
+    btn.disabled = false;
+  }
 }
 
 // Text and image to image, text and image to video; one job per market for local versions.
