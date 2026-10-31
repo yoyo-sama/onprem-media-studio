@@ -180,7 +180,7 @@ def test_turn_routes_streams_and_makes_cards(tmp_path, files):
     # The answering role got its own instructions, the common block filled in, its tools only.
     _, messages, tools = llm.calls[1]
     system = messages[0]["content"]
-    assert "Ad art director" in system and "Answer in French" in system and "Test Studio" in system
+    assert "Ad art director" in system and "Answer in French (informal: address the user as « tu »" in system and "Test Studio" in system
     assert "- A1: image, attached by the user" in system and "{" + "references}" not in system
     assert {t["function"]["name"] for t in tools} == {"ask_choices", "handoff", "edit_image", "create_image"}
     # The last user message carries its image for the model's vision.

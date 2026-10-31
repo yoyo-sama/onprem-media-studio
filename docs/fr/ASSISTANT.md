@@ -65,7 +65,7 @@ You are a storyboard artist and director of photography…
 - `_common.md` est le bloc que chaque rôle reçoit en premier : règles de travail (ne demander que
   ce qui manque, une question à la fois par des choix cliquables, montrer avant de rendre, prompts
   positifs en anglais, ids d'images pris dans la table des références…). Le code remplit ses
-  champs : `{app_name}`, `{language}` (la langue de l'interface : le rôle y répond), `{engines}`
+  champs : `{app_name}`, `{language}` (la langue de l'interface : le rôle y répond, en tutoyant en français, espagnol et allemand, comme l'interface), `{engines}`
   (une ligne par outil du rôle), `{references}` (la table des images), `{role_name}`, `{roles}`
   (les autres rôles, pour les relais).
 - **Remplacer un rôle** : panneau Modèles, carte « Rôles de l'assistant » ; ou un fichier

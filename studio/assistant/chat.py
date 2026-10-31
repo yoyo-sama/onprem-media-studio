@@ -34,7 +34,10 @@ MAX_IMAGES_SENT = 4           # images of the last user message sent to the LLM'
 HISTORY_CHARS = 60_000        # conversation sent to the LLM, newest first
 ROUTE_CONFIDENCE = 0.5        # below it, the current role keeps the conversation
 CARD_STATUSES = {"proposed", "running", "done", "error", "cancelled", "opened", "launched", "answered"}
-LANGUAGES = {"en": "English", "fr": "French", "es": "Spanish", "de": "German"}
+# The interface addresses the user informally in French, Spanish and German: the roles too.
+LANGUAGES = {"en": "English", "fr": "French (informal: address the user as « tu », never « vous »)",
+             "es": "Spanish (informal: address the user as « tú », never « usted »)",
+             "de": "German (informal: address the user as « du », never « Sie »)"}
 VIDEO = (".mp4", ".webm", ".mov")
 
 

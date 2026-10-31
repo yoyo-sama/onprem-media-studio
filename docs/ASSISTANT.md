@@ -65,7 +65,7 @@ You are a storyboard artist and director of photography…
 - `_common.md` is the block every role receives first: working rules (ask only what is
   missing, one question at a time through clickable choices, show before rendering, positive
   prompts in English, image ids from the reference table…). The code fills its placeholders:
-  `{app_name}`, `{language}` (the interface language: the role answers in it), `{engines}`
+  `{app_name}`, `{language}` (the interface language: the role answers in it, informally in French, Spanish and German, as the interface does), `{engines}`
   (one line per tool of the role), `{references}` (the image table), `{role_name}`, `{roles}`
   (the other roles, for handoffs).
 - **Replacing a role**: Models panel, "Assistant roles" card; or a file
