@@ -3527,4 +3527,9 @@ export const DICT = {
     es: "Director iniciado desde una tarjeta del asistente.",
     de: "Regie über eine Assistenten-Karte gestartet.",
   },
+  "Back to the welcome, for a new conversation": {
+    fr: "Revenir à l'accueil, pour une nouvelle conversation",
+    es: "Volver a la bienvenida, para una nueva conversación",
+    de: "Zurück zur Begrüßung, für eine neue Unterhaltung",
+  },
 };

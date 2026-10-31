@@ -14,6 +14,8 @@ renders before the user clicks Generate on a card.
 - **Modes**: Assistant and Studio are two modes of `index.html`; the address (`#assistant`,
   `#studio`) or the last mode used chooses it at load, the assistant by default. The Canvas
   offers the same three choices.
+- **Conversations**: a page load opens on the welcome; earlier conversations stay in the list,
+  and "＋ New conversation" goes back to the welcome at any time.
 - **Library**: the "Library" button opens the job queue and the gallery beside the chat (over it
   on a phone). A gallery image used from the assistant ("→ Use as input", or dragged onto the
   chat) becomes an attachment of the next message; "Reuse the prompt" copies it into the message

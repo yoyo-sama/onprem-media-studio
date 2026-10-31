@@ -13,6 +13,8 @@ prompt et réglages remplis. Rien ne part en rendu avant le clic de l'utilisateu
 - **Modes** : Assistant et Studio sont deux modes d'`index.html` ; l'adresse (`#assistant`,
   `#studio`) ou le dernier mode utilisé le choisit au chargement, l'assistant par défaut. Le
   Canvas propose les trois mêmes choix.
+- **Conversations** : un chargement de la page ouvre l'accueil ; les conversations précédentes
+  restent dans la liste, et « ＋ Nouvelle conversation » ramène à l'accueil à tout moment.
 - **Bibliothèque** : le bouton « Bibliothèque » ouvre la file de jobs et la galerie à côté du chat
   (par-dessus sur un téléphone). Une image de la galerie utilisée depuis l'assistant (« → Utiliser
   en entrée », ou glissée sur le chat) devient une pièce jointe du prochain message ; « Réutiliser

@@ -18,7 +18,7 @@ const P = F.P;
 const MAX_ATTACHMENTS = 6;
 const ORIGIN = "assistant";
 const VIDEO = /\.(mp4|webm|mov)$/i;
-const CONV_KEY = "chatConversation", ROLE_KEY = "chatRole", LIBRARY_KEY = "assistantLibrary";
+const ROLE_KEY = "chatRole", LIBRARY_KEY = "assistantLibrary";
 
 let hooks = {};
 let roles = [];             // the server's role records
@@ -145,7 +145,10 @@ function renderQuestion(card, live) {
   }
   const row = document.createElement("div");
   row.className = "cc-options";
+  const otherLabel = s => String(s).trim().toLowerCase().replace(/[.…]+$/, "");
   for (const option of card.args.options || []) {
+    // The model sometimes adds its own "Other…": the card already has one.
+    if (otherLabel(option) === otherLabel(t("Other…"))) continue;
     const b = rawText("button", option, "secondary-btn");
     b.type = "button";
     b.disabled = live;
@@ -472,7 +475,6 @@ async function openConversation(id) {
     try { conv = await api.chatLoad(id); }
     catch (err) { conv = null; if (err.status !== 404) warn(err); }
   }
-  saveLocal(CONV_KEY, conv?.id || null);
   renderAnswering();
   renderLog();
   await refreshList();
@@ -624,12 +626,12 @@ const STARTERS = [
 
 let loaded = false;
 // Called each time the page switches to the assistant: the first time loads the roles
-// and the last conversation.
+// and opens on the welcome (a new conversation); earlier ones stay in the list.
 export async function showAssistant() {
   if (!loaded) {
     loaded = true;
     await loadRoles();
-    await openConversation(readLocal(CONV_KEY));
+    await openConversation(null);
   }
   if (!MOBILE.matches) $("chatInput").focus();
 }

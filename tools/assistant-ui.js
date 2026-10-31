@@ -32,7 +32,7 @@ const CARDS = [
   card("C1", "create_image", { prompt: "a perfume bottle on wet black stone", engine: "krea2", ratio: "4:5", count: 1, style: "product" }),
   card("C2", "edit_image", { instruction: "Replace the background of <image1> with a beach", image: "A1", references: [], markets: ["europe"] }),
   card("C3", "video_from_image", { prompt: "slow push-in, waves", image: "C1#1", duration: 6 }, { warnings: ["duration 3 out of range, 5 used"] }),
-  card("C4", "ask_choices", { question: "Which mood?", options: ["Sunny", "Night"] }),
+  card("C4", "ask_choices", { question: "Which mood?", options: ["Sunny", "Night", "Autre…"] }),
   card("C5", "storyboard", { brief: "A detective enters a studio", shots: 5, duration: 5, ratio: "16:9" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
@@ -182,8 +182,9 @@ const CARDS = [
   check(await page.inputValue("#pipelineSelect") === "image2image" && await page.inputValue("#modelSelect") === "qwen21_i2i", "C2 pipeline");
   check(!(await page.isHidden("#assetChip")), "C2 input image not set");
   check((await page.$$(".market-chip.active")).length === 1, "C2 market not selected");
-  // A question answered by a button.
+  // A question answered by a button; the model's own "Other…" is not shown twice.
   await page.click('.rail-mode[data-mode="assistant"]');
+  check((await page.$$(".chat-question .cc-options button")).length === 3, "the model's own Other… duplicates the card's");
   await page.click('.chat-question .cc-options button >> nth=1');
   await page.waitForTimeout(500);
   check(chatBodies[1]?.answer_to === "C4" && chatBodies[1].text === "Night", "answer not sent: " + JSON.stringify(chatBodies[1]));
@@ -197,6 +198,12 @@ const CARDS = [
   check(await page.inputValue("#brief") === "A detective enters a studio" && await page.inputValue("#pipelineSelect") === "storyboard", "director brief not in the form");
   check(llmBodies.some(b => b.includes("A detective enters a studio")), "the director did not start");
   check(cardPosts.some(([id, b]) => id === "C5" && b.status === "launched"), "launch not reported");
+  // A reload opens on the welcome; the conversation stays in the list.
+  await page.click('.rail-mode[data-mode="assistant"]');
+  await page.reload({ waitUntil: "load" });
+  await page.waitForTimeout(600);
+  check(await page.isVisible("#chatStarters") && (await page.$$("#chatLog > *")).length === 0, "reload did not open on the welcome");
+  check(await page.$$eval("#chatConvSelect option", o => o.length) === 2, "the earlier conversation is not in the list");
   check(!errs.length, "page errors: " + errs.join(" | "));
   await browser.close(); server.close();
   console.log(fails.length ? "FAIL\n" + fails.join("\n") : "Assistant mode: all checks passed.");
