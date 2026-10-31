@@ -17,7 +17,9 @@ in `web/js/vendor/`.
 | `web/js/i18n.js`, `i18n-dict.js` | Translation: English text is the key, French, Spanish and German in `DICT` |
 | `web/js/ui.js` | Studio shell: event log, job queue and `runJob`, undo banner, prompt editor, theme |
 | `web/js/form.js` | The 1.4 manifest as tables (workflows, pipelines, controls), form values, sizes, uploads, extra references |
-| `web/js/studio.js` | Studio page: goal cards, menus, inputs, enrichment, generate flows, models, LoRA, update |
+| `web/js/studio.js` | Studio page: goal cards, menus, inputs, enrichment, the form's generate handlers, models, LoRA, update |
+| `web/js/generate.js` | The simple flows as functions of their settings (text/image to image or video, markets, sequence, campaign), called by the form and by the assistant's cards |
+| `web/js/chat.js` | Assistant panel: conversations, streamed replies, role choice, attachments, cards (Generate, ✨, Open in the Studio), role editor of the Models panel: [ASSISTANT.md](ASSISTANT.md) |
 | `web/js/director.js` | Storyboard and reference-to-video director: sheets, shots, shot images, cuts, animatic, Relay |
 | `web/js/gallery.js` | Studio gallery on `/api/gallery` (filters, lightbox, tags, trash) |
 | `web/js/canvas.js` | Canvas page: drawing, media overlays, properties panel, use cases, persistence, theme, language |
@@ -48,6 +50,9 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
   original" removes the replacement. A replaced text only takes the default's place: the answer
   key and the token checks stay in the code, and the panel warns when the text stops naming the
   key (or SUBJECTREF, for reference to video). The defaults stay those of 1.4.
+- **The assistant follows the same rules**: its cards run only on a click, through `generate.js`
+  (the submitted jobs are the form's, byte for byte); a storyboard or reference-to-video card only
+  fills the form; "Open in the Studio" writes the brief on the click, with Undo.
 - **Interface text is translated, log lines too**; file names, prompts and server data are
   marked `data-raw` and never translated.
 
@@ -93,6 +98,7 @@ to it.
 | `python -m pytest` | Server, engines' parameters, gallery, and `tests/test_i18n.py`: every interface string of both pages has its French, Spanish and German translation with the same `{placeholders}`, and no entry is unused | Python, Node |
 | `node tools/parity-prompts.js` | Every prompt compiler and instruction gives, character for character, what 1.4 (`234f37c`, read from `../dellaicontent`) gives, with scripted Gemma answers | Node, the 1.4 checkout |
 | `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256 (or is the replaced one, for its engine only), the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
+| `node tools/assistant-ui.js` | The assistant panel headless with `/api` stubbed and a scripted reply: no job from opening, typing, sending or editing a card; one job per Generate, with the card's settings, reported back; "Open in the Studio" fills the form and submits nothing | Node, Playwright and its Chromium |
 
-Changing a prompt compiler or an instruction makes the last two fail; if the change is wanted,
+Changing a prompt compiler or an instruction makes `parity-prompts.js` and `prompt-systems.js` fail; if the change is wanted,
 update the reference in the same commit and say why.

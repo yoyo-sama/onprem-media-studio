@@ -17,7 +17,9 @@ inclus avec sa licence MIT dans `web/js/vendor/`.
 | `web/js/i18n.js`, `i18n-dict.js` | Traduction : le texte anglais est la clé, français, espagnol et allemand dans `DICT` |
 | `web/js/ui.js` | Cadre du Studio : journal, file de jobs et `runJob`, bandeau d'annulation, éditeur de prompt, thème |
 | `web/js/form.js` | Le manifest de la 1.4 sous forme de tables (workflows, pipelines, contrôles), valeurs du formulaire, tailles, envois, références supplémentaires |
-| `web/js/studio.js` | Page Studio : cartes d'objectif, menus, entrées, enrichissement, générations, modèles, LoRA, mise à jour |
+| `web/js/studio.js` | Page Studio : cartes d'objectif, menus, entrées, enrichissement, gestionnaires de génération du formulaire, modèles, LoRA, mise à jour |
+| `web/js/generate.js` | Les générations simples comme fonctions de leurs réglages (texte/image vers image ou vidéo, marchés, séquence, campagne), appelées par le formulaire et par les cartes de l'assistant |
+| `web/js/chat.js` | Panneau Assistant : conversations, réponses en flux, choix du rôle, pièces jointes, cartes (Générer, ✨, Ouvrir dans le Studio), éditeur de rôles du panneau Modèles : [ASSISTANT.md](ASSISTANT.md) |
 | `web/js/director.js` | Réalisateur du storyboard et de la référence vers vidéo : planches, plans, images des plans, cuts, animatic, Relay |
 | `web/js/gallery.js` | Galerie du Studio sur `/api/gallery` (filtres, visionneuse, tags, corbeille) |
 | `web/js/canvas.js` | Page Canvas : dessin, médias superposés, panneau Propriétés, cas d'usage, sauvegarde, thème, langue |
@@ -49,6 +51,10 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
   celui par défaut : la clé de réponse et les vérifications de jetons restent dans le code, et le
   panneau prévient quand le texte ne nomme plus la clé (ou SUBJECTREF, pour la référence vers
   vidéo). Les consignes par défaut restent celles de la 1.4.
+- **L'assistant suit les mêmes règles** : ses cartes ne tournent que sur un clic, par `generate.js`
+  (les jobs soumis sont ceux du formulaire, octet pour octet) ; une carte storyboard ou référence
+  vers vidéo ne fait que remplir le formulaire ; « Ouvrir dans le Studio » écrit le brief sur le
+  clic, avec Annuler.
 - **Le texte d'interface est traduit, le journal aussi** ; noms de fichiers, prompts et données
   du serveur sont marqués `data-raw` et jamais traduits.
 
@@ -96,6 +102,7 @@ ajoute une carte Import d'image reliée à elle.
 | `python -m pytest` | Serveur, paramètres des moteurs, galerie, et `tests/test_i18n.py` : chaque texte d'interface des deux pages a sa traduction française, espagnole et allemande avec les mêmes `{paramètres}`, et aucune entrée n'est inutilisée | Python, Node |
 | `node tools/parity-prompts.js` | Chaque compilateur de prompt et consigne donne, au caractère près, ce que donne la 1.4 (`234f37c`, lue dans `../dellaicontent`), avec des réponses de Gemma scriptées | Node, la copie de la 1.4 |
 | `node tools/prompt-systems.js` | Lance les deux pages sans affichage avec `/api` bouchonné : pour chaque moteur et bouton ✨ (et l'enrichissement automatique), la consigne reçue par Gemma a le sha256 de la 1.4 (ou est la consigne remplacée, pour son seul moteur), le nombre d'appels et le contenu sont justes, le texte revient dans le champ | Node, Playwright et son Chromium (`NODE_PATH=$(npm root -g)`) |
+| `node tools/assistant-ui.js` | Le panneau Assistant sans affichage, avec `/api` bouchonné et une réponse scriptée : aucun job à l'ouverture, à la saisie, à l'envoi ni à la modification d'une carte ; un job par clic sur Générer, avec les réglages de la carte, signalé au serveur ; « Ouvrir dans le Studio » remplit le formulaire et ne soumet rien | Node, Playwright et son Chromium |
 
-Modifier un compilateur de prompt ou une consigne fait échouer les deux derniers ; si le
+Modifier un compilateur de prompt ou une consigne fait échouer `parity-prompts.js` et `prompt-systems.js` ; si le
 changement est voulu, mettre à jour la référence dans le même commit et dire pourquoi.

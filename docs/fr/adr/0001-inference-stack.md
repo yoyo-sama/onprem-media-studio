@@ -26,7 +26,7 @@ copié et aucun n'est une dépendance.
 | Serveur | Python, FastAPI, un processus, un thread worker GPU | Même langage que tous les moteurs ; les jobs passent dans l'ordre sur un seul GPU |
 | Krea 2, Qwen Image 2.1 | Pipelines `diffusers` de Hugging Face, poids officiels | Les dépôts officiels sont au format diffusers (`model_index.json`) ; bibliothèque Apache-2.0 |
 | MiniMax H3 / FastH3 | `FastVideo` (Apache-2.0) | Publie les poids FastH3 OmniRef NVFP4 QAD avec une recette DGX Spark ; les noyaux NVFP4 et VSA sont son travail, pas le nôtre |
-| LLM de prompt | `llama-server` de llama.cpp, Gemma 4 E4B en GGUF + mmproj | Même approche que Maestro ; API compatible OpenAI ; vision via mmproj |
+| LLM de prompt | `llama-server` de llama.cpp, Gemma 4 en GGUF + mmproj (E4B au départ ; 26B-A4B depuis le 2026-10-31, voir plus bas) | Même approche que Maestro ; API compatible OpenAI ; vision via mmproj |
 | Téléchargement | `huggingface_hub`, fichier par fichier, marqueur `.complete` | Reprise possible, contrôle de l'espace disque, dépôts restreints via `HF_TOKEN` |
 | Compilateurs de prompt | Le moteur JavaScript de la 1.4 (`js/engine.js`), porté en anglais | Source unique partagée par le Studio et le Canvas, déjà couverte par les tests de parité ; le backend ne fait que l'inférence |
 | Packaging | Image de base NGC PyTorch (multi-arch, CUDA 13) | Fournit un PyTorch compilé pour Blackwell/GB10 ; le bare metal réutilise le même paquet Python |
@@ -66,3 +66,14 @@ copié et aucun n'est une dépendance.
 - **Les clips H3 font 5 à 15 s** dans FastVideo, là où la 1.4 acceptait des cuts plus courts.
 - **Le tag de l'image NGC et la révision de llama.cpp** sont figés mais pas encore compilés sur
   GB10 : le premier build sur la machine peut demander de les faire évoluer.
+
+## Amendement du 2026-10-31 : un Gemma plus grand pour les prompts et l'assistant
+
+L'assistant de création (docs/fr/ASSISTANT.md) demande un modèle qui suit de longues consignes de
+rôle et appelle des outils de façon fiable. À la demande du propriétaire du projet, un seul modèle
+sert l'assistant et les enrichissements : Gemma 4 26B-A4B (`ggml-org/gemma-4-26B-A4B-it-GGUF`,
+Q4_0 14,6 Go + mmproj, Apache-2.0). C'est un mélange d'experts avec environ 4 milliards de
+paramètres actifs par jeton : sa vitesse reste proche de celle d'E4B, sa qualité celle d'un modèle
+bien plus grand. Gemma 4 E4B reste disponible par `STUDIO_LLM_MODEL=gemma4-e4b`. Toujours un seul
+LLM : un seul `llama-server`, arrêté quand un moteur H3 a besoin de la mémoire. À vérifier sur le
+GB10 : appels d'outils via `--jinja`, vitesse, et enrichissements comparés à ceux d'E4B.

@@ -1,22 +1,31 @@
-"""Gemma 4 E4B through llama.cpp's llama-server, replacing Ollama.
+"""Gemma 4 through llama.cpp's llama-server, replacing Ollama: prompt enrichment
+and the creative assistant use the same model.
 
 The server is started on the first request (model downloaded first if needed),
 listens on 127.0.0.1 only, and speaks the OpenAI chat API. Vision works through
-the mmproj file: images travel as base64 data URIs.
+the mmproj file: images travel as base64 data URIs. STUDIO_LLM_MODEL chooses the
+model: Gemma 4 26B-A4B by default, Gemma 4 E4B on a machine with less memory.
 """
 
+import json
 import subprocess
 import threading
 import time
+from collections.abc import Iterator
 
 import httpx
 
 from .config import Settings
 from .models import ModelStore
 
-MODEL_ID = "gemma4-e4b"
-MODEL_FILE = "gemma-4-E4B-it-Q8_0.gguf"
-MMPROJ_FILE = "mmproj-gemma-4-E4B-it-Q8_0.gguf"
+# Catalog id → (weights, vision projector).
+LLM_FILES = {
+    "gemma4-26b-a4b": ("gemma-4-26B-A4B-it-Q4_0.gguf", "mmproj-gemma-4-26B-A4B-it-Q8_0.gguf"),
+    "gemma4-e4b": ("gemma-4-E4B-it-Q8_0.gguf", "mmproj-gemma-4-E4B-it-Q8_0.gguf"),
+}
+# Room for the assistant's instructions, tools and conversation history; one slot,
+# so concurrent requests queue instead of splitting the context.
+CTX_SIZE = 32768
 
 
 class LlmError(RuntimeError):
@@ -31,6 +40,9 @@ class LlamaServer:
         self.url = f"http://127.0.0.1:{settings.llm_port}"
         self.proc: subprocess.Popen | None = None
         self._lock = threading.Lock()
+        if settings.llm_model not in LLM_FILES:
+            raise LlmError(f"STUDIO_LLM_MODEL must be one of {', '.join(LLM_FILES)}, not {settings.llm_model!r}")
+        self.model_id = settings.llm_model
 
     @property
     def state(self) -> str:
@@ -39,20 +51,21 @@ class LlamaServer:
         return "running" if self.proc.poll() is None else "exited"
 
     def command(self) -> list[str]:
-        folder = self.models.path(MODEL_ID)
+        folder = self.models.path(self.model_id)
+        weights, mmproj = LLM_FILES[self.model_id]
         return [
             self.settings.llama_server,
-            "--model", str(folder / MODEL_FILE),
-            "--mmproj", str(folder / MMPROJ_FILE),
+            "--model", str(folder / weights),
+            "--mmproj", str(folder / mmproj),
             "--host", "127.0.0.1", "--port", str(self.settings.llm_port),
-            "--ctx-size", "8192", "--n-gpu-layers", "99", "--jinja",
+            "--ctx-size", str(CTX_SIZE), "--parallel", "1", "--n-gpu-layers", "99", "--jinja",
         ]
 
     def start(self) -> None:
         with self._lock:
             if self.state == "running":
                 return
-            self.models.ensure([MODEL_ID])
+            self.models.ensure([self.model_id])
             try:
                 self.proc = subprocess.Popen(self.command())
             except FileNotFoundError as exc:
@@ -98,3 +111,38 @@ class LlamaServer:
         if resp.status_code != 200:
             raise LlmError(f"llama-server answered {resp.status_code}: {resp.text[:300]}")
         return resp.json()["choices"][0]["message"]["content"]
+
+    def stream(self, messages: list[dict], tools: list[dict] | None = None,
+               temperature: float = 0.6) -> Iterator[tuple[str, object]]:
+        """A chat completion, streamed: ("text", chunk) as the answer is written, then
+        ("tool", {"id", "name", "arguments"}) for each tool call once complete.
+        Closing the iterator closes the connection, which stops the generation."""
+        self.start()
+        body = {"messages": messages, "temperature": temperature, "stream": True}
+        if tools:
+            body["tools"] = tools
+        calls: dict[int, dict] = {}
+        with httpx.stream("POST", f"{self.url}/v1/chat/completions", json=body, timeout=300) as resp:
+            if resp.status_code != 200:
+                resp.read()
+                raise LlmError(f"llama-server answered {resp.status_code}: {resp.text[:300]}")
+            for line in resp.iter_lines():
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    delta = json.loads(data)["choices"][0].get("delta") or {}
+                except (ValueError, KeyError, IndexError):
+                    continue
+                if delta.get("content"):
+                    yield "text", delta["content"]
+                for part in delta.get("tool_calls") or []:
+                    call = calls.setdefault(part.get("index", len(calls)), {"id": "", "name": "", "arguments": ""})
+                    call["id"] = part.get("id") or call["id"]
+                    fn = part.get("function") or {}
+                    call["name"] += fn.get("name") or ""
+                    call["arguments"] += fn.get("arguments") or ""
+        for i, call in sorted(calls.items()):
+            yield "tool", {**call, "id": call["id"] or f"call_{i}"}

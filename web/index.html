@@ -19,6 +19,10 @@
         <span class="rail-name">Canvas</span>
       </a>
     </div>
+    <button type="button" class="rail-btn rail-assistant" id="railAssistant" title="Assistant" aria-controls="chatPanel">
+      <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4Z"/><path d="M8.5 9.5h7M8.5 12.5h4.5"/></svg>
+      <span class="rail-name">Assistant</span>
+    </button>
     <button type="button" class="rail-btn" data-panel="monitor" title="Monitor">
       <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6.5 4 13L16 12h5"/></svg>
       <span class="rail-name">Monitor</span>
@@ -36,7 +40,7 @@
       <div class="pipeline">
         <h3 class="section-title">Pipeline flow</h3>
         <div class="pipeline-flow">
-          <div class="step" id="stepEnrich"><strong>Prompt enrichment</strong><span>Gemma 4 E4B</span></div>
+          <div class="step" id="stepEnrich"><strong>Prompt enrichment</strong><span>Gemma 4</span></div>
           <div class="step active"><strong>Model selector</strong><span id="modelLabel" data-raw>—</span></div>
           <div class="step" id="stepInference"><strong>Local inference</strong><span>Job queue</span></div>
           <div class="step"><strong>Gallery</strong><span>Assets + export</span></div>
@@ -81,6 +85,22 @@
           <div class="instr-actions">
             <button type="button" class="control-btn primary" id="instrSave">Save</button>
             <button type="button" class="control-btn" id="instrReset">Restore the original</button>
+          </div>
+        </div>
+      </details>
+      <details class="right-card">
+        <summary class="panel-title"><span class="live-dot">Assistant roles</span><span id="roleState"></span></summary>
+        <p>What each role of the assistant is told. The text starts with a header between --- lines (id, name, when the role answers, the tools it may use); the rest is its instructions. Your text replaces the shipped one.</p>
+        <div class="form-stack">
+          <label>
+            Role
+            <select id="roleEditSelect"></select>
+          </label>
+          <textarea id="roleEditText" rows="14" spellcheck="false" aria-label="Role instructions"></textarea>
+          <span class="hint" id="roleEditHint"></span>
+          <div class="instr-actions">
+            <button type="button" class="control-btn primary" id="roleEditSave">Save</button>
+            <button type="button" class="control-btn" id="roleEditReset">Restore the original</button>
           </div>
         </div>
       </details>
@@ -249,7 +269,7 @@
               <p class="hint">No engine of this studio encodes a negative prompt: say every constraint positively in the brief.</p>
               <div class="actions">
                 <button class="secondary-btn" id="enrichBtn" title="Rewrites your brief into a detailed prompt with the local LLM, once, without starting a render">✨ Enrich the brief</button>
-                <button class="secondary-btn" id="autoEnrichBtn" aria-pressed="false" title="Enriches the brief with Gemma 4 E4B before every render (except workflows that build their own prompts)">✨ Auto enrichment (Gemma 4 E4B): off</button>
+                <button class="secondary-btn" id="autoEnrichBtn" aria-pressed="false" title="Enriches the brief with Gemma 4 before every render (except workflows that build their own prompts)">✨ Auto enrichment (Gemma 4): off</button>
               </div>
             </div>
           </details>
@@ -456,6 +476,36 @@
   <p class="credits">Video and audio generation: MiniMax H3 (FastH3, run by FastVideo).</p>
   </div>
 </div>
+
+<aside class="chat-panel" id="chatPanel" aria-label="Assistant" hidden>
+  <header class="chat-head">
+    <strong class="chat-title">Assistant</strong>
+    <select id="chatConvSelect" aria-label="Conversations"></select>
+    <button type="button" class="secondary-btn" id="chatNewBtn" title="New conversation">＋</button>
+    <button type="button" class="secondary-btn" id="chatDeleteBtn" title="Delete this conversation">🗑</button>
+    <button type="button" class="secondary-btn" id="chatCloseBtn" title="Close the assistant">✕</button>
+  </header>
+  <div class="chat-role-row">
+    <label>Role <select id="chatRoleSelect"></select></label>
+    <span class="hint" id="chatRoleNow"></span>
+  </div>
+  <div class="chat-log" id="chatLog" role="log"></div>
+  <div class="chat-starters" id="chatStarters">
+    <p class="hint">Say what you want to make: the assistant asks what it needs, then proposes cards. Nothing renders before you click Generate on a card.</p>
+  </div>
+  <form class="chat-compose" id="chatForm">
+    <div class="chat-answering" id="chatAnswering" hidden></div>
+    <div class="chat-atts" id="chatAtts"></div>
+    <textarea id="chatInput" rows="2" maxlength="8000" placeholder="Describe what you want to make (Enter sends, Shift+Enter for a new line)" aria-label="Message"></textarea>
+    <div class="chat-compose-row">
+      <button type="button" class="secondary-btn" id="chatAttachBtn" title="Attach images (or drop them here, from your computer or the gallery)">📎</button>
+      <input type="file" id="chatFiles" accept="image/*" multiple hidden>
+      <span class="spacer"></span>
+      <button type="button" class="secondary-btn" id="chatStopBtn" hidden>Stop</button>
+      <button type="submit" class="primary-btn" id="chatSendBtn">Send</button>
+    </div>
+  </form>
+</aside>
 
 <div id="promptModal" hidden>
   <div class="prompt-dialog" role="dialog" aria-modal="true" aria-labelledby="promptModalTitle">

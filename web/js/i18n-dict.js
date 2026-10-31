@@ -612,10 +612,10 @@ export const DICT = {
     es: "Motor",
     de: "Engine",
   },
-  "Enriches the brief with Gemma 4 E4B before every render (except workflows that build their own prompts)": {
-    fr: "Enrichit le brief avec Gemma 4 E4B avant chaque rendu (sauf les workflows qui construisent leurs propres prompts)",
-    es: "Enriquece el brief con Gemma 4 E4B antes de cada render (salvo los workflows que construyen sus propios prompts)",
-    de: "Reichert das Briefing vor jedem Rendering mit Gemma 4 E4B an (außer bei Workflows, die ihre eigenen Prompts bauen)",
+  "Enriches the brief with Gemma 4 before every render (except workflows that build their own prompts)": {
+    fr: "Enrichit le brief avec Gemma 4 avant chaque rendu (sauf les workflows qui construisent leurs propres prompts)",
+    es: "Enriquece el brief con Gemma 4 antes de cada render (salvo los workflows que construyen sus propios prompts)",
+    de: "Reichert das Briefing vor jedem Rendering mit Gemma 4 an (außer bei Workflows, die ihre eigenen Prompts bauen)",
   },
   "Enriching the brief with {llm}…": {
     fr: "Enrichissement du brief avec {llm}…",
@@ -872,10 +872,10 @@ export const DICT = {
     es: "Galería: {warning}",
     de: "Galerie: {warning}",
   },
-  "Gemma 4 E4B": {
-    fr: "Gemma 4 E4B",
-    es: "Gemma 4 E4B",
-    de: "Gemma 4 E4B",
+  "Gemma 4": {
+    fr: "Gemma 4",
+    es: "Gemma 4",
+    de: "Gemma 4",
   },
   "Gemma instruction saved: {engine}.": {
     fr: "Consigne Gemma enregistrée : {engine}.",
@@ -2977,10 +2977,10 @@ export const DICT = {
     es: "✕ Quitar la imagen final",
     de: "✕ Endbild entfernen",
   },
-  "✨ Auto enrichment (Gemma 4 E4B): off": {
-    fr: "✨ Enrichissement auto (Gemma 4 E4B) : non",
-    es: "✨ Enriquecimiento automático (Gemma 4 E4B): no",
-    de: "✨ Automatische Anreicherung (Gemma 4 E4B): aus",
+  "✨ Auto enrichment (Gemma 4): off": {
+    fr: "✨ Enrichissement auto (Gemma 4) : non",
+    es: "✨ Enriquecimiento automático (Gemma 4): no",
+    de: "✨ Automatische Anreicherung (Gemma 4): aus",
   },
   "✨ Auto enrichment ({llm}): off": {
     fr: "✨ Enrichissement auto ({llm}) : non",
@@ -3106,5 +3106,365 @@ export const DICT = {
     fr: "🗑 Supprimer",
     es: "🗑 Eliminar",
     de: "🗑 Löschen",
+  },
+  "Rewrites this card's prompt with the engine's Gemma instruction, without starting a render": {
+    fr: "Réécrit le prompt de cette carte avec la consigne Gemma du moteur, sans lancer de rendu",
+    es: "Reescribe el prompt de esta tarjeta con la instrucción Gemma del motor, sin lanzar ningún render",
+    de: "Schreibt den Prompt dieser Karte mit der Gemma-Anweisung der Engine um, ohne ein Rendering zu starten",
+  },
+  "+ New role": {
+    fr: "+ Nouveau rôle",
+    es: "+ Nuevo rol",
+    de: "+ Neue Rolle",
+  },
+  "A new role: give it its own id.": {
+    fr: "Un nouveau rôle : donne-lui son propre id.",
+    es: "Un rol nuevo: dale su propio id.",
+    de: "Eine neue Rolle: Gib ihr eine eigene ID.",
+  },
+  "A proposal was set aside: {reason}": {
+    fr: "Une proposition a été écartée : {reason}",
+    es: "Se ha descartado una propuesta: {reason}",
+    de: "Ein Vorschlag wurde verworfen: {reason}",
+  },
+  "A role you added.": {
+    fr: "Un rôle que tu as ajouté.",
+    es: "Un rol que has añadido.",
+    de: "Eine Rolle, die du hinzugefügt hast.",
+  },
+  "Ad art director": {
+    fr: "DA publicité",
+    es: "Director de arte publicitario",
+    de: "Werbe-Art-Director",
+  },
+  "Adapt this ad for other markets": {
+    fr: "Adapte cette pub à d'autres marchés",
+    es: "Adapta este anuncio a otros mercados",
+    de: "Passe diese Anzeige an andere Märkte an",
+  },
+  "Animate this image into a short clip": {
+    fr: "Anime cette image en un court clip",
+    es: "Anima esta imagen en un clip corto",
+    de: "Animiere dieses Bild zu einem kurzen Clip",
+  },
+  "Answer in your own words": {
+    fr: "Réponds avec tes propres mots",
+    es: "Responde con tus propias palabras",
+    de: "Antworte mit deinen eigenen Worten",
+  },
+  "Answering: {question}": {
+    fr: "Réponse à : {question}",
+    es: "Respondiendo a: {question}",
+    de: "Antwort auf: {question}",
+  },
+  "Automatic": {
+    fr: "Automatique",
+    es: "Automático",
+    de: "Automatisch",
+  },
+  "Card prompt enriched.": {
+    fr: "Prompt de la carte enrichi.",
+    es: "Prompt de la tarjeta enriquecido.",
+    de: "Prompt der Karte angereichert.",
+  },
+  "Casting and sets": {
+    fr: "Casting et décors",
+    es: "Casting y decorados",
+    de: "Casting und Kulissen",
+  },
+  "Clips": {
+    fr: "Clips",
+    es: "Clips",
+    de: "Clips",
+  },
+  "Delete the role": {
+    fr: "Supprimer le rôle",
+    es: "Eliminar el rol",
+    de: "Rolle löschen",
+  },
+  "Delete this conversation for good?": {
+    fr: "Supprimer définitivement cette conversation ?",
+    es: "¿Eliminar esta conversación definitivamente?",
+    de: "Diese Unterhaltung endgültig löschen?",
+  },
+  "Director": {
+    fr: "Réalisateur",
+    es: "Director",
+    de: "Regie",
+  },
+  "Empty prompt: write what you want first.": {
+    fr: "Prompt vide : écris d'abord ce que tu veux.",
+    es: "Prompt vacío: escribe primero lo que quieres.",
+    de: "Leerer Prompt: Schreib zuerst, was du willst.",
+  },
+  "Fills the Studio form with this card, to go on there": {
+    fr: "Remplit le formulaire du Studio avec cette carte, pour continuer là-bas",
+    es: "Rellena el formulario del Studio con esta tarjeta, para seguir allí",
+    de: "Füllt das Studio-Formular mit dieser Karte aus, um dort weiterzumachen",
+  },
+  "Fills the Studio form; the step-by-step review starts there": {
+    fr: "Remplit le formulaire du Studio ; la revue étape par étape commence là-bas",
+    es: "Rellena el formulario del Studio; la revisión paso a paso empieza allí",
+    de: "Füllt das Studio-Formular aus; die schrittweise Prüfung beginnt dort",
+  },
+  "General assistant": {
+    fr: "Assistant général",
+    es: "Asistente general",
+    de: "Allgemeiner Assistent",
+  },
+  "Generate again": {
+    fr: "Régénérer",
+    es: "Regenerar",
+    de: "Neu generieren",
+  },
+  "I need a poster for a product launch": {
+    fr: "J'ai besoin d'une affiche pour un lancement de produit",
+    es: "Necesito un póster para un lanzamiento de producto",
+    de: "Ich brauche ein Poster für eine Produkteinführung",
+  },
+  "Joined clips": {
+    fr: "Clips assemblés",
+    es: "Clips unidos",
+    de: "Verbundene Clips",
+  },
+  "Key images": {
+    fr: "Images clés",
+    es: "Imágenes clave",
+    de: "Schlüsselbilder",
+  },
+  "Localisation": {
+    fr: "Localisation",
+    es: "Localización",
+    de: "Lokalisierung",
+  },
+  "Markets: {list}": {
+    fr: "Marchés : {list}",
+    es: "Mercados: {list}",
+    de: "Märkte: {list}",
+  },
+  "Not an answer to this question": {
+    fr: "Ce n'est pas une réponse à cette question",
+    es: "No es una respuesta a esta pregunta",
+    de: "Keine Antwort auf diese Frage",
+  },
+  "Only images can be attached.": {
+    fr: "Seules des images peuvent être jointes.",
+    es: "Solo se pueden adjuntar imágenes.",
+    de: "Nur Bilder können angehängt werden.",
+  },
+  "Open in the Studio": {
+    fr: "Ouvrir dans le Studio",
+    es: "Abrir en el Studio",
+    de: "Im Studio öffnen",
+  },
+  "Opened in the Studio": {
+    fr: "Ouverte dans le Studio",
+    es: "Abierta en el Studio",
+    de: "Im Studio geöffnet",
+  },
+  "Other…": {
+    fr: "Autre…",
+    es: "Otra…",
+    de: "Andere…",
+  },
+  "Product and fashion campaign": {
+    fr: "Campagne produit et mode",
+    es: "Campaña de producto y moda",
+    de: "Produkt- und Modekampagne",
+  },
+  "Proposed": {
+    fr: "Proposée",
+    es: "Propuesta",
+    de: "Vorgeschlagen",
+  },
+  "References": {
+    fr: "Références",
+    es: "Referencias",
+    de: "Referenzen",
+  },
+  "Remove this image": {
+    fr: "Retirer cette image",
+    es: "Quitar esta imagen",
+    de: "Dieses Bild entfernen",
+  },
+  "Role restored: {id}.": {
+    fr: "Rôle restauré : {id}.",
+    es: "Rol restaurado: {id}.",
+    de: "Rolle wiederhergestellt: {id}.",
+  },
+  "Role saved: {id}.": {
+    fr: "Rôle enregistré : {id}.",
+    es: "Rol guardado: {id}.",
+    de: "Rolle gespeichert: {id}.",
+  },
+  "Role: chosen automatically": {
+    fr: "Rôle : choisi automatiquement",
+    es: "Rol: elegido automáticamente",
+    de: "Rolle: automatisch gewählt",
+  },
+  "Role: {role} (automatic)": {
+    fr: "Rôle : {role} (automatique)",
+    es: "Rol: {role} (automático)",
+    de: "Rolle: {role} (automatisch)",
+  },
+  "Role: {role} (your choice)": {
+    fr: "Rôle : {role} (ton choix)",
+    es: "Rol: {role} (tu elección)",
+    de: "Rolle: {role} (deine Wahl)",
+  },
+  "Running…": {
+    fr: "En cours…",
+    es: "En curso…",
+    de: "Läuft…",
+  },
+  "Shipped role.": {
+    fr: "Rôle d'origine.",
+    es: "Rol original.",
+    de: "Mitgelieferte Rolle.",
+  },
+  "Subject sheet": {
+    fr: "Planche du sujet",
+    es: "Hoja del sujeto",
+    de: "Motivblatt",
+  },
+  "The assistant is unavailable: {error}": {
+    fr: "L'assistant est indisponible : {error}",
+    es: "El asistente no está disponible: {error}",
+    de: "Der Assistent ist nicht verfügbar: {error}",
+  },
+  "The role header needs an id line.": {
+    fr: "L'en-tête du rôle doit avoir une ligne id.",
+    es: "La cabecera del rol necesita una línea id.",
+    de: "Der Kopf der Rolle braucht eine id-Zeile.",
+  },
+  "Transition editor": {
+    fr: "Monteur transitions",
+    es: "Editor de transiciones",
+    de: "Übergangs-Cutter",
+  },
+  "Turn my story into a short trailer": {
+    fr: "Fais de mon histoire une courte bande-annonce",
+    es: "Convierte mi historia en un tráiler corto",
+    de: "Mach aus meiner Geschichte einen kurzen Trailer",
+  },
+  "Video from a text": {
+    fr: "Vidéo à partir d'un texte",
+    es: "Vídeo a partir de un texto",
+    de: "Video aus einem Text",
+  },
+  "Video from an image": {
+    fr: "Vidéo à partir d'une image",
+    es: "Vídeo a partir de una imagen",
+    de: "Video aus einem Bild",
+  },
+  "Waiting for {ids}: generate the card that makes it first.": {
+    fr: "En attente de {ids} : génère d'abord la carte qui le produit.",
+    es: "Esperando {ids}: genera primero la tarjeta que lo produce.",
+    de: "Wartet auf {ids}: Generiere zuerst die Karte, die es erzeugt.",
+  },
+  "You chose {role}.": {
+    fr: "Tu as choisi {role}.",
+    es: "Has elegido {role}.",
+    de: "Du hast {role} gewählt.",
+  },
+  "Your text (replaces the shipped role).": {
+    fr: "Ton texte (remplace le rôle d'origine).",
+    es: "Tu texto (sustituye al rol original).",
+    de: "Dein Text (ersetzt die mitgelieferte Rolle).",
+  },
+  "{id} is not available yet.": {
+    fr: "{id} n'est pas encore disponible.",
+    es: "{id} aún no está disponible.",
+    de: "{id} ist noch nicht verfügbar.",
+  },
+  "{role} takes over.": {
+    fr: "{role} prend le relais.",
+    es: "{role} toma el relevo.",
+    de: "{role} übernimmt.",
+  },
+  "Assistant roles": {
+    fr: "Rôles de l'assistant",
+    es: "Roles del asistente",
+    de: "Rollen des Assistenten",
+  },
+  "Assistant": {
+    fr: "Assistant",
+    es: "Asistente",
+    de: "Assistent",
+  },
+  "Attach images (or drop them here, from your computer or the gallery)": {
+    fr: "Joindre des images (ou dépose-les ici, depuis ton ordinateur ou la galerie)",
+    es: "Adjuntar imágenes (o suéltalas aquí, desde tu ordenador o la galería)",
+    de: "Bilder anhängen (oder zieh sie hierher, vom Computer oder aus der Galerie)",
+  },
+  "Close the assistant": {
+    fr: "Fermer l'assistant",
+    es: "Cerrar el asistente",
+    de: "Assistenten schließen",
+  },
+  "Conversations": {
+    fr: "Conversations",
+    es: "Conversaciones",
+    de: "Unterhaltungen",
+  },
+  "Delete this conversation": {
+    fr: "Supprimer cette conversation",
+    es: "Eliminar esta conversación",
+    de: "Diese Unterhaltung löschen",
+  },
+  "Describe what you want to make (Enter sends, Shift+Enter for a new line)": {
+    fr: "Décris ce que tu veux créer (Entrée envoie, Maj+Entrée pour aller à la ligne)",
+    es: "Describe lo que quieres crear (Intro envía, Mayús+Intro para una línea nueva)",
+    de: "Beschreib, was du erstellen willst (Enter sendet, Umschalt+Enter für eine neue Zeile)",
+  },
+  "Message": {
+    fr: "Message",
+    es: "Mensaje",
+    de: "Nachricht",
+  },
+  "New conversation": {
+    fr: "Nouvelle conversation",
+    es: "Nueva conversación",
+    de: "Neue Unterhaltung",
+  },
+  "Role instructions": {
+    fr: "Consignes du rôle",
+    es: "Instrucciones del rol",
+    de: "Anweisungen der Rolle",
+  },
+  "Role": {
+    fr: "Rôle",
+    es: "Rol",
+    de: "Rolle",
+  },
+  "Say what you want to make: the assistant asks what it needs, then proposes cards. Nothing renders before you click Generate on a card.": {
+    fr: "Dis ce que tu veux créer : l'assistant demande ce qui lui manque, puis propose des cartes. Rien ne part en rendu avant ton clic sur Générer dans une carte.",
+    es: "Di lo que quieres crear: el asistente pregunta lo que le falta y luego propone tarjetas. Nada se renderiza antes de que pulses Generar en una tarjeta.",
+    de: "Sag, was du erstellen willst: Der Assistent fragt nach, was ihm fehlt, und schlägt dann Karten vor. Nichts wird gerendert, bevor du auf einer Karte auf Generieren klickst.",
+  },
+  "Send": {
+    fr: "Envoyer",
+    es: "Enviar",
+    de: "Senden",
+  },
+  "Stop": {
+    fr: "Arrêter",
+    es: "Detener",
+    de: "Stopp",
+  },
+  "What each role of the assistant is told. The text starts with a header between --- lines (id, name, when the role answers, the tools it may use); the rest is its instructions. Your text replaces the shipped one.": {
+    fr: "Ce que l'on dit à chaque rôle de l'assistant. Le texte commence par un en-tête entre deux lignes --- (id, nom, quand le rôle répond, les outils qu'il peut utiliser) ; le reste, ce sont ses consignes. Ton texte remplace celui d'origine.",
+    es: "Lo que se le dice a cada rol del asistente. El texto empieza con una cabecera entre líneas --- (id, nombre, cuándo responde el rol, las herramientas que puede usar); el resto son sus instrucciones. Tu texto sustituye al original.",
+    de: "Was jeder Rolle des Assistenten gesagt wird. Der Text beginnt mit einem Kopf zwischen ---Zeilen (ID, Name, wann die Rolle antwortet, die Werkzeuge, die sie nutzen darf); der Rest sind ihre Anweisungen. Dein Text ersetzt den mitgelieferten.",
+  },
+  "Assistant card opened in the Studio form: nothing starts before Generate.": {
+    fr: "Carte de l'assistant ouverte dans le formulaire du Studio : rien ne part avant Générer.",
+    es: "Tarjeta del asistente abierta en el formulario del Studio: nada empieza antes de Generar.",
+    de: "Assistentenkarte im Studio-Formular geöffnet: Nichts startet vor Generieren.",
+  },
+  "Card opened in the Studio form.": {
+    fr: "Carte ouverte dans le formulaire du Studio.",
+    es: "Tarjeta abierta en el formulario del Studio.",
+    de: "Karte im Studio-Formular geöffnet.",
   },
 };

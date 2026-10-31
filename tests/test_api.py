@@ -31,6 +31,7 @@ class Echo(Pipeline):
 
 class FakeLlm:
     state = "stopped"
+    model_id = "gemma4-26b-a4b"
 
     def chat(self, system, prompt, images, json_mode, temperature):
         return '{"prompt": "%s"}' % prompt.upper()

@@ -4,7 +4,8 @@
 Ollama, no cloud: the app runs the models itself and downloads the weights it needs on first use.
 
 Successor of AI Content Studio 1.4. Engines: Krea 2, Qwen Image 2.1, MiniMax H3
-through FastH3, Gemma 4 E4B for prompt enrichment.
+through FastH3, Gemma 4 26B-A4B for prompt enrichment and the creative assistant (a chat with
+roles that proposes ready-to-run cards: [docs/ASSISTANT.md](docs/ASSISTANT.md)).
 
 > Status: step 4 of the [roadmap](docs/ROADMAP.md). The server, model downloads, job queue and
 > LLM bridge are in place, and the image engines (Krea 2, Qwen Image 2.1), Gemma 4 and the
@@ -78,6 +79,7 @@ the `PATH` or in `STUDIO_LLAMA_SERVER`.
 - [Image engines](docs/IMAGE-ENGINES.md): Krea 2 and Qwen Image 2.1 jobs, image references, qualification
 - [Video engines](docs/H3.md): MiniMax H3 jobs, the two-pass reference-to-video, precision
   fallback, LoRA stack, qualification
+- [Creative assistant](docs/ASSISTANT.md): the chat panel, its roles, cards and model
 - [Front end](docs/FRONTEND.md): Studio and Canvas pages, Canvas cards, differences from 1.4,
   front-end tests
 - [Bare-metal install](docs/INSTALL.md): `scripts/install.sh`, service, updates

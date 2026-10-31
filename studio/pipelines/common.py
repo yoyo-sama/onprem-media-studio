@@ -80,6 +80,9 @@ def fit_area(width: int, height: int, area: int = 1024 * 1024, multiple: int = 3
 # upscaler, VAE decode) goes far past its weights, and with Qwen kept next to it a
 # two-pass r2v left 11 GB free on the GB10.
 _resident: dict[object, object] = {}
+# Called when a pipeline loaded alone still does not fit once every other pipeline
+# is freed: the app registers the LLM server's stop here.
+LOW_MEMORY: list = []
 RESERVE = 16 * 1024**3  # left free next to the weights for the render's activations
 
 
@@ -118,6 +121,9 @@ def load(key, build, size: int = 0, alone: bool = False):
         return _resident[key]
     while _resident and (alone or free_memory() < size + RESERVE):
         _free(next(iter(_resident)))
+    if alone and LOW_MEMORY and free_memory() < size + RESERVE:
+        for hook in LOW_MEMORY:
+            hook()
     _resident[key] = build()
     return _resident[key]
 

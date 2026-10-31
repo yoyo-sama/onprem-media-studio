@@ -11,6 +11,8 @@ from pydantic import BaseModel
 
 from . import gallery as gallery_api
 from . import instructions, loras, update
+from .assistant import chat as assistant_chat
+from .assistant.roles import Roles
 from .config import APP_VERSION, Settings
 from .files import FileStore
 from .gallery import Gallery
@@ -118,11 +120,18 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     app.include_router(update.router(updater))
     app.include_router(loras.router(settings.loras_dir))
     app.include_router(instructions.router(instructions.Instructions(settings.data_dir / "instructions.json")))
+    assistant = assistant_chat.Assistant(llm, Roles(settings.data_dir),
+                                         assistant_chat.Conversations(settings.data_dir / "chats"), files,
+                                         settings.app_name)
+    app.include_router(assistant_chat.router(assistant))
+    # A video engine that does not fit next to the LLM stops it; the next LLM request
+    # starts it again (about 20 s).
+    common.LOW_MEMORY.append(llm.stop)
 
     @app.get("/api/health")
     def health():
         return {"app": settings.app_name, "version": APP_VERSION, "gpu": gpu_info(), "memory": memory_info(),
-                "llm": llm.state, "queue": busy()}
+                "llm": llm.state, "llm_model": llm.model_id, "queue": busy()}
 
     @app.get("/api/models")
     def list_models():

@@ -16,6 +16,8 @@ import { initModelNotice, showModelNotice } from "./model-notice.js";
 import { initGallery } from "./gallery.js";
 import * as F from "./form.js";
 import * as D from "./director.js";
+import * as G from "./generate.js";
+import { initChat, loadRolePanel } from "./chat.js";
 
 const P = F.P;
 const brief = $("brief");
@@ -171,25 +173,15 @@ async function inputImageRef() {
 }
 
 // ── Target markets ────────────────────────────────────────────────────────────
-const MARKETS = {
-  na: { label: L("North America"), cues: "New York and Los Angeles urban backdrop, bold dynamic typography, energetic premium blockbuster vibe" },
-  latam: { label: L("Latin America"), cues: "Rio de Janeiro and Mexico City vibrancy, warm saturated color accents, festive energetic atmosphere" },
-  europe: { label: L("Europe"), cues: "Parisian and Berlin refined atmosphere, elegant minimal typography, sophisticated muted palette accents" },
-  mea: { label: L("Middle East"), cues: "Dubai futuristic skyline, luxurious gold accents, modest wardrobe styling, Arabic typographic cues" },
-  africa: { label: L("Africa"), cues: "Lagos and Nairobi skyline energy, warm earth-tone accents, contemporary Afro-futurist visual cues" },
-  asia: { label: L("Asia"), cues: "Tokyo and Seoul neon cityscape, CJK typography styling, high-tech night aesthetics" },
-};
 const selectedMarkets = new Set();
-// The market name in the prompt is the English one: it is model input.
-const marketPrompt = id =>
-  `${F.brief()} Adapt this asset for the ${MARKETS[id].label} market: ${MARKETS[id].cues}. Keep the composition, main character, logo placement and brand palette unchanged.`;
 function renderMarkets() {
-  $("marketChips").replaceChildren(...Object.entries(MARKETS).map(([id, m]) => {
+  $("marketChips").replaceChildren(...Object.entries(G.MARKETS).map(([id, m]) => {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "market-chip";
     chip.textContent = m.label;
-    chip.setAttribute("aria-pressed", "false");
+    chip.classList.toggle("active", selectedMarkets.has(id));
+    chip.setAttribute("aria-pressed", String(selectedMarkets.has(id)));
     chip.addEventListener("click", () => {
       if (selectedMarkets.has(id)) selectedMarkets.delete(id); else selectedMarkets.add(id);
       chip.classList.toggle("active", selectedMarkets.has(id));
@@ -256,15 +248,6 @@ function renderSeqSummary() {
     { n: segs, asked, real: real.toFixed(2) });
 }
 const txAria = (el, text) => { el.setAttribute("aria-label", text); el.title = text; };
-
-// Aspect of the sequence: the first image's, so every segment renders at one size.
-async function seqAspect() {
-  const bmp = await createImageBitmap(await F.imageBlob(seqImages[0]));
-  const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-  const g = gcd(bmp.width, bmp.height), w = bmp.width / g, h = bmp.height / g;
-  bmp.close();
-  return w <= 9999 && h <= 9999 && w / h >= 0.25 && w / h <= 4 ? `${w}:${h}` : undefined;
-}
 
 // ── Extra references and H3 subjects ──────────────────────────────────────────
 function addRefs(images) {
@@ -478,9 +461,8 @@ async function generatePlain(wf, seed) {
   const withStyle = s => (styleText ? `${s} ${styleText}` : s);
   const markets = wf.pipeline === "image2image" ? [...selectedMarkets] : [];
   const specs = markets.length
-    ? markets.map(id => ({ prompt: withStyle(marketPrompt(id)), label: ["{workflow} · {market}", { workflow: t(wf.label), market: t(MARKETS[id].label) }] }))
+    ? markets.map(id => ({ prompt: withStyle(G.marketPrompt(F.brief(), id)), label: ["{workflow} · {market}", { workflow: t(wf.label), market: t(G.MARKETS[id].label) }] }))
     : [{ prompt: withStyle(F.brief()), label: [wf.label] }];
-  const [width, height] = (wf.engine === "qwen-image-2.1" ? F.QWEN21_RATIOS : F.RATIOS)[$("ratioSelect").value];
   const count = clampInt($("variants").value, 1, 4, 1), duration = F.formDuration(), loras = F.formLoras();
   let image = null, last = null, refs = [];
   if (wf.pipeline === "image2image" || wf.pipeline === "image2video") image = await inputImageRef();
@@ -488,28 +470,8 @@ async function generatePlain(wf, seed) {
   if (wf.id === "qwen21_i2i") refs = await F.refRefs("i2i");
   const lastFile = $("lastImageInput").files[0];
   if (wf.id === "h3_i2v" && lastFile) last = await F.imageRef({ name: lastFile.name, blob: lastFile });
-  specs.forEach((spec, i) => {
-    const s = F.seedPlus(seed, i);
-    let params, info;
-    if (wf.id === "krea2_t2i" || wf.id === "qwen21_t2i") {
-      params = { prompt: spec.prompt, width, height, count, seed: s };
-      info = `${width}×${height}`;
-    } else if (wf.id === "qwen21_i2i") {
-      // The size follows the input image (~1 MP): the ratio control plays no part here.
-      params = { prompt: spec.prompt, images: [image, ...refs], seed: s };
-      info = refs.length ? `Qwen Image 2.1 · +${refs.length} ref.` : "Qwen Image 2.1";
-    } else if (wf.id === "h3_t2v") {
-      params = { prompt: F.capH3(spec.prompt), duration, seed: s, loras, aspect: $("ratioSelect").value };
-      info = `${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`;
-    } else {
-      // H3 expects at the head of the prompt the moment each input image stands for.
-      params = { prompt: F.capH3(`${P.h3Alignment(!!last, duration)}\n\n${spec.prompt}`), duration, seed: s, loras, image,
-                 ...(last ? { last_image: last } : {}) };
-      info = `${last ? "FL2VA" : "I2VA"} · ${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`;
-    }
-    detach(runJob(wf.engine, params, { origin: markets.length ? "markets" : "studio", label: spec.label,
-      sub: ["{info} · seed {seed}", { info, seed: s }] }));
-  });
+  G.runPlain(wf, { specs, origin: markets.length ? "markets" : "studio", ratio: $("ratioSelect").value,
+    count, duration, loras, image, last, refs, seed }).forEach(detach);
 }
 
 // Each pair of images becomes an H3 segment from the first to the last frame, then the
@@ -517,35 +479,62 @@ async function generatePlain(wf, seed) {
 async function generateSequence(seed) {
   if (seqImages.length < 2) throw new Error(t("Add at least 2 images to the sequence (files or gallery)."));
   const items = seqImages.slice(), text = F.brief(), loras = F.formLoras();
-  const [refs, aspect] = await Promise.all([Promise.all(items.map(F.imageRef)), seqAspect()]);
-  const n = items.length - 1;
-  log("req", "Sequence: {n} segment(s) from first to last frame…", { n });
-  const clips = items.slice(0, -1).map((it, i) => runJob("h3-i2v", {
-    prompt: F.capH3(`${P.h3Alignment(true, it.dur)}\n\n${text}`), duration: it.dur, seed: F.seedPlus(seed, i), loras,
-    image: refs[i], last_image: refs[i + 1], ...(aspect ? { aspect } : {}),
-  }, { origin: "sequence", label: ["Sequence · segment {k}/{n}", { k: i + 1, n }],
-       sub: ["{info} · seed {seed}", { info: `FL2VA · ${it.dur} s`, seed: F.seedPlus(seed, i) }] }));
-  detach(Promise.all(clips).then(async jobs => {
-    const videos = jobs.map(j => j.outputs.find(o => o.endsWith(".mp4")));
-    await runJob("video-concat", { clips: videos }, { origin: "sequence", label: ["Sequence · assembly"],
-      sub: ["{n} segment(s)", { n }] });
-    log("ok", "Sequence assembled.");
-  }));
+  const [refs, aspect] = await Promise.all([Promise.all(items.map(F.imageRef)), G.seqAspect(items[0])]);
+  detach(G.runSequence({ refs, durs: items.map(it => it.dur), text, loras, aspect, seed }));
 }
 
 // Posters, thumbnails and a social image (Krea 2), plus a vertical H3 teaser.
-const CAMPAIGN_NAMES = { poster: L("posters"), thumbnail: L("thumbnails"), social: L("social image") };
 function generateCampaign(seed) {
-  const text = F.brief(), styleId = F.currentStyleId();
-  const count = clampInt($("variants").value, 1, 4, 3), duration = F.formDuration();
-  P.CAMPAIGN_IMAGES.forEach((img, i) => detach(runJob("krea2-t2i", {
-    prompt: P.campaignPrompt(text, img.suffix, styleId), width: img.width, height: img.height,
-    count: img.batch ? count : 1, seed: F.seedPlus(seed, 200 + i),
-  }, { origin: "campaign", label: ["Campaign · {name}", { name: t(CAMPAIGN_NAMES[img.name]) }],
-       sub: ["{info} · seed {seed}", { info: `${img.width}×${img.height}`, seed: F.seedPlus(seed, 200 + i) }] })));
-  detach(runJob("h3-t2v", {
-    prompt: F.capH3(P.campaignPrompt(text, P.CAMPAIGN_TEASER, styleId)), duration, seed, aspect: "9:16", loras: [],
-  }, { origin: "campaign", label: ["Campaign · teaser"], sub: ["{info} · seed {seed}", { info: `9:16 · ${duration} s`, seed }] }));
+  G.runCampaign({ text: F.brief(), styleId: F.currentStyleId(), count: clampInt($("variants").value, 1, 4, 3),
+    duration: F.formDuration(), seed }).forEach(detach);
+}
+
+// ── Assistant cards opened in the form ────────────────────────────────────────
+// A card of the assistant taken over by the form: pipeline, engine, settings, images
+// and the brief, on the user's click. Starts nothing; Undo puts the brief and the
+// pipeline back (the images stay, as with "Reuse the prompt").
+const CARD_FORM = {
+  create_image: a => ["text2image", a.engine === "qwen" ? "qwen21_t2i" : "krea2_t2i", a.prompt],
+  edit_image: a => ["image2image", "qwen21_i2i", a.instruction],
+  video_from_text: a => ["text2video", "h3_t2v", a.prompt],
+  video_from_image: a => ["image2video", "h3_i2v", a.prompt],
+  image_sequence: a => ["sequence", "h3_sequence", a.prompt],
+  campaign: a => ["campaign", "campaign", a.brief],
+  storyboard: a => ["storyboard", "storyboard_qwen21", a.brief],
+  reference_video: a => ["reference2video", "h3_r2v", a.brief],
+};
+async function openCardInForm(tool, a, image) {
+  const [pipeline, wfId, text] = CARD_FORM[tool](a);
+  const before = { brief: brief.value, scenario: activeScenario, pipeline: F.currentPipeline(), wf: $("modelSelect").value };
+  const scenario = F.pipelineDef(pipeline).scenario?.[0] || (pipeline === "image2image" ? "localization" : "campaign");
+  selectScenario(scenario, pipeline);
+  $("modelSelect").value = wfId;
+  updateModelLabel();
+  if (a.ratio) $("ratioSelect").value = a.ratio;
+  if (a.count || a.variants) $("variants").value = a.count || a.variants;
+  if (a.duration) $("videoDuration").value = a.duration;
+  if (a.shots) $("shotCount").value = a.shots;
+  if (a.style && F.hasControl("style")) { $("styleSelect").value = a.style; D.setStyle(a.style); }
+  const img = id => image(id) && { name: image(id).name, ref: image(id).ref };
+  if (a.image) setSelectedAsset({ ref: img(a.image).ref, filename: img(a.image).name });
+  if (a.last_image) setInputFile($("lastImageInput"), await assetFile({ ref: img(a.last_image).ref, filename: img(a.last_image).name }));
+  if (tool === "edit_image") {
+    F.refList("i2i").splice(0, Infinity, ...(a.references || []).map(img));
+    selectedMarkets.clear();
+    for (const m of a.markets || []) selectedMarkets.add(m);
+    renderMarkets();
+  }
+  if (tool === "reference_video") F.refList("r2v").splice(0, Infinity, ...(a.references || []).map(img));
+  if (tool === "image_sequence") { seqImages.splice(0, Infinity, ...a.images.map(id => ({ ...img(id), dur: a.duration }))); renderSeqList(); }
+  renderRefs();
+  brief.value = text;
+  log("sys", "Assistant card opened in the Studio form: nothing starts before Generate.");
+  undoToast("Card opened in the Studio form.", {}, () => {
+    brief.value = before.brief;
+    selectScenario(before.scenario, before.pipeline);
+    if ([...$("modelSelect").options].some(o => o.value === before.wf)) { $("modelSelect").value = before.wf; updateModelLabel(); }
+  });
+  brief.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 // ── Project buttons (resume, cancel) ──────────────────────────────────────────
@@ -771,11 +760,11 @@ function initRail() {
   // One flyout at a time, open until its button is clicked again.
   document.querySelectorAll(".rail-btn[data-panel]").forEach(btn => btn.addEventListener("click", () => {
     const name = btn.classList.contains("active") ? "studio" : btn.dataset.panel;
-    document.querySelectorAll(".rail-btn").forEach(b => b.classList.toggle("active", b.dataset.panel === name));
+    document.querySelectorAll(".rail-btn[data-panel]").forEach(b => b.classList.toggle("active", b.dataset.panel === name));
     let open = false;
     document.querySelectorAll(".flyout").forEach(f => { f.hidden = f.dataset.flyout !== name; open ||= !f.hidden; });
     document.querySelector(".app-rail").classList.toggle("expanded", open);
-    if (name === "models") { loadModels(); loadLoras(); loadInstructionPanel(); loadUpdate(); }
+    if (name === "models") { loadModels(); loadLoras(); loadInstructionPanel(); loadRolePanel(); loadUpdate(); }
   }));
 }
 
@@ -856,6 +845,7 @@ function boot() {
   on("model", onModelEvent);
   initModelNotice();
   connect();
+  initChat({ openInStudio: openCardInForm, useAsInput: setSelectedAsset });
   initGallery({
     useAsInput: setSelectedAsset,
     addToSequence: a => { if (addSeqImage({ name: a.filename, ref: a.ref })) notice(true, "{name} added to the sequence ({n}/{max}).", { name: a.filename, n: seqImages.length, max: SEQ_MAX }); },
