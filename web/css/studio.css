@@ -1940,7 +1940,7 @@ body.library-open .assistant-chat { margin: 0; }
 .mascot .m-shadow { fill: rgba(15, 23, 42, 0.14); transform-origin: 60px 113px; }
 .mascot .m-body, .mascot .m-arm { stroke: rgba(15, 23, 42, 0.08); stroke-width: 1; }
 /* A white cap, as on the reference image: a fine outline keeps it apart from the body. */
-.mascot .m-cap > path:first-child, .mascot .m-cap > path:nth-child(3), .mascot .m-cap > circle { stroke: rgba(15, 23, 42, 0.18); stroke-width: 1; }
+.mascot .m-cap > path:first-child, .mascot .m-cap > path:nth-child(4), .mascot .m-cap > circle { stroke: rgba(15, 23, 42, 0.18); stroke-width: 1; }
 .mascot .m-all, .mascot .m-arm, .mascot .m-eyes, .mascot .m-face, .mascot .m-cap { transform-box: view-box; }
 .mascot .m-all { transform-origin: 60px 106px; }
 .mascot .m-arm-l { transform-origin: 30px 72px; }
