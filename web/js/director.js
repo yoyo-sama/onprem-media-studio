@@ -522,6 +522,28 @@ async function importSheet(kind, file) {
   } catch (err) { warn(err); }
 }
 
+// A subject sheet drawn by Qwen Image 2.1 from a photo or drawing of the subject: a new
+// variant, the subject's fields giving the description, the photo its look.
+async function sheetFromPhoto(file) {
+  if (!d) return;
+  const owner = curChar();
+  if (owner.variants.some(v => v.status === "pending")) return;
+  try {
+    const photo = await F.imageRef({ name: file.name, blob: file });
+    const lastGen = [...owner.variants].reverse().find(v => v.source === "generated");
+    const seed = F.seedPlus(lastGen ? lastGen.seed : d.seed, 1);
+    const prompt = P.charsheetFromPhotoPrompt(charDesc(owner), P.charKindOf(owner.fields), d.sheetTemplate, d.style);
+    const variant = { seed, source: "generated", prompt, edited: false, status: "pending" };
+    owner.variants.push(variant);
+    owner.active = owner.variants.length - 1;
+    d.validated = false;
+    refreshSheetUI("char");
+    log("req", "Subject sheet from a photo: {name} (Qwen Image 2.1)…", { name: file.name });
+    watchVariant("char", variant, runJob("qwen-image-2.1", { prompt, images: [photo], ...P.SHEET_SIZE, count: 1, seed }, {
+      origin: origin(), label: ["Subject sheet"], sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed }] }));
+  } catch (err) { warn(err); }
+}
+
 function openSheetPrompt(kind) {
   if (!d) return;
   const isChar = kind === "char", owner = isChar ? curChar() : null;
@@ -1415,6 +1437,9 @@ export function initDirector(h) {
     const file = section.querySelector(".sheet-import-input");
     section.querySelector(".sheet-import").addEventListener("click", () => file.click());
     file.addEventListener("change", () => { if (file.files[0]) importSheet(kind, file.files[0]); file.value = ""; });
+    const photo = section.querySelector(".sheet-photo-input");
+    section.querySelector(".sheet-photo").addEventListener("click", () => photo.click());
+    photo.addEventListener("change", () => { if (photo.files[0]) sheetFromPhoto(photo.files[0]); photo.value = ""; });
     const img = section.querySelector(".sheet-preview img");
     img.addEventListener("click", () => { if (img.getAttribute("src")) openLightbox({ url: img.src, type: "image" }); });
   }

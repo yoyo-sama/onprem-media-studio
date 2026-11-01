@@ -3602,4 +3602,24 @@ export const DICT = {
     es: "Foto",
     de: "Foto",
   },
+  "📷 Sheet from a photo": {
+    fr: "📷 Planche depuis une photo",
+    es: "📷 Hoja desde una foto",
+    de: "📷 Blatt aus einem Foto",
+  },
+  "Draws the sheet from a photo or a drawing of the subject, keeping its look (Qwen Image 2.1)": {
+    fr: "Dessine la planche à partir d'une photo ou d'un dessin du sujet, en gardant son apparence (Qwen Image 2.1)",
+    es: "Dibuja la hoja a partir de una foto o un dibujo del sujeto, conservando su aspecto (Qwen Image 2.1)",
+    de: "Zeichnet das Blatt aus einem Foto oder einer Zeichnung des Motivs und behält sein Aussehen (Qwen Image 2.1)",
+  },
+  "Use an image that is already a finished sheet, as it is": {
+    fr: "Utilise telle quelle une image qui est déjà une planche terminée",
+    es: "Usa tal cual una imagen que ya es una hoja terminada",
+    de: "Verwendet ein Bild, das schon ein fertiges Blatt ist, unverändert",
+  },
+  "Subject sheet from a photo: {name} (Qwen Image 2.1)…": {
+    fr: "Planche du sujet depuis une photo : {name} (Qwen Image 2.1)…",
+    es: "Hoja del sujeto desde una foto: {name} (Qwen Image 2.1)…",
+    de: "Motivblatt aus einem Foto: {name} (Qwen Image 2.1)…",
+  },
 };
