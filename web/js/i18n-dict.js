@@ -487,11 +487,6 @@ export const DICT = {
     es: "Director: imágenes de los planos ancladas en las láminas aprobadas…",
     de: "Regie: Einstellungsbilder, verankert auf den freigegebenen Bögen…",
   },
-  "Director: subject sheet and setting sheet with {llm}…": {
-    fr: "Réalisateur : planche du sujet et planche du décor avec {llm}…",
-    es: "Director: lámina del sujeto y lámina del decorado con {llm}…",
-    de: "Regie: Motivbogen und Schauplatzbogen mit {llm}…",
-  },
   "Documentary": {
     fr: "Documentaire",
     es: "Documental",
@@ -921,16 +916,6 @@ export const DICT = {
     fr: "Générer la planche",
     es: "Generar la lámina",
     de: "Bogen generieren",
-  },
-  "Generate the sheets (step 1/2)": {
-    fr: "Générer les planches (étape 1/2)",
-    es: "Generar las láminas (paso 1/2)",
-    de: "Bögen generieren (Schritt 1/2)",
-  },
-  "Generate the sheets (step 1/3)": {
-    fr: "Générer les planches (étape 1/3)",
-    es: "Generar las láminas (paso 1/3)",
-    de: "Bögen generieren (Schritt 1/3)",
   },
   "Generate the shot images": {
     fr: "Générer les images des plans",
@@ -1536,11 +1521,6 @@ export const DICT = {
     fr: "Aucun résultat pour ces filtres.",
     es: "Ningún resultado para estos filtros.",
     de: "Kein Ergebnis für diese Filter.",
-  },
-  "No sheet yet: describe the subject (or ✎ Prompt), then generate.": {
-    fr: "Aucune planche : décris le sujet (ou ✎ Prompt) puis génère.",
-    es: "Sin lámina: describe el sujeto (o ✎ Prompt) y luego genera.",
-    de: "Noch kein Bogen: Motiv beschreiben (oder ✎ Prompt) und dann generieren.",
   },
   "No video yet.": {
     fr: "Pas encore de vidéo.",
@@ -3621,5 +3601,35 @@ export const DICT = {
     fr: "Planche du sujet depuis une photo : {name} (Qwen Image 2.1)…",
     es: "Hoja del sujeto desde una foto: {name} (Qwen Image 2.1)…",
     de: "Motivblatt aus einem Foto: {name} (Qwen Image 2.1)…",
+  },
+  "Director: subject and setting descriptions with {llm}…": {
+    fr: "Réalisateur : descriptions du sujet et du décor par {llm}…",
+    es: "Director: descripciones del sujeto y del decorado con {llm}…",
+    de: "Regie: Beschreibungen von Motiv und Schauplatz mit {llm}…",
+  },
+  "No sheet yet: generate it from the fields (or ✎ Prompt), from a photo, or import a finished sheet.": {
+    fr: "Pas encore de planche : génère-la depuis les champs (ou ✎ Prompt), depuis une photo, ou importe une planche terminée.",
+    es: "Aún no hay hoja: genérala desde los campos (o ✎ Prompt), desde una foto, o importa una hoja terminada.",
+    de: "Noch kein Blatt: generiere es aus den Feldern (oder ✎ Prompt), aus einem Foto, oder importiere ein fertiges Blatt.",
+  },
+  "No sheet yet: generate it from the fields (or ✎ Prompt), or import a finished sheet.": {
+    fr: "Pas encore de planche : génère-la depuis les champs (ou ✎ Prompt), ou importe une planche terminée.",
+    es: "Aún no hay hoja: genérala desde los campos (o ✎ Prompt), o importa una hoja terminada.",
+    de: "Noch kein Blatt: generiere es aus den Feldern (oder ✎ Prompt), oder importiere ein fertiges Blatt.",
+  },
+  "Studio open: no sheet is drawn yet. Generate each one from its description or a photo, or import a finished sheet.": {
+    fr: "Studio ouvert : aucune planche n'est encore dessinée. Génère chacune depuis sa description ou une photo, ou importe une planche terminée.",
+    es: "Estudio abierto: aún no se ha dibujado ninguna hoja. Genera cada una desde su descripción o una foto, o importa una hoja terminada.",
+    de: "Studio geöffnet: noch kein Blatt gezeichnet. Generiere jedes aus seiner Beschreibung oder einem Foto, oder importiere ein fertiges Blatt.",
+  },
+  "Open the studio (step 1/3)": {
+    fr: "Entrer dans le studio (étape 1/3)",
+    es: "Entrar en el estudio (paso 1/3)",
+    de: "Studio öffnen (Schritt 1/3)",
+  },
+  "Open the studio (step 1/2)": {
+    fr: "Entrer dans le studio (étape 1/2)",
+    es: "Entrar en el estudio (paso 1/2)",
+    de: "Studio öffnen (Schritt 1/2)",
   },
 };

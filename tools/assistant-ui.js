@@ -217,6 +217,7 @@ const CARDS = [
   // Launch the director: one click switches to the Studio, fills the form and starts the
   // director (its first step asks Gemma for the sheets, stubbed out here).
   check(llmBodies.length === 0, "Gemma called before the director was launched");
+  const jobsAtLaunch = jobs.length;
   await page.click('.chat-card[data-card="C5"] .primary-btn');
   await page.waitForTimeout(800);
   check(await page.evaluate(() => document.body.dataset.mode) === "studio", "Launch the director did not switch to the Studio");
@@ -230,6 +231,15 @@ const CARDS = [
   const back = await page.waitForFunction(() => !document.getElementById("generateBtn").textContent.includes("écrit les fiches"),
     null, { timeout: 20000 }).then(() => true, () => false);
   check(back, "Generate button label not restored");
+  // The first step opens the studio and draws nothing; a sheet renders on its own click,
+  // with the seed the automatic first step used to give it.
+  check(await page.evaluate(() => document.body.dataset.studio) === "1", "the director's studio did not open");
+  check(!jobs.slice(jobsAtLaunch).some(j => j.pipeline === "krea2-t2i"), "the first step drew a sheet");
+  await page.click("#studioCharacter .sheet-regen");
+  await page.waitForTimeout(400);
+  const sheetJob = jobs[jobs.length - 1], proj = await page.evaluate(() => JSON.parse(localStorage.getItem("studioProject")));
+  check(sheetJob?.pipeline === "krea2-t2i" && sheetJob.params.seed === proj.seed && sheetJob.params.width === 1920,
+    "subject sheet on click: " + JSON.stringify(sheetJob?.params?.seed) + " vs " + proj?.seed);
   // Sheets handed over by a storyboard card: the director keeps them, Gemma reads each
   // one (vision), no sheet job is submitted and every shot starts with both subjects.
   await page.click('.rail-mode[data-mode="assistant"]');

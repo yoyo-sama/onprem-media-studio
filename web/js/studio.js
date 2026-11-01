@@ -43,13 +43,13 @@ let activeScenario = "campaign";
 const GENERATE_LABELS = {
   text2image: L("Generate the images"), image2image: L("Generate the variants"),
   text2video: L("Generate the video"), image2video: L("Generate the video"),
-  sequence: L("Generate the sequence"), storyboard: L("Generate the sheets (step 1/3)"),
+  sequence: L("Generate the sequence"), storyboard: L("Open the studio (step 1/3)"),
   campaign: L("Start the campaign (posters + thumbnails + teaser)"),
 };
 function refreshGenerateLabel() {
   const p = F.currentPipeline();
   tx($("generateBtn"), p === "reference2video"
-    ? ($("skipSheetsToggle").checked ? "Generate the video" : "Generate the sheets (step 1/2)")
+    ? ($("skipSheetsToggle").checked ? "Generate the video" : "Open the studio (step 1/2)")
     : GENERATE_LABELS[p] || "Generate");
 }
 

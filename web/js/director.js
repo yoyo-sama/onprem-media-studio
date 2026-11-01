@@ -203,7 +203,7 @@ async function openSession(pipeline, seed) {
   const given = pipeline === "storyboard" ? givenSheets : null;
   const subjects = given?.subjects || [], setting = given?.setting || null;
   if (given) log("req", "Director: reading the sheets from the assistant with {llm} (vision)…", { llm: LLM });
-  else log("req", "Director: subject sheet and setting sheet with {llm}…", { llm: LLM });
+  else log("req", "Director: subject and setting descriptions with {llm}…", { llm: LLM });
   const charFields = [];
   for (const img of subjects) charFields.push(await fieldsFromSheet(img, P.characterSheetFromBrief, SUBJECT_FROM_SHEET));
   if (!subjects.length) charFields.push(await P.characterSheetFromBrief(F.llm, text, promptLog));
@@ -214,15 +214,10 @@ async function openSession(pipeline, seed) {
     style: F.currentStyleId(), sheetTemplate: F.currentTemplateId(),
     locFields, chars: charFields.map(f => newChar(f)), charIdx: 0, locVariants: [], locActive: 0, validated: false,
   };
-  // The prompt compiled here is the one sent AND the one kept on the variant: the
-  // prompt editor reopens on what was really rendered, template included (LESSONS).
-  const prev = d;
-  d = s;
-  s.chars.forEach((c, i) => c.variants.push(subjects[i] ? imported(subjects[i])
-    : { seed, source: "generated", prompt: charSheetPrompt(c.fields), status: "pending" }));
-  s.locVariants.push(setting ? imported(setting)
-    : { seed: F.seedPlus(seed, 101), source: "generated", prompt: locSheetPrompt(), status: "pending" });
-  d = prev;
+  // Nothing is drawn here: the studio opens on the descriptions, and each sheet is
+  // generated (from its fields or a photo) or imported by the user's click.
+  s.chars.forEach((c, i) => { if (subjects[i]) c.variants.push(imported(subjects[i])); });
+  if (setting) s.locVariants.push(imported(setting));
   if (given) {
     givenSheets = null;
     log("ok", "{n} sheet(s) from the assistant kept: they are not drawn again.", { n: subjects.length + (setting ? 1 : 0) });
@@ -240,10 +235,7 @@ function enterSession(s) {
   renderSheetMenu("loc");
   if (!isR2V()) { renderRelay(); renderShotList(); }
   updateGate();
-  // Only the sheets still to draw get a job (one per subject, then the setting).
-  const pending = (kind, v) => { if (v.status === "pending") watchVariant(kind, v, sheetJob(kind, v.prompt, v.seed)); };
-  s.chars.forEach(c => pending("char", c.variants[0]));
-  pending("loc", s.locVariants[0]);
+  log("ok", "Studio open: no sheet is drawn yet. Generate each one from its description or a photo, or import a finished sheet.");
   save();
 }
 
@@ -448,7 +440,9 @@ function renderVariantStrip(kind) {
   if (av?.ref && av.status !== "missing") { img.src = refURL(av.ref); img.hidden = false; }
   else { img.removeAttribute("src"); img.hidden = true; }
   const status = section.querySelector(".sheet-status");
-  if (!av) tx(status, d && isChar && !variants.length ? "No sheet yet: describe the subject (or ✎ Prompt), then generate." : "");
+  if (!av) tx(status, !d || variants.length ? "" : isChar
+    ? "No sheet yet: generate it from the fields (or ✎ Prompt), from a photo, or import a finished sheet."
+    : "No sheet yet: generate it from the fields (or ✎ Prompt), or import a finished sheet.");
   else if (variants.length > 1) tx(status, "{status} · sheet {n} of {total} active", { status: t(statusWord(av.status)), n: act + 1, total: variants.length });
   else tx(status, statusWord(av.status));
   const busy = variants.some(v => v.status === "pending");
@@ -488,7 +482,7 @@ function regenerateSheet(kind, promptOverride) {
   // A subject added by hand has no variant to start from: a seed of its own, so two
   // new subjects do not look alike.
   const base = isChar ? F.seedPlus(d.seed, d.charIdx ? 211 + d.charIdx : 0) : F.seedPlus(d.seed, 101);
-  const seed = F.seedPlus(lastGen ? lastGen.seed : base, 1);
+  const seed = lastGen ? F.seedPlus(lastGen.seed, 1) : base;
   // A subject described only in the prompt editor would leave its fields empty, and the
   // fields are what shot images and cuts read: the description goes into the first field.
   const fields = isChar ? owner.fields : d.locFields;

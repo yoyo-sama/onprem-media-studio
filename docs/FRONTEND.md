@@ -39,6 +39,12 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
 - **Nothing renders without a click.** Choosing a goal card, a pipeline, an engine, a language,
   adding a card or connecting cards submits nothing. Only Generate buttons (and the director's
   step buttons) post to `/api/jobs`.
+- **The director's first step draws nothing** (decided on 2026-11-01, unlike 1.4). "Open the
+  studio" has Gemma write the subject and setting descriptions and the shot list, then opens
+  the studio with no sheet. Each sheet is generated on its own click: from its fields, from a
+  photo of the subject ("📷 Sheet from a photo", Qwen Image 2.1), or imported finished. A
+  sheet's first generation keeps the seed the automatic step used to give it, so its job is the
+  one 1.4 sent.
 - **The brief belongs to the user.** Examples are placeholders, never values; an empty brief
   starts nothing.
 - **The user's prompt goes verbatim**; anchoring blocks and sheet skeletons are re-appended by
@@ -105,7 +111,7 @@ to it.
 | `python -m pytest` | Server, engines' parameters, gallery, and `tests/test_i18n.py`: every interface string of both pages has its French, Spanish and German translation with the same `{placeholders}`, and no entry is unused | Python, Node |
 | `node tools/parity-prompts.js` | Every prompt compiler and instruction gives, character for character, what 1.4 (`234f37c`, read from `../dellaicontent`) gives, with scripted Gemma answers | Node, the 1.4 checkout |
 | `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256 (or is the replaced one, for its engine only), the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
-| `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready | Node, Playwright and its Chromium |
+| `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready; that step opens the studio without drawing a sheet, and a sheet's own click sends it with the first step's seed | Node, Playwright and its Chromium |
 
 Changing a prompt compiler or an instruction makes `parity-prompts.js` and `prompt-systems.js` fail; if the change is wanted,
 update the reference in the same commit and say why.

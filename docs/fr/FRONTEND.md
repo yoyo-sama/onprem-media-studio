@@ -38,6 +38,12 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
 - **Rien ne part en rendu sans un clic.** Choisir une carte d'objectif, un pipeline, un moteur,
   une langue, ajouter ou relier des cartes ne soumet rien. Seuls les boutons Générer (et les
   boutons d'étape du réalisateur) postent sur `/api/jobs`.
+- **La première étape du réalisateur ne dessine rien** (décidé le 2026-11-01, contrairement à la
+  1.4). « Entrer dans le studio » fait écrire par Gemma les descriptions du sujet et du décor et
+  la liste de plans, puis ouvre le studio sans planche. Chaque planche part sur son propre clic :
+  depuis ses champs, depuis une photo du sujet (« 📷 Planche depuis une photo », Qwen Image 2.1),
+  ou importée terminée. La première génération d'une planche garde la seed que l'étape
+  automatique lui donnait : son job est celui qu'envoyait la 1.4.
 - **Le brief n'appartient qu'à l'utilisateur.** Les exemples sont des placeholders, jamais des
   valeurs ; un brief vide ne lance rien.
 - **Le prompt de l'utilisateur part tel quel** ; les blocs d'ancrage et squelettes de planche
@@ -107,7 +113,7 @@ ajoute une carte Import d'image reliée à elle.
 | `python -m pytest` | Serveur, paramètres des moteurs, galerie, et `tests/test_i18n.py` : chaque texte d'interface des deux pages a sa traduction française, espagnole et allemande avec les mêmes `{paramètres}`, et aucune entrée n'est inutilisée | Python, Node |
 | `node tools/parity-prompts.js` | Chaque compilateur de prompt et consigne donne, au caractère près, ce que donne la 1.4 (`234f37c`, lue dans `../dellaicontent`), avec des réponses de Gemma scriptées | Node, la copie de la 1.4 |
 | `node tools/prompt-systems.js` | Lance les deux pages sans affichage avec `/api` bouchonné : pour chaque moteur et bouton ✨ (et l'enrichissement automatique), la consigne reçue par Gemma a le sha256 de la 1.4 (ou est la consigne remplacée, pour son seul moteur), le nombre d'appels et le contenu sont justes, le texte revient dans le champ | Node, Playwright et son Chromium (`NODE_PATH=$(npm root -g)`) |
-| `node tools/assistant-ui.js` | Le mode Assistant sans affichage, avec `/api` bouchonné et une réponse scriptée : la page s'ouvre sur l'assistant ; aucun job au changement de mode, à la Bibliothèque, à la saisie, à l'envoi ni à la modification d'une carte ; un job par clic sur Générer, avec les réglages de la carte, son avancement affiché sur la carte d'après les événements du job, signalé au serveur ; « Ouvrir dans le Studio » passe au Studio, remplit le formulaire et ne soumet rien ; « Lancer le Réalisateur » passe au Studio et lance le réalisateur, dont le bouton Générer nomme le travail de Gemma et son temps jusqu'à ce que la première étape soit prête | Node, Playwright et son Chromium |
+| `node tools/assistant-ui.js` | Le mode Assistant sans affichage, avec `/api` bouchonné et une réponse scriptée : la page s'ouvre sur l'assistant ; aucun job au changement de mode, à la Bibliothèque, à la saisie, à l'envoi ni à la modification d'une carte ; un job par clic sur Générer, avec les réglages de la carte, son avancement affiché sur la carte d'après les événements du job, signalé au serveur ; « Ouvrir dans le Studio » passe au Studio, remplit le formulaire et ne soumet rien ; « Lancer le Réalisateur » passe au Studio et lance le réalisateur, dont le bouton Générer nomme le travail de Gemma et son temps jusqu'à ce que la première étape soit prête ; cette étape ouvre le studio sans dessiner de planche, et le clic d'une planche l'envoie avec la seed de la première étape | Node, Playwright et son Chromium |
 
 Modifier un compilateur de prompt ou une consigne fait échouer `parity-prompts.js` et `prompt-systems.js` ; si le
 changement est voulu, mettre à jour la référence dans le même commit et dire pourquoi.
