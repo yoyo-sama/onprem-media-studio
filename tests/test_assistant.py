@@ -329,6 +329,13 @@ def test_chat_api(settings, store):
         assert c.get("/api/health").json()["llm_model"] == "gemma4-26b-a4b"
 
 
+def test_character_sheet_takes_a_photo():
+    args, warnings = T.normalize("character_sheet", {"description": "a red coat", "photo": ["A1"]}, lambda r: True)
+    assert args["photo"] == ["A1"] and not warnings
+    args, _ = T.normalize("character_sheet", {"description": "a red coat"}, lambda r: True)
+    assert "photo" not in args
+
+
 def test_storyboard_card_takes_the_conversation_sheets():
     args, warnings = T.normalize("storyboard", {"brief": "x", "subject_sheets": ["C2#1", "A1"], "setting_sheet": ["C9#1"]},
                                  lambda r: r != "C9#1")

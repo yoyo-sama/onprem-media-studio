@@ -3597,4 +3597,9 @@ export const DICT = {
     es: "No usar esta lámina",
     de: "Diesen Bogen nicht verwenden",
   },
+  "Photo": {
+    fr: "Photo",
+    es: "Foto",
+    de: "Foto",
+  },
 };

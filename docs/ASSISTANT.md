@@ -116,7 +116,7 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 |---|---|---|
 | `create_image` | Prompt, engine (Krea 2 / Qwen Image 2.1), ratio, variants, style | `krea2-t2i` or `qwen-image-2.1`, as the Text2Image form |
 | `edit_image` | Instruction, input image, references, markets | `qwen-image-2.1` editing, one job per market, as Image2Image |
-| `character_sheet`, `location_sheet` | Description, subject type, style | `krea2-t2i` 1920×1088 with the 1.4 sheet templates |
+| `character_sheet`, `location_sheet` | Description, subject type, style; a photo of the subject (subject sheet only) | `krea2-t2i` 1920×1088 with the 1.4 sheet templates; with a photo, `qwen-image-2.1` edits it into the sheet at the same size, the template preceded by an identity sentence on `<image1>` (`charsheetFromPhotoPrompt`, not qualified yet) |
 | `video_from_text` | Prompt, length, ratio | `h3-t2v` |
 | `video_from_image` | Prompt, first image, optional last image, length | `h3-i2v` (I2VA or FL2VA) |
 | `image_sequence` | Prompt, 2 to 6 key images, segment length | the multi-image sequence (H3 segments, then `video-concat`) |

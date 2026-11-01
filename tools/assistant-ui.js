@@ -36,6 +36,7 @@ const CARDS = [
   card("C5", "storyboard", { brief: "A detective enters a studio", shots: 5, duration: 5, ratio: "16:9" }),
   card("C7", "storyboard", { brief: "A dwarf and an elf pick mushrooms", subject_sheets: ["C1#1", "A1"], setting_sheet: ["C1#1"],
                              shots: 4, duration: 5, ratio: "16:9" }),
+  card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
 (async () => {
@@ -247,6 +248,15 @@ const CARDS = [
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("studioProject") || "null"));
   check(saved?.shots?.every(sh => JSON.stringify(sh.subjects) === "[0,1]"), "shots do not start with both subjects");
   check(saved?.locVariants?.[0]?.source === "imported" && saved.chars.every(c => c.variants[0].source === "imported"), "sheets not kept as imported");
+  // A subject sheet from a photo: one Qwen Image 2.1 edit of the photo, at the sheets' size.
+  await page.click('.rail-mode[data-mode="assistant"]');
+  const before8 = jobs.length;
+  await page.click('.chat-card[data-card="C8"] .primary-btn');
+  await page.waitForSelector('.chat-card[data-card="C8"] .status.done');
+  const j8 = jobs[before8];
+  check(jobs.length === before8 + 1 && j8.pipeline === "qwen-image-2.1" && JSON.stringify(j8.params.images) === '["inputs/att.png"]'
+    && j8.params.width === 1920 && j8.params.height === 1088 && j8.params.prompt.startsWith("Using <image1> only as the identity reference: the person")
+    && j8.params.prompt.includes("a woman in a red coat"), "sheet from a photo: " + JSON.stringify(j8));
   // A reload opens on the welcome; the conversation stays in the list.
   await page.click('.rail-mode[data-mode="assistant"]');
   await page.reload({ waitUntil: "load" });

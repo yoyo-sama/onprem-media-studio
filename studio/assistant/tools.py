@@ -78,8 +78,10 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
                      "description": "Market presets, one render each (na, latam, europe, mea, africa, asia)"}},
         ["instruction", "image"]),
     "character_sheet": (
-        "Card: a character sheet (multi-view reference, Krea 2, neutral light) of one subject.",
+        "Card: a character sheet (multi-view reference, neutral light) of one subject; from a photo of it when "
+        "one is given.",
         {"description": _str("What the subject is, in English: face, build, hair, costume, materials. No scene."),
+         "photo": _ids("A photo of this very subject, to draw the sheet from (its identity is kept), " + IMAGE_ID, 0, 1),
          "kind": _enum("human for a person, other for an animal, creature, robot or object", ["human", "other"], "human"),
          "style": STYLE},
         ["description"]),
@@ -145,7 +147,8 @@ ENGINE_NOTES = {
                     "(text in the image). Ratios 16:9, 9:16, 1:1, 4:5; 1 to 4 variants.",
     "edit_image": "edit_image: Qwen Image 2.1 editing. The input image is <image1>, up to 9 references "
                   "<image2>…<image10>; one image per render, at the input image's size.",
-    "character_sheet": "character_sheet: one subject on a multi-view sheet (Krea 2, 1920×1088, neutral light).",
+    "character_sheet": "character_sheet: one subject on a multi-view sheet (1920×1088, neutral light), drawn by "
+                       "Krea 2 from the description, or by Qwen Image 2.1 from a photo of the subject (photo).",
     "location_sheet": "location_sheet: one empty place on a multi-view sheet (Krea 2, 1920×1088).",
     "video_from_text": "video_from_text: MiniMax H3, 5 to 15 s, native sound (ambience, voices), one continuous "
                        "shot; the length snaps to the engine's frame grid.",
@@ -246,7 +249,7 @@ def normalize(name: str, raw, known_ids) -> tuple[dict, list[str]]:
     unknown = sorted(set(raw) - set(props))
     if unknown:
         warnings.append("ignored: " + ", ".join(unknown))
-    for key in ("image", "last_image", "references", "images", "clips", "subject_sheets", "setting_sheet"):
+    for key in ("image", "last_image", "references", "images", "clips", "subject_sheets", "setting_sheet", "photo"):
         for ref in ([out[key]] if isinstance(out.get(key), str) else out.get(key) or []):
             if not known_ids(ref):
                 warnings.append(f"{ref} is not in the reference table")

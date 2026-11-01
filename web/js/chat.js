@@ -49,7 +49,7 @@ const CARD_UI = {
                   enrich: a => (a.engine === "qwen" ? "qwen21_t2i" : "krea2_t2i") },
   edit_image: { title: L("Image editing"), text: "instruction", images: ["image", "references"], form: true,
                 enrich: () => "qwen21_i2i" },
-  character_sheet: { title: L("Subject sheet"), text: "description", fields: ["kind", "style"] },
+  character_sheet: { title: L("Subject sheet"), text: "description", images: ["photo"], fields: ["kind", "style"] },
   location_sheet: { title: L("Setting sheet"), text: "description", fields: ["style"] },
   video_from_text: { title: L("Video from a text"), text: "prompt", fields: ["duration", "ratio"], form: true,
                      enrich: () => "h3_t2v" },
@@ -67,7 +67,7 @@ const CARD_UI = {
 };
 const IMAGE_LABELS = {
   image: L("Image"), references: L("References"), last_image: L("Last frame"), images: L("Key images"), clips: L("Clips"),
-  subject_sheets: L("Subject sheets"), setting_sheet: L("Setting sheet"),
+  subject_sheets: L("Subject sheets"), setting_sheet: L("Setting sheet"), photo: L("Photo"),
 };
 const FIELDS = {
   engine: { label: L("Engine"), options: () => [["krea2", "Krea 2 Turbo"], ["qwen", "Qwen Image 2.1"]] },
@@ -377,7 +377,12 @@ function startCard(card, a, aspect) {
         : [{ prompt: a.instruction, label: label(title) }];
       return G.runPlain(F.workflow("qwen21_i2i"), { ...opts, specs, image: need(a.image), refs: (a.references || []).map(need) });
     }
-    case "character_sheet": return sheet(P.charsheetPromptFrom(a.description, a.kind, "auto", a.style));
+    case "character_sheet":
+      if (!a.photo?.length) return sheet(P.charsheetPromptFrom(a.description, a.kind, "auto", a.style));
+      // From a photo: Qwen Image 2.1 edits it into the sheet, at the sheets' size.
+      return [runJob("qwen-image-2.1", { prompt: P.charsheetFromPhotoPrompt(a.description, a.kind, "auto", a.style),
+        images: [need(a.photo[0])], ...P.SHEET_SIZE, count: 1, seed }, {
+        origin: ORIGIN, label: label(title), sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed }] })];
     case "location_sheet": return sheet(P.locsheetPromptFrom(a.description, a.style));
     case "video_from_text":
       return G.runPlain(F.workflow("h3_t2v"), { ...opts, specs: [{ prompt: a.prompt, label: label(title) }], ratio: a.ratio, duration: a.duration });
