@@ -298,3 +298,15 @@ def test_a_pipeline_is_built_even_when_nothing_is_left_to_free(monkeypatch):
     monkeypatch.setattr(common, "_resident", {})
     monkeypatch.setattr(common, "free_memory", lambda: 0)
     assert common.load("krea2", lambda: "pipe", 34 * 1024**3) == "pipe"
+
+
+def test_torch_cache_is_given_back_before_memory_is_measured(monkeypatch):
+    # The last render's cached blocks counted as used made Krea 2 unload Qwen on the GB10.
+    gb = 1024**3
+    free = {"bytes": 30 * gb}
+    closed = []
+    monkeypatch.setattr(common, "_resident", {"qwen": Closable("qwen", closed)})
+    monkeypatch.setattr(common, "free_memory", lambda: free["bytes"])
+    monkeypatch.setattr(common, "_empty_cache", lambda: free.update(bytes=free["bytes"] + 25 * gb))
+    common.load("krea2", lambda: Closable("krea2", closed), 34 * gb)
+    assert closed == [] and list(common._resident) == ["qwen", "krea2"]

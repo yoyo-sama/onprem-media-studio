@@ -126,6 +126,10 @@ def load(key, build, size: int = 0, alone: bool = False):
         _resident[key] = _resident.pop(key)  # now the most recently used
         return _resident[key]
     began, freed = time.time(), []
+    # Blocks the last render left in torch's cache count as used: given back first, so a
+    # pipeline is not freed for room that was only cached (Qwen was freed for Krea 2 on
+    # the GB10 with 55 GB available once the cache was empty).
+    _empty_cache()
     while _resident and (alone or free_memory() < size + RESERVE):
         freed.append(next(iter(_resident)))
         _free(freed[-1])
@@ -148,6 +152,10 @@ def _free(key) -> None:
         old.close()
     del old
     gc.collect()
+    _empty_cache()
+
+
+def _empty_cache() -> None:
     try:
         import torch
     except ImportError:
