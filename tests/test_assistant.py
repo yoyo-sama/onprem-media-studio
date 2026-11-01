@@ -227,6 +227,27 @@ def test_handoff_switches_role_in_the_same_turn(tmp_path, files):
     assert texts == ["Over to the director.", "Scenes first."]
 
 
+def test_a_call_written_as_json_text_becomes_its_card(tmp_path, files):
+    ref = files.save_input(PNG)["ref"]
+    written = ('You want the cat falling asleep.\n\n```json\n{\n  "type": "video_from_image",\n  "props": {\n'
+               '    "image": "A1",\n    "prompt": "The cat slowly closes its eyes",\n    "duration": 5\n  }\n}\n```')
+    llm = ScriptedLlm(streams=[[("text", written)]])
+    a = make(tmp_path, files, llm)
+    conv, events = run(a, {"text": "a 5 s video where the cat falls asleep", "attachments": [ref], "role": "director"})
+    cards = [e["card"] for e in events if e["type"] == "card"]
+    assert len(cards) == 1 and cards[0]["tool"] == "video_from_image" and not cards[0].get("invalid")
+    assert cards[0]["args"]["image"] == "A1" and cards[0]["args"]["duration"] == 5
+    assert conv["messages"][-1]["text"] == "You want the cat falling asleep."
+    # A tool the role does not have, or plain JSON, stays text.
+    assert C.text_tool_calls('```json\n{"name": "campaign", "arguments": {"brief": "x"}}\n```', ["storyboard"])[0] == []
+    assert C.text_tool_calls('{"a": 1}', ["storyboard"]) == ([], '{"a": 1}')
+    calls, rest = C.text_tool_calls('Here.\n{"function": {"name": "storyboard", "arguments": "{\\"brief\\": \\"x\\"}"}}',
+                                    ["storyboard"])
+    assert calls[0]["name"] == "storyboard" and calls[0]["arguments"] == {"brief": "x"} and rest == "Here."
+    # The instructions say a card is a call, never JSON in the text.
+    assert "Never write a card, a tool call or JSON in your message" in llm.calls[0][1][0]["content"]
+
+
 def test_card_results_feed_the_reference_table(tmp_path, files):
     llm = ScriptedLlm(streams=[[tool("video_from_image", {"prompt": "push in", "image": "C9#1"})],
                                [tool("join_videos", {"clips": ["C1#1", "C1#1"]})]])
@@ -306,3 +327,27 @@ def test_chat_api(settings, store):
         assert c.delete(f"/api/chats/{cid}", headers=SAME_ORIGIN).json() == {"deleted": cid}
         assert c.get(f"/api/chats/{cid}").status_code == 404
         assert c.get("/api/health").json()["llm_model"] == "gemma4-26b-a4b"
+
+
+def test_a_sheet_card_without_its_photo_takes_the_attached_image(tmp_path, files):
+    ref = files.save_input(PNG)["ref"]
+    llm = ScriptedLlm(streams=[[tool("character_sheet", {"description": "an anime girl"})]])
+    conv, events = run(make(tmp_path, files, llm), {"text": "a sheet from this image", "attachments": [ref], "role": "casting"})
+    card = next(e["card"] for e in events if e["type"] == "card")
+    assert card["args"]["photo"] == ["A1"] and card["warnings"] == ["photo A1 taken from the attached image"]
+
+
+def test_character_sheet_takes_a_photo():
+    args, warnings = T.normalize("character_sheet", {"description": "a red coat", "photo": ["A1"]}, lambda r: True)
+    assert args["photo"] == ["A1"] and not warnings
+    args, _ = T.normalize("character_sheet", {"description": "a red coat"}, lambda r: True)
+    assert "photo" not in args
+
+
+def test_storyboard_card_takes_the_conversation_sheets():
+    args, warnings = T.normalize("storyboard", {"brief": "x", "subject_sheets": ["C2#1", "A1"], "setting_sheet": ["C9#1"]},
+                                 lambda r: r != "C9#1")
+    assert args["subject_sheets"] == ["C2#1", "A1"] and args["setting_sheet"] == ["C9#1"]
+    assert warnings == ["C9#1 is not in the reference table"]
+    _, warnings = T.normalize("storyboard", {"brief": "x", "setting_sheet": ["A1", "A2"]}, lambda r: True)
+    assert warnings == ["setting_sheet: only the first 1 kept"]

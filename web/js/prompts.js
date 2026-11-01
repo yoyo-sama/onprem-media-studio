@@ -645,6 +645,15 @@
     return `${layout.build(desc, sheetWords(kind), kind === "other" ? SUBJECT_GUARD : "")}${SHEET_CLEAN}${styleText ? " " + styleText : ""}`;
   }
 
+  // A subject sheet drawn by Qwen Image 2.1 from a photo (<image1>): the photo holds the
+  // identity, the template the layout. Not part of 1.4.
+  const SHEET_FROM_PHOTO = {
+    human: "Using <image1> only as the identity reference: the person of <image1>, with exactly the same face, hair, build, skin tone and clothing, shown again from every angle for a studio reference sheet, in the same visual style as <image1>. ",
+    other: "Using <image1> only as the identity reference: the subject of <image1>, with exactly the same shape, proportions, surface, colors and markings, shown again from every angle for a studio reference sheet, in the same visual style as <image1>. ",
+  };
+  const charsheetFromPhotoPrompt = (desc, kind, templateId, styleId) =>
+    SHEET_FROM_PHOTO[kind === "other" ? "other" : "human"] + charsheetPromptFrom(desc, kind, templateId, styleId);
+
   function locsheetPromptFrom(locDesc, styleId) {
     const styleText = styleTextFor(styleId);
     return `A professional photorealistic environment reference sheet of one single location, composited as a clean multi-view layout on a smooth seamless dark neutral background: ${locDesc}. Arranged neatly, the sheet shows several wide establishing photographs of the same location from different angles across the top, below them a row of medium shots of key structures, and along the bottom a cluster of tight close-up material and detail studies. The location is completely empty and deserted, showing only architecture, materials and scenery. Consistent art direction, matching lighting and color palette across every view. ${SHEET_CLEAN}${styleText ? " " + styleText : ""}`;
@@ -1089,7 +1098,7 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
     h3AssignSubjects, h3Summary, h3RefBody, buildH3RefPrompt, capH3Prompt, h3VideoFrames, h3RealDuration,
     h3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, h3CutBodyOf, restoreCameraClause,
     normalizeShotList, fallbackShots,
-    SHEET_CLEAN, SHEET_TEMPLATES, SHEET_SIZE, sheetWords, charsheetPromptFrom, locsheetPromptFrom,
+    SHEET_CLEAN, SHEET_TEMPLATES, SHEET_SIZE, sheetWords, charsheetPromptFrom, charsheetFromPhotoPrompt, locsheetPromptFrom,
     sheetSkeleton, stripSheetSkeleton, wrapSheetDesc,
     CAMPAIGN_IMAGES, CAMPAIGN_TEASER, campaignPrompt,
     KREA2_ENRICH_SYSTEM, H3_VIDEO_ENRICH_SYSTEM, R2V_BRIEF_ENRICH_SYSTEM, QWEN_EDIT_INSTRUCTION_ENRICH_SYSTEM,

@@ -40,6 +40,16 @@ Gemma 4 E4B (8 GB) on a smaller machine. Native tool calls go through `llama-ser
 When an H3 video engine has to load alone and memory is short, the server stops `llama-server`
 first (`common.LOW_MEMORY`); it starts again on the next LLM request.
 
+Each Gemma call writes one line to the container log, with llama-server's timings, and so does
+each model load: `docker logs studio --since 30m 2>&1 | grep "llm:"` tells a slow model from a
+slow render (`llm: call 12.4 s (prompt 850 tokens in 1.1 s, 410 generated in 11.3 s)`). Each
+engine load writes an `engine:` line too (duration, engines freed for it): `grep -E "llm:|engine:"`.
+
+llama-server lets Gemma 4 think by default. For the prompt compilers (enrichment, sheets, shot
+list, role routing) that meant thousands of hidden tokens per call: 44 to 81 s measured on the
+GB10 for answers of a few hundred tokens. Those calls send `enable_thinking: false`; the chat
+turns keep thinking, which helps choosing the tools.
+
 ## Roles
 
 A role is a Markdown file: a header between `---` lines, then its instructions.
@@ -96,7 +106,10 @@ with server-sent events:
 3. **Cards**: each tool call becomes a card; its arguments are checked (`assistant/tools.py`
    `normalize`): defaults filled, values out of range brought back with a warning shown on the
    card, unknown image ids flagged. A call that cannot become a card (missing prompt…) is set
-   aside and Gemma is told why in the next turn.
+   aside and Gemma is told why in the next turn. Gemma sometimes writes a call as JSON in its
+   text instead of calling the tool (a fenced block such as `{"type": "video_from_image",
+   "props": {…}}`): when the answer holds no card, such a block naming one of the role's tools
+   becomes that card and leaves the text (`text_tool_calls`); the instructions also forbid it.
 4. **Handoff**: the `handoff` tool passes the conversation to another role, which answers in the
    same turn (once per turn).
 
@@ -109,7 +122,7 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 |---|---|---|
 | `create_image` | Prompt, engine (Krea 2 / Qwen Image 2.1), ratio, variants, style | `krea2-t2i` or `qwen-image-2.1`, as the Text2Image form |
 | `edit_image` | Instruction, input image, references, markets | `qwen-image-2.1` editing, one job per market, as Image2Image |
-| `character_sheet`, `location_sheet` | Description, subject type, style | `krea2-t2i` 1920×1088 with the 1.4 sheet templates |
+| `character_sheet`, `location_sheet` | Description, subject type, style; a photo of the subject (subject sheet only) | `krea2-t2i` 1920×1088 with the 1.4 sheet templates; with a photo, `qwen-image-2.1` edits it into the sheet at the same size, the template preceded by an identity sentence on `<image1>` (`charsheetFromPhotoPrompt`, not qualified yet). When Gemma leaves the photo out while the user's message carries one image, that image is the photo (with a warning on the card). The director's subject menu has the same action: "📷 Sheet from a photo" |
 | `video_from_text` | Prompt, length, ratio | `h3-t2v` |
 | `video_from_image` | Prompt, first image, optional last image, length | `h3-i2v` (I2VA or FL2VA) |
 | `image_sequence` | Prompt, 2 to 6 key images, segment length | the multi-image sequence (H3 segments, then `video-concat`) |
@@ -120,6 +133,9 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 
 - A card runs **only on the user's click**, through the same functions as the Studio form
   (`web/js/generate.js`): what a card submits is what the form would submit.
+- While a card renders, it shows its progress: a bar (the mean of its jobs), the jobs done, the
+  time since the click and the engine's last message (a model download, a step…). Its jobs are
+  tagged with the card's id when submitted (`withJobTag` in `web/js/ui.js`).
 - The prompt and the settings of a card can be edited before Generate; ✨ Enrich rewrites the
   card's prompt with the engine's own Gemma instruction (`Prompts.briefEnrichSystem`), with Undo.
 - "Open in the Studio" switches to the Studio and fills the form (pipeline, engine, settings,
@@ -127,6 +143,11 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 - "Launch the director" (storyboard and reference-to-video cards) fills the form the same way,
   then its click is the Generate click: the director's first step starts and every next step
   waits for the user's approval, as always.
+- A storyboard card carries the sheets the conversation already holds (`subject_sheets`, main
+  subject first, and `setting_sheet`). The form lists them under "Sheets from the assistant" (✕
+  drops one); the director keeps them as imported variants, has Gemma read each one (vision) to
+  fill its fields, and draws only the missing sheets. With several subjects, every shot starts
+  with the first two.
 - The browser reports what became of a card (`POST /api/chats/{id}/cards/{card}`: running with
   the settings it ran with, done with its files, error, cancelled, opened, director launched). The next turns see it:
   the results get ids **C3#1, C3#2…** (an H3 clip is followed by its last frame, C3#2), which

@@ -330,6 +330,12 @@
             <div class="hint" id="seqSummary"></div>
           </div>
 
+          <div class="form-stack" id="givenSheetsWrap" hidden>
+            <h3 class="section-title">Sheets from the assistant</h3>
+            <p class="hint">The director keeps these sheets and draws only the missing ones.</p>
+            <div class="ref-subjects" id="givenSheets"></div>
+          </div>
+
           <div class="form-stack" id="refExtrasWrap" hidden>
             <h3 class="section-title">Extra references</h3>
             <p class="hint r2v-only">In addition to the character and setting sheets. None required.</p>
@@ -437,8 +443,10 @@
             <div class="sheet-actions">
               <button type="button" class="secondary-btn sheet-regen">🔄 Regenerate the sheet</button>
               <button type="button" class="secondary-btn sheet-prompt">✎ Prompt</button>
-              <button type="button" class="secondary-btn sheet-import">📥 Import an image</button>
+              <button type="button" class="secondary-btn sheet-import" title="Use an image that is already a finished sheet, as it is">📥 Import an image</button>
               <input type="file" class="sheet-import-input" accept="image/*" hidden>
+              <button type="button" class="secondary-btn sheet-photo" title="Draws the sheet from a photo or a drawing of the subject, keeping its look (Qwen Image 2.1)">📷 Sheet from a photo</button>
+              <input type="file" class="sheet-photo-input" accept="image/*" hidden>
             </div>
           </div>
           <div class="sheet-right">

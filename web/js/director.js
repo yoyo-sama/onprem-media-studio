@@ -8,7 +8,7 @@
 // prompt the user edited is sent verbatim and never compiled over; the anchoring
 // blocks are re-appended by code; a shot holds at most two subjects.
 
-import { refURL } from "./api.js";
+import { blobToBase64, refURL } from "./api.js";
 import { L, LANG, t, translateTree, tx } from "./i18n.js";
 import { $, LLM, MOBILE, log, openPromptEditor, promptLog, runJob, undoToast, warn } from "./ui.js";
 import { openLightbox } from "./gallery.js";
@@ -25,6 +25,13 @@ const SAVE_KEY = "studioProject";
 let d = null;            // the session
 let hooks = {};
 let savedCache = null;   // valid saved project (drives "Resume the project")
+// Sheets an assistant card handed over ({subjects: [image], setting: image | null}): the
+// next storyboard keeps them instead of drawing new ones. Shown in the form.
+let givenSheets = null;
+export function useSheets(sheets) {
+  givenSheets = sheets && (sheets.subjects?.length || sheets.setting) ? { subjects: sheets.subjects || [], setting: sheets.setting || null } : null;
+}
+export const sheetsGiven = () => givenSheets;
 
 export const active = () => !!d;
 const isR2V = () => d?.pipeline === "reference2video";
@@ -108,7 +115,7 @@ const SECTIONS = { character: "studioCharacter", location: "studioLocation", sto
                    montage: "studioMontage", relay: "studioRelay", video: "studioVideoR2V" };
 const navBtn = name => document.querySelector(`#studioNav [data-section="${name}"]`);
 function enterStudio() { document.body.dataset.studio = "1"; hooks.onChange?.(); }
-function exitStudio() { delete document.body.dataset.studio; hooks.onChange?.(); }
+export function exitStudio() { delete document.body.dataset.studio; hooks.onChange?.(); }
 function selectSection(name) {
   for (const [key, id] of Object.entries(SECTIONS)) $(id).hidden = key !== name;
   document.querySelectorAll("#studioNav .studio-nav-btn").forEach(b => b.classList.toggle("active", b.dataset.section === name));
@@ -174,31 +181,51 @@ export function refreshSessionBar() {
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-// Sheets from the brief (Gemma), both sheet jobs at once, then (storyboard) the shot list.
+// Sheets from the brief (Gemma), the sheet jobs at once, then (storyboard) the shot list.
+// A sheet handed over by the assistant is kept as an imported variant: Gemma reads its
+// fields from the image (vision) and no job draws it again.
+const SUBJECT_FROM_SHEET = "The scene is the attached character sheet: describe the subject it shows, exactly as it looks there.";
+const SETTING_FROM_SHEET = "The scene is the attached setting sheet: describe the place it shows, exactly as it looks there.";
+const imported = img => ({ ref: img.ref, seed: null, source: "imported", prompt: null, status: "ready" });
+
+// The sheet compilers, fed the image instead of the brief. A failed call leaves the
+// fields empty (to fill by hand), never the instruction itself.
+async function fieldsFromSheet(img, read, scene) {
+  const b64 = await blobToBase64(await F.imageBlob(img));
+  const fields = await read((system, user) => F.llm(system, user, [b64]), scene, promptLog);
+  for (const k of Object.keys(fields)) if (fields[k] === scene) fields[k] = "";
+  return fields;
+}
+
 async function openSession(pipeline, seed) {
   const text = F.brief();
   if (!text) throw new Error(t("Describe the scene in the brief before generating."));
-  log("req", "Director: subject sheet and setting sheet with {llm}…", { llm: LLM });
-  const charFields = await P.characterSheetFromBrief(F.llm, text, promptLog);
-  const locFields = await P.locationSheetFromBrief(F.llm, text, promptLog);
+  const given = pipeline === "storyboard" ? givenSheets : null;
+  const subjects = given?.subjects || [], setting = given?.setting || null;
+  if (given) log("req", "Director: reading the sheets from the assistant with {llm} (vision)…", { llm: LLM });
+  else log("req", "Director: subject and setting descriptions with {llm}…", { llm: LLM });
+  const charFields = [];
+  for (const img of subjects) charFields.push(await fieldsFromSheet(img, P.characterSheetFromBrief, SUBJECT_FROM_SHEET));
+  if (!subjects.length) charFields.push(await P.characterSheetFromBrief(F.llm, text, promptLog));
+  const locFields = setting ? await fieldsFromSheet(setting, P.locationSheetFromBrief, SETTING_FROM_SHEET)
+    : await P.locationSheetFromBrief(F.llm, text, promptLog);
   const s = {
     pipeline, wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value,
     style: F.currentStyleId(), sheetTemplate: F.currentTemplateId(),
-    locFields, chars: [newChar(charFields)], charIdx: 0, locVariants: [], locActive: 0, validated: false,
+    locFields, chars: charFields.map(f => newChar(f)), charIdx: 0, locVariants: [], locActive: 0, validated: false,
   };
-  // The prompt compiled here is the one sent AND the one kept on the variant: the
-  // prompt editor reopens on what was really rendered, template included (LESSONS).
-  const prev = d;
-  d = s;
-  const charV = { seed, source: "generated", prompt: charSheetPrompt(charFields), status: "pending" };
-  const locV = { seed: F.seedPlus(seed, 101), source: "generated", prompt: locSheetPrompt(), status: "pending" };
-  d = prev;
-  s.chars[0].variants.push(charV);
-  s.locVariants.push(locV);
-  return { s, charV, locV, text };
+  // Nothing is drawn here: the studio opens on the descriptions, and each sheet is
+  // generated (from its fields or a photo) or imported by the user's click.
+  s.chars.forEach((c, i) => { if (subjects[i]) c.variants.push(imported(subjects[i])); });
+  if (setting) s.locVariants.push(imported(setting));
+  if (given) {
+    givenSheets = null;
+    log("ok", "{n} sheet(s) from the assistant kept: they are not drawn again.", { n: subjects.length + (setting ? 1 : 0) });
+  }
+  return { s, text };
 }
 
-function enterSession(s, charV, locV) {
+function enterSession(s) {
   reset();
   d = s;
   updateNavForPipeline();
@@ -208,30 +235,32 @@ function enterSession(s, charV, locV) {
   renderSheetMenu("loc");
   if (!isR2V()) { renderRelay(); renderShotList(); }
   updateGate();
-  watchVariant("char", charV, sheetJob("char", charV.prompt, charV.seed));
-  watchVariant("loc", locV, sheetJob("loc", locV.prompt, locV.seed));
+  log("ok", "Studio open: no sheet is drawn yet. Generate each one from its description or a photo, or import a finished sheet.");
   save();
 }
 
 export async function startStoryboard(seed) {
-  const { s, charV, locV, text } = await openSession("storyboard", seed);
+  const { s, text } = await openSession("storyboard", seed);
   s.n = Math.min(16, Math.max(4, parseInt($("shotCount").value, 10) || 6));
   s.segDur = F.formDuration();
   s.holdDur = parseInt($("holdDuration").value, 10) > 0 ? F.clampDuration($("holdDuration").value) : 0;
   s.shots = await P.shotListFromBrief(F.llm, text, s.n, s.segDur, promptLog);
+  // Several subjects handed over: each shot starts with the first two (the cap of a
+  // shot); the shot list's chips change that.
+  if (s.chars.length > 1) s.shots.forEach(shot => { shot.subjects = [0, 1]; });
   s.keyframes = null; s.cutPlan = null; s.cuts = null; s.order = null; s.animatic = null;
   s.relay = { segments: [newRelaySegment()], video: null, scenario: "" };
-  enterSession(s, charV, locV);
+  enterSession(s);
   $("relayScenario").value = "";
 }
 
 export async function startR2V(seed) {
-  const { s, charV, locV } = await openSession("reference2video", seed);
+  const { s } = await openSession("reference2video", seed);
   // The video job's settings are read now, not at launch, so a form edited during the
   // review changes nothing.
   s.duration = F.formDuration();
   s.loras = F.formLoras();
-  enterSession(s, charV, locV);
+  enterSession(s);
 }
 
 // Variant of a sheet job already submitted.
@@ -411,7 +440,9 @@ function renderVariantStrip(kind) {
   if (av?.ref && av.status !== "missing") { img.src = refURL(av.ref); img.hidden = false; }
   else { img.removeAttribute("src"); img.hidden = true; }
   const status = section.querySelector(".sheet-status");
-  if (!av) tx(status, d && isChar && !variants.length ? "No sheet yet: describe the subject (or ✎ Prompt), then generate." : "");
+  if (!av) tx(status, !d || variants.length ? "" : isChar
+    ? "No sheet yet: generate it from the fields (or ✎ Prompt), from a photo, or import a finished sheet."
+    : "No sheet yet: generate it from the fields (or ✎ Prompt), or import a finished sheet.");
   else if (variants.length > 1) tx(status, "{status} · sheet {n} of {total} active", { status: t(statusWord(av.status)), n: act + 1, total: variants.length });
   else tx(status, statusWord(av.status));
   const busy = variants.some(v => v.status === "pending");
@@ -451,7 +482,7 @@ function regenerateSheet(kind, promptOverride) {
   // A subject added by hand has no variant to start from: a seed of its own, so two
   // new subjects do not look alike.
   const base = isChar ? F.seedPlus(d.seed, d.charIdx ? 211 + d.charIdx : 0) : F.seedPlus(d.seed, 101);
-  const seed = F.seedPlus(lastGen ? lastGen.seed : base, 1);
+  const seed = lastGen ? F.seedPlus(lastGen.seed, 1) : base;
   // A subject described only in the prompt editor would leave its fields empty, and the
   // fields are what shot images and cuts read: the description goes into the first field.
   const fields = isChar ? owner.fields : d.locFields;
@@ -482,6 +513,28 @@ async function importSheet(kind, file) {
     refreshSheetUI(kind);
     log("ok", kind === "char" ? "Subject sheet imported: {name}." : "Setting sheet imported: {name}.", { name: file.name });
     save();
+  } catch (err) { warn(err); }
+}
+
+// A subject sheet drawn by Qwen Image 2.1 from a photo or drawing of the subject: a new
+// variant, the subject's fields giving the description, the photo its look.
+async function sheetFromPhoto(file) {
+  if (!d) return;
+  const owner = curChar();
+  if (owner.variants.some(v => v.status === "pending")) return;
+  try {
+    const photo = await F.imageRef({ name: file.name, blob: file });
+    const lastGen = [...owner.variants].reverse().find(v => v.source === "generated");
+    const seed = F.seedPlus(lastGen ? lastGen.seed : d.seed, 1);
+    const prompt = P.charsheetFromPhotoPrompt(charDesc(owner), P.charKindOf(owner.fields), d.sheetTemplate, d.style);
+    const variant = { seed, source: "generated", prompt, edited: false, status: "pending" };
+    owner.variants.push(variant);
+    owner.active = owner.variants.length - 1;
+    d.validated = false;
+    refreshSheetUI("char");
+    log("req", "Subject sheet from a photo: {name} (Qwen Image 2.1)…", { name: file.name });
+    watchVariant("char", variant, runJob("qwen-image-2.1", { prompt, images: [photo], ...P.SHEET_SIZE, count: 1, seed }, {
+      origin: origin(), label: ["Subject sheet"], sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed }] }));
   } catch (err) { warn(err); }
 }
 
@@ -1378,6 +1431,9 @@ export function initDirector(h) {
     const file = section.querySelector(".sheet-import-input");
     section.querySelector(".sheet-import").addEventListener("click", () => file.click());
     file.addEventListener("change", () => { if (file.files[0]) importSheet(kind, file.files[0]); file.value = ""; });
+    const photo = section.querySelector(".sheet-photo-input");  // subject menu only
+    section.querySelector(".sheet-photo")?.addEventListener("click", () => photo.click());
+    photo?.addEventListener("change", () => { if (photo.files[0]) sheetFromPhoto(photo.files[0]); photo.value = ""; });
     const img = section.querySelector(".sheet-preview img");
     img.addEventListener("click", () => { if (img.getAttribute("src")) openLightbox({ url: img.src, type: "image" }); });
   }

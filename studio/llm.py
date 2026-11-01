@@ -32,6 +32,19 @@ class LlmError(RuntimeError):
     pass
 
 
+def log_call(kind: str, seconds: float, timings: dict | None, images: int = 0) -> None:
+    """One line per Gemma call in the container log (`docker logs studio | grep llm:`),
+    to tell a slow model from a slow render."""
+    t = timings or {}
+    line = f"llm: {kind} {seconds:.1f} s"
+    if t:
+        line += (f" (prompt {t.get('prompt_n', '?')} tokens in {t.get('prompt_ms', 0) / 1000:.1f} s,"
+                 f" {t.get('predicted_n', '?')} generated in {t.get('predicted_ms', 0) / 1000:.1f} s)")
+    if images:
+        line += f", {images} image(s)"
+    print(line, flush=True)
+
+
 class LlamaServer:
     def __init__(self, settings: Settings, models: ModelStore, startup_timeout: float = 180):
         self.settings = settings
@@ -66,6 +79,7 @@ class LlamaServer:
             if self.state == "running":
                 return
             self.models.ensure([self.model_id])
+            began = time.time()
             try:
                 self.proc = subprocess.Popen(self.command())
             except FileNotFoundError as exc:
@@ -76,6 +90,7 @@ class LlamaServer:
                     raise LlmError(f"llama-server exited with code {self.proc.returncode}")
                 try:
                     if httpx.get(f"{self.url}/health", timeout=2).status_code == 200:
+                        print(f"llm: {self.model_id} loaded in {time.time() - began:.1f} s", flush=True)
                         return
                 except httpx.HTTPError:
                     pass
@@ -107,10 +122,16 @@ class LlamaServer:
         }
         if json_mode:
             body["response_format"] = {"type": "json_object"}
+        # Gemma 4 thinks by default through llama-server: thousands of hidden tokens per
+        # prompt compiled (44 to 81 s measured on the GB10). The compilers want the answer.
+        body["chat_template_kwargs"] = {"enable_thinking": False}
+        began = time.time()
         resp = httpx.post(f"{self.url}/v1/chat/completions", json=body, timeout=300)
         if resp.status_code != 200:
             raise LlmError(f"llama-server answered {resp.status_code}: {resp.text[:300]}")
-        return resp.json()["choices"][0]["message"]["content"]
+        data = resp.json()
+        log_call("call", time.time() - began, data.get("timings"), len(images or []))
+        return data["choices"][0]["message"]["content"]
 
     def stream(self, messages: list[dict], tools: list[dict] | None = None,
                temperature: float = 0.6) -> Iterator[tuple[str, object]]:
@@ -122,6 +143,7 @@ class LlamaServer:
         if tools:
             body["tools"] = tools
         calls: dict[int, dict] = {}
+        began, timings = time.time(), None
         with httpx.stream("POST", f"{self.url}/v1/chat/completions", json=body, timeout=300) as resp:
             if resp.status_code != 200:
                 resp.read()
@@ -133,8 +155,10 @@ class LlamaServer:
                 if data == "[DONE]":
                     break
                 try:
-                    delta = json.loads(data)["choices"][0].get("delta") or {}
-                except (ValueError, KeyError, IndexError):
+                    chunk = json.loads(data)
+                    timings = chunk.get("timings") or timings
+                    delta = chunk["choices"][0].get("delta") or {}
+                except (ValueError, KeyError, IndexError, AttributeError):
                     continue
                 if delta.get("content"):
                     yield "text", delta["content"]
@@ -144,5 +168,6 @@ class LlamaServer:
                     fn = part.get("function") or {}
                     call["name"] += fn.get("name") or ""
                     call["arguments"] += fn.get("arguments") or ""
+        log_call("chat", time.time() - began, timings)
         for i, call in sorted(calls.items()):
             yield "tool", {**call, "id": call["id"] or f"call_{i}"}

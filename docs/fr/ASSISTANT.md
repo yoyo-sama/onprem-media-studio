@@ -40,6 +40,18 @@ d'outils natifs passent par `llama-server --jinja` (gabarit de chat de Gemma 4).
 Quand un moteur vidéo H3 doit se charger seul et que la mémoire manque, le serveur arrête d'abord
 `llama-server` (`common.LOW_MEMORY`) ; il redémarre à la requête LLM suivante.
 
+Chaque appel à Gemma écrit une ligne dans le journal du conteneur, avec les temps de
+llama-server, de même que chaque chargement du modèle : `docker logs studio --since 30m 2>&1 |
+grep "llm:"` distingue un modèle lent d'un rendu lent (`llm: call 12.4 s (prompt 850 tokens in
+1.1 s, 410 generated in 11.3 s)`). Chaque chargement de moteur écrit aussi une ligne `engine:`
+(durée, moteurs libérés pour lui) : `grep -E "llm:|engine:"`.
+
+llama-server fait réfléchir Gemma 4 par défaut. Pour les compilateurs de prompts (enrichissement,
+planches, liste de plans, choix du rôle), cela faisait des milliers de jetons cachés par appel :
+44 à 81 s mesurées sur le GB10 pour des réponses de quelques centaines de jetons. Ces appels
+envoient `enable_thinking: false` ; les tours du chat gardent la réflexion, utile au choix des
+outils.
+
 ## Rôles
 
 Un rôle est un fichier Markdown : un en-tête entre deux lignes `---`, puis ses consignes.
@@ -97,7 +109,10 @@ des événements server-sent :
    (`assistant/tools.py` `normalize`) : valeurs par défaut remplies, valeurs hors bornes ramenées
    avec un avertissement affiché sur la carte, ids d'images inconnus signalés. Un appel qui ne
    peut pas devenir une carte (prompt manquant…) est écarté et Gemma apprend pourquoi au tour
-   suivant.
+   suivant. Gemma écrit parfois un appel en JSON dans son texte au lieu d'appeler l'outil (un
+   bloc comme `{"type": "video_from_image", "props": {…}}`) : quand la réponse n'a aucune carte,
+   un tel bloc qui nomme un outil du rôle devient cette carte et sort du texte
+   (`text_tool_calls`) ; la consigne l'interdit aussi.
 4. **Relais** : l'outil `handoff` passe la conversation à un autre rôle, qui répond dans le même
    tour (une fois par tour).
 
@@ -110,7 +125,7 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 |---|---|---|
 | `create_image` | Prompt, moteur (Krea 2 / Qwen Image 2.1), ratio, variantes, style | `krea2-t2i` ou `qwen-image-2.1`, comme le formulaire Text2Image |
 | `edit_image` | Consigne, image d'entrée, références, marchés | édition `qwen-image-2.1`, un job par marché, comme Image2Image |
-| `character_sheet`, `location_sheet` | Description, type de sujet, style | `krea2-t2i` 1920×1088 avec les gabarits de planche de la 1.4 |
+| `character_sheet`, `location_sheet` | Description, type de sujet, style ; une photo du sujet (planche sujet seulement) | `krea2-t2i` 1920×1088 avec les gabarits de planche de la 1.4 ; avec une photo, `qwen-image-2.1` la transforme en planche à la même taille, le gabarit précédé d'une phrase d'identité sur `<image1>` (`charsheetFromPhotoPrompt`, pas encore qualifié). Quand Gemma omet la photo alors que le message de l'utilisateur porte une seule image, cette image sert de photo (avec un avertissement sur la carte). Le menu du sujet du réalisateur a la même action : « 📷 Planche depuis une photo » |
 | `video_from_text` | Prompt, durée, ratio | `h3-t2v` |
 | `video_from_image` | Prompt, première image, dernière image facultative, durée | `h3-i2v` (I2VA ou FL2VA) |
 | `image_sequence` | Prompt, 2 à 6 images clés, durée des segments | la séquence multi-images (segments H3, puis `video-concat`) |
@@ -122,6 +137,10 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 - Une carte ne tourne **que sur le clic de l'utilisateur**, par les mêmes fonctions que le
   formulaire du Studio (`web/js/generate.js`) : ce qu'une carte soumet est ce que le formulaire
   soumettrait.
+- Pendant son rendu, une carte montre son avancement : une barre (la moyenne de ses jobs), les
+  jobs terminés, le temps écoulé depuis le clic et le dernier message du moteur (téléchargement
+  d'un modèle, une étape…). Ses jobs sont marqués de l'id de la carte à l'envoi (`withJobTag` dans
+  `web/js/ui.js`).
 - Le prompt et les réglages d'une carte se modifient avant Générer ; ✨ Enrichir réécrit le prompt
   de la carte avec la consigne Gemma propre au moteur (`Prompts.briefEnrichSystem`), avec
   Annuler.
@@ -130,6 +149,11 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 - « Lancer le Réalisateur » (cartes storyboard et référence vers vidéo) remplit le formulaire de
   la même façon, puis son clic vaut le clic sur Générer : la première étape du réalisateur démarre
   et chaque étape suivante attend l'accord de l'utilisateur, comme toujours.
+- Une carte storyboard porte les planches que la conversation contient déjà (`subject_sheets`,
+  sujet principal en premier, et `setting_sheet`). Le formulaire les liste sous « Planches venues
+  de l'assistant » (✕ en retire une) ; le réalisateur les garde comme variantes importées, fait
+  lire chacune par Gemma (vision) pour remplir ses champs, et ne dessine que les planches qui
+  manquent. Avec plusieurs sujets, chaque plan part avec les deux premiers.
 - Le navigateur signale ce qu'est devenue une carte (`POST /api/chats/{id}/cards/{card}` : en
   cours avec les réglages utilisés, terminée avec ses fichiers, erreur, annulée, ouverte, réalisateur
 lancé). Les

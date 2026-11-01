@@ -111,6 +111,12 @@ def disk_size(path: Path) -> int:
     return sum(f.stat().st_size for f in Path(path).rglob("*") if f.is_file())
 
 
+# Safetensors read whole instead of memory-mapped: on the GB10, Krea 2 loaded in 86 s
+# instead of 254 s (tools/qualify/load_speed.sh, page cache dropped; disk 4.3 GB/s).
+# device_map on the GPU gained nothing (250 s).
+LOAD_OPTIONS = {"disable_mmap": True}
+
+
 def load(key, build, size: int = 0, alone: bool = False):
     """The resident pipeline for `key`, built on first use. Before building one,
     the least recently used pipelines are freed until `size` bytes (its weights)
@@ -119,12 +125,22 @@ def load(key, build, size: int = 0, alone: bool = False):
     if key in _resident:
         _resident[key] = _resident.pop(key)  # now the most recently used
         return _resident[key]
+    began, freed = time.time(), []
+    # Blocks the last render left in torch's cache count as used: given back first, so a
+    # pipeline is not freed for room that was only cached (Qwen was freed for Krea 2 on
+    # the GB10 with 55 GB available once the cache was empty).
+    _empty_cache()
     while _resident and (alone or free_memory() < size + RESERVE):
-        _free(next(iter(_resident)))
+        freed.append(next(iter(_resident)))
+        _free(freed[-1])
     if alone and LOW_MEMORY and free_memory() < size + RESERVE:
         for hook in LOW_MEMORY:
             hook()
     _resident[key] = build()
+    # One line per load in the container log (`docker logs studio | grep engine:`):
+    # a slow job is often a model loaded again.
+    print(f"engine: {key} loaded in {time.time() - began:.1f} s"
+          + (f", after freeing {', '.join(map(str, freed))}" if freed else ""), flush=True)
     return _resident[key]
 
 
@@ -136,6 +152,10 @@ def _free(key) -> None:
         old.close()
     del old
     gc.collect()
+    _empty_cache()
+
+
+def _empty_cache() -> None:
     try:
         import torch
     except ImportError:

@@ -156,10 +156,24 @@ export function initJobs() {
   setInterval(renderSessionJobs, 1000);
 }
 
+// A job submitted while a tag is set (`withJobTag`, read when runJob is called) is
+// reported with that tag to the `onJobSubmitted` handlers: the assistant follows the
+// jobs of its cards this way.
+let jobTag = null;
+const submitHandlers = new Set();
+export const onJobSubmitted = fn => submitHandlers.add(fn);
+export const currentJobTag = () => jobTag;
+export function withJobTag(tag, fn) {
+  const before = jobTag;
+  jobTag = tag;
+  try { return fn(); } finally { jobTag = before; }
+}
+
 // `label` and `sub` are [English template, params] pairs, shown translated.
 export async function runJob(pipeline, params, { origin, label, sub = ["", {}] } = {}) {
-  const token = cancelToken;
+  const token = cancelToken, tag = jobTag;
   const job = await api.submit(pipeline, params, origin);
+  for (const fn of submitHandlers) fn(job, tag);
   const el = document.createElement("div");
   el.className = "job fade-in";
   el.innerHTML = `<div><strong></strong><span class="sub"></span></div><span class="status running"></span>`;

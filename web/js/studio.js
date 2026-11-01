@@ -43,13 +43,13 @@ let activeScenario = "campaign";
 const GENERATE_LABELS = {
   text2image: L("Generate the images"), image2image: L("Generate the variants"),
   text2video: L("Generate the video"), image2video: L("Generate the video"),
-  sequence: L("Generate the sequence"), storyboard: L("Generate the sheets (step 1/3)"),
+  sequence: L("Generate the sequence"), storyboard: L("Open the studio (step 1/3)"),
   campaign: L("Start the campaign (posters + thumbnails + teaser)"),
 };
 function refreshGenerateLabel() {
   const p = F.currentPipeline();
   tx($("generateBtn"), p === "reference2video"
-    ? ($("skipSheetsToggle").checked ? "Generate the video" : "Generate the sheets (step 1/2)")
+    ? ($("skipSheetsToggle").checked ? "Generate the video" : "Open the studio (step 1/2)")
     : GENERATE_LABELS[p] || "Generate");
 }
 
@@ -292,6 +292,34 @@ function renderRefs() {
   }));
   translateTree($("refSubjects"));
   renderSubjectChips();
+  renderGivenSheets();
+}
+
+// Sheets handed over by an assistant card, shown while the storyboard is chosen: the
+// director keeps them instead of drawing new ones. ✕ drops one.
+function renderGivenSheets() {
+  const given = D.sheetsGiven(), on = !!given && F.currentPipeline() === "storyboard";
+  $("givenSheetsWrap").hidden = !on;
+  if (!on) return;
+  const rows = [...given.subjects.map((img, i) => [img, [L("Subject sheet {n}"), { n: i + 1 }], () => given.subjects.splice(i, 1)]),
+                ...(given.setting ? [[given.setting, [L("Setting sheet"), {}], () => { given.setting = null; }]] : [])];
+  $("givenSheets").replaceChildren(...rows.map(([img, [label, params], drop]) => {
+    const row = document.createElement("div");
+    row.className = "ref-subject ref-removable";
+    const tag = tx(document.createElement("div"), label, params);
+    tag.className = "rs-tag";
+    const name = document.createElement("div");
+    name.className = "rs-name";
+    name.dataset.raw = "";
+    name.textContent = img.name;
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "rs-x"; x.textContent = "✕";
+    txAria(x, "Do not use this sheet");
+    x.addEventListener("click", () => { drop(); D.useSheets(given); renderGivenSheets(); });
+    row.append(tag, name, x);
+    return row;
+  }));
+  translateTree($("givenSheets"));
 }
 
 // Chips that insert a <Subject N> token at the cursor: the only way to tell H3 which
@@ -438,6 +466,17 @@ async function generate() {
   }
   const btn = $("generateBtn");
   btn.disabled = true;
+  // The director's first step and the auto enrichment wait on Gemma before any job:
+  // the button says so, with the time spent.
+  const busy = wf.pipeline === "storyboard" ? L("{llm} is writing the sheets and the shot list… {time}")
+    : wf.pipeline === "reference2video" ? L("{llm} is preparing the director… {time}")
+    : autoEnrich && wf.enrich !== "builtin" ? L("{llm} is enriching the brief… {time}") : null;
+  const start = Date.now();
+  const tick = () => {
+    const s = Math.floor((Date.now() - start) / 1000);
+    tx(btn, busy, { llm: LLM, time: `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` });
+  };
+  const timer = busy ? (tick(), setInterval(tick, 1000)) : 0;
   try {
     if (autoEnrich && wf.enrich !== "builtin") {
       log("req", "Auto enrichment of the brief with {llm}…", { llm: LLM });
@@ -452,7 +491,12 @@ async function generate() {
     else if (wf.pipeline === "campaign") generateCampaign(seed);
     else await generatePlain(wf, seed);
   } catch (err) { warn(err); }
-  finally { btn.disabled = false; }
+  finally {
+    clearInterval(timer);
+    if (busy) refreshGenerateLabel();
+    renderGivenSheets();  // used by the director once its session opened
+    btn.disabled = false;
+  }
 }
 
 // Text and image to image, text and image to video; one job per market for local versions.
@@ -505,6 +549,7 @@ const CARD_FORM = {
 };
 async function openCardInForm(tool, a, image, quiet = false) {
   setMode("studio");
+  D.exitStudio();  // the form, not a director session left open (it stays in the session bar)
   const [pipeline, wfId, text] = CARD_FORM[tool](a);
   const before = { brief: brief.value, scenario: activeScenario, pipeline: F.currentPipeline(), wf: $("modelSelect").value };
   const scenario = F.pipelineDef(pipeline).scenario?.[0] || (pipeline === "image2image" ? "localization" : "campaign");
@@ -526,6 +571,9 @@ async function openCardInForm(tool, a, image, quiet = false) {
     renderMarkets();
   }
   if (tool === "reference_video") F.refList("r2v").splice(0, Infinity, ...(a.references || []).map(img));
+  // Sheets of a storyboard card: the director keeps them (another card drops them).
+  D.useSheets(tool === "storyboard"
+    ? { subjects: (a.subject_sheets || []).map(img), setting: a.setting_sheet?.length ? img(a.setting_sheet[0]) : null } : null);
   if (tool === "image_sequence") { seqImages.splice(0, Infinity, ...a.images.map(id => ({ ...img(id), dur: a.duration }))); renderSeqList(); }
   renderRefs();
   brief.value = text;

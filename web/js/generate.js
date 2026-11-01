@@ -4,7 +4,7 @@
 // Each returns the promise of its jobs; nothing here reads the form.
 
 import { L, t } from "./i18n.js";
-import { log, runJob } from "./ui.js";
+import { currentJobTag, log, runJob, withJobTag } from "./ui.js";
 import * as F from "./form.js";
 
 const P = F.P;
@@ -64,7 +64,7 @@ export async function seqAspect(img) {
 // the last frame; `durs[i]` is the length of the segment starting on image i. The
 // segments are then joined. Resolves with the assembly job.
 export function runSequence({ refs, durs, text, loras = [], aspect, seed, origin = "sequence" }) {
-  const n = refs.length - 1;
+  const n = refs.length - 1, tag = currentJobTag();
   log("req", "Sequence: {n} segment(s) from first to last frame…", { n });
   const clips = refs.slice(0, -1).map((ref, i) => runJob("h3-i2v", {
     prompt: F.capH3(`${P.h3Alignment(true, durs[i])}\n\n${text}`), duration: durs[i], seed: F.seedPlus(seed, i), loras,
@@ -73,8 +73,9 @@ export function runSequence({ refs, durs, text, loras = [], aspect, seed, origin
        sub: ["{info} · seed {seed}", { info: `FL2VA · ${durs[i]} s`, seed: F.seedPlus(seed, i) }] }));
   return Promise.all(clips).then(async jobs => {
     const videos = jobs.map(j => j.outputs.find(o => o.endsWith(".mp4")));
-    const job = await runJob("video-concat", { clips: videos }, { origin, label: ["Sequence · assembly"],
-      sub: ["{n} segment(s)", { n }] });
+    // Submitted later: under the caller's tag, as the segments were.
+    const job = await withJobTag(tag, () => runJob("video-concat", { clips: videos }, { origin, label: ["Sequence · assembly"],
+      sub: ["{n} segment(s)", { n }] }));
     log("ok", "Sequence assembled.");
     return job;
   });

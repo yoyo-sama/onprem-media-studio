@@ -487,11 +487,6 @@ export const DICT = {
     es: "Director: imágenes de los planos ancladas en las láminas aprobadas…",
     de: "Regie: Einstellungsbilder, verankert auf den freigegebenen Bögen…",
   },
-  "Director: subject sheet and setting sheet with {llm}…": {
-    fr: "Réalisateur : planche du sujet et planche du décor avec {llm}…",
-    es: "Director: lámina del sujeto y lámina del decorado con {llm}…",
-    de: "Regie: Motivbogen und Schauplatzbogen mit {llm}…",
-  },
   "Documentary": {
     fr: "Documentaire",
     es: "Documental",
@@ -921,16 +916,6 @@ export const DICT = {
     fr: "Générer la planche",
     es: "Generar la lámina",
     de: "Bogen generieren",
-  },
-  "Generate the sheets (step 1/2)": {
-    fr: "Générer les planches (étape 1/2)",
-    es: "Generar las láminas (paso 1/2)",
-    de: "Bögen generieren (Schritt 1/2)",
-  },
-  "Generate the sheets (step 1/3)": {
-    fr: "Générer les planches (étape 1/3)",
-    es: "Generar las láminas (paso 1/3)",
-    de: "Bögen generieren (Schritt 1/3)",
   },
   "Generate the shot images": {
     fr: "Générer les images des plans",
@@ -1536,11 +1521,6 @@ export const DICT = {
     fr: "Aucun résultat pour ces filtres.",
     es: "Ningún resultado para estos filtros.",
     de: "Kein Ergebnis für diese Filter.",
-  },
-  "No sheet yet: describe the subject (or ✎ Prompt), then generate.": {
-    fr: "Aucune planche : décris le sujet (ou ✎ Prompt) puis génère.",
-    es: "Sin lámina: describe el sujeto (o ✎ Prompt) y luego genera.",
-    de: "Noch kein Bogen: Motiv beschreiben (oder ✎ Prompt) und dann generieren.",
   },
   "No video yet.": {
     fr: "Pas encore de vidéo.",
@@ -3531,5 +3511,125 @@ export const DICT = {
     fr: "Revenir à l'accueil, pour une nouvelle conversation",
     es: "Volver a la bienvenida, para una nueva conversación",
     de: "Zurück zur Begrüßung, für eine neue Unterhaltung",
+  },
+  "Waiting in the queue · {time}": {
+    fr: "En attente dans la file · {time}",
+    es: "En espera en la cola · {time}",
+    de: "Wartet in der Warteschlange · {time}",
+  },
+  "Rendering {pct}% · {done}/{n} done · {time}": {
+    fr: "Rendu {pct} % · {done}/{n} terminés · {time}",
+    es: "Renderizando {pct} % · {done}/{n} terminados · {time}",
+    de: "Rendering {pct} % · {done}/{n} fertig · {time}",
+  },
+  "Rendering {pct}% · {time}": {
+    fr: "Rendu {pct} % · {time}",
+    es: "Renderizando {pct} % · {time}",
+    de: "Rendering {pct} % · {time}",
+  },
+  "{llm} is writing the sheets and the shot list… {time}": {
+    fr: "{llm} écrit les fiches et la liste des plans… {time}",
+    es: "{llm} escribe las fichas y la lista de planos… {time}",
+    de: "{llm} schreibt die Blätter und die Einstellungsliste… {time}",
+  },
+  "{llm} is preparing the director… {time}": {
+    fr: "{llm} prépare le réalisateur… {time}",
+    es: "{llm} prepara al director… {time}",
+    de: "{llm} bereitet die Regie vor… {time}",
+  },
+  "{llm} is enriching the brief… {time}": {
+    fr: "{llm} enrichit le brief… {time}",
+    es: "{llm} enriquece el brief… {time}",
+    de: "{llm} reichert das Briefing an… {time}",
+  },
+  "Subject sheets": {
+    fr: "Planches des sujets",
+    es: "Hojas de los sujetos",
+    de: "Motivblätter",
+  },
+  "Subject sheet {n}": {
+    fr: "Planche du sujet {n}",
+    es: "Hoja del sujeto {n}",
+    de: "Motivblatt {n}",
+  },
+  "Director: reading the sheets from the assistant with {llm} (vision)…": {
+    fr: "Réalisateur : lecture des planches de l'assistant par {llm} (vision)…",
+    es: "Director: {llm} lee las láminas del asistente (visión)…",
+    de: "Regie: {llm} liest die Bögen des Assistenten (Bilderkennung)…",
+  },
+  "{n} sheet(s) from the assistant kept: they are not drawn again.": {
+    fr: "{n} planche(s) de l'assistant reprise(s) : elles ne sont pas redessinées.",
+    es: "{n} lámina(s) del asistente conservada(s): no se vuelven a dibujar.",
+    de: "{n} Bogen/Bögen des Assistenten übernommen: sie werden nicht neu gezeichnet.",
+  },
+  "Sheets from the assistant": {
+    fr: "Planches venues de l'assistant",
+    es: "Láminas del asistente",
+    de: "Bögen aus dem Assistenten",
+  },
+  "The director keeps these sheets and draws only the missing ones.": {
+    fr: "Le réalisateur garde ces planches et ne dessine que celles qui manquent.",
+    es: "El director conserva estas láminas y solo dibuja las que faltan.",
+    de: "Die Regie behält diese Bögen und zeichnet nur die fehlenden.",
+  },
+  "Do not use this sheet": {
+    fr: "Ne pas utiliser cette planche",
+    es: "No usar esta lámina",
+    de: "Diesen Bogen nicht verwenden",
+  },
+  "Photo": {
+    fr: "Photo",
+    es: "Foto",
+    de: "Foto",
+  },
+  "📷 Sheet from a photo": {
+    fr: "📷 Planche depuis une photo",
+    es: "📷 Hoja desde una foto",
+    de: "📷 Blatt aus einem Foto",
+  },
+  "Draws the sheet from a photo or a drawing of the subject, keeping its look (Qwen Image 2.1)": {
+    fr: "Dessine la planche à partir d'une photo ou d'un dessin du sujet, en gardant son apparence (Qwen Image 2.1)",
+    es: "Dibuja la hoja a partir de una foto o un dibujo del sujeto, conservando su aspecto (Qwen Image 2.1)",
+    de: "Zeichnet das Blatt aus einem Foto oder einer Zeichnung des Motivs und behält sein Aussehen (Qwen Image 2.1)",
+  },
+  "Use an image that is already a finished sheet, as it is": {
+    fr: "Utilise telle quelle une image qui est déjà une planche terminée",
+    es: "Usa tal cual una imagen que ya es una hoja terminada",
+    de: "Verwendet ein Bild, das schon ein fertiges Blatt ist, unverändert",
+  },
+  "Subject sheet from a photo: {name} (Qwen Image 2.1)…": {
+    fr: "Planche du sujet depuis une photo : {name} (Qwen Image 2.1)…",
+    es: "Hoja del sujeto desde una foto: {name} (Qwen Image 2.1)…",
+    de: "Motivblatt aus einem Foto: {name} (Qwen Image 2.1)…",
+  },
+  "Director: subject and setting descriptions with {llm}…": {
+    fr: "Réalisateur : descriptions du sujet et du décor par {llm}…",
+    es: "Director: descripciones del sujeto y del decorado con {llm}…",
+    de: "Regie: Beschreibungen von Motiv und Schauplatz mit {llm}…",
+  },
+  "No sheet yet: generate it from the fields (or ✎ Prompt), from a photo, or import a finished sheet.": {
+    fr: "Pas encore de planche : génère-la depuis les champs (ou ✎ Prompt), depuis une photo, ou importe une planche terminée.",
+    es: "Aún no hay hoja: genérala desde los campos (o ✎ Prompt), desde una foto, o importa una hoja terminada.",
+    de: "Noch kein Blatt: generiere es aus den Feldern (oder ✎ Prompt), aus einem Foto, oder importiere ein fertiges Blatt.",
+  },
+  "No sheet yet: generate it from the fields (or ✎ Prompt), or import a finished sheet.": {
+    fr: "Pas encore de planche : génère-la depuis les champs (ou ✎ Prompt), ou importe une planche terminée.",
+    es: "Aún no hay hoja: genérala desde los campos (o ✎ Prompt), o importa una hoja terminada.",
+    de: "Noch kein Blatt: generiere es aus den Feldern (oder ✎ Prompt), oder importiere ein fertiges Blatt.",
+  },
+  "Studio open: no sheet is drawn yet. Generate each one from its description or a photo, or import a finished sheet.": {
+    fr: "Studio ouvert : aucune planche n'est encore dessinée. Génère chacune depuis sa description ou une photo, ou importe une planche terminée.",
+    es: "Estudio abierto: aún no se ha dibujado ninguna hoja. Genera cada una desde su descripción o una foto, o importa una hoja terminada.",
+    de: "Studio geöffnet: noch kein Blatt gezeichnet. Generiere jedes aus seiner Beschreibung oder einem Foto, oder importiere ein fertiges Blatt.",
+  },
+  "Open the studio (step 1/3)": {
+    fr: "Entrer dans le studio (étape 1/3)",
+    es: "Entrar en el estudio (paso 1/3)",
+    de: "Studio öffnen (Schritt 1/3)",
+  },
+  "Open the studio (step 1/2)": {
+    fr: "Entrer dans le studio (étape 1/2)",
+    es: "Entrar en el estudio (paso 1/2)",
+    de: "Studio öffnen (Schritt 1/2)",
   },
 };

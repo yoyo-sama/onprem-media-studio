@@ -34,6 +34,9 @@ const CARDS = [
   card("C3", "video_from_image", { prompt: "slow push-in, waves", image: "C1#1", duration: 6 }, { warnings: ["duration 3 out of range, 5 used"] }),
   card("C4", "ask_choices", { question: "Which mood?", options: ["Sunny", "Night", "Autre…"] }),
   card("C5", "storyboard", { brief: "A detective enters a studio", shots: 5, duration: 5, ratio: "16:9" }),
+  card("C7", "storyboard", { brief: "A dwarf and an elf pick mushrooms", subject_sheets: ["C1#1", "A1"], setting_sheet: ["C1#1"],
+                             shots: 4, duration: 5, ratio: "16:9" }),
+  card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
 (async () => {
@@ -52,7 +55,9 @@ const CARDS = [
       const job = JSON.parse(req.postData()), jid = `job-${++n}`;
       jobs.push(job);
       const outs = job.pipeline.startsWith("h3-") ? [`outputs/${jid}.mp4`, `outputs/${jid}-last.png`] : [`outputs/${jid}.png`];
-      done[jid] = { id: jid, status: "done", outputs: outs };
+      // H3 jobs stay queued until the test sends their events on the socket.
+      done[jid] = job.pipeline.startsWith("h3-") ? { id: jid, status: "queued", progress: 0, outputs: [], later: outs }
+        : { id: jid, status: "done", outputs: outs };
       return json(done[jid], 201);
     }
     if (p.startsWith("/api/jobs/")) return json(done[p.split("/").pop()] || {});
@@ -60,7 +65,11 @@ const CARDS = [
     if (p === "/api/loras") return json({ h3: [] });
     if (p === "/api/instructions") return json({});
     if (p === "/api/roles") return json(ROLES);
-    if (p === "/api/llm/chat") { llmBodies.push(req.postData()); return json({ detail: "LLM stubbed out" }, 503); }
+    if (p === "/api/llm/chat") {
+      llmBodies.push(req.postData());
+      await new Promise(r => setTimeout(r, 1500));  // Gemma takes its time
+      return json({ detail: "LLM stubbed out" }, 503);
+    }
     if (p === "/api/chats") return json(conv ? [{ id: conv.id, title: conv.title, updated: 1, role: conv.role }] : []);
     if (p === "/api/chat") {
       const body = JSON.parse(req.postData());
@@ -99,6 +108,11 @@ const CARDS = [
     if (p === "/api/gallery/assets") return json({ items: [], next: null, counts: { image: 0, video: 0 } });
     return json({ detail: "x" }, 404);
   });
+  // Images the director reads back (sheets handed over by a card).
+  await ctx.route(/\/(outputs|inputs)\//, route => route.fulfill({ status: 200, contentType: "image/png", body: Buffer.from(PNG, "base64") }));
+  let socket = null;
+  await ctx.routeWebSocket("**/api/ws", ws => { socket = ws; });
+  const send = job => socket.send(JSON.stringify({ type: "job", job }));
   await ctx.route("**/outputs/**", r => r.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") }));
   await ctx.route("**/inputs/**", r => r.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") }));
   const page = await ctx.newPage();
@@ -163,7 +177,18 @@ const CARDS = [
   check(cardPosts[0]?.[1].status === "running" && cardPosts[0][1].args.ratio === "1:1", "running report lacks the edited args");
   await page.waitForSelector('.chat-card[data-card="C3"] .primary-btn:not([disabled])');
   await page.click('.chat-card[data-card="C3"] .primary-btn');
+  // The card shows its job's progress while it renders.
+  await page.waitForSelector('.chat-card[data-card="C3"] .cc-progress');
+  const h3 = Object.values(done).find(j => j.status === "queued");
+  send({ ...h3, status: "running", progress: 0.4, message: "Denoising step 4/10" });
+  await page.waitForTimeout(300);
+  const bar = await page.$eval('.chat-card[data-card="C3"] .cc-progress', b => [b.querySelector("progress").value, b.textContent]);
+  check(bar[0] === 40 && bar[1].includes("40") && bar[1].includes("Denoising step 4/10"), "card progress not shown: " + JSON.stringify(bar));
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/card-progress-1440.png` });
+  Object.assign(h3, { status: "done", progress: 1, outputs: h3.later });
+  send(h3);
   await page.waitForSelector('.chat-card[data-card="C3"] .status.done');
+  check(!(await page.$('.chat-card[data-card="C3"] .cc-progress')), "progress still shown after the render");
   check(jobs.length === 2 && jobs[1].pipeline === "h3-i2v" && jobs[1].params.image === "outputs/job-1.png", "C3 job wrong: " + JSON.stringify(jobs[1]));
   check((await page.$$('.chat-card[data-card="C3"] .cc-outputs figure')).length === 1, "C3 should show the clip only (last frame hidden)");
   // Open in the Studio: switches to the Studio, fills the form, starts nothing.
@@ -192,12 +217,63 @@ const CARDS = [
   // Launch the director: one click switches to the Studio, fills the form and starts the
   // director (its first step asks Gemma for the sheets, stubbed out here).
   check(llmBodies.length === 0, "Gemma called before the director was launched");
+  const jobsAtLaunch = jobs.length;
   await page.click('.chat-card[data-card="C5"] .primary-btn');
   await page.waitForTimeout(800);
   check(await page.evaluate(() => document.body.dataset.mode) === "studio", "Launch the director did not switch to the Studio");
   check(await page.inputValue("#brief") === "A detective enters a studio" && await page.inputValue("#pipelineSelect") === "storyboard", "director brief not in the form");
   check(llmBodies.some(b => b.includes("A detective enters a studio")), "the director did not start");
   check(cardPosts.some(([id, b]) => id === "C5" && b.status === "launched"), "launch not reported");
+  // While Gemma prepares the director, the button says so; then it comes back.
+  const waiting = await page.textContent("#generateBtn");
+  check(waiting.includes("écrit les fiches"), "Generate button does not say Gemma is working: " + waiting);
+  // Each Gemma call of the first step waits 1.5 s here, then fails: the button comes back.
+  const back = await page.waitForFunction(() => !document.getElementById("generateBtn").textContent.includes("écrit les fiches"),
+    null, { timeout: 20000 }).then(() => true, () => false);
+  check(back, "Generate button label not restored");
+  // The first step opens the studio and draws nothing; a sheet renders on its own click,
+  // with the seed the automatic first step used to give it.
+  check(await page.evaluate(() => document.body.dataset.studio) === "1", "the director's studio did not open");
+  check(!jobs.slice(jobsAtLaunch).some(j => j.pipeline === "krea2-t2i"), "the first step drew a sheet");
+  await page.click("#studioCharacter .sheet-regen");
+  await page.waitForTimeout(400);
+  const sheetJob = jobs[jobs.length - 1], proj = await page.evaluate(() => JSON.parse(localStorage.getItem("studioProject")));
+  check(sheetJob?.pipeline === "krea2-t2i" && sheetJob.params.seed === proj.seed && sheetJob.params.width === 1920,
+    "subject sheet on click: " + JSON.stringify(sheetJob?.params?.seed) + " vs " + proj?.seed);
+  // Sheets handed over by a storyboard card: the director keeps them, Gemma reads each
+  // one (vision), no sheet job is submitted and every shot starts with both subjects.
+  await page.click('.rail-mode[data-mode="assistant"]');
+  await page.click('.chat-card[data-card="C7"] .cc-actions button >> nth=1');
+  await page.waitForTimeout(300);
+  check(!(await page.isHidden("#givenSheetsWrap")) && (await page.$$("#givenSheets .ref-subject")).length === 3, "handed-over sheets not shown in the form");
+  const jobsBefore = jobs.length, llmBefore = llmBodies.length;
+  await page.click("#generateBtn");
+  const opened = await page.waitForFunction(() => document.body.dataset.studio === "1" && document.querySelectorAll("#subjectTabs .subject-tab:not(.add):not(.del)").length === 2,
+    null, { timeout: 20000 }).then(() => true, () => false);
+  check(opened, "director did not open with the two handed-over subjects");
+  const reads = llmBodies.slice(llmBefore).map(b => JSON.parse(b));
+  check(reads.filter(b => b.images?.length === 1).length === 3, "Gemma did not read the 3 sheets: " + reads.map(b => b.images?.length).join(","));
+  check(jobs.slice(jobsBefore).every(j => j.pipeline !== "krea2-t2i"), "a handed-over sheet was drawn again");
+  check(await page.isHidden("#givenSheetsWrap"), "handed-over sheets still shown once used");
+  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("studioProject") || "null"));
+  check(saved?.shots?.every(sh => JSON.stringify(sh.subjects) === "[0,1]"), "shots do not start with both subjects");
+  check(saved?.locVariants?.[0]?.source === "imported" && saved.chars.every(c => c.variants[0].source === "imported"), "sheets not kept as imported");
+  // The director's "Sheet from a photo": one Qwen Image 2.1 job on the chosen image, as a new variant.
+  const beforeDir = jobs.length;
+  await page.setInputFiles("#studioCharacter .sheet-photo-input", { name: "me.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.waitForTimeout(600);
+  const jd = jobs[beforeDir];
+  check(jobs.length === beforeDir + 1 && jd.pipeline === "qwen-image-2.1" && jd.params.images?.length === 1 && jd.params.width === 1920
+    && jd.params.prompt.startsWith("Using <image1>"), "director sheet from a photo: " + JSON.stringify(jd));
+  // A subject sheet from a photo: one Qwen Image 2.1 edit of the photo, at the sheets' size.
+  await page.click('.rail-mode[data-mode="assistant"]');
+  const before8 = jobs.length;
+  await page.click('.chat-card[data-card="C8"] .primary-btn');
+  await page.waitForSelector('.chat-card[data-card="C8"] .status.done');
+  const j8 = jobs[before8];
+  check(jobs.length === before8 + 1 && j8.pipeline === "qwen-image-2.1" && JSON.stringify(j8.params.images) === '["inputs/att.png"]'
+    && j8.params.width === 1920 && j8.params.height === 1088 && j8.params.prompt.startsWith("Using <image1> only as the identity reference: the person")
+    && j8.params.prompt.includes("a woman in a red coat"), "sheet from a photo: " + JSON.stringify(j8));
   // A reload opens on the welcome; the conversation stays in the list.
   await page.click('.rail-mode[data-mode="assistant"]');
   await page.reload({ waitUntil: "load" });

@@ -49,7 +49,7 @@ class Krea2TextToImage(Pipeline):
 def _build(path):
     import torch
     from diffusers import Krea2Pipeline
-    return Krea2Pipeline.from_pretrained(path, torch_dtype=torch.bfloat16).to(common.device())
+    return Krea2Pipeline.from_pretrained(path, torch_dtype=torch.bfloat16, **common.LOAD_OPTIONS).to(common.device())
 
 
 register(Krea2TextToImage())

@@ -254,7 +254,7 @@ class Closable:
         self.log.append(self.name)
 
 
-def test_pipelines_stay_resident_while_memory_allows(monkeypatch):
+def test_pipelines_stay_resident_while_memory_allows(monkeypatch, capsys):
     gb = 1024**3
     free = {"bytes": 80 * gb}
     closed = []
@@ -278,6 +278,10 @@ def test_pipelines_stay_resident_while_memory_allows(monkeypatch):
     # A 64 GB video engine does not fit: the least recently used goes first, then the next.
     common.load("h3", lambda: Closable("h3", closed), 64 * gb)
     assert closed == ["qwen", "krea2"] and list(common._resident) == ["h3"]
+    # Each load is one line of the container log, naming what it freed.
+    lines = capsys.readouterr().out.splitlines()
+    assert [l.split(" loaded")[0] for l in lines] == ["engine: krea2", "engine: qwen", "engine: h3"]
+    assert lines[-1].endswith("after freeing qwen, krea2")
 
 
 def test_a_video_engine_is_loaded_alone(monkeypatch):
@@ -294,3 +298,15 @@ def test_a_pipeline_is_built_even_when_nothing_is_left_to_free(monkeypatch):
     monkeypatch.setattr(common, "_resident", {})
     monkeypatch.setattr(common, "free_memory", lambda: 0)
     assert common.load("krea2", lambda: "pipe", 34 * 1024**3) == "pipe"
+
+
+def test_torch_cache_is_given_back_before_memory_is_measured(monkeypatch):
+    # The last render's cached blocks counted as used made Krea 2 unload Qwen on the GB10.
+    gb = 1024**3
+    free = {"bytes": 30 * gb}
+    closed = []
+    monkeypatch.setattr(common, "_resident", {"qwen": Closable("qwen", closed)})
+    monkeypatch.setattr(common, "free_memory", lambda: free["bytes"])
+    monkeypatch.setattr(common, "_empty_cache", lambda: free.update(bytes=free["bytes"] + 25 * gb))
+    common.load("krea2", lambda: Closable("krea2", closed), 34 * gb)
+    assert closed == [] and list(common._resident) == ["qwen", "krea2"]

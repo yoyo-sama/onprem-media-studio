@@ -6,9 +6,9 @@
 // their click switches to the Studio, fills the form and starts the step-by-step
 // review there, the only way to run them.
 
-import { api, chatStream, refURL } from "./api.js";
+import { api, chatStream, on, refURL } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
-import { $, LLM, MOBILE, fillSelect, log, notice, promptLog, runJob, undoToast, warn } from "./ui.js";
+import { $, LLM, MOBILE, fillSelect, log, notice, onJobSubmitted, promptLog, runJob, undoToast, warn, withJobTag } from "./ui.js";
 import { openLightbox } from "./gallery.js";
 import { drawMascots, setCostume, setMood } from "./mascot.js";
 import * as F from "./form.js";
@@ -29,6 +29,7 @@ let attachments = [];       // images of the next message: {name, ref | blob}
 let streaming = null;       // AbortController of the turn in progress
 const drafts = new Map();   // card id → arguments edited on the card
 const running = new Set();  // card ids rendering from this page
+const progress = new Map(); // card id → {start, jobs: Map(job id → {p, status, message})}
 
 const saveLocal = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* this page only */ } };
 const readLocal = k => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -48,7 +49,7 @@ const CARD_UI = {
                   enrich: a => (a.engine === "qwen" ? "qwen21_t2i" : "krea2_t2i") },
   edit_image: { title: L("Image editing"), text: "instruction", images: ["image", "references"], form: true,
                 enrich: () => "qwen21_i2i" },
-  character_sheet: { title: L("Subject sheet"), text: "description", fields: ["kind", "style"] },
+  character_sheet: { title: L("Subject sheet"), text: "description", images: ["photo"], fields: ["kind", "style"] },
   location_sheet: { title: L("Setting sheet"), text: "description", fields: ["style"] },
   video_from_text: { title: L("Video from a text"), text: "prompt", fields: ["duration", "ratio"], form: true,
                      enrich: () => "h3_t2v" },
@@ -59,12 +60,14 @@ const CARD_UI = {
   join_videos: { title: L("Joined clips"), images: ["clips"] },
   campaign: { title: L("Campaign"), text: "brief", fields: ["variants", "duration", "style"], form: true,
               enrich: () => "campaign" },
-  storyboard: { title: L("Storyboard"), text: "brief", fields: ["shots", "duration", "ratio"], form: true, director: true },
+  storyboard: { title: L("Storyboard"), text: "brief", images: ["subject_sheets", "setting_sheet"], fields: ["shots", "duration", "ratio"],
+                form: true, director: true },
   reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio"],
                      form: true, director: true },
 };
 const IMAGE_LABELS = {
   image: L("Image"), references: L("References"), last_image: L("Last frame"), images: L("Key images"), clips: L("Clips"),
+  subject_sheets: L("Subject sheets"), setting_sheet: L("Setting sheet"), photo: L("Photo"),
 };
 const FIELDS = {
   engine: { label: L("Engine"), options: () => [["krea2", "Krea 2 Turbo"], ["qwen", "Qwen Image 2.1"]] },
@@ -278,6 +281,7 @@ function renderCard(card, live = false) {
   el.appendChild(actions);
   if (missing.length && !live)
     el.appendChild(tx(document.createElement("p"), "Waiting for {ids}: generate the card that makes it first.", { ids: missing.join(", ") })).className = "hint";
+  if (progress.has(card.id)) el.appendChild(fillProgress(progressBox(), progress.get(card.id)));
   if (st.error) el.appendChild(rawText("p", st.error, "cc-warn"));
 
   const outputs = st.outputs || [];
@@ -301,6 +305,47 @@ function renderCard(card, live = false) {
   return el;
 }
 
+// ── Progress of a card ────────────────────────────────────────────────────────
+// The card's jobs (tagged with its id when submitted) as one bar: their mean progress,
+// how many are done, the time since the click and the engine's last message (a model
+// download, a step…).
+function progressBox() {
+  const box = document.createElement("div");
+  box.className = "cc-progress";
+  box.innerHTML = `<progress max="100" value="0"></progress><span class="cc-progress-text"></span><span class="cc-progress-msg" data-raw></span>`;
+  return box;
+}
+function fillProgress(box, pr) {
+  const jobs = [...pr.jobs.values()], n = jobs.length;
+  const done = jobs.filter(j => j.status === "done").length;
+  const pct = n ? Math.round((jobs.reduce((s, j) => s + j.p, 0) / n) * 100) : 0;
+  const s = Math.floor((Date.now() - pr.start) / 1000);
+  const time = `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const started = jobs.some(j => j.status !== "queued");
+  box.querySelector("progress").value = pct;
+  tx(box.querySelector(".cc-progress-text"), !started ? "Waiting in the queue · {time}"
+    : n > 1 ? "Rendering {pct}% · {done}/{n} done · {time}" : "Rendering {pct}% · {time}", { pct, done, n, time });
+  box.querySelector(".cc-progress-msg").textContent = jobs.find(j => j.status === "running" && j.message)?.message || "";
+  return box;
+}
+function paintProgress(id) {
+  const box = document.querySelector(`.chat-card[data-card="${id}"] .cc-progress`), pr = progress.get(id);
+  if (box && pr) fillProgress(box, pr);
+}
+onJobSubmitted((job, tag) => {
+  const pr = tag && progress.get(tag);
+  if (!pr) return;
+  pr.jobs.set(job.id, { p: 0, status: job.status, message: "" });
+  paintProgress(tag);
+});
+on("job", job => {
+  for (const [id, pr] of progress) if (pr.jobs.has(job.id)) {
+    pr.jobs.set(job.id, { p: job.status === "done" ? 1 : job.progress || 0, status: job.status, message: job.message || "" });
+    paintProgress(id);
+  }
+});
+setInterval(() => { for (const id of progress.keys()) paintProgress(id); }, 1000);
+
 // ── Running a card ────────────────────────────────────────────────────────────
 function need(id) {
   const ref = refOf(id);
@@ -308,8 +353,13 @@ function need(id) {
   return ref;
 }
 
-// The job promises of a card, submitted through the Studio's own flows.
+// The job promises of a card, submitted through the Studio's own flows, tagged with the
+// card's id so its progress shows on it.
 async function submitCard(card, a) {
+  const aspect = card.tool === "image_sequence" ? await G.seqAspect({ ref: need(a.images[0]) }) : undefined;
+  return withJobTag(card.id, () => startCard(card, a, aspect));
+}
+function startCard(card, a, aspect) {
   const seed = Math.floor(Math.random() * 2 ** 31);
   const label = what => ["{id} · {what}", { id: card.id, what: t(what) }];
   const title = CARD_UI[card.tool].title, opts = { origin: ORIGIN, seed };
@@ -327,7 +377,12 @@ async function submitCard(card, a) {
         : [{ prompt: a.instruction, label: label(title) }];
       return G.runPlain(F.workflow("qwen21_i2i"), { ...opts, specs, image: need(a.image), refs: (a.references || []).map(need) });
     }
-    case "character_sheet": return sheet(P.charsheetPromptFrom(a.description, a.kind, "auto", a.style));
+    case "character_sheet":
+      if (!a.photo?.length) return sheet(P.charsheetPromptFrom(a.description, a.kind, "auto", a.style));
+      // From a photo: Qwen Image 2.1 edits it into the sheet, at the sheets' size.
+      return [runJob("qwen-image-2.1", { prompt: P.charsheetFromPhotoPrompt(a.description, a.kind, "auto", a.style),
+        images: [need(a.photo[0])], ...P.SHEET_SIZE, count: 1, seed }, {
+        origin: ORIGIN, label: label(title), sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed }] })];
     case "location_sheet": return sheet(P.locsheetPromptFrom(a.description, a.style));
     case "video_from_text":
       return G.runPlain(F.workflow("h3_t2v"), { ...opts, specs: [{ prompt: a.prompt, label: label(title) }], ratio: a.ratio, duration: a.duration });
@@ -336,7 +391,6 @@ async function submitCard(card, a) {
         image: need(a.image), last: a.last_image ? need(a.last_image) : null });
     case "image_sequence": {
       const refs = a.images.map(need);
-      const aspect = await G.seqAspect({ ref: refs[0] });
       return [G.runSequence({ ...opts, refs, durs: refs.map(() => a.duration), text: a.prompt, aspect })];
     }
     case "join_videos":
@@ -362,6 +416,7 @@ async function runCard(card) {
   const key = CARD_UI[card.tool].text;
   if (key && !String(args[key] || "").trim()) { notice(false, "Empty prompt: write what you want first."); return; }
   running.add(card.id);
+  progress.set(card.id, { start: Date.now(), jobs: new Map() });
   try {
     // The server checks the edited settings again: what runs is what it kept.
     const kept = (await report(cid, card, { status: "running", args }))?.args || args;
@@ -370,10 +425,12 @@ async function runCard(card) {
     const failed = results.find(r => r.status === "rejected");
     if (failed && !outputs.length) throw failed.reason;
     running.delete(card.id);
+    progress.delete(card.id);
     await report(cid, card, { status: "done", outputs });
     setMood("happy", 2400);
   } catch (err) {
     running.delete(card.id);
+    progress.delete(card.id);
     const cancelled = err.message === "cancelled" || err.message === t("Project cancelled.");
     if (!cancelled) { warn(err); setMood("sad", 2400); }
     report(cid, card, { status: cancelled ? "cancelled" : "error", ...(cancelled ? {} : { error: err.message }) }).catch(warn);
