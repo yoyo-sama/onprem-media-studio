@@ -418,6 +418,14 @@ class Assistant:
             if call["name"] == "handoff":
                 raise T.ToolError("one handoff per answer, to another known role")
             card["args"], card["warnings"] = T.normalize(call["name"], call["arguments"], lambda r: known_id(conv, r))
+            # Gemma often leaves out the photo the user just attached for a sheet: the
+            # message's only image is that photo.
+            if call["name"] == "character_sheet" and not card["args"].get("photo"):
+                user = next((m for m in reversed(conv["messages"]) if m["type"] == "user"), None)
+                atts = (user or {}).get("attachments") or []
+                if len(atts) == 1:
+                    card["args"]["photo"] = [atts[0]["id"]]
+                    card["warnings"].append(f"photo {atts[0]['id']} taken from the attached image")
         except T.ToolError as exc:
             card["invalid"] = str(exc)
             card["args"] = _json(call["arguments"])

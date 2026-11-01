@@ -122,6 +122,9 @@ class LlamaServer:
         }
         if json_mode:
             body["response_format"] = {"type": "json_object"}
+        # Gemma 4 thinks by default through llama-server: thousands of hidden tokens per
+        # prompt compiled (44 to 81 s measured on the GB10). The compilers want the answer.
+        body["chat_template_kwargs"] = {"enable_thinking": False}
         began = time.time()
         resp = httpx.post(f"{self.url}/v1/chat/completions", json=body, timeout=300)
         if resp.status_code != 200:

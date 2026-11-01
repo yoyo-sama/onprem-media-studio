@@ -648,8 +648,8 @@
   // A subject sheet drawn by Qwen Image 2.1 from a photo (<image1>): the photo holds the
   // identity, the template the layout. Not part of 1.4.
   const SHEET_FROM_PHOTO = {
-    human: "Using <image1> only as the identity reference: the person of <image1>, with exactly the same face, hair, build, skin tone and clothing, photographed again from every angle for a studio reference sheet. ",
-    other: "Using <image1> only as the identity reference: the subject of <image1>, with exactly the same shape, proportions, surface, colors and markings, photographed again from every angle for a studio reference sheet. ",
+    human: "Using <image1> only as the identity reference: the person of <image1>, with exactly the same face, hair, build, skin tone and clothing, shown again from every angle for a studio reference sheet, in the same visual style as <image1>. ",
+    other: "Using <image1> only as the identity reference: the subject of <image1>, with exactly the same shape, proportions, surface, colors and markings, shown again from every angle for a studio reference sheet, in the same visual style as <image1>. ",
   };
   const charsheetFromPhotoPrompt = (desc, kind, templateId, styleId) =>
     SHEET_FROM_PHOTO[kind === "other" ? "other" : "human"] + charsheetPromptFrom(desc, kind, templateId, styleId);

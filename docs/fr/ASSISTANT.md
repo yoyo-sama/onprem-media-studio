@@ -45,6 +45,12 @@ llama-server, de même que chaque chargement du modèle : `docker logs studio --
 grep "llm:"` distingue un modèle lent d'un rendu lent (`llm: call 12.4 s (prompt 850 tokens in
 1.1 s, 410 generated in 11.3 s)`).
 
+llama-server fait réfléchir Gemma 4 par défaut. Pour les compilateurs de prompts (enrichissement,
+planches, liste de plans, choix du rôle), cela faisait des milliers de jetons cachés par appel :
+44 à 81 s mesurées sur le GB10 pour des réponses de quelques centaines de jetons. Ces appels
+envoient `enable_thinking: false` ; les tours du chat gardent la réflexion, utile au choix des
+outils.
+
 ## Rôles
 
 Un rôle est un fichier Markdown : un en-tête entre deux lignes `---`, puis ses consignes.
@@ -118,7 +124,7 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 |---|---|---|
 | `create_image` | Prompt, moteur (Krea 2 / Qwen Image 2.1), ratio, variantes, style | `krea2-t2i` ou `qwen-image-2.1`, comme le formulaire Text2Image |
 | `edit_image` | Consigne, image d'entrée, références, marchés | édition `qwen-image-2.1`, un job par marché, comme Image2Image |
-| `character_sheet`, `location_sheet` | Description, type de sujet, style ; une photo du sujet (planche sujet seulement) | `krea2-t2i` 1920×1088 avec les gabarits de planche de la 1.4 ; avec une photo, `qwen-image-2.1` la transforme en planche à la même taille, le gabarit précédé d'une phrase d'identité sur `<image1>` (`charsheetFromPhotoPrompt`, pas encore qualifié) |
+| `character_sheet`, `location_sheet` | Description, type de sujet, style ; une photo du sujet (planche sujet seulement) | `krea2-t2i` 1920×1088 avec les gabarits de planche de la 1.4 ; avec une photo, `qwen-image-2.1` la transforme en planche à la même taille, le gabarit précédé d'une phrase d'identité sur `<image1>` (`charsheetFromPhotoPrompt`, pas encore qualifié). Quand Gemma omet la photo alors que le message de l'utilisateur porte une seule image, cette image sert de photo (avec un avertissement sur la carte) |
 | `video_from_text` | Prompt, durée, ratio | `h3-t2v` |
 | `video_from_image` | Prompt, première image, dernière image facultative, durée | `h3-i2v` (I2VA ou FL2VA) |
 | `image_sequence` | Prompt, 2 à 6 images clés, durée des segments | la séquence multi-images (segments H3, puis `video-concat`) |

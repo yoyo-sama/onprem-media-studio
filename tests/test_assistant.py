@@ -329,6 +329,14 @@ def test_chat_api(settings, store):
         assert c.get("/api/health").json()["llm_model"] == "gemma4-26b-a4b"
 
 
+def test_a_sheet_card_without_its_photo_takes_the_attached_image(tmp_path, files):
+    ref = files.save_input(PNG)["ref"]
+    llm = ScriptedLlm(streams=[[tool("character_sheet", {"description": "an anime girl"})]])
+    conv, events = run(make(tmp_path, files, llm), {"text": "a sheet from this image", "attachments": [ref], "role": "casting"})
+    card = next(e["card"] for e in events if e["type"] == "card")
+    assert card["args"]["photo"] == ["A1"] and card["warnings"] == ["photo A1 taken from the attached image"]
+
+
 def test_character_sheet_takes_a_photo():
     args, warnings = T.normalize("character_sheet", {"description": "a red coat", "photo": ["A1"]}, lambda r: True)
     assert args["photo"] == ["A1"] and not warnings

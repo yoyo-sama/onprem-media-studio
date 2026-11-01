@@ -81,7 +81,8 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
         "Card: a character sheet (multi-view reference, neutral light) of one subject; from a photo of it when "
         "one is given.",
         {"description": _str("What the subject is, in English: face, build, hair, costume, materials. No scene."),
-         "photo": _ids("A photo of this very subject, to draw the sheet from (its identity is kept), " + IMAGE_ID, 0, 1),
+         "photo": _ids("The image of this very subject the user gave (photo or drawing), to draw the sheet from; "
+                       "always pass it when the user attached one. " + IMAGE_ID, 0, 1),
          "kind": _enum("human for a person, other for an animal, creature, robot or object", ["human", "other"], "human"),
          "style": STYLE},
         ["description"]),

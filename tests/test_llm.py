@@ -94,3 +94,26 @@ def test_stream_error_is_an_llm_error(settings, store, monkeypatch):
     monkeypatch.setattr(server, "start", lambda: None)
     with pytest.raises(LlmError, match="500"):
         list(server.stream([]))
+
+
+def test_compiler_calls_do_not_think(settings, store, monkeypatch, capsys):
+    sent = {}
+
+    class Resp:
+        status_code = 200
+
+        def json(self):
+            return {"choices": [{"message": {"content": "{}"}}], "timings": {"prompt_n": 10, "predicted_n": 5}}
+
+    def post(url, json, timeout):
+        sent.update(json)
+        return Resp()
+
+    monkeypatch.setattr("studio.llm.httpx.post", post)
+    server = LlamaServer(settings, store)
+    monkeypatch.setattr(server, "start", lambda: None)
+    assert server.chat("sys", "hi") == "{}"
+    # Gemma 4 thinks by default through llama-server: thousands of hidden tokens per call.
+    assert sent["chat_template_kwargs"] == {"enable_thinking": False}
+    assert sent["response_format"] == {"type": "json_object"}
+    assert capsys.readouterr().out.startswith("llm: call ")
