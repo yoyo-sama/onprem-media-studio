@@ -13,6 +13,7 @@ import random
 import shutil
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 MAX_SEED = 2**32 - 1
@@ -115,13 +116,44 @@ def disk_size(path: Path) -> int:
 # instead of 254 s (tools/qualify/load_speed.sh, page cache dropped; disk 4.3 GB/s).
 # device_map on the GPU gained nothing (250 s).
 LOAD_OPTIONS = {"disable_mmap": True}
+PREFETCH_CHUNK = 256 * 1024**2
+PREFETCH_THREADS = 8
 
 
-def load(key, build, size: int = 0, alone: bool = False):
+def prefetch(folder: Path) -> float:
+    """Read every file of a model folder once, in large chunks on several threads, and
+    return the seconds it took. The loaders then find the weights in the page cache:
+    memory-mapped, they read the disk page by page, which took 170 s for the 27 GB of
+    FastH3 and most of the text encoders' load on the GB10, whose disk reads 4.3 GB/s
+    in large blocks. The page cache is reclaimable: it never counts against the
+    memory budget (see available_memory)."""
+    began = time.time()
+    chunks = [(f, offset) for f in sorted(Path(folder).rglob("*")) if f.is_file()
+              for offset in range(0, f.stat().st_size, PREFETCH_CHUNK)]
+
+    def read(chunk):
+        path, offset = chunk
+        buf = bytearray(16 * 1024**2)
+        with open(path, "rb", buffering=0) as fh:
+            fh.seek(offset)
+            left = PREFETCH_CHUNK
+            while left > 0:
+                n = fh.readinto(memoryview(buf)[:min(left, len(buf))])
+                if not n:
+                    break
+                left -= n
+
+    with ThreadPoolExecutor(PREFETCH_THREADS) as pool:
+        list(pool.map(read, chunks))
+    return time.time() - began
+
+
+def load(key, build, size: int = 0, alone: bool = False, files: Path | None = None):
     """The resident pipeline for `key`, built on first use. Before building one,
     the least recently used pipelines are freed until `size` bytes (its weights)
     plus RESERVE fit in free memory, or all of them when it must run `alone`;
-    when nothing is left to free, it is built anyway."""
+    when nothing is left to free, it is built anyway. `files`, the model folder,
+    is read ahead into the page cache before the build (prefetch)."""
     if key in _resident:
         _resident[key] = _resident.pop(key)  # now the most recently used
         return _resident[key]
@@ -136,10 +168,12 @@ def load(key, build, size: int = 0, alone: bool = False):
     if alone and LOW_MEMORY and free_memory() < size + RESERVE:
         for hook in LOW_MEMORY:
             hook()
+    read = prefetch(files) if files else None
     _resident[key] = build()
     # One line per load in the container log (`docker logs studio | grep engine:`):
     # a slow job is often a model loaded again.
     print(f"engine: {key} loaded in {time.time() - began:.1f} s"
+          + (f" (files read in {read:.1f} s)" if read is not None else "")
           + (f", after freeing {', '.join(map(str, freed))}" if freed else ""), flush=True)
     return _resident[key]
 
@@ -177,11 +211,28 @@ def generator(seed_: int):
 
 
 def step_progress(ctx, steps: int, label: str):
-    """diffusers step callback that reports progress; raises if the job was cancelled."""
+    """diffusers step callback that reports progress; raises if the job was cancelled.
+    It keeps the time each step ended in `callback.marks`, for log_render."""
+    marks = []
+
     def callback(pipe, step, timestep, tensors):
+        marks.append(time.time())
         ctx.progress((step + 1) / steps, f"{label}: step {step + 1}/{steps}")
         return tensors
+    callback.marks = marks
     return callback
+
+
+def log_render(key: str, detail: str, began: float, marks: list[float]) -> None:
+    """One line per image render in the container log (`grep render:`), split into
+    text encoding, steps and decoding: the first step's time is taken as the mean."""
+    total = time.time() - began
+    if len(marks) < 2:
+        print(f"render: {key} {detail} in {total:.1f} s", flush=True)
+        return
+    step = (marks[-1] - marks[0]) / (len(marks) - 1)
+    print(f"render: {key} {detail} in {total:.1f} s: text encoding {max(0.0, marks[0] - began - step):.1f} s, "
+          f"{len(marks)} steps × {step:.2f} s, decoding {time.time() - marks[-1]:.1f} s", flush=True)
 
 
 def open_image(path: Path):

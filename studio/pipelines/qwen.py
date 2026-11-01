@@ -16,6 +16,8 @@ Rules carried over from 1.4 (LESSONS.md § 5):
   used: it is refused rather than silently dropped.
 """
 
+import time
+
 from . import Pipeline, common, register
 
 MAX_SUBJECTS = 2
@@ -89,7 +91,9 @@ class QwenImage21(Pipeline):
             width, height = common.fit_area(*images[0].size)
         ctx.progress(0, "Loading Qwen Image 2.1")
         pipe = common.load(self.id, lambda: _build_21(models["qwen-image-2.1"]),
-                           common.disk_size(models["qwen-image-2.1"]))
+                           common.disk_size(models["qwen-image-2.1"]), files=models["qwen-image-2.1"])
+        steps = common.step_progress(ctx, QWEN21_STEPS, "Qwen Image 2.1")
+        began = time.time()
         out = pipe(
             prompt=params["prompt"],
             image=images or None,
@@ -100,8 +104,10 @@ class QwenImage21(Pipeline):
             num_images_per_prompt=params["count"],
             output_resolution=QWEN21_RESOLUTION,
             generator=common.generator(params["seed"]),
-            callback_on_step_end=common.step_progress(ctx, QWEN21_STEPS, "Qwen Image 2.1"),
+            callback_on_step_end=steps,
         ).images
+        common.log_render(self.id, f"{width}×{height} ×{params['count']}, {len(images)} input image(s)",
+                          began, steps.marks)
         return common.save_images(out, ctx, params)
 
 

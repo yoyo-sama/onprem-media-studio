@@ -44,7 +44,8 @@ Chaque appel à Gemma écrit une ligne dans le journal du conteneur, avec les te
 llama-server, de même que chaque chargement du modèle : `docker logs studio --since 30m 2>&1 |
 grep "llm:"` distingue un modèle lent d'un rendu lent (`llm: call 12.4 s (prompt 850 tokens in
 1.1 s, 410 generated in 11.3 s)`). Chaque chargement de moteur écrit aussi une ligne `engine:`
-(durée, moteurs libérés pour lui) : `grep -E "llm:|engine:"`.
+(durée, temps de lecture des fichiers, moteurs libérés pour lui), et chaque rendu d'image une ligne
+`render:` (encodage, étapes, décodage) : `grep -E "llm:|engine:|render:"`.
 
 llama-server fait réfléchir Gemma 4 par défaut. Pour les compilateurs de prompts (enrichissement,
 planches, liste de plans, choix du rôle), cela faisait des milliers de jetons cachés par appel :

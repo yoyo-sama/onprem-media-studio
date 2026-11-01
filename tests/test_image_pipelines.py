@@ -38,7 +38,7 @@ class FakeDiffusersPipeline:
 def fake(monkeypatch):
     pipe = FakeDiffusersPipeline()
     loaded = []
-    monkeypatch.setattr(common, "load", lambda key, build, size=0: loaded.append(key) or pipe)
+    monkeypatch.setattr(common, "load", lambda key, build, size=0, files=None: loaded.append(key) or pipe)
     monkeypatch.setattr(common, "generator", lambda seed: ("generator", seed))
     pipe.loaded = loaded
     return pipe
@@ -310,3 +310,48 @@ def test_torch_cache_is_given_back_before_memory_is_measured(monkeypatch):
     monkeypatch.setattr(common, "_empty_cache", lambda: free.update(bytes=free["bytes"] + 25 * gb))
     common.load("krea2", lambda: Closable("krea2", closed), 34 * gb)
     assert closed == [] and list(common._resident) == ["qwen", "krea2"]
+
+
+def test_prefetch_reads_every_byte_of_a_model_folder(tmp_path, monkeypatch):
+    monkeypatch.setattr(common, "PREFETCH_CHUNK", 1000)  # several chunks per file
+    (tmp_path / "transformer").mkdir()
+    sizes = {tmp_path / "model_index.json": 10, tmp_path / "transformer" / "a.safetensors": 2500}
+    for path, size in sizes.items():
+        path.write_bytes(b"x" * size)
+    read = []
+    real_open = open
+
+    class Counting:
+        def __init__(self, fh):
+            self.fh = fh
+        def __enter__(self):
+            return self
+        def __exit__(self, *exc):
+            self.fh.close()
+        def seek(self, offset):
+            self.fh.seek(offset)
+        def readinto(self, buf):
+            n = self.fh.readinto(buf)
+            read.append(n)
+            return n
+
+    monkeypatch.setattr("builtins.open", lambda path, *a, **k: Counting(real_open(path, *a, **k)))
+    assert common.prefetch(tmp_path) >= 0
+    assert sum(read) == sum(sizes.values())
+
+
+def test_a_load_reads_the_model_folder_ahead_and_logs_it(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "free_memory", lambda: 200 * 1024**3)
+    seen = []
+    monkeypatch.setattr(common, "prefetch", lambda folder: seen.append(folder) or 2.0)
+    common.load("krea2", lambda: seen.append("built") or "pipe", 1, files=tmp_path)
+    assert seen == [tmp_path, "built"]
+    assert "(files read in 2.0 s)" in capsys.readouterr().out
+
+
+def test_render_log_splits_encoding_steps_and_decoding(monkeypatch, capsys):
+    monkeypatch.setattr(common.time, "time", lambda: 20.0)
+    common.log_render("krea2-t2i", "1920×1088 ×1", 0.0, [5.0, 7.0, 9.0, 11.0])
+    assert capsys.readouterr().out.strip() == ("render: krea2-t2i 1920×1088 ×1 in 20.0 s: text encoding 3.0 s, "
+                                               "4 steps × 2.00 s, decoding 9.0 s")
