@@ -40,6 +40,11 @@ d'outils natifs passent par `llama-server --jinja` (gabarit de chat de Gemma 4).
 Quand un moteur vidéo H3 doit se charger seul et que la mémoire manque, le serveur arrête d'abord
 `llama-server` (`common.LOW_MEMORY`) ; il redémarre à la requête LLM suivante.
 
+Chaque appel à Gemma écrit une ligne dans le journal du conteneur, avec les temps de
+llama-server, de même que chaque chargement du modèle : `docker logs studio --since 30m 2>&1 |
+grep "llm:"` distingue un modèle lent d'un rendu lent (`llm: call 12.4 s (prompt 850 tokens in
+1.1 s, 410 generated in 11.3 s)`).
+
 ## Rôles
 
 Un rôle est un fichier Markdown : un en-tête entre deux lignes `---`, puis ses consignes.

@@ -66,12 +66,13 @@ def sse(delta):
     return "data: " + json.dumps({"choices": [{"delta": delta}]})
 
 
-def test_stream_gives_text_then_complete_tool_calls(settings, store, monkeypatch):
+def test_stream_gives_text_then_complete_tool_calls(settings, store, monkeypatch, capsys):
     fake = FakeStream([
         sse({"content": "Here "}), "", sse({"content": "you go."}),
         sse({"tool_calls": [{"index": 0, "id": "call_a", "function": {"name": "create_", "arguments": '{"pro'}}]}),
         sse({"tool_calls": [{"index": 0, "function": {"name": "image", "arguments": 'mpt": "a cat"}'}}]}),
         sse({"tool_calls": [{"index": 1, "function": {"name": "ask_choices", "arguments": "{}"}}]}),
+        "data: " + json.dumps({"choices": [], "timings": {"prompt_n": 900, "prompt_ms": 1500, "predicted_n": 40, "predicted_ms": 800}}),
         "data: [DONE]",
     ])
     monkeypatch.setattr("studio.llm.httpx.stream", fake)
@@ -82,6 +83,9 @@ def test_stream_gives_text_then_complete_tool_calls(settings, store, monkeypatch
                    ("tool", {"id": "call_a", "name": "create_image", "arguments": '{"prompt": "a cat"}'}),
                    ("tool", {"id": "call_1", "name": "ask_choices", "arguments": "{}"})]
     assert fake.body["stream"] is True and fake.body["tools"] == [{"type": "function"}]
+    # One line per call in the container log, with llama-server's own timings.
+    line = capsys.readouterr().out
+    assert line.startswith("llm: chat ") and "(prompt 900 tokens in 1.5 s, 40 generated in 0.8 s)" in line
 
 
 def test_stream_error_is_an_llm_error(settings, store, monkeypatch):

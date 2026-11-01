@@ -40,6 +40,10 @@ Gemma 4 E4B (8 GB) on a smaller machine. Native tool calls go through `llama-ser
 When an H3 video engine has to load alone and memory is short, the server stops `llama-server`
 first (`common.LOW_MEMORY`); it starts again on the next LLM request.
 
+Each Gemma call writes one line to the container log, with llama-server's timings, and so does
+each model load: `docker logs studio --since 30m 2>&1 | grep "llm:"` tells a slow model from a
+slow render (`llm: call 12.4 s (prompt 850 tokens in 1.1 s, 410 generated in 11.3 s)`).
+
 ## Roles
 
 A role is a Markdown file: a header between `---` lines, then its instructions.
