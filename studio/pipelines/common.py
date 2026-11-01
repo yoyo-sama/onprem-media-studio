@@ -111,6 +111,12 @@ def disk_size(path: Path) -> int:
     return sum(f.stat().st_size for f in Path(path).rglob("*") if f.is_file())
 
 
+# Safetensors read whole instead of memory-mapped: on the GB10, Krea 2 loaded in 86 s
+# instead of 254 s (tools/qualify/load_speed.sh, page cache dropped; disk 4.3 GB/s).
+# device_map on the GPU gained nothing (250 s).
+LOAD_OPTIONS = {"disable_mmap": True}
+
+
 def load(key, build, size: int = 0, alone: bool = False):
     """The resident pipeline for `key`, built on first use. Before building one,
     the least recently used pipelines are freed until `size` bytes (its weights)

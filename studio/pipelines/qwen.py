@@ -108,7 +108,7 @@ class QwenImage21(Pipeline):
 def _build_21(path):
     import torch
     from diffusers import QwenImage21Pipeline
-    return QwenImage21Pipeline.from_pretrained(path, torch_dtype=torch.bfloat16).to(common.device())
+    return QwenImage21Pipeline.from_pretrained(path, torch_dtype=torch.bfloat16, **common.LOAD_OPTIONS).to(common.device())
 
 
 register(QwenImage21())
