@@ -119,12 +119,18 @@ def load(key, build, size: int = 0, alone: bool = False):
     if key in _resident:
         _resident[key] = _resident.pop(key)  # now the most recently used
         return _resident[key]
+    began, freed = time.time(), []
     while _resident and (alone or free_memory() < size + RESERVE):
-        _free(next(iter(_resident)))
+        freed.append(next(iter(_resident)))
+        _free(freed[-1])
     if alone and LOW_MEMORY and free_memory() < size + RESERVE:
         for hook in LOW_MEMORY:
             hook()
     _resident[key] = build()
+    # One line per load in the container log (`docker logs studio | grep engine:`):
+    # a slow job is often a model loaded again.
+    print(f"engine: {key} loaded in {time.time() - began:.1f} s"
+          + (f", after freeing {', '.join(map(str, freed))}" if freed else ""), flush=True)
     return _resident[key]
 
 
