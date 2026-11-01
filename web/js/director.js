@@ -1437,9 +1437,9 @@ export function initDirector(h) {
     const file = section.querySelector(".sheet-import-input");
     section.querySelector(".sheet-import").addEventListener("click", () => file.click());
     file.addEventListener("change", () => { if (file.files[0]) importSheet(kind, file.files[0]); file.value = ""; });
-    const photo = section.querySelector(".sheet-photo-input");
-    section.querySelector(".sheet-photo").addEventListener("click", () => photo.click());
-    photo.addEventListener("change", () => { if (photo.files[0]) sheetFromPhoto(photo.files[0]); photo.value = ""; });
+    const photo = section.querySelector(".sheet-photo-input");  // subject menu only
+    section.querySelector(".sheet-photo")?.addEventListener("click", () => photo.click());
+    photo?.addEventListener("change", () => { if (photo.files[0]) sheetFromPhoto(photo.files[0]); photo.value = ""; });
     const img = section.querySelector(".sheet-preview img");
     img.addEventListener("click", () => { if (img.getAttribute("src")) openLightbox({ url: img.src, type: "image" }); });
   }

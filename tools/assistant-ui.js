@@ -248,6 +248,13 @@ const CARDS = [
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("studioProject") || "null"));
   check(saved?.shots?.every(sh => JSON.stringify(sh.subjects) === "[0,1]"), "shots do not start with both subjects");
   check(saved?.locVariants?.[0]?.source === "imported" && saved.chars.every(c => c.variants[0].source === "imported"), "sheets not kept as imported");
+  // The director's "Sheet from a photo": one Qwen Image 2.1 job on the chosen image, as a new variant.
+  const beforeDir = jobs.length;
+  await page.setInputFiles("#studioCharacter .sheet-photo-input", { name: "me.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.waitForTimeout(600);
+  const jd = jobs[beforeDir];
+  check(jobs.length === beforeDir + 1 && jd.pipeline === "qwen-image-2.1" && jd.params.images?.length === 1 && jd.params.width === 1920
+    && jd.params.prompt.startsWith("Using <image1>"), "director sheet from a photo: " + JSON.stringify(jd));
   // A subject sheet from a photo: one Qwen Image 2.1 edit of the photo, at the sheets' size.
   await page.click('.rail-mode[data-mode="assistant"]');
   const before8 = jobs.length;
