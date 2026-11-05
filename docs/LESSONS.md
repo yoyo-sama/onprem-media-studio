@@ -134,7 +134,8 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     first changed nothing (236 s): the mapping costs, not the disk. diffusers' `disable_mmap`
     reaches only its own models, so `common.from_pretrained` loads the transformers text
     encoders itself with theirs, and FastVideo's weight iterator gets a whole-file reader
-    (`h3_runtime.WholeFile`) in place of `safe_open`. (GB10, 2026-11-05)
+    (`h3_runtime.WholeFile`) in place of `safe_open`: FastH3 OmniRef then loads in 147 s instead
+    of about 285 s. (GB10, 2026-11-05)
 43. **No torchao FP8 on the GB10; torch.compile only where it pays back.** FP8 weights and dynamic
     activations (per-row scales) took 1 800 s per Krea 2 step instead of 5.7. `torch.compile` of
     the transformer, default mode, saved 22 % per step on Qwen Image 2.1 at 1920×1088 (16 s per
