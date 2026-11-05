@@ -91,7 +91,7 @@ class QwenImage21(Pipeline):
             width, height = common.fit_area(*images[0].size)
         ctx.progress(0, "Loading Qwen Image 2.1")
         pipe = common.load(self.id, lambda: _build_21(models["qwen-image-2.1"]),
-                           common.disk_size(models["qwen-image-2.1"]), files=models["qwen-image-2.1"])
+                           common.disk_size(models["qwen-image-2.1"]))
         steps = common.step_progress(ctx, QWEN21_STEPS, "Qwen Image 2.1")
         began = time.time()
         out = pipe(
@@ -112,9 +112,8 @@ class QwenImage21(Pipeline):
 
 
 def _build_21(path):
-    import torch
     from diffusers import QwenImage21Pipeline
-    return QwenImage21Pipeline.from_pretrained(path, torch_dtype=torch.bfloat16, **common.LOAD_OPTIONS).to(common.device())
+    return common.compile_transformer(common.from_pretrained(QwenImage21Pipeline, path))
 
 
 register(QwenImage21())

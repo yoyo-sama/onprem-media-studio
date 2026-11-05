@@ -34,7 +34,7 @@ class Krea2TextToImage(Pipeline):
     def run(self, params, models, ctx):
         ctx.progress(0, "Loading Krea 2")
         pipe = common.load(self.id, lambda: _build(models["krea2-turbo"]),
-                           common.disk_size(models["krea2-turbo"]), files=models["krea2-turbo"])
+                           common.disk_size(models["krea2-turbo"]))
         steps = common.step_progress(ctx, STEPS, "Krea 2")
         began = time.time()
         images = pipe(
@@ -52,9 +52,8 @@ class Krea2TextToImage(Pipeline):
 
 
 def _build(path):
-    import torch
     from diffusers import Krea2Pipeline
-    return Krea2Pipeline.from_pretrained(path, torch_dtype=torch.bfloat16, **common.LOAD_OPTIONS).to(common.device())
+    return common.compile_transformer(common.from_pretrained(Krea2Pipeline, path))
 
 
 register(Krea2TextToImage())

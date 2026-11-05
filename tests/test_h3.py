@@ -102,10 +102,9 @@ class FakeEngine:
 def engines(monkeypatch, settings):
     log = {"engines": []}
 
-    def load(key, build, size=0, alone=False, files=None):
+    def load(key, build, size=0, alone=False):
         assert alone
         assert key[0] == "h3"
-        assert files == key[1].model_dir  # read ahead before the build
         engine = FakeEngine(key[1], log)
         log["engines"].append(engine)
         return engine
@@ -474,3 +473,13 @@ def test_qualification_cases_are_valid_jobs(settings):
 def test_status_page_names_minimax_h3(client):
     # The MiniMax H3 licence asks products built on it to show its name.
     assert "MiniMax H3" in client.get("/").text
+
+
+def test_fastvideo_weights_are_read_whole(tmp_path):
+    torch = pytest.importorskip("torch")
+    from safetensors.torch import save_file
+    from studio.pipelines.h3_runtime import WholeFile
+    save_file({"a": torch.ones(2, 3), "b": torch.zeros(4)}, str(tmp_path / "w.safetensors"))
+    with WholeFile(str(tmp_path / "w.safetensors"), framework="pt", device="cpu") as f:
+        assert sorted(f.keys()) == ["a", "b"]
+        assert f.get_tensor("a").shape == (2, 3)

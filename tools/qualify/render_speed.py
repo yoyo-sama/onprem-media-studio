@@ -2,12 +2,13 @@
 
     docker exec -i studio python - krea2-turbo base < tools/qualify/render_speed.py
 
-Variants: base (what the server runs), compile (torch.compile of the transformer, default
-mode: no CUDA graphs, see LESSONS #37), fp8 (transformer linear layers quantised by torchao
-to FP8, dynamic activations, per-row scales), fp8-compile (both). Each variant renders the
-same prompt and seed three times and saves the last image under output/bench/ (it shows
-in the gallery), so the variants can be compared by eye before any of them reaches the
-server. render_speed.sh runs them all.
+Variants: base (no compilation), compile (torch.compile of the transformer, default mode:
+no CUDA graphs, see LESSONS #37; what the server runs). Each variant renders the same prompt
+and seed three times and saves the last image under output/bench/ (it shows in the
+gallery), to compare them by eye. render_speed.sh runs both. Measured on the GB10
+(2026-11-05, 1920×1088): Krea 2 5.70 → 4.99 s per step, Qwen Image 2.1 2.95 → 2.30 s; the
+first render pays about 20 s of compilation. FP8 by torchao (dynamic activations, per-row
+scales) took 1 800 s per Krea 2 step: never use it on the GB10 (LESSONS #43).
 """
 import sys
 import time
@@ -16,7 +17,7 @@ import torch
 from diffusers import Krea2Pipeline, QwenImage21Pipeline
 
 from studio.config import Settings
-from studio.pipelines.common import LOAD_OPTIONS, prefetch
+from studio.pipelines.common import from_pretrained
 
 model, variant = sys.argv[1], sys.argv[2]
 cls, steps = {"krea2-turbo": (Krea2Pipeline, 8), "qwen-image-2.1": (QwenImage21Pipeline, 25)}[model]
@@ -27,14 +28,10 @@ settings = Settings()
 path = settings.models_dir / model
 
 began = time.time()
-prefetch(path)
-pipe = cls.from_pretrained(path, torch_dtype=torch.bfloat16, **LOAD_OPTIONS).to("cuda")
-if variant.startswith("fp8"):
-    from torchao.quantization import Float8DynamicActivationFloat8WeightConfig, PerRow, quantize_
-    quantize_(pipe.transformer, Float8DynamicActivationFloat8WeightConfig(granularity=PerRow()))
-if variant.endswith("compile"):
+pipe = from_pretrained(cls, path)
+if variant == "compile":
     pipe.transformer.compile()
-elif variant not in ("base", "fp8"):
+elif variant != "base":
     sys.exit(f"unknown variant {variant!r}")
 torch.cuda.synchronize()
 load = time.time() - began

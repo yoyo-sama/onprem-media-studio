@@ -13,7 +13,6 @@ import random
 import shutil
 import subprocess
 import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 MAX_SEED = 2**32 - 1
@@ -112,48 +111,42 @@ def disk_size(path: Path) -> int:
     return sum(f.stat().st_size for f in Path(path).rglob("*") if f.is_file())
 
 
-# Safetensors read whole instead of memory-mapped: on the GB10, Krea 2 loaded in 86 s
-# instead of 254 s (tools/qualify/load_speed.sh, page cache dropped; disk 4.3 GB/s).
-# device_map on the GPU gained nothing (250 s).
-LOAD_OPTIONS = {"disable_mmap": True}
-PREFETCH_CHUNK = 256 * 1024**2
-PREFETCH_THREADS = 8
+# Safetensors read whole instead of memory-mapped, for every model of a pipeline: on the
+# GB10, Krea 2 loaded in 82 s instead of 253 s with diffusers' own models read whole, and
+# its page cache warm did not help the mapped files (236 s): the cost is the mapping, not
+# the disk (4.3 GB/s). diffusers does not pass disable_mmap to transformers models (the
+# text encoders: 9 GB for Krea 2, 17 GB for Qwen), so from_pretrained loads those itself.
+# device_map on the GPU gained nothing (258 s). tools/qualify/load_speed.sh, 2026-11-05.
+def from_pretrained(cls, path: Path):
+    """A diffusers pipeline of `cls` from `path`, every safetensors file read whole, in
+    bfloat16 on the GPU."""
+    import torch
+    import transformers
+    index = json.loads((Path(path) / "model_index.json").read_text())
+    parts = {}
+    for name, spec in index.items():
+        model = getattr(transformers, spec[1], None) if isinstance(spec, list) and spec[0] == "transformers" else None
+        if isinstance(model, type) and issubclass(model, transformers.PreTrainedModel):
+            parts[name] = model.from_pretrained(Path(path) / name, dtype=torch.bfloat16, disable_mmap=True)
+    return cls.from_pretrained(path, torch_dtype=torch.bfloat16, disable_mmap=True, **parts).to(device())
 
 
-def prefetch(folder: Path) -> float:
-    """Read every file of a model folder once, in large chunks on several threads, and
-    return the seconds it took. The loaders then find the weights in the page cache:
-    memory-mapped, they read the disk page by page, which took 170 s for the 27 GB of
-    FastH3 and most of the text encoders' load on the GB10, whose disk reads 4.3 GB/s
-    in large blocks. The page cache is reclaimable: it never counts against the
-    memory budget (see available_memory)."""
-    began = time.time()
-    chunks = [(f, offset) for f in sorted(Path(folder).rglob("*")) if f.is_file()
-              for offset in range(0, f.stat().st_size, PREFETCH_CHUNK)]
-
-    def read(chunk):
-        path, offset = chunk
-        buf = bytearray(16 * 1024**2)
-        with open(path, "rb", buffering=0) as fh:
-            fh.seek(offset)
-            left = PREFETCH_CHUNK
-            while left > 0:
-                n = fh.readinto(memoryview(buf)[:min(left, len(buf))])
-                if not n:
-                    break
-                left -= n
-
-    with ThreadPoolExecutor(PREFETCH_THREADS) as pool:
-        list(pool.map(read, chunks))
-    return time.time() - began
+def compile_transformer(pipe):
+    """torch.compile of the denoiser, default mode: no CUDA graphs, whose state is per
+    thread (LESSONS #37). On the GB10 a step took 5.0 s instead of 5.7 (Krea 2) and 2.3 s
+    instead of 2.95 (Qwen Image 2.1) at 1920×1088; the first render at a new size pays
+    the compilation (about 20 s). Compiled kernels are kept on the data volume."""
+    from ..config import Settings
+    os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", str(Settings().data_dir / "cache" / "inductor"))
+    pipe.transformer.compile()
+    return pipe
 
 
-def load(key, build, size: int = 0, alone: bool = False, files: Path | None = None):
+def load(key, build, size: int = 0, alone: bool = False):
     """The resident pipeline for `key`, built on first use. Before building one,
     the least recently used pipelines are freed until `size` bytes (its weights)
     plus RESERVE fit in free memory, or all of them when it must run `alone`;
-    when nothing is left to free, it is built anyway. `files`, the model folder,
-    is read ahead into the page cache before the build (prefetch)."""
+    when nothing is left to free, it is built anyway."""
     if key in _resident:
         _resident[key] = _resident.pop(key)  # now the most recently used
         return _resident[key]
@@ -168,12 +161,10 @@ def load(key, build, size: int = 0, alone: bool = False, files: Path | None = No
     if alone and LOW_MEMORY and free_memory() < size + RESERVE:
         for hook in LOW_MEMORY:
             hook()
-    read = prefetch(files) if files else None
     _resident[key] = build()
     # One line per load in the container log (`docker logs studio | grep engine:`):
     # a slow job is often a model loaded again.
     print(f"engine: {key} loaded in {time.time() - began:.1f} s"
-          + (f" (files read in {read:.1f} s)" if read is not None else "")
           + (f", after freeing {', '.join(map(str, freed))}" if freed else ""), flush=True)
     return _resident[key]
 

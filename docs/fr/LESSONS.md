@@ -140,6 +140,18 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     `ref_image_size` « max » de ComfyUI ne fait que réduire à ce côté : environ 247 s, sans perte
     visible. Envoyer des références plus petites n'y change rien, FastVideo les ré-agrandit.
     (GB10, 2026-10-30)
+42. **Ne jamais laisser projeter en mémoire un fichier de poids sur le GB10.** Projeté, Krea 2
+    chargeait en 253 s ; lu d'un bloc, 82 s, alors que son disque lit à 4,3 Go/s. Lire d'abord le
+    dossier dans le cache disque n'a rien changé (236 s) : c'est la projection qui coûte, pas le
+    disque. Le `disable_mmap` de diffusers ne touche que ses propres modèles, donc
+    `common.from_pretrained` charge lui-même les encodeurs de texte transformers avec le leur, et
+    l'itérateur de poids de FastVideo reçoit un lecteur de fichier entier (`h3_runtime.WholeFile`)
+    à la place de `safe_open`. (GB10, 2026-11-05)
+43. **Pas de FP8 torchao sur le GB10 ; torch.compile est l'accélération sûre.** Des poids et
+    activations dynamiques FP8 (échelles par ligne) prenaient 1 800 s par étape de Krea 2 au lieu
+    de 5,7. `torch.compile` du transformer, en mode par défaut, a fait gagner 12 % par étape sur
+    Krea 2 et 22 % sur Qwen Image 2.1 en 1920×1088, pour environ 20 s de compilation au premier
+    rendu de chaque taille. (GB10, 2026-11-05)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

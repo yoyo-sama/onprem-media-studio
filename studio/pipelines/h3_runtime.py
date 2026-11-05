@@ -127,6 +127,36 @@ def _size_references_like_comfyui() -> None:
     reference.resolve_reference_image_size = lambda width, height: reference_size(width, height, step)
 
 
+class WholeFile:
+    """Stands in for safetensors' safe_open in FastVideo's weight iterator (DiT shards and
+    text encoders): the file is read whole instead of memory-mapped. Mapped, the 27 GB of
+    FastH3 took 170 s to read on the GB10, as Krea 2's mapped files did (253 s against 82 s
+    read whole, LESSONS.md #42). Only what the iterator uses on one GPU: keys, get_tensor."""
+
+    def __init__(self, path, framework: str = "pt", device: str = "cpu"):
+        from safetensors.torch import load
+        with open(path, "rb") as fh:
+            self._tensors = load(fh.read())
+        self._device = device
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self._tensors = None
+
+    def keys(self):
+        return list(self._tensors)
+
+    def get_tensor(self, name):
+        return self._tensors[name].to(self._device)
+
+
+def _read_weights_whole() -> None:
+    from fastvideo.models.loader import weight_utils
+    weight_utils.safe_open = WholeFile
+
+
 def _apply_env(env: dict[str, str]) -> None:
     for key in _ALL_KEYS - set(env):
         os.environ.pop(key, None)
@@ -142,6 +172,7 @@ class Engine:
                                    OffloadConfig, PipelineSelection, QuantizationConfig)
         self.spec = spec
         _apply_env(environment(spec))
+        _read_weights_whole()
         quant = (QuantizationConfig(transformer_quant="NVFP4", layer_profile="h3_dit_vsa")
                  if spec.precision == "nvfp4" else QuantizationConfig(transformer_quant="FP8"))
         components = ComponentConfig(lora_path=str(spec.lora) if spec.lora else None, lora_strength=1.0)

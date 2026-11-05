@@ -207,7 +207,7 @@ def _engine(ctx, model_dir: Path, ref2va: bool, prec: str, loras: list[dict]):
     spec = EngineSpec(model_dir=model_dir, ref2va=ref2va, precision=prec, lora=lora)
     label = "FastH3 OmniRef" if ref2va else "FastH3"
     ctx.progress(0, f"Loading MiniMax H3 ({label}, {prec.upper()})")
-    return common.load(("h3", spec), lambda: Engine(spec), alone=True, files=model_dir)
+    return common.load(("h3", spec), lambda: Engine(spec), alone=True)
 
 
 # ── Outputs ──────────────────────────────────────────────────────────────────
