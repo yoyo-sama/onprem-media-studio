@@ -100,8 +100,7 @@ to it.
 - No Krea 2 LoRA, megapixel or turbo/steps controls; H3 LoRAs are uploaded files.
 - Reference to video takes image references only (no video or audio references).
 - In the director, a reference-to-video clip plays under its button once rendered, and the
-  button becomes "Regenerate the video": a new job on the same sheets, with the next seed (1.4
-  only wrote the file name in the log).
+  button becomes "Regenerate the video": a new job on the same sheets, with the next seed.
 - The multi-image sequence uses the H3 video instruction (1.4 used LTX there).
 - The Relay legend names every subject of the shot (1.4 lost the main character).
 - Canvas: ✨ follows the Studio routing (1.4 had its own copy of the generic instruction), the
