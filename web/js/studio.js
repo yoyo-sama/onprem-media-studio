@@ -7,7 +7,7 @@
 // the app never writes the brief (the scenario example is only a placeholder).
 
 import { api, connect, on, uploadLora } from "./api.js";
-import { L, LANG, pct, setLang, t, translateTree, tx } from "./i18n.js";
+import { L, LANG, pct, setLang, t, translateTree, tx, txAttr } from "./i18n.js";
 import {
   $, LLM, MOBILE, cancelAll, clampInt, fillSelect, initJobs, initPromptEditor, initTheme, initUndo,
   log, notice, onJobsChange, promptLog, runJob, runningJobs, undoToast, warn,
@@ -101,7 +101,8 @@ function updateModelLabel() {
   $("refExtrasWrap").hidden = !ctx;
   for (const [cls, on] of [[".r2v-only", ctx === "r2v"], [".sb-only", ctx === "sb"], [".i2i-only", ctx === "i2i"]])
     document.querySelectorAll(`#refExtrasWrap ${cls}`).forEach(el => { el.hidden = !on; });
-  tx($("refCapLabel"), "Extra reference images (at most {max})", { max: F.REF_CAPS[ctx] || 7 });
+  if (ctx === "r2v") tx($("refCapLabel"), "Extra references: up to 7 images, 3 clips and 3 sounds");
+  else tx($("refCapLabel"), "Extra reference images (at most {max})", { max: F.REF_CAPS[ctx] || 7 });
   renderRefs();
   updateResumeButton();
   D.refreshSessionBar();
@@ -250,35 +251,46 @@ function renderSeqSummary() {
 const txAria = (el, text) => { el.setAttribute("aria-label", text); el.title = text; };
 
 // ── Extra references and H3 subjects ──────────────────────────────────────────
-function addRefs(images) {
-  const ctx = F.refCtx(), list = F.refList(ctx), max = F.REF_CAPS[ctx];
+// Reference to video also takes clips and sounds (7 images, 3 clips, 3 sounds next to
+// the sheets); the other lists take images only.
+function addRefs(items) {
+  const ctx = F.refCtx(), list = F.refList(ctx);
   if (!ctx) return;
-  const room = Math.max(0, max - list.length);
-  list.push(...images.slice(0, room));
-  if (images.length > room) notice(false, "At most {max} images here: the extra ones were ignored.", { max });
+  if (ctx !== "r2v") {
+    const max = F.REF_CAPS[ctx], room = Math.max(0, max - list.length);
+    list.push(...items.slice(0, room));
+    if (items.length > room) notice(false, "At most {max} images here: the extra ones were ignored.", { max });
+  } else {
+    const room = Object.fromEntries(Object.entries(F.R2V_MEDIA_CAPS).map(([m, max]) => [m, max - list.filter(it => F.itemMedia(it) === m).length]));
+    const kept = items.filter(it => room[F.itemMedia(it)]-- > 0);
+    list.push(...kept);
+    if (kept.length < items.length) notice(false, "At most 7 images, 3 clips and 3 sounds here: the extra files were ignored.");
+  }
   renderRefs();
 }
 
-// Subjects of the next Ref2VA job, in picture order. Skipping the sheets makes the
-// first two references the character and the setting.
+// Subjects of the next Ref2VA job, in their order. Skipping the sheets makes the first
+// two reference images the character and the setting; a clip can be a subject too.
 const SUBJECT_KINDS = { character: L("character"), environment: L("setting"), reference: L("reference") };
-function plannedSubjects() {
-  const refs = F.refList("r2v");
-  if ($("skipSheetsToggle").checked)
-    return refs.map((_, i) => (i === 0 ? "character" : i === 1 ? "environment" : "reference"));
-  return ["character", "environment", ...refs.map(() => "reference")];
-}
+const r2vPlan = () => F.r2vPlan($("skipSheetsToggle").checked);
+const plannedSubjects = () => r2vPlan().entries.filter(e => SUBJECT_KINDS[e.kind]).map(e => e.kind);
 
 function renderRefs() {
-  const ctx = F.refCtx(), skip = $("skipSheetsToggle").checked;
+  const ctx = F.refCtx(), plan = ctx === "r2v" ? r2vPlan() : null;
+  $("refImagesInput").accept = ctx === "r2v" ? "image/*,video/*,audio/*" : "image/*";
   $("refSubjects").replaceChildren(...F.refList(ctx).map((img, i) => {
     const row = document.createElement("div");
     row.className = "ref-subject ref-removable";
     const tag = document.createElement("div");
     tag.className = "rs-tag";
+    const entry = plan?.entries.find(e => e.item === img);
     if (ctx === "i2i") tag.textContent = `<image${i + 2}>`;
     else if (ctx === "sb") tx(tag, "Reference {n}", { n: i + 1 });
-    else tx(tag, "Subject {n}", { n: skip ? i + 1 : i + 3 });
+    else if (!entry) { tx(tag, "Not sent (over the limit)"); row.classList.add("ref-ignored"); }
+    else {
+      const [, word, n] = /^<(\w+) (\d+)>$/.exec(entry.label);
+      tx(tag, word === "Subject" ? "Subject {n}" : word === "Video" ? "Clip {n}" : "Sound {n}", { n: +n });
+    }
     const name = document.createElement("div");
     name.className = "rs-name";
     name.dataset.raw = "";
@@ -287,7 +299,17 @@ function renderRefs() {
     x.type = "button"; x.className = "rs-x"; x.textContent = "✕";
     txAria(x, "Remove this reference");
     x.addEventListener("click", () => { F.refList(ctx).splice(i, 1); renderRefs(); });
-    row.append(tag, name, x);
+    row.append(tag, name);
+    // A clip or a sound has a role, which decides its label: redraw on change.
+    if (ctx === "r2v" && F.itemMedia(img) !== "image") {
+      const role = document.createElement("select");
+      role.className = "rs-role";
+      fillSelect(role, F.MEDIA_KINDS[F.itemMedia(img)].map(k => [k, t(F.REF_KINDS[k][1])]), F.itemRole(img));
+      txAttr(role, "aria-label", "Role of this reference in the clip");
+      role.addEventListener("change", () => { img.kind = role.value; renderRefs(); });
+      row.appendChild(role);
+    }
+    row.appendChild(x);
     return row;
   }));
   translateTree($("refSubjects"));
@@ -366,7 +388,7 @@ function setInputFile(input, file) {
 }
 // `max()` = 1: a one-image field (replaced); otherwise a cap, `count()` images already
 // there (drops add up). `put(file)` places a file; `putAsset(asset)` a gallery image.
-function dropZone(el, { max = () => 1, count = () => 0, put, putAsset }) {
+function dropZone(el, { max = () => 1, count = () => 0, put, putAsset, media = () => false }) {
   el.classList.add("drop-zone");
   const hint = document.createElement("span");
   hint.className = "drop-hint";
@@ -379,9 +401,14 @@ function dropZone(el, { max = () => 1, count = () => 0, put, putAsset }) {
   async function handle(files, asset) {
     let items = files.length ? files.map(file => ({ file, name: file.name, type: file.type })) : asset ? [{ asset, name: asset.filename, type: asset.type }] : [];
     const refusals = [];
+    const clips = media();  // a zone that also takes clips and sounds
     items = items.filter(it => {
-      if (it.type === "video" || /^video\//.test(it.type)) { refusals.push(["A video cannot go here: drop an image."]); return false; }
-      if (it.file && !/^image\//.test(it.type)) { refusals.push(["{name} is not an image.", { name: it.name }]); return false; }
+      if (!clips && (it.type === "video" || /^video\//.test(it.type))) { refusals.push(["A video cannot go here: drop an image."]); return false; }
+      if (it.file && !(/^image\//.test(it.type) || (clips && /^(video|audio)\//.test(it.type)))) {
+        if (clips) refusals.push([L("{name} is not an image, a clip or a sound."), { name: it.name }]);
+        else refusals.push(["{name} is not an image.", { name: it.name }]);
+        return false;
+      }
       return true;
     });
     const mono = max() === 1;
@@ -422,7 +449,10 @@ function initDrops() {
     putAsset: a => addSeqImage({ name: a.filename, ref: a.ref }),
   });
   dropZone($("refDropZone"), {
-    max: () => F.REF_CAPS[F.refCtx()] || 0, count: () => F.refList().length,
+    // Reference to video: clips and sounds too, capped per media by addRefs.
+    media: () => F.refCtx() === "r2v",
+    max: () => F.refCtx() === "r2v" ? Object.values(F.R2V_MEDIA_CAPS).reduce((a, b) => a + b, 0) : F.REF_CAPS[F.refCtx()] || 0,
+    count: () => F.refList().length,
     put: f => addRefs([{ name: f.name, blob: f }]),
     putAsset: a => addRefs([{ name: a.filename, ref: a.ref }]),
   });
@@ -570,7 +600,8 @@ async function openCardInForm(tool, a, image, quiet = false) {
     for (const m of a.markets || []) selectedMarkets.add(m);
     renderMarkets();
   }
-  if (tool === "reference_video") F.refList("r2v").splice(0, Infinity, ...(a.references || []).map(img));
+  if (tool === "reference_video")
+    F.refList("r2v").splice(0, Infinity, ...(a.references || []).map((id, i) => ({ ...img(id), kind: a.kinds?.[i] })));
   // Sheets of a storyboard card: the director keeps them (another card drops them).
   D.useSheets(tool === "storyboard"
     ? { subjects: (a.subject_sheets || []).map(img), setting: a.setting_sheet?.length ? img(a.setting_sheet[0]) : null } : null);

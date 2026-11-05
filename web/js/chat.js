@@ -70,14 +70,8 @@ const CARD_UI = {
 // for a subject, else its own <Video N> or <Audio N>, with the role the user or Gemma
 // gave it.
 const R2V_MAX = { image: 9, video: 3, audio: 3 }, R2V_MAX_REFS = 12;  // FastH3 OmniRef's limits (server h3.py)
-const REF_KINDS = { character: ["character", L("Character")], setting: ["environment", L("Setting")],
-                    object: ["reference", L("Object or other")], motion: ["motion", L("Camera movement and pacing")],
-                    voice: ["voice", L("Voice of a character")], music: ["music", L("Music")],
-                    ambience: ["ambience", L("Ambience and sounds")] };
-const MEDIA_KINDS = { image: ["character", "setting", "object"], video: ["motion", "character", "setting", "object"],
-                      audio: ["voice", "music", "ambience"] };
-const AUDIO = /\.(wav|mp3|m4a|flac|ogg)$/i;
-const mediaOf = id => { const ref = refOf(id) || ""; return VIDEO.test(ref) ? "video" : AUDIO.test(ref) ? "audio" : "image"; };
+const { REF_KINDS, MEDIA_KINDS, AUDIO_RE: AUDIO } = F;
+const mediaOf = id => F.refMedia(refOf(id));
 function kindOf(a, i) {
   const media = mediaOf(a.references[i]), k = a.kinds?.[i];
   if (MEDIA_KINDS[media].includes(k)) return k;
@@ -593,12 +587,8 @@ async function enrichCard(card, area, btn) {
 async function openInStudio(card, launch = false) {
   let a = argsOf(card);
   const images = {}, cid = conv.id;
-  // The Studio's reference-to-video form takes images only: clips and sounds stay on the card.
-  if (card.tool === "reference_video" && (a.references || []).some(id => mediaOf(id) !== "image")) {
-    const keep = (a.references || []).map((id, i) => mediaOf(id) === "image" ? i : -1).filter(i => i >= 0);
-    a = { ...a, references: keep.map(i => a.references[i]), kinds: keep.map(i => kindOf(a, i)) };
-    notice(false, "The Studio takes image references only: the clips and sounds stay on the card, for “Generate the video”.");
-  }
+  // Every reference goes with its role (the Studio's list keeps those of clips and sounds).
+  if (card.tool === "reference_video") a = { ...a, kinds: (a.references || []).map((_, i) => kindOf(a, i)) };
   try {
     for (const id of imageIds(card, a)) images[id] = { name: fileName(need(id)), ref: need(id) };
     const image = id => images[id] || null;

@@ -557,10 +557,40 @@ export const DICT = {
     es: "Duración / plano (s)",
     de: "Dauer / Einstellung (s)",
   },
-  "Each image gets a subject number, used automatically in the prompt.": {
-    fr: "Chaque image reçoit un numéro de sujet, utilisé automatiquement dans le prompt.",
-    es: "Cada imagen recibe un número de sujeto, usado automáticamente en el prompt.",
-    de: "Jedes Bild erhält eine Motivnummer, die automatisch im Prompt verwendet wird.",
+  "Each image gets a subject number, each clip and sound its own label, used automatically in the prompt. A clip is sent silent: to use its sound, add the sound itself.": {
+    fr: "Chaque image reçoit un numéro de sujet, chaque vidéo et chaque son son propre repère, utilisés automatiquement dans le prompt. Une vidéo part sans son : pour garder sa bande son, ajoute-la aussi comme son.",
+    es: "Cada imagen recibe un número de sujeto, y cada vídeo y cada sonido su propia etiqueta, usados automáticamente en el prompt. Un vídeo se envía sin sonido: para usar su sonido, añade el sonido en sí.",
+    de: "Jedes Bild erhält eine Motivnummer, jeder Clip und jeder Ton eine eigene Marke, die automatisch im Prompt verwendet werden. Ein Clip wird ohne Ton gesendet: Um seinen Ton zu nutzen, füge den Ton selbst hinzu.",
+  },
+  "Extra references: up to 7 images, 3 clips and 3 sounds": {
+    fr: "Références en plus : jusqu'à 7 images, 3 vidéos et 3 sons",
+    es: "Referencias adicionales: hasta 7 imágenes, 3 vídeos y 3 sonidos",
+    de: "Zusätzliche Referenzen: bis zu 7 Bilder, 3 Clips und 3 Töne",
+  },
+  "At most 7 images, 3 clips and 3 sounds here: the extra files were ignored.": {
+    fr: "7 images, 3 vidéos et 3 sons au plus ici : les autres fichiers ont été ignorés.",
+    es: "Aquí caben como máximo 7 imágenes, 3 vídeos y 3 sonidos: los demás archivos se han ignorado.",
+    de: "Hier höchstens 7 Bilder, 3 Clips und 3 Töne: Die übrigen Dateien wurden ignoriert.",
+  },
+  "Not sent (over the limit)": {
+    fr: "Non envoyée (au-delà de la limite)",
+    es: "No enviada (por encima del límite)",
+    de: "Nicht gesendet (über dem Limit)",
+  },
+  "Clip {n}": {
+    fr: "Vidéo {n}",
+    es: "Vídeo {n}",
+    de: "Clip {n}",
+  },
+  "Sound {n}": {
+    fr: "Son {n}",
+    es: "Sonido {n}",
+    de: "Ton {n}",
+  },
+  "{name} is not an image, a clip or a sound.": {
+    fr: "{name} n'est ni une image, ni une vidéo, ni un son.",
+    es: "{name} no es una imagen, ni un vídeo, ni un sonido.",
+    de: "{name} ist weder ein Bild noch ein Clip noch ein Ton.",
   },
   "Edit the fields then regenerate to make a new variant; click a thumbnail to choose the active sheet.": {
     fr: "Modifie les champs puis régénère pour créer une variante ; clique sur une vignette pour choisir la planche active.",
@@ -3691,11 +3721,6 @@ export const DICT = {
     fr: "9 images, 3 vidéos et 3 sons au plus ici, 12 en tout : les autres fichiers ont été ignorés.",
     es: "Aquí caben como máximo 9 imágenes, 3 vídeos y 3 sonidos, 12 en total: los demás archivos se han ignorado.",
     de: "Hier höchstens 9 Bilder, 3 Clips und 3 Töne, insgesamt 12: Die übrigen Dateien wurden ignoriert.",
-  },
-  "The Studio takes image references only: the clips and sounds stay on the card, for “Generate the video”.": {
-    fr: "Le Studio ne prend que les images en référence : les vidéos et les sons restent sur la carte, pour « Générer la vidéo ».",
-    es: "El Studio solo admite imágenes como referencia: los vídeos y los sonidos se quedan en la tarjeta, para «Generar el vídeo».",
-    de: "Das Studio nimmt nur Bilder als Referenz: Clips und Töne bleiben auf der Karte, für „Video generieren“.",
   },
   "Object or other": {
     fr: "Objet ou autre",

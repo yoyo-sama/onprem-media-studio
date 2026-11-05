@@ -1290,13 +1290,17 @@ async function assembleRelay() {
 }
 
 // ── Reference to video ────────────────────────────────────────────────────────
-// Ref2VA job: the six-field block with every subject defined on its picture; extra
-// references become subjects 3 and up, described by Gemma's vision.
+// Ref2VA job: the six-field block with every subject defined on its picture. Extra
+// references (F.r2vPlan: {item, media, kind}) follow: an image is the next subject,
+// described by Gemma's vision; a clip is a subject or its camera movement (<Video N>),
+// a sound a voice, the music or the ambience (<Audio N>).
 async function r2vJob({ subjects, refs, extras, seed, duration, loras, aspect, text }) {
-  const extraDescs = await F.describeRefs(extras);
-  const all = P.h3AssignSubjects(subjects.concat(extraDescs.map(desc => ({ kind: "reference", desc }))));
+  const images = extras.filter(e => e.media === "image");
+  const found = await F.describeRefs(images.map(e => e.item));
+  const all = P.h3AssignRefs(subjects.concat(extras.map(e => ({
+    media: e.media, kind: e.kind, desc: e.media === "image" ? found[images.indexOf(e)] : "" }))));
   const prompt = F.capH3(P.buildH3RefPrompt({ subjects: all, summary: P.h3Summary(text), body: P.h3RefBody(all, text) }));
-  const extraRefs = await Promise.all(extras.map(F.imageRef));
+  const extraRefs = await Promise.all(extras.map(e => F.imageRef(e.item)));
   return runJob("h3-r2v", { prompt, duration, seed, loras, aspect, references: [...refs, ...extraRefs] }, {
     origin: "reference2video", label: ["Consistent character + setting (MiniMax H3)"],
     sub: ["{info} · seed {seed}", { info: extras.length ? `${duration} s · +${extras.length} ref.` : `${duration} s`, seed }] });
@@ -1310,7 +1314,7 @@ async function launchR2V() {
   s.r2vVideo = "pending";
   updateGate();
   try {
-    const extras = F.refList("r2v").slice(0, F.REF_CAPS.r2v);
+    const { extras } = F.r2vPlan(false);
     const job = await r2vJob({
       subjects: [{ kind: "character", desc: charDesc(s.chars[0]) }, { kind: "environment", desc: locDesc() }],
       refs: [activeVariant(s.chars[0]).ref, locVariant().ref], extras, seed,
@@ -1324,18 +1328,18 @@ async function launchR2V() {
   updateGate();
 }
 
-// "Skip the sheets": nothing generated, nothing to review; the first two references
-// are the character and the setting, and their description by Gemma's vision is all
-// that tells the model what they are.
+// "Skip the sheets": nothing generated, nothing to review; the first two reference
+// images are the character and the setting, and their description by Gemma's vision
+// is all that tells the model what they are.
 export async function r2vWithoutSheets(seed) {
   const text = F.brief();
   if (!text) throw new Error(t("Describe the character and the setting in the brief before generating."));
-  const list = F.refList("r2v").slice(0, F.REF_CAPS.r2v);
-  if (list.length < 2) throw new Error(t("Skipping the sheets needs at least 2 images in “Extra references”."));
-  const [charD, locD] = await F.describeRefs(list.slice(0, 2));
-  const refs = await Promise.all(list.slice(0, 2).map(F.imageRef));
+  const { anchors, extras } = F.r2vPlan(true);
+  if (anchors.length < 2) throw new Error(t("Skipping the sheets needs at least 2 images in “Extra references”."));
+  const [charD, locD] = await F.describeRefs(anchors);
+  const refs = await Promise.all(anchors.map(F.imageRef));
   runJobDetached(r2vJob({
-    subjects: [{ kind: "character", desc: charD }, { kind: "environment", desc: locD }], refs, extras: list.slice(2),
+    subjects: [{ kind: "character", desc: charD }, { kind: "environment", desc: locD }], refs, extras,
     seed: F.seedPlus(seed, 201), duration: F.formDuration(), loras: F.formLoras(), aspect: $("ratioSelect").value, text }));
 }
 const runJobDetached = p => { p.catch(warn); };

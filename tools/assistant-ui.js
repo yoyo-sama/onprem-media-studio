@@ -352,6 +352,36 @@ const CARDS = [
     && p10.includes("detailed_description:\n<Subject 1> is in <Subject 2>. <Subject 1> rides a motorcycle") && !p10.includes("A1"),
     "C10: prompt not in the H3 grammar: " + p10);
   check(j10?.params.duration === 5 && j10.params.aspect === "16:9", "C10: settings");
+  // The same card opened in the Studio: its clip and sound go to the reference list with
+  // their roles; skipping the sheets, the two images are subjects 1 and 2 and one job
+  // carries the four references.
+  for (const j of Object.values(done).filter(j => j.status === "queued")) {
+    Object.assign(j, { status: "done", progress: 1, outputs: j.later });
+    send(j);
+  }
+  await page.waitForSelector(`${c10} .cc-actions button:nth-child(3):not([disabled])`, { timeout: 5000 });
+  await page.click(`${c10} .cc-actions button >> nth=2`);
+  await page.waitForFunction(() => document.querySelectorAll("#refSubjects .ref-subject").length === 4, null, { timeout: 5000 }).catch(() => {});
+  const tags = () => page.$$eval("#refSubjects .rs-tag", els => els.map(e => e.textContent));
+  let st = await tags();
+  check(JSON.stringify(st) === JSON.stringify(["Sujet 3", "Sujet 4", "Vidéo 1", "Son 1"]), "Studio r2v: reference labels with the sheets: " + st);
+  check(JSON.stringify(await page.$$eval("#refSubjects .rs-role", els => els.map(e => e.value))) === '["motion","voice"]',
+    "Studio r2v: the clip and sound roles did not follow the card");
+  await page.$eval("#skipSheetsToggle", el => { el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
+  st = await tags();
+  check(JSON.stringify(st) === JSON.stringify(["Sujet 1", "Sujet 2", "Vidéo 1", "Son 1"]), "Studio r2v: reference labels without the sheets: " + st);
+  if (SHOTS) await (await page.$("#refExtrasWrap")).screenshot({ path: `${SHOTS}/r2v-studio-refs-1440.png` });
+  const beforeS = jobs.length;
+  check(beforeS === jobs.length, "Studio r2v: opening the card submitted a job");
+  await page.click("#generateBtn");
+  await page.waitForTimeout(2500);
+  const jS = jobs[beforeS], pS = jS?.params.prompt || "";
+  check(jobs.length === beforeS + 1 && jS.pipeline === "h3-r2v"
+    && JSON.stringify(jS.params.references) === JSON.stringify(["inputs/att.png", "inputs/att.png", "inputs/clip.mp4", "inputs/voice.wav"]),
+    "Studio r2v: not one job with the four references in order: " + JSON.stringify(jS));
+  check(pS.includes("\n<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n")
+    && pS.includes("summary:\n[reference generation + audio reference] "), "Studio r2v: prompt: " + pS);
+  await page.$eval("#skipSheetsToggle", el => { el.checked = false; el.dispatchEvent(new Event("change", { bubbles: true })); });
   // A reload opens on the welcome; the conversation stays in the list.
   await page.click('.rail-mode[data-mode="assistant"]');
   await page.reload({ waitUntil: "load" });
