@@ -1141,7 +1141,7 @@ body[data-studio="1"] #sessionBar { min-height: 54px; }
 .relay-thumb:hover:not(:disabled) { opacity: 1; }
 .relay-thumb.active { border-color: var(--accent); opacity: 1; }
 .relay-thumb:disabled { cursor: default; }
-#relayPlayer video { width: 100%; margin-top: 12px; border-radius: var(--radius); }
+#relayPlayer video, #r2vPlayer video { width: 100%; margin-top: 12px; border-radius: var(--radius); }
 
 #promptModal {
   position: fixed;

@@ -93,6 +93,14 @@ l'image 1 sauf si `width` et `height` sont donnés tous les deux. Le prompt cite
 | Planches sujet et décor | `krea2-t2i` en 1920×1088, une image chacune |
 | Images des plans (keyframes) | `qwen-image-2.1` avec `subjects` = la ou les planches de sujet, `setting` = la planche du décor |
 
+## Vitesse
+
+Les poids sont lus d'un bloc, jamais projetés en mémoire, et le transformer de Qwen Image 2.1
+passe par `torch.compile` ; mesures et bancs dans [H3.md](H3.md#mémoire-et-annulation) et
+[LESSONS.md](LESSONS.md) n°42–43. Chargements sur le GB10, cache disque vidé : Krea 2 34 s
+(253 s avant). Rendus en 1280×720 : Krea 2 environ 20 s par image ; Qwen Image 2.1 en 1344×768
+environ 40 s une fois compilé (le premier rendu à une nouvelle taille ajoute environ 15 s).
+
 ## Qualification
 
 Un moteur n'est qualifié que par un vrai rendu dont les images ont été regardées (LESSONS n°1),

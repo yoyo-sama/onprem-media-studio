@@ -100,6 +100,9 @@ ajoute une carte Import d'image reliée à elle.
 - Plus de génération cloud (OpenAI, Gemini).
 - Ni LoRA Krea 2, ni mégapixels, ni turbo/steps ; les LoRA H3 sont des fichiers envoyés.
 - La référence vers vidéo ne prend que des images (ni vidéo ni audio de référence).
+- Dans le réalisateur, un clip de référence vers vidéo se lit sous son bouton une fois rendu, et
+  le bouton devient « Régénérer la vidéo » : un nouveau job sur les mêmes planches, avec le seed
+  suivant.
 - La séquence multi-images utilise la consigne vidéo H3 (la 1.4 y utilisait LTX).
 - La légende du Relay nomme tous les sujets du plan (la 1.4 perdait le personnage principal).
 - Canvas : ✨ suit le routage du Studio (la 1.4 avait sa propre copie de la consigne générique),

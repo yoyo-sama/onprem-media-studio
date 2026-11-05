@@ -87,6 +87,14 @@ setting, as in 1.4: 2 sheets + 7), it edits: `count` is 1, size from image 1 unl
 | Subject and setting sheets | `krea2-t2i` at 1920×1088, one image each |
 | Shot images (keyframes) | `qwen-image-2.1` with `subjects` = the subject sheet(s), `setting` = the setting sheet |
 
+## Speed
+
+Weights are read whole, never memory-mapped, and Qwen Image 2.1's transformer runs through
+`torch.compile`; measures and benches in [H3.md](H3.md#memory-and-cancellation) and
+[LESSONS.md](LESSONS.md) #42–43. Loads on the GB10, page cache dropped: Krea 2 34 s (253 s
+before). Renders at 1280×720: Krea 2 about 20 s per image; Qwen Image 2.1 at 1344×768 about 40 s
+once compiled (the first render at a new size adds about 15 s).
+
 ## Qualification
 
 An engine is qualified only by a real render whose images were looked at (LESSONS #1), on the

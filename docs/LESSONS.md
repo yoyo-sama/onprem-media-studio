@@ -129,6 +129,19 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     `ref_image_size` "max" only ever downscales to that edge: about 247 s, with no visible loss.
     Sending smaller references does not help, since FastVideo scales them back up. (GB10,
     2026-10-30)
+42. **Never let a weights file be memory-mapped on the GB10.** Mapped, Krea 2 loaded in 253 s;
+    read whole, 82 s, although its disk reads 4.3 GB/s. Reading the folder into the page cache
+    first changed nothing (236 s): the mapping costs, not the disk. diffusers' `disable_mmap`
+    reaches only its own models, so `common.from_pretrained` loads the transformers text
+    encoders itself with theirs, and FastVideo's weight iterator gets a whole-file reader
+    (`h3_runtime.WholeFile`) in place of `safe_open`: FastH3 OmniRef then loads in 147 s instead
+    of about 285 s. (GB10, 2026-11-05)
+43. **No torchao FP8 on the GB10; torch.compile only where it pays back.** FP8 weights and dynamic
+    activations (per-row scales) took 1 800 s per Krea 2 step instead of 5.7. `torch.compile` of
+    the transformer, default mode, saved 22 % per step on Qwen Image 2.1 at 1920×1088 (16 s per
+    image) for about 15 s of compilation on the first render at each size in a process: kept.
+    On Krea 2 it saved 12 % (6 s per image of 8 steps) for about 33 s per new size or image
+    count: not kept. (GB10, 2026-11-05)
 
 ## 8. Front end (for the port in step 4)
 

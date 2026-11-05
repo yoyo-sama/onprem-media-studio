@@ -111,10 +111,36 @@ def disk_size(path: Path) -> int:
     return sum(f.stat().st_size for f in Path(path).rglob("*") if f.is_file())
 
 
-# Safetensors read whole instead of memory-mapped: on the GB10, Krea 2 loaded in 86 s
-# instead of 254 s (tools/qualify/load_speed.sh, page cache dropped; disk 4.3 GB/s).
-# device_map on the GPU gained nothing (250 s).
-LOAD_OPTIONS = {"disable_mmap": True}
+# Safetensors read whole instead of memory-mapped, for every model of a pipeline: on the
+# GB10, Krea 2 loaded in 82 s instead of 253 s with diffusers' own models read whole, and
+# its page cache warm did not help the mapped files (236 s): the cost is the mapping, not
+# the disk (4.3 GB/s). diffusers does not pass disable_mmap to transformers models (the
+# text encoders: 9 GB for Krea 2, 17 GB for Qwen), so from_pretrained loads those itself.
+# device_map on the GPU gained nothing (258 s). tools/qualify/load_speed.sh, 2026-11-05.
+def from_pretrained(cls, path: Path):
+    """A diffusers pipeline of `cls` from `path`, every safetensors file read whole, in
+    bfloat16 on the GPU."""
+    import torch
+    import transformers
+    index = json.loads((Path(path) / "model_index.json").read_text())
+    parts = {}
+    for name, spec in index.items():
+        model = getattr(transformers, spec[1], None) if isinstance(spec, list) and spec[0] == "transformers" else None
+        if isinstance(model, type) and issubclass(model, transformers.PreTrainedModel):
+            parts[name] = model.from_pretrained(Path(path) / name, dtype=torch.bfloat16, disable_mmap=True)
+    return cls.from_pretrained(path, torch_dtype=torch.bfloat16, disable_mmap=True, **parts).to(device())
+
+
+def compile_transformer(pipe):
+    """torch.compile of the denoiser, default mode: no CUDA graphs, whose state is per
+    thread (LESSONS #37). Used by Qwen Image 2.1 only (LESSONS #43): on the GB10 a step
+    took 2.3 s instead of 2.95 at 1920×1088, 16 s saved per image of 25 steps, for about
+    15 s of compilation on the first render at each size in a process. Compiled kernels
+    are kept on the data volume."""
+    from ..config import Settings
+    os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", str(Settings().data_dir / "cache" / "inductor"))
+    pipe.transformer.compile()
+    return pipe
 
 
 def load(key, build, size: int = 0, alone: bool = False):
@@ -139,9 +165,13 @@ def load(key, build, size: int = 0, alone: bool = False):
     _resident[key] = build()
     # One line per load in the container log (`docker logs studio | grep engine:`):
     # a slow job is often a model loaded again.
-    print(f"engine: {key} loaded in {time.time() - began:.1f} s"
-          + (f", after freeing {', '.join(map(str, freed))}" if freed else ""), flush=True)
+    print(f"engine: {_name(key)} loaded in {time.time() - began:.1f} s"
+          + (f", after freeing {', '.join(map(_name, freed))}" if freed else ""), flush=True)
     return _resident[key]
+
+
+def _name(key) -> str:
+    return " ".join(map(str, key)) if isinstance(key, tuple) else str(key)
 
 
 def _free(key) -> None:
@@ -177,11 +207,29 @@ def generator(seed_: int):
 
 
 def step_progress(ctx, steps: int, label: str):
-    """diffusers step callback that reports progress; raises if the job was cancelled."""
+    """diffusers step callback that reports progress; raises if the job was cancelled.
+    It keeps the time each step ended in `callback.marks`, for log_render."""
+    marks = []
+
     def callback(pipe, step, timestep, tensors):
+        marks.append(time.time())
         ctx.progress((step + 1) / steps, f"{label}: step {step + 1}/{steps}")
         return tensors
+    callback.marks = marks
     return callback
+
+
+def log_render(key: str, detail: str, began: float, marks: list[float]) -> None:
+    """One line per image render in the container log (`grep render:`). The first step
+    is counted with the text encoding: it also holds torch.compile's compilation when
+    the transformer meets a new size (about 20 to 40 s on the GB10)."""
+    total = time.time() - began
+    if len(marks) < 2:
+        print(f"render: {key} {detail} in {total:.1f} s", flush=True)
+        return
+    step = (marks[-1] - marks[0]) / (len(marks) - 1)
+    print(f"render: {key} {detail} in {total:.1f} s: text encoding and first step {marks[0] - began:.1f} s, "
+          f"{len(marks) - 1} more steps × {step:.2f} s, decoding {time.time() - marks[-1]:.1f} s", flush=True)
 
 
 def open_image(path: Path):

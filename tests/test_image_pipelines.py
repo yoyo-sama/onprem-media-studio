@@ -310,3 +310,47 @@ def test_torch_cache_is_given_back_before_memory_is_measured(monkeypatch):
     monkeypatch.setattr(common, "_empty_cache", lambda: free.update(bytes=free["bytes"] + 25 * gb))
     common.load("krea2", lambda: Closable("krea2", closed), 34 * gb)
     assert closed == [] and list(common._resident) == ["qwen", "krea2"]
+
+
+def test_text_encoders_are_loaded_whole_by_transformers(tmp_path, monkeypatch):
+    # diffusers passes disable_mmap to its own models only: transformers ones are built here.
+    import json
+    import sys
+    import types
+    calls = {}
+
+    class PreTrainedModel:
+        @classmethod
+        def from_pretrained(cls, path, **kwargs):
+            calls[cls.__name__] = (path, kwargs)
+            return cls.__name__
+
+    class TextModel(PreTrainedModel):
+        pass
+
+    class Tokenizer:
+        pass
+
+    class Pipeline:
+        @classmethod
+        def from_pretrained(cls, path, **kwargs):
+            calls["pipeline"] = kwargs
+            return types.SimpleNamespace(to=lambda device: ("on", device))
+
+    monkeypatch.setitem(sys.modules, "torch", types.SimpleNamespace(bfloat16="bf16"))
+    monkeypatch.setitem(sys.modules, "transformers", types.SimpleNamespace(
+        PreTrainedModel=PreTrainedModel, TextModel=TextModel, Tokenizer=Tokenizer))
+    monkeypatch.setattr(common, "device", lambda: "cuda")
+    (tmp_path / "model_index.json").write_text(json.dumps({
+        "_class_name": "Krea2Pipeline", "text_encoder": ["transformers", "TextModel"],
+        "tokenizer": ["transformers", "Tokenizer"], "vae": ["diffusers", "AutoencoderKL"]}))
+    assert common.from_pretrained(Pipeline, tmp_path) == ("on", "cuda")
+    assert calls["TextModel"] == (tmp_path / "text_encoder", {"dtype": "bf16", "disable_mmap": True})
+    assert calls["pipeline"] == {"torch_dtype": "bf16", "disable_mmap": True, "text_encoder": "TextModel"}
+
+
+def test_render_log_splits_encoding_steps_and_decoding(monkeypatch, capsys):
+    monkeypatch.setattr(common.time, "time", lambda: 20.0)
+    common.log_render("krea2-t2i", "1920×1088 ×1", 0.0, [5.0, 7.0, 9.0, 11.0])
+    assert capsys.readouterr().out.strip() == ("render: krea2-t2i 1920×1088 ×1 in 20.0 s: text encoding and first "
+                                               "step 5.0 s, 3 more steps × 2.00 s, decoding 9.0 s")

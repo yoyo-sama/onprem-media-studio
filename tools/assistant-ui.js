@@ -8,7 +8,8 @@
 // (running, then done with its files); a card that needs another card's result waits for
 // it; "Open in the Studio" switches to the Studio and fills the form, starting nothing (Undo
 // puts the brief back); a choice button answers the question; "Launch the director" switches
-// to the Studio, fills the form and starts the director. With a folder, screenshots of the
+// to the Studio, fills the form and starts the director; a reference-to-video clip plays in
+// the director, whose button then regenerates it. With a folder, screenshots of the
 // assistant in light and dark at 390, 768, 1250 and 1440 px.
 // Exit 0 = all green, 1 = a check failed.
 "use strict";
@@ -274,6 +275,38 @@ const CARDS = [
   check(jobs.length === before8 + 1 && j8.pipeline === "qwen-image-2.1" && JSON.stringify(j8.params.images) === '["inputs/att.png"]'
     && j8.params.width === 1920 && j8.params.height === 1088 && j8.params.prompt.startsWith("Using <image1> only as the identity reference: the person")
     && j8.params.prompt.includes("a woman in a red coat"), "sheet from a photo: " + JSON.stringify(j8));
+  // Reference to video: once rendered, the clip plays under the button, which becomes
+  // "Regenerate the video" and starts one new job with the next seed.
+  await page.click('.rail-mode[data-mode="studio"]');
+  if (await page.isVisible("#studioExitBtn")) await page.click("#studioExitBtn");
+  await page.fill("#brief", "A detective walks through a dark forest");
+  await page.selectOption("#pipelineSelect", "reference2video");
+  await page.click("#generateBtn");
+  const r2vOpen = await page.waitForFunction(() => document.body.dataset.studio === "1", null, { timeout: 20000 }).then(() => true, () => false);
+  check(r2vOpen, "reference to video: the studio did not open");
+  for (const sec of ["#studioCharacter", "#studioLocation"])
+    await page.setInputFiles(`${sec} .sheet-import-input`, { name: "s.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.waitForSelector("#directorValidateBtn:not([disabled])");
+  await page.click("#directorValidateBtn");
+  await page.click('#studioNav [data-section="video"]');
+  const beforeR2V = jobs.length;
+  await page.click("#directorR2VLaunchBtn");
+  await page.waitForTimeout(400);
+  const r2v = Object.values(done).find(j => j.status === "queued");
+  check(jobs.length === beforeR2V + 1 && jobs[beforeR2V].pipeline === "h3-r2v" && await page.isDisabled("#directorR2VLaunchBtn"),
+    "reference to video: one job, button disabled while it renders");
+  Object.assign(r2v, { status: "done", progress: 1, outputs: r2v.later });
+  send(r2v);
+  const played = await page.waitForSelector("#r2vPlayer video", { timeout: 5000 }).then(() => true, () => false);
+  check(played && (await page.getAttribute("#r2vPlayer video", "src")).endsWith(r2v.later[0]), "reference to video: no player after the render");
+  check((await page.textContent("#directorR2VLaunchBtn")).trim() === "Régénérer la vidéo" && !(await page.isDisabled("#directorR2VLaunchBtn")),
+    "reference to video: the button does not offer to regenerate");
+  if (SHOTS) await page.screenshot({ path: `${SHOTS}/r2v-player-1440.png` });
+  await page.click("#directorR2VLaunchBtn");
+  await page.waitForTimeout(400);
+  check(jobs.length === beforeR2V + 2 && jobs[beforeR2V + 1].params.seed === (jobs[beforeR2V].params.seed + 1) % 2 ** 32,
+    "reference to video: regenerating did not submit one job with the next seed");
+  check(await page.isVisible("#r2vPlayer video"), "reference to video: the last clip disappeared while the new one renders");
   // A reload opens on the welcome; the conversation stays in the list.
   await page.click('.rail-mode[data-mode="assistant"]');
   await page.reload({ waitUntil: "load" });

@@ -143,6 +143,7 @@ export function reset() {
   $("studioTimeline").replaceChildren();
   $("relayList").replaceChildren();
   $("relayPlayer").replaceChildren();
+  $("r2vPlayer").replaceChildren();
   updateNavForPipeline();
   renderSheetMenu("char");
   renderSheetMenu("loc");
@@ -561,8 +562,14 @@ function updateGate() {
   $("directorValidateBtn").disabled = !anchorsReady();
   const lock = (name, open) => { const b = navBtn(name); b.disabled = !open; b.classList.toggle("locked", !open); };
   if (isR2V()) {
-    $("directorR2VLaunchBtn").disabled = !unlocked;
-    tx($("studioVideoR2VStatus"), unlocked ? "Ready to start the video." : "Approve the character and setting sheets to enable the launch.");
+    // The last video stays under the button, which then starts a new one.
+    const video = d?.r2vVideo;
+    $("directorR2VLaunchBtn").disabled = !unlocked || video === "pending";
+    tx($("directorR2VLaunchBtn"), video?.ref ? "Regenerate the video" : "Start the video");
+    tx($("studioVideoR2VStatus"), !unlocked ? "Approve the character and setting sheets to enable the launch."
+      : video === "pending" ? "The video is rendering: its progress shows in the job queue."
+      : video?.ref ? "Video ready. Regenerating it keeps the same sheets and draws a new seed."
+      : "Ready to start the video.");
     lock("video", unlocked);
   } else {
     $("shotEditList").hidden = !unlocked;
@@ -1297,17 +1304,24 @@ async function r2vJob({ subjects, refs, extras, seed, duration, loras, aspect, t
 
 async function launchR2V() {
   if (!isR2V() || !anchorsReady() || !d.validated) return;
-  const s = d;
-  $("directorR2VLaunchBtn").disabled = true;
+  const s = d, last = s.r2vVideo;
+  // The first video keeps the session's seed (as before); each regeneration draws the next one.
+  const seed = last?.ref ? F.seedPlus(last.seed, 1) : F.seedPlus(s.seed, 201);
+  s.r2vVideo = "pending";
+  updateGate();
   try {
     const extras = F.refList("r2v").slice(0, F.REF_CAPS.r2v);
     const job = await r2vJob({
       subjects: [{ kind: "character", desc: charDesc(s.chars[0]) }, { kind: "environment", desc: locDesc() }],
-      refs: [activeVariant(s.chars[0]).ref, locVariant().ref], extras, seed: F.seedPlus(s.seed, 201),
+      refs: [activeVariant(s.chars[0]).ref, locVariant().ref], extras, seed,
       duration: s.duration, loras: s.loras, aspect: s.ratio, text: F.brief() });
-    log("ok", "Video ready: {name}.", { name: out(job, ".mp4") });
-  } catch (err) { warn(err); }
-  if (sameSession(s)) updateGate();
+    const ref = out(job, ".mp4");
+    s.r2vVideo = ref ? { ref, seed } : last;
+    log("ok", "Video ready: {name}.", { name: ref });
+  } catch (err) { s.r2vVideo = last; warn(err); }
+  if (!sameSession(s)) return;
+  player($("r2vPlayer"), s.r2vVideo?.ref);
+  updateGate();
 }
 
 // "Skip the sheets": nothing generated, nothing to review; the first two references

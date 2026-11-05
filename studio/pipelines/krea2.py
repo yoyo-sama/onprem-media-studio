@@ -8,6 +8,8 @@ unconditional pass entirely, and a `negative` parameter is refused rather than
 silently dropped.
 """
 
+import time
+
 from . import Pipeline, common, register
 
 STEPS = 8
@@ -33,6 +35,8 @@ class Krea2TextToImage(Pipeline):
         ctx.progress(0, "Loading Krea 2")
         pipe = common.load(self.id, lambda: _build(models["krea2-turbo"]),
                            common.disk_size(models["krea2-turbo"]))
+        steps = common.step_progress(ctx, STEPS, "Krea 2")
+        began = time.time()
         images = pipe(
             prompt=params["prompt"],
             width=params["width"],
@@ -41,15 +45,17 @@ class Krea2TextToImage(Pipeline):
             guidance_scale=GUIDANCE,
             num_images_per_prompt=params["count"],
             generator=common.generator(params["seed"]),
-            callback_on_step_end=common.step_progress(ctx, STEPS, "Krea 2"),
+            callback_on_step_end=steps,
         ).images
+        common.log_render(self.id, f"{params['width']}×{params['height']} ×{params['count']}", began, steps.marks)
         return common.save_images(images, ctx, params)
 
 
 def _build(path):
-    import torch
     from diffusers import Krea2Pipeline
-    return Krea2Pipeline.from_pretrained(path, torch_dtype=torch.bfloat16, **common.LOAD_OPTIONS).to(common.device())
+    # Not compiled: on the GB10 the first render at each size and image count paid about
+    # 33 s of compilation, against 0.7 s saved per step (8 steps) after it.
+    return common.from_pretrained(Krea2Pipeline, path)
 
 
 register(Krea2TextToImage())

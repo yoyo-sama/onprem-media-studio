@@ -43,7 +43,8 @@ first (`common.LOW_MEMORY`); it starts again on the next LLM request.
 Each Gemma call writes one line to the container log, with llama-server's timings, and so does
 each model load: `docker logs studio --since 30m 2>&1 | grep "llm:"` tells a slow model from a
 slow render (`llm: call 12.4 s (prompt 850 tokens in 1.1 s, 410 generated in 11.3 s)`). Each
-engine load writes an `engine:` line too (duration, engines freed for it): `grep -E "llm:|engine:"`.
+engine load writes an `engine:` line too (duration, files read time, engines freed for it), and
+each image render a `render:` line (encoding, steps, decoding): `grep -E "llm:|engine:|render:"`.
 
 llama-server lets Gemma 4 think by default. For the prompt compilers (enrichment, sheets, shot
 list, role routing) that meant thousands of hidden tokens per call: 44 to 81 s measured on the

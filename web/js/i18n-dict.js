@@ -1797,6 +1797,21 @@ export const DICT = {
     es: "Listo",
     de: "Bereit",
   },
+  "Regenerate the video": {
+    fr: "Régénérer la vidéo",
+    es: "Regenerar el vídeo",
+    de: "Video neu generieren",
+  },
+  "The video is rendering: its progress shows in the job queue.": {
+    fr: "La vidéo est en cours de rendu : son avancement s'affiche dans la file des jobs.",
+    es: "El vídeo se está renderizando: su avance aparece en la cola de trabajos.",
+    de: "Das Video wird gerendert: Den Fortschritt siehst du in der Job-Warteschlange.",
+  },
+  "Video ready. Regenerating it keeps the same sheets and draws a new seed.": {
+    fr: "Vidéo prête. La régénérer garde les mêmes planches et prend un nouveau seed.",
+    es: "Vídeo listo. Regenerarlo mantiene las mismas láminas y usa una nueva semilla.",
+    de: "Video fertig. Neu generieren behält dieselben Blätter und nimmt einen neuen Seed.",
+  },
   "Ready to start the video.": {
     fr: "Prêt à lancer la vidéo.",
     es: "Listo para iniciar el vídeo.",
