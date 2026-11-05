@@ -63,8 +63,14 @@ const CARD_UI = {
   storyboard: { title: L("Storyboard"), text: "brief", images: ["subject_sheets", "setting_sheet"], fields: ["shots", "duration", "ratio"],
                 form: true, director: true },
   reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio"],
-                     form: true, director: true },
+                     form: true, director: true, video: true },
 };
+// Reference to video straight from the card: each reference becomes <Subject N> in its
+// order (the numbers are the app's, never typed), with the role the user or Gemma gave it.
+const R2V_MAX_REFS = 9;  // FastH3 OmniRef's limit (server MAX_REFERENCES)
+const REF_KINDS = { character: ["character", L("Character")], setting: ["environment", L("Setting")],
+                    object: ["reference", L("Object or other")] };
+const kindOf = (a, i) => (REF_KINDS[a.kinds?.[i]] ? a.kinds[i] : i === 0 ? "character" : "object");
 const IMAGE_LABELS = {
   image: L("Image"), references: L("References"), last_image: L("Last frame"), images: L("Key images"), clips: L("Clips"),
   subject_sheets: L("Subject sheets"), setting_sheet: L("Setting sheet"), photo: L("Photo"),
@@ -91,6 +97,7 @@ const findCard = id => {
 };
 // File reference of an image id (A1, C3#2), null while it has none.
 function refOf(id) {
+  if (String(id).includes("/")) return id;  // a file added on the card itself
   for (const m of conv?.messages || []) for (const a of m.attachments || []) if (a.id === id) return a.ref;
   const m = /^(C\d+)#(\d+)$/.exec(id || "");
   return m ? findCard(m[1])?.state.outputs?.[+m[2] - 1] || null : null;
@@ -238,7 +245,8 @@ function renderCard(card, live = false) {
     el.appendChild(tx(document.createElement("p"), "Markets: {list}", { list: a.markets.map(m => t(G.MARKETS[m]?.label || m)).join(", ") })).className = "hint";
 
   const missing = [];
-  for (const key of ui.images || []) {
+  if (ui.video) el.appendChild(renderRefEditor(card, a, busy || live, missing));
+  for (const key of ui.video ? [] : ui.images || []) {
     const ids = [].concat(a[key] || []);
     if (!ids.length) continue;
     const row = document.createElement("div");
@@ -255,9 +263,17 @@ function renderCard(card, live = false) {
   const actions = document.createElement("div");
   actions.className = "cc-actions";
   if (ui.director) {
+    const blocked = live || busy || missing.length > 0;
+    if (ui.video) {
+      const again = ["done", "error", "cancelled"].includes(st.status);
+      const g = button(again ? "Generate the video again" : "🎞 Generate the video",
+        "Renders the clip now from these references, each one as <Subject N> in its order", () => runCard(card), "primary-btn");
+      g.disabled = blocked || !(a.references || []).length;
+      actions.appendChild(g);
+    }
     const b = button("🎬 Launch the director", "Switches to the Studio and starts the step-by-step review with this brief",
-      () => openInStudio(card, true), "primary-btn");
-    b.disabled = live || busy || missing.length > 0;
+      () => openInStudio(card, true), ui.video ? "secondary-btn" : "primary-btn");
+    b.disabled = blocked;
     const o = button("Open in the Studio", "Fills the Studio form without starting anything", () => openInStudio(card));
     o.disabled = b.disabled;
     actions.append(b, o);
@@ -303,6 +319,80 @@ function renderCard(card, live = false) {
   }
   translateTree(el);
   return el;
+}
+
+// References of a video card: each with its <Subject N>, its role and a remove button,
+// then a picker that adds an image of the conversation or a file from the computer.
+function renderRefEditor(card, a, locked, missing) {
+  const ids = [...(a.references || [])], kinds = ids.map((_, i) => kindOf(a, i));
+  const set = (nextIds, nextKinds) => { setDraft(card, "references", nextIds); setDraft(card, "kinds", nextKinds); renderLog(); };
+  const row = document.createElement("div");
+  row.className = "cc-images cc-refs";
+  row.appendChild(tx(document.createElement("span"), "References ({n}/{max}): each one is <Subject N> in this order",
+    { n: ids.length, max: R2V_MAX_REFS }));
+  ids.forEach((id, i) => {
+    const ref = refOf(id);
+    if (!ref) missing.push(id);
+    const fig = thumb(ref, `${P.h3Subject(i + 1)} · ${id.includes("/") ? fileName(id) : id}`);
+    const kind = document.createElement("select");
+    fillSelect(kind, Object.entries(REF_KINDS).map(([k, [, label]]) => [k, t(label)]), kinds[i]);
+    txAttr(kind, "aria-label", "Role of this reference in the clip");
+    kind.disabled = locked;
+    kind.addEventListener("change", () => { kinds[i] = kind.value; setDraft(card, "kinds", [...kinds]); });
+    fig.appendChild(kind);
+    if (!locked) fig.appendChild(button("✕", "Remove this reference", () => {
+      ids.splice(i, 1); kinds.splice(i, 1); set(ids, kinds);
+    }, "cc-x"));
+    row.appendChild(fig);
+  });
+  if (!locked && ids.length < R2V_MAX_REFS) {
+    const add = document.createElement("select");
+    const free = conversationImages().filter(x => !ids.includes(x.id));
+    fillSelect(add, [["", t("＋ Add a reference…")], ...free.map(x => [x.id, x.id]), ["file", t("From the computer…")]], "");
+    txAttr(add, "aria-label", "Add a reference");
+    const file = document.createElement("input");
+    file.type = "file"; file.accept = "image/*"; file.multiple = true; file.hidden = true;
+    add.addEventListener("change", () => {
+      if (add.value === "file") { add.value = ""; file.click(); return; }
+      if (add.value) set([...ids, add.value], [...kinds, "object"]);
+    });
+    file.addEventListener("change", async () => {
+      const room = R2V_MAX_REFS - ids.length, picked = [...file.files].filter(f => /^image\//.test(f.type));
+      if (picked.length > room) notice(false, "At most {max} images here: the extra ones were ignored.", { max: R2V_MAX_REFS });
+      try {
+        const refs = await Promise.all(picked.slice(0, room).map(blob => F.imageRef({ name: blob.name, blob })));
+        set([...ids, ...refs], [...kinds, ...refs.map(() => "object")]);
+      } catch (err) { warn(err); }
+    });
+    row.append(add, file);
+  }
+  return row;
+}
+// Images the conversation holds: attachments, then image outputs of the cards.
+function conversationImages() {
+  const out = [];
+  for (const m of conv?.messages || []) {
+    for (const att of m.attachments || []) out.push({ id: att.id, ref: att.ref });
+    for (const c of m.cards || []) (c.state?.outputs || []).forEach((ref, i) => {
+      if (!VIDEO.test(ref) && !(i > 0 && VIDEO.test(c.state.outputs[i - 1]))) out.push({ id: `${c.id}#${i + 1}`, ref });
+    });
+  }
+  return out;
+}
+
+// The six-field Ref2VA prompt of a video card. The brief names the references by their
+// ids (A1, C2#1…) or by tokens already; each id becomes its <Subject N>. Gemma's vision
+// describes each image for subject_definitions (an undescribed one still goes).
+async function r2vCardPrompt(a) {
+  const refs = a.references.map(need);
+  const descs = await F.describeRefs(refs.map(ref => ({ name: fileName(ref), ref })));
+  const subjects = P.h3AssignSubjects(refs.map((_, i) => ({ kind: REF_KINDS[kindOf(a, i)][0], desc: descs[i] })));
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let text = String(a.brief || "");
+  a.references.forEach((id, i) => {
+    if (!id.includes("/")) text = text.replace(new RegExp(`(?<![\\w#])${esc(id)}(?![\\w#])`, "g"), P.h3Subject(i + 1));
+  });
+  return F.capH3(P.buildH3RefPrompt({ subjects, summary: P.h3Summary(text), body: P.h3RefBody(subjects, text) }));
 }
 
 // ── Progress of a card ────────────────────────────────────────────────────────
@@ -357,9 +447,10 @@ function need(id) {
 // card's id so its progress shows on it.
 async function submitCard(card, a) {
   const aspect = card.tool === "image_sequence" ? await G.seqAspect({ ref: need(a.images[0]) }) : undefined;
-  return withJobTag(card.id, () => startCard(card, a, aspect));
+  const prompt = card.tool === "reference_video" ? await r2vCardPrompt(a) : undefined;
+  return withJobTag(card.id, () => startCard(card, a, aspect, prompt));
 }
-function startCard(card, a, aspect) {
+function startCard(card, a, aspect, prompt) {
   const seed = Math.floor(Math.random() * 2 ** 31);
   const label = what => ["{id} · {what}", { id: card.id, what: t(what) }];
   const title = CARD_UI[card.tool].title, opts = { origin: ORIGIN, seed };
@@ -397,6 +488,9 @@ function startCard(card, a, aspect) {
       return [runJob("video-concat", { clips: a.clips.map(need) }, { origin: ORIGIN, label: label(title), sub: ["{n} clip(s)", { n: a.clips.length }] })];
     case "campaign":
       return G.runCampaign({ ...opts, text: a.brief, styleId: a.style, count: a.variants, duration: a.duration });
+    case "reference_video":
+      return [runJob("h3-r2v", { prompt, duration: a.duration, seed, aspect: a.ratio, references: a.references.map(need) }, {
+        origin: ORIGIN, label: label(title), sub: ["{info} · seed {seed}", { info: `${a.duration} s · ${a.references.length} ref.`, seed }] })];
   }
   throw new Error(`unknown card ${card.tool}`);
 }

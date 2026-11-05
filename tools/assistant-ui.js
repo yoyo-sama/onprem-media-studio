@@ -37,6 +37,8 @@ const CARDS = [
   card("C5", "storyboard", { brief: "A detective enters a studio", shots: 5, duration: 5, ratio: "16:9" }),
   card("C7", "storyboard", { brief: "A dwarf and an elf pick mushrooms", subject_sheets: ["C1#1", "A1"], setting_sheet: ["C1#1"],
                              shots: 4, duration: 5, ratio: "16:9" }),
+  card("C10", "reference_video", { brief: "A1 rides a motorcycle along a jungle track, an elephant charging behind him.",
+                                  references: ["A1"], kinds: ["character"], duration: 5, ratio: "16:9" }),
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
@@ -307,6 +309,28 @@ const CARDS = [
   check(jobs.length === beforeR2V + 2 && jobs[beforeR2V + 1].params.seed === (jobs[beforeR2V].params.seed + 1) % 2 ** 32,
     "reference to video: regenerating did not submit one job with the next seed");
   check(await page.isVisible("#r2vPlayer video"), "reference to video: the last clip disappeared while the new one renders");
+  // Reference to video from the card: a reference added from the computer, its role set,
+  // then one h3-r2v job whose prompt is the six-field block with A1 as <Subject 1>.
+  await page.click('.rail-mode[data-mode="assistant"]');
+  const c10 = '.chat-card[data-card="C10"]';
+  await page.waitForSelector(`${c10} .cc-refs`);
+  check((await page.textContent(`${c10} .cc-refs figcaption`)).startsWith("<Subject 1> · A1"), "C10: A1 not shown as <Subject 1>");
+  await page.setInputFiles(`${c10} .cc-refs input[type=file]`, { name: "jungle.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.waitForFunction(sel => document.querySelectorAll(`${sel} .cc-refs figure`).length === 2, c10);
+  await page.selectOption(`${c10} .cc-refs figure >> nth=1 >> select`, "setting");
+  if (SHOTS) await (await page.$(c10)).screenshot({ path: `${SHOTS}/r2v-card-1440.png` });
+  const before10 = jobs.length;
+  check(jobs.length === before10, "C10: editing the references submitted a job");
+  await page.click(`${c10} .cc-actions .primary-btn`);
+  await page.waitForTimeout(2500);  // Gemma's vision (stubbed out, 1.5 s) describes each reference first
+  const j10 = jobs[before10];
+  check(jobs.length === before10 + 1 && j10.pipeline === "h3-r2v" && j10.params.references.length === 2
+    && j10.params.references[0] === "inputs/att.png", "C10: not one h3-r2v job with both references: " + JSON.stringify(j10));
+  const p10 = j10?.params.prompt || "";
+  check(p10.startsWith("subject_definitions:\n<Subject 1> is the main character in <Picture 1>.\n<Subject 2> is the location as defined by <Picture 2>.")
+    && p10.includes("detailed_description:\n<Subject 1> is in <Subject 2>. <Subject 1> rides a motorcycle") && !p10.includes("A1"),
+    "C10: prompt not in the H3 grammar: " + p10);
+  check(j10?.params.duration === 5 && j10.params.aspect === "16:9", "C10: settings");
   // A reload opens on the welcome; the conversation stays in the list.
   await page.click('.rail-mode[data-mode="assistant"]');
   await page.reload({ waitUntil: "load" });

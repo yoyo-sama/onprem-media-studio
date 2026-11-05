@@ -1882,6 +1882,10 @@ body.library-open .assistant-chat { margin: 0; }
 .cc-thumb .cc-missing { border: 1px dashed var(--border-dark); cursor: default; }
 .cc-thumb figcaption { font-size: 11px; color: var(--text-2); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cc-thumb .cc-use { padding: 5px 8px; font-size: 11px; }
+.cc-refs .cc-thumb { width: 124px; }
+.cc-refs .cc-thumb figcaption { white-space: normal; }
+.cc-refs .cc-thumb select { width: 100%; font-size: 12px; padding: 4px 6px; }
+.cc-refs > select { flex: 1 0 100%; }
 .cc-thumb .cc-x { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.6); color: #fff; cursor: pointer; }
 .cc-actions, .cc-options { display: flex; flex-wrap: wrap; gap: 8px; }
 .cc-progress { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; font-size: 12px; color: var(--text-2); }

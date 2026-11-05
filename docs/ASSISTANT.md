@@ -129,7 +129,8 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 | `image_sequence` | Prompt, 2 to 6 key images, segment length | the multi-image sequence (H3 segments, then `video-concat`) |
 | `join_videos` | Clips | `video-concat` |
 | `campaign` | Brief, variants, length, style | the full campaign (posters, thumbnails, social image, teaser) |
-| `storyboard`, `reference_video` | Brief and settings | the director: "Launch the director" switches to the Studio, fills the form and starts the step-by-step review there, as the form's Generate does |
+| `storyboard` | Brief and settings | the director: "Launch the director" switches to the Studio, fills the form and starts the step-by-step review there, as the form's Generate does |
+| `reference_video` | Brief, 1 to 9 references each with its role (character, setting, object), length, ratio | "🎞 Generate the video": one `h3-r2v` job from the card. Each reference is `<Subject N>` in its order (numbers given by the app); the brief names references by their ids (`A1 rides…`), each replaced by its token; Gemma's vision describes each image for `subject_definitions`, and the six-field Ref2VA block is built by `buildH3RefPrompt`, as in the director. References can be removed, or added from the conversation's images or the computer. "Launch the director" still opens the step-by-step review |
 | `ask_choices` | A question with 2 to 4 buttons and "Other…" | nothing: the choice is sent as the user's answer |
 
 - A card runs **only on the user's click**, through the same functions as the Studio form

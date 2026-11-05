@@ -3647,4 +3647,49 @@ export const DICT = {
     es: "Entrar en el estudio (paso 1/2)",
     de: "Studio öffnen (Schritt 1/2)",
   },
+  "🎞 Generate the video": {
+    fr: "🎞 Générer la vidéo",
+    es: "🎞 Generar el vídeo",
+    de: "🎞 Video generieren",
+  },
+  "Generate the video again": {
+    fr: "Régénérer la vidéo",
+    es: "Regenerar el vídeo",
+    de: "Video neu generieren",
+  },
+  "Renders the clip now from these references, each one as <Subject N> in its order": {
+    fr: "Rend le clip tout de suite à partir de ces références, chacune devenant <Subject N> dans son ordre",
+    es: "Renderiza el clip ahora a partir de estas referencias, cada una como <Subject N> en su orden",
+    de: "Rendert den Clip sofort aus diesen Referenzen, jede als <Subject N> in ihrer Reihenfolge",
+  },
+  "References ({n}/{max}): each one is <Subject N> in this order": {
+    fr: "Références ({n}/{max}) : chacune est <Subject N> dans cet ordre",
+    es: "Referencias ({n}/{max}): cada una es <Subject N> en este orden",
+    de: "Referenzen ({n}/{max}): Jede ist <Subject N> in dieser Reihenfolge",
+  },
+  "Object or other": {
+    fr: "Objet ou autre",
+    es: "Objeto u otro",
+    de: "Objekt oder anderes",
+  },
+  "Role of this reference in the clip": {
+    fr: "Rôle de cette référence dans le clip",
+    es: "Papel de esta referencia en el clip",
+    de: "Rolle dieser Referenz im Clip",
+  },
+  "＋ Add a reference…": {
+    fr: "＋ Ajouter une référence…",
+    es: "＋ Añadir una referencia…",
+    de: "＋ Referenz hinzufügen…",
+  },
+  "Add a reference": {
+    fr: "Ajouter une référence",
+    es: "Añadir una referencia",
+    de: "Referenz hinzufügen",
+  },
+  "From the computer…": {
+    fr: "Depuis l'ordinateur…",
+    es: "Desde el ordenador…",
+    de: "Vom Computer…",
+  },
 };

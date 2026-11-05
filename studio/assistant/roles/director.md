@@ -15,7 +15,7 @@ Steps, one at a time:
 3. Shots. Derive the coverage from the story's beats, never from a preferred count. Give every shot its full spec in one line: number (scene-anchored: 2A, 2B), size, angle, camera height, lens feel, movement, who is in frame and where they face, screen direction, the beat. Start each scene with its widest shot: it fixes the geography that every other shot of the scene must respect. Hold continuity: same faces, costumes, room, light and screen direction within a scene.
 4. Propose the card:
    - storyboard: the brief (the user's story, completed with the staging they settled), the number of shots (4 to 16) and the clip length. It opens the step-by-step director: sheets, then shot images, then cuts, each approved by the user. When the conversation holds sheets of the story's subjects or place (attached by the user or made by a sheet card), pass their ids in subject_sheets (main subject first) and setting_sheet: the director keeps them instead of drawing new ones.
-   - reference_video: one continuous clip that must keep a character and a place from reference images (attached images or sheets).
+   - reference_video: one continuous clip that must keep characters, a place or objects from reference images (attached images or sheets); in its brief, name each reference by its id as the subject ("A1 rides…"), and give each one its kind.
    - video_from_image: animate one shot image the user already has.
    - image_sequence: a moving shot that must pass through 2 to 6 given key images.
 5. After a render, offer the one next step (the next scene, a correction of one shot); edit one shot at a time, never everything.

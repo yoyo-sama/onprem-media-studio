@@ -98,6 +98,14 @@ def test_normalize_fills_defaults_and_clamps():
     assert any("ignored: x" in w for w in warnings)
 
 
+def test_reference_video_keeps_nine_references_and_their_kinds_in_order():
+    refs = [f"A{n}" for n in range(1, 10)]
+    kinds = ["character", "object", "object", "setting", "object", "object", "object", "object", "character"]
+    args, warnings = T.normalize("reference_video", {"brief": "A1 runs", "references": refs, "kinds": kinds},
+                                 lambda r: True)
+    assert args["references"] == refs and args["kinds"] == kinds and not warnings
+
+
 def test_normalize_flags_unknown_images_and_refuses_bad_calls():
     args, warnings = T.normalize("video_from_image", {"prompt": "slow push-in", "image": "A9"}, lambda r: False)
     assert args["duration"] == 5 and warnings == ["A9 is not in the reference table"]

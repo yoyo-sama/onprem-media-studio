@@ -132,7 +132,8 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 | `image_sequence` | Prompt, 2 à 6 images clés, durée des segments | la séquence multi-images (segments H3, puis `video-concat`) |
 | `join_videos` | Clips | `video-concat` |
 | `campaign` | Brief, variantes, durée, style | la campagne complète (affiches, miniatures, image sociale, teaser) |
-| `storyboard`, `reference_video` | Brief et réglages | le réalisateur : « Lancer le Réalisateur » passe au Studio, remplit le formulaire et y lance la revue étape par étape, comme le fait Générer dans le formulaire |
+| `storyboard` | Brief et réglages | le réalisateur : « Lancer le Réalisateur » passe au Studio, remplit le formulaire et y lance la revue étape par étape, comme le fait Générer dans le formulaire |
+| `reference_video` | Brief, 1 à 9 références avec chacune son rôle (personnage, décor, objet), durée, ratio | « 🎞 Générer la vidéo » : un job `h3-r2v` depuis la carte. Chaque référence est `<Subject N>` dans son ordre (numéros donnés par l'app) ; le brief nomme les références par leur id (`A1 rides…`), chacun remplacé par son jeton ; la vision de Gemma décrit chaque image pour `subject_definitions`, et le bloc Ref2VA à six champs est construit par `buildH3RefPrompt`, comme dans le réalisateur. On peut retirer des références, ou en ajouter depuis les images de la conversation ou l'ordinateur. « Lancer le Réalisateur » ouvre toujours la revue étape par étape |
 | `ask_choices` | Une question avec 2 à 4 boutons et « Autre… » | rien : le choix part comme réponse de l'utilisateur |
 
 - Une carte ne tourne **que sur le clic de l'utilisateur**, par les mêmes fonctions que le
