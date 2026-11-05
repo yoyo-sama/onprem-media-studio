@@ -85,6 +85,9 @@ class EngineSpec:
     precision: str  # nvfp4 | fp8
     lora: Path | None = None
 
+    def __str__(self) -> str:  # the engine: log line
+        return f"{self.model_dir.name} {self.precision}" + (f" + LoRA {self.lora.name}" if self.lora else "")
+
 
 def environment(spec: EngineSpec) -> dict[str, str]:
     env = dict(_SPARK_ENV)

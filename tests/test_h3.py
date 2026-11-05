@@ -483,3 +483,12 @@ def test_fastvideo_weights_are_read_whole(tmp_path):
     with WholeFile(str(tmp_path / "w.safetensors"), framework="pt", device="cpu") as f:
         assert sorted(f.keys()) == ["a", "b"]
         assert f.get_tensor("a").shape == (2, 3)
+
+
+def test_an_h3_engine_is_named_shortly_in_the_log(monkeypatch, capsys):
+    from studio.pipelines.h3_runtime import EngineSpec
+    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "free_memory", lambda: 200 * 1024**3)
+    spec = EngineSpec(model_dir=Path("/data/models/fasth3-omniref-nvfp4"), ref2va=True, precision="nvfp4")
+    common.load(("h3", spec), lambda: object(), alone=True)
+    assert capsys.readouterr().out.startswith("engine: h3 fasth3-omniref-nvfp4 nvfp4 loaded in ")

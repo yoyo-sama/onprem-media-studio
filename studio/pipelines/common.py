@@ -165,9 +165,13 @@ def load(key, build, size: int = 0, alone: bool = False):
     _resident[key] = build()
     # One line per load in the container log (`docker logs studio | grep engine:`):
     # a slow job is often a model loaded again.
-    print(f"engine: {key} loaded in {time.time() - began:.1f} s"
-          + (f", after freeing {', '.join(map(str, freed))}" if freed else ""), flush=True)
+    print(f"engine: {_name(key)} loaded in {time.time() - began:.1f} s"
+          + (f", after freeing {', '.join(map(_name, freed))}" if freed else ""), flush=True)
     return _resident[key]
+
+
+def _name(key) -> str:
+    return " ".join(map(str, key)) if isinstance(key, tuple) else str(key)
 
 
 def _free(key) -> None:
