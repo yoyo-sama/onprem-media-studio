@@ -215,15 +215,16 @@ def step_progress(ctx, steps: int, label: str):
 
 
 def log_render(key: str, detail: str, began: float, marks: list[float]) -> None:
-    """One line per image render in the container log (`grep render:`), split into
-    text encoding, steps and decoding: the first step's time is taken as the mean."""
+    """One line per image render in the container log (`grep render:`). The first step
+    is counted with the text encoding: it also holds torch.compile's compilation when
+    the transformer meets a new size (about 20 to 40 s on the GB10)."""
     total = time.time() - began
     if len(marks) < 2:
         print(f"render: {key} {detail} in {total:.1f} s", flush=True)
         return
     step = (marks[-1] - marks[0]) / (len(marks) - 1)
-    print(f"render: {key} {detail} in {total:.1f} s: text encoding {max(0.0, marks[0] - began - step):.1f} s, "
-          f"{len(marks)} steps × {step:.2f} s, decoding {time.time() - marks[-1]:.1f} s", flush=True)
+    print(f"render: {key} {detail} in {total:.1f} s: text encoding and first step {marks[0] - began:.1f} s, "
+          f"{len(marks) - 1} more steps × {step:.2f} s, decoding {time.time() - marks[-1]:.1f} s", flush=True)
 
 
 def open_image(path: Path):

@@ -352,5 +352,5 @@ def test_text_encoders_are_loaded_whole_by_transformers(tmp_path, monkeypatch):
 def test_render_log_splits_encoding_steps_and_decoding(monkeypatch, capsys):
     monkeypatch.setattr(common.time, "time", lambda: 20.0)
     common.log_render("krea2-t2i", "1920×1088 ×1", 0.0, [5.0, 7.0, 9.0, 11.0])
-    assert capsys.readouterr().out.strip() == ("render: krea2-t2i 1920×1088 ×1 in 20.0 s: text encoding 3.0 s, "
-                                               "4 steps × 2.00 s, decoding 9.0 s")
+    assert capsys.readouterr().out.strip() == ("render: krea2-t2i 1920×1088 ×1 in 20.0 s: text encoding and first "
+                                               "step 5.0 s, 3 more steps × 2.00 s, decoding 9.0 s")
