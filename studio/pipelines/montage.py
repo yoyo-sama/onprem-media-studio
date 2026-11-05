@@ -17,10 +17,10 @@ import subprocess
 import time
 from pathlib import Path
 
+from ..files import VIDEO_EXTENSIONS
 from . import Pipeline, register
 from . import common
 
-VIDEO_EXTENSIONS = (".mp4", ".webm", ".mov")
 MAX_CLIPS = 32
 MAX_GRID = 16
 MAX_FRAME_OFFSET = 48  # two seconds at 24 fps
@@ -49,8 +49,11 @@ def probe(path: Path) -> dict:
 
 
 def video_refs(params: dict, key: str, files, low: int, high: int) -> list[str]:
-    refs = common.image_refs(params, key, files, low, high)
+    refs = params.get(key, [])
+    if not isinstance(refs, list) or not low <= len(refs) <= high:
+        raise ValueError(f"{key} must be a list of {low} to {high} video references")
     for ref in refs:
+        files.resolve(ref)
         if not ref.lower().endswith(VIDEO_EXTENSIONS):
             raise ValueError(f"{key}: {ref} is not a video")
     return refs
@@ -110,11 +113,7 @@ class ImageGrid(Pipeline):
 
     def validate(self, params, files):
         common.check_keys(params, {"images"}, "a contact sheet has no prompt.")
-        refs = common.image_refs(params, "images", files, 2, MAX_GRID)
-        for ref in refs:
-            if ref.lower().endswith(VIDEO_EXTENSIONS):
-                raise ValueError(f"images: {ref} is a video")
-        return {"images": refs}
+        return {"images": common.image_refs(params, "images", files, 2, MAX_GRID)}
 
     def run(self, params, models, ctx):
         from PIL import Image

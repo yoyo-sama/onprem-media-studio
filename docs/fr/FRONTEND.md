@@ -78,7 +78,7 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
 | Storyboard | fiche personnage, fiche décor, une troisième fiche facultative | liste de plans par Gemma, une image `qwen-image-2.1` par plan (sujets + décor), `image-grid` |
 | Génération vidéo | storyboard | un cut `h3-i2v` par plan (depuis l'image du plan), ou `h3-r2v` (planches + image du plan en références) |
 | Vidéo finale | génération vidéo | `video-concat` des cuts |
-| Reference2Video | fiche personnage, fiche décor, jusqu'à 7 images en plus | un job `h3-r2v` |
+| Reference2Video | fiche personnage, fiche décor, jusqu'à 7 images, 3 vidéos et 3 sons en plus | un job `h3-r2v` |
 | Création d'image | — | `krea2-t2i` ou `qwen-image-2.1` |
 | Édition d'image | image, jusqu'à 9 références en plus | `qwen-image-2.1` (l'image est `<image1>`, les références `<image2>`…) |
 | Vidéo | image | `h3-i2v` |
@@ -99,7 +99,12 @@ ajoute une carte Import d'image reliée à elle.
   Image 2.1.
 - Plus de génération cloud (OpenAI, Gemini).
 - Ni LoRA Krea 2, ni mégapixels, ni turbo/steps ; les LoRA H3 sont des fichiers envoyés.
-- La référence vers vidéo ne prend que des images (ni vidéo ni audio de référence).
+- Les références en plus de la référence vers vidéo prennent jusqu'à 7 images, 3 vidéos et 3 sons
+  (comme en 1.4), dans une seule liste (`F.r2vPlan`). Chaque image est le `<Subject N>` suivant ;
+  une vidéo a un rôle (mouvement de caméra et rythme, ou un sujet), un son aussi (voix d'un
+  personnage, musique, ambiance et bruitages), affiché avec son repère. Le réalisateur et
+  « Ignorer les planches » les envoient dans l'ordre de la liste, avec le prompt de
+  `buildH3RefPrompt` ([H3.md](H3.md)) ; une vidéo part muette.
 - Dans le réalisateur, un clip de référence vers vidéo se lit sous son bouton une fois rendu, et
   le bouton devient « Régénérer la vidéo » : un nouveau job sur les mêmes planches, avec le seed
   suivant.

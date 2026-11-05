@@ -124,6 +124,41 @@ export function refCtx(wf = currentWorkflow()) {
 }
 export const refList = (ctx = refCtx()) => refLists[ctx] || [];
 
+// ── Clips and sounds as Ref2VA references ─────────────────────────────────────
+// FastH3 OmniRef also takes clips and sounds (9 images, 3 clips, 3 sounds, 12 in all;
+// server h3.py). The assistant's card and the Studio's reference-to-video list share
+// these roles: `REF_KINDS` maps a role to its prompt kind (P.h3AssignRefs) and label.
+export const VIDEO_RE = /\.(mp4|webm|mov)$/i, AUDIO_RE = /\.(wav|mp3|m4a|flac|ogg)$/i;
+export const REF_KINDS = { character: ["character", L("Character")], setting: ["environment", L("Setting")],
+                           object: ["reference", L("Object or other")], motion: ["motion", L("Camera movement and pacing")],
+                           voice: ["voice", L("Voice of a character")], music: ["music", L("Music")],
+                           ambience: ["ambience", L("Ambience and sounds")] };
+export const MEDIA_KINDS = { image: ["character", "setting", "object"], video: ["motion", "character", "setting", "object"],
+                             audio: ["voice", "music", "ambience"] };
+export const R2V_MEDIA_CAPS = { image: REF_CAPS.r2v, video: 3, audio: 3 };
+export const refMedia = ref => VIDEO_RE.test(ref || "") ? "video" : AUDIO_RE.test(ref || "") ? "audio" : "image";
+// Media of a list item ({name, blob | ref, media?, kind?}).
+export const itemMedia = it => it.media
+  || (it.blob?.type ? (/^video\//.test(it.blob.type) ? "video" : /^audio\//.test(it.blob.type) ? "audio" : "image")
+                    : refMedia(it.ref || it.name));
+// Role of a clip or a sound of the list (its own, else the first of its media).
+export const itemRole = it => MEDIA_KINDS[itemMedia(it)].includes(it.kind) ? it.kind : MEDIA_KINDS[itemMedia(it)][0];
+
+// The reference-to-video plan of the form, in the order sent: the two anchors (the
+// sheets, or with "skip the sheets" the first two images of the list), then the
+// other items of the list, capped per media. `anchors` holds list items only when
+// the sheets are skipped. Each entry: {item, media, kind} (kind as P.h3AssignRefs).
+export function r2vPlan(skip, list = refList("r2v")) {
+  const room = { ...R2V_MEDIA_CAPS }, kept = list.filter(it => room[itemMedia(it)]-- > 0);
+  const images = kept.filter(it => itemMedia(it) === "image");
+  const anchors = skip ? images.slice(0, 2) : [];
+  const extras = kept.filter(it => !anchors.includes(it)).map(item => ({
+    item, media: itemMedia(item), kind: itemMedia(item) === "image" ? "reference" : REF_KINDS[itemRole(item)][0] }));
+  const lead = [{ media: "image", kind: "character", item: anchors[0] || null },
+                { media: "image", kind: "environment", item: anchors[1] || null }];
+  return { anchors, extras, dropped: list.length - kept.length, entries: P.h3AssignRefs([...lead, ...extras]) };
+}
+
 // The first `REF_CAPS` images of a list, uploaded. The cap is applied here too: the
 // interface is not the only way in.
 export async function refRefs(ctx) {

@@ -78,7 +78,7 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
 | Storyboard | character sheet, setting sheet, an optional third sheet | Gemma shot list, one `qwen-image-2.1` shot image per shot (subjects + setting), `image-grid` |
 | Video generation | storyboard | one `h3-i2v` cut per shot (from the shot image), or `h3-r2v` (sheets + shot image as references) |
 | Final video | video generation | `video-concat` of the cuts |
-| Reference2Video | character sheet, setting sheet, up to 7 extra images | one `h3-r2v` job |
+| Reference2Video | character sheet, setting sheet, up to 7 extra images, 3 clips and 3 sounds | one `h3-r2v` job |
 | Image creation | — | `krea2-t2i` or `qwen-image-2.1` |
 | Image editing | image, up to 9 extra references | `qwen-image-2.1` (the image is `<image1>`, references `<image2>`…) |
 | Video | image | `h3-i2v` |
@@ -98,7 +98,11 @@ to it.
   project saved with the 2509 storyboard resumes on Qwen Image 2.1.
 - No cloud generation (OpenAI, Gemini).
 - No Krea 2 LoRA, megapixel or turbo/steps controls; H3 LoRAs are uploaded files.
-- Reference to video takes image references only (no video or audio references).
+- Reference to video's extra references take up to 7 images, 3 clips and 3 sounds (as in 1.4),
+  in one list (`F.r2vPlan`). Each image is the next `<Subject N>`; a clip has a role (camera
+  movement and pacing, or a subject) and a sound one too (voice of a character, music, ambience
+  and sounds), shown with its label. The director and "skip the sheets" send them in the list
+  order, with the prompt of `buildH3RefPrompt` ([H3.md](H3.md)); a clip goes silent.
 - In the director, a reference-to-video clip plays under its button once rendered, and the
   button becomes "Regenerate the video": a new job on the same sheets, with the next seed.
 - The multi-image sequence uses the H3 video instruction (1.4 used LTX there).

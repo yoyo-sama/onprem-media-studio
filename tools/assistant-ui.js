@@ -37,6 +37,8 @@ const CARDS = [
   card("C5", "storyboard", { brief: "A detective enters a studio", shots: 5, duration: 5, ratio: "16:9" }),
   card("C7", "storyboard", { brief: "A dwarf and an elf pick mushrooms", subject_sheets: ["C1#1", "A1"], setting_sheet: ["C1#1"],
                              shots: 4, duration: 5, ratio: "16:9" }),
+  card("C10", "reference_video", { brief: "A1 rides a motorcycle along a jungle track, an elephant charging behind him.",
+                                  references: ["A1"], kinds: ["character"], duration: 5, ratio: "16:9" }),
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
@@ -62,7 +64,11 @@ const CARDS = [
       return json(done[jid], 201);
     }
     if (p.startsWith("/api/jobs/")) return json(done[p.split("/").pop()] || {});
-    if (p === "/api/inputs") return json({ ref: "inputs/att.png" }, 201);
+    if (p === "/api/inputs") {
+      // The test's clip and sound are tagged in their first bytes.
+      const head = (req.postDataBuffer() || Buffer.alloc(0)).subarray(0, 5).toString();
+      return json({ ref: head === "VIDEO" ? "inputs/clip.mp4" : head === "AUDIO" ? "inputs/voice.wav" : "inputs/att.png" }, 201);
+    }
     if (p === "/api/loras") return json({ h3: [] });
     if (p === "/api/instructions") return json({});
     if (p === "/api/roles") return json(ROLES);
@@ -307,6 +313,75 @@ const CARDS = [
   check(jobs.length === beforeR2V + 2 && jobs[beforeR2V + 1].params.seed === (jobs[beforeR2V].params.seed + 1) % 2 ** 32,
     "reference to video: regenerating did not submit one job with the next seed");
   check(await page.isVisible("#r2vPlayer video"), "reference to video: the last clip disappeared while the new one renders");
+  // Reference to video from the card: a reference added from the computer, its role set,
+  // then one h3-r2v job whose prompt is the six-field block with A1 as <Subject 1>.
+  await page.click('.rail-mode[data-mode="assistant"]');
+  const c10 = '.chat-card[data-card="C10"]';
+  await page.waitForSelector(`${c10} .cc-refs`);
+  check((await page.textContent(`${c10} .cc-refs figcaption`)).startsWith("<Subject 1> · A1"), "C10: A1 not shown as <Subject 1>");
+  await page.setInputFiles(`${c10} .cc-refs input[type=file]`, { name: "jungle.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.waitForFunction(sel => document.querySelectorAll(`${sel} .cc-refs figure`).length === 2, c10);
+  await page.selectOption(`${c10} .cc-refs figure >> nth=1 >> select`, "setting");
+  // A clip and a sound: a clip is <Video 1> for its camera movement, or a subject; a sound is <Audio 1>.
+  await page.setInputFiles(`${c10} .cc-refs input[type=file]`, [
+    { name: "ride.mp4", mimeType: "video/mp4", buffer: Buffer.from("VIDEO clip") },
+    { name: "voice.wav", mimeType: "audio/wav", buffer: Buffer.from("AUDIO sound") }]);
+  await page.waitForFunction(sel => document.querySelectorAll(`${sel} .cc-refs figure`).length === 4, c10);
+  const caps10 = () => page.$$eval(`${c10} .cc-refs figcaption`, f => f.map(x => x.textContent));
+  let caps = await caps10();
+  check(caps[2] === "<Video 1> · clip.mp4" && caps[3] === "<Audio 1> · voice.wav", "C10: clip and sound labels: " + caps);
+  check(await page.$$eval(`${c10} .cc-refs figure >> nth=3 >> audio`, a => a.length) === 1, "C10: the sound has no player");
+  await page.selectOption(`${c10} .cc-refs figure >> nth=2 >> select`, "character");
+  caps = await caps10();
+  check(caps[2] === "<Subject 3> · clip.mp4", "C10: a clip as a character is not <Subject 3>: " + caps[2]);
+  await page.selectOption(`${c10} .cc-refs figure >> nth=2 >> select`, "motion");
+  if (SHOTS) await (await page.$(c10)).screenshot({ path: `${SHOTS}/r2v-card-1440.png` });
+  const before10 = jobs.length;
+  check(jobs.length === before10, "C10: editing the references submitted a job");
+  await page.click(`${c10} .cc-actions .primary-btn`);
+  await page.waitForTimeout(2500);  // Gemma's vision (stubbed out, 1.5 s) describes each reference first
+  const j10 = jobs[before10];
+  check(jobs.length === before10 + 1 && j10.pipeline === "h3-r2v"
+    && JSON.stringify(j10.params.references) === JSON.stringify(["inputs/att.png", "inputs/att.png", "inputs/clip.mp4", "inputs/voice.wav"]),
+    "C10: not one h3-r2v job with the four references in order: " + JSON.stringify(j10));
+  const p10 = j10?.params.prompt || "";
+  check(p10.startsWith("subject_definitions:\n<Subject 1> is the main character in <Picture 1>.\n<Subject 2> is the location as defined by <Picture 2>.\n"
+      + "<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n\n"
+      + "summary:\n[reference generation + audio reference] ")
+    && p10.includes("\n<Video 1> (camera movement and pacing): weak_reference - ") && p10.includes("\n<Audio 1>: reference - ")
+    && p10.includes("detailed_description:\n<Subject 1> is in <Subject 2>. <Subject 1> rides a motorcycle") && !p10.includes("A1"),
+    "C10: prompt not in the H3 grammar: " + p10);
+  check(j10?.params.duration === 5 && j10.params.aspect === "16:9", "C10: settings");
+  // The same card opened in the Studio: its clip and sound go to the reference list with
+  // their roles; skipping the sheets, the two images are subjects 1 and 2 and one job
+  // carries the four references.
+  for (const j of Object.values(done).filter(j => j.status === "queued")) {
+    Object.assign(j, { status: "done", progress: 1, outputs: j.later });
+    send(j);
+  }
+  await page.waitForSelector(`${c10} .cc-actions button:nth-child(3):not([disabled])`, { timeout: 5000 });
+  await page.click(`${c10} .cc-actions button >> nth=2`);
+  await page.waitForFunction(() => document.querySelectorAll("#refSubjects .ref-subject").length === 4, null, { timeout: 5000 }).catch(() => {});
+  const tags = () => page.$$eval("#refSubjects .rs-tag", els => els.map(e => e.textContent));
+  let st = await tags();
+  check(JSON.stringify(st) === JSON.stringify(["Sujet 3", "Sujet 4", "Vidéo 1", "Son 1"]), "Studio r2v: reference labels with the sheets: " + st);
+  check(JSON.stringify(await page.$$eval("#refSubjects .rs-role", els => els.map(e => e.value))) === '["motion","voice"]',
+    "Studio r2v: the clip and sound roles did not follow the card");
+  await page.$eval("#skipSheetsToggle", el => { el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
+  st = await tags();
+  check(JSON.stringify(st) === JSON.stringify(["Sujet 1", "Sujet 2", "Vidéo 1", "Son 1"]), "Studio r2v: reference labels without the sheets: " + st);
+  if (SHOTS) await (await page.$("#refExtrasWrap")).screenshot({ path: `${SHOTS}/r2v-studio-refs-1440.png` });
+  const beforeS = jobs.length;
+  check(beforeS === jobs.length, "Studio r2v: opening the card submitted a job");
+  await page.click("#generateBtn");
+  await page.waitForTimeout(2500);
+  const jS = jobs[beforeS], pS = jS?.params.prompt || "";
+  check(jobs.length === beforeS + 1 && jS.pipeline === "h3-r2v"
+    && JSON.stringify(jS.params.references) === JSON.stringify(["inputs/att.png", "inputs/att.png", "inputs/clip.mp4", "inputs/voice.wav"]),
+    "Studio r2v: not one job with the four references in order: " + JSON.stringify(jS));
+  check(pS.includes("\n<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n")
+    && pS.includes("summary:\n[reference generation + audio reference] "), "Studio r2v: prompt: " + pS);
+  await page.$eval("#skipSheetsToggle", el => { el.checked = false; el.dispatchEvent(new Event("change", { bubbles: true })); });
   // A reload opens on the welcome; the conversation stays in the list.
   await page.click('.rail-mode[data-mode="assistant"]');
   await page.reload({ waitUntil: "load" });

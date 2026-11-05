@@ -5,7 +5,8 @@ Three engines:
 - `h3-i2v`: first image to video, or first and last images (FL2VA) when
   `last_image` is given (same checkpoint and FastVideo pipeline: the keyframes
   become conditioning rows);
-- `h3-r2v`: reference images to video (FastH3 OmniRef), the two passes of the
+- `h3-r2v`: references to video (FastH3 OmniRef): images, silent clips and
+  sounds, in one ordered list; the two passes of the
   workflow validated on the GB10 in ComfyUI: 8 steps at about 0.3 MP, latent
   upscale to about 0.9 MP, then 3 refine steps at denoise 0.4. `preview` stops
   after the first pass.
@@ -14,7 +15,9 @@ Rules carried over from 1.4 (LESSONS.md § 6):
 - the prompt arrives already compiled in the H3 grammar (`web/js/h3.js`) and
   is sent verbatim; the 7,000-character cap is enforced, never by trimming;
 - frame counts follow the 17n+5 grid: a 5 s request renders 124 frames;
-- `<Picture N>` numbers the references in the order they are sent;
+- `<Picture N>` numbers the reference images in the order they are sent,
+  `<Video N>` the clips and `<Audio N>` the sounds, each kind on its own
+  (FastVideo's presentation, MiniMax's full-reference guide);
 - no guidance (cfg 1), so a negative prompt is refused.
 
 FastVideo constrains H3 to clips of 5 to 15 seconds (1.4 allowed shorter
@@ -32,12 +35,17 @@ import traceback
 from pathlib import Path
 
 from ..config import Settings
+from ..files import media_kind
 from . import Pipeline, common, h3_lora, register
 
 FPS = 24
 MIN_SECONDS, MAX_SECONDS = 5, 15
 PROMPT_CHARS = 7000           # H3_PROMPT_CHARS of 1.4
-MAX_REFERENCES = 9            # 1.4: two sheets + seven references
+# FastVideo's Ref2VA limits (MINIMAX_H3_MAX_REFERENCE_*): 9 images, 3 clips,
+# 3 sounds, 12 in all, and a sound never alone.
+MAX_REFERENCES = {"image": 9, "video": 3, "audio": 3}
+MAX_ALL_REFERENCES = 12
+REFERENCE_LABELS = {"image": "Picture", "video": "Video", "audio": "Audio"}
 MAX_PIXELS = 768 * 1344       # FastVideo's MiniMax H3 canvas limit
 MULTIPLE = 32
 FINAL_MEGAPIXELS = 0.9        # size of every final clip (validated Ref2VA workflow)
@@ -159,8 +167,30 @@ def _common(params: dict, files, extra: set[str]) -> dict:
     return out
 
 
-def _cited_pictures(prompt: str) -> set[int]:
-    return {int(n) for n in re.findall(r"<Picture (\d+)>", prompt)}
+def _cited_pictures(prompt: str, label: str = "Picture") -> set[int]:
+    return {int(n) for n in re.findall(rf"<{label} (\d+)>", prompt)}
+
+
+def _references(params: dict, files) -> list[str]:
+    """The ordered Ref2VA list: each entry's kind comes from its extension."""
+    refs = params.get("references", [])
+    if not isinstance(refs, list) or not refs:
+        raise ValueError("references must be a non-empty list of images, videos and sounds")
+    counts = dict.fromkeys(MAX_REFERENCES, 0)
+    for ref in refs:
+        files.resolve(ref)
+        kind = media_kind(ref)
+        if kind is None:
+            raise ValueError(f"references: {ref} is neither an image, a video nor a sound")
+        counts[kind] += 1
+    for kind, limit in MAX_REFERENCES.items():
+        if counts[kind] > limit:
+            raise ValueError(f"MiniMax H3 takes at most {limit} {kind} references, {counts[kind]} were sent")
+    if len(refs) > MAX_ALL_REFERENCES:
+        raise ValueError(f"MiniMax H3 takes at most {MAX_ALL_REFERENCES} references, {len(refs)} were sent")
+    if counts["audio"] == len(refs):
+        raise ValueError("A sound reference needs at least one image or video reference beside it")
+    return refs
 
 
 # ── Precision and fallback ───────────────────────────────────────────────────
@@ -233,8 +263,17 @@ def _outputs(result, path: Path, ctx, params: dict) -> list[Path]:
 
 
 def _reference(path: Path):
+    """One FastVideo reference. A clip goes silent, as decoded frames: FastVideo would
+    otherwise adopt its soundtrack as one more <Audio N> the prompt does not define
+    (the full-reference guide: a video's sound is not a reference by itself being
+    there). A sound is its own reference."""
     from fastvideo.pipelines.basic.minimax_h3 import MiniMaxH3Reference
-    return MiniMaxH3Reference(source=str(path), media_type="image")
+    kind = media_kind(path.name)
+    if kind == "video":
+        from fastvideo.pipelines.basic.minimax_h3.reference import decode_reference_video
+        frames, fps, _ = decode_reference_video(path)
+        return MiniMaxH3Reference(source=frames, media_type="video", fps=fps)
+    return MiniMaxH3Reference(source=str(path), media_type=kind)
 
 
 def _open(ctx, ref: str):
@@ -313,11 +352,12 @@ class H3ReferenceToVideo(H3Pipeline):
 
     def validate(self, params, files):
         out = _common(params, files, {"references", "aspect", "preview"})
-        out["references"] = common.image_refs(params, "references", files, 1, MAX_REFERENCES)
-        wrong = sorted(n for n in _cited_pictures(out["prompt"]) if not 1 <= n <= len(out["references"]))
-        if wrong:
-            raise ValueError(f"The prompt cites <Picture {wrong[0]}> but only {len(out['references'])} "
-                             "reference image(s) were sent")
+        out["references"] = _references(params, files)
+        for kind, label in REFERENCE_LABELS.items():
+            sent = sum(media_kind(r) == kind for r in out["references"])
+            wrong = sorted(n for n in _cited_pictures(out["prompt"], label) if not 1 <= n <= sent)
+            if wrong:
+                raise ValueError(f"The prompt cites <{label} {wrong[0]}> but only {sent} {kind} reference(s) were sent")
         aspect = parse_aspect(params.get("aspect", "16:9"))
         out["aspect"] = "%d:%d" % aspect
         out["pass1_width"], out["pass1_height"] = size_for(aspect, PASS1_MEGAPIXELS)
@@ -338,7 +378,8 @@ class H3ReferenceToVideo(H3Pipeline):
         terms = contract(model_dir)
         engine = _engine(ctx, model_dir, True, prec, params["loras"])
         # FastVideo resizes reference images to a 2048-pixel short edge, which is
-        # what ref_image_size=max did in the validated workflow.
+        # what ref_image_size=max did in the validated workflow. Clips are decoded
+        # once for both passes.
         refs = [_reference(ctx.files.resolve(r)) for r in params["references"]]
         w1, h1, preview = params["pass1_width"], params["pass1_height"], params["preview"]
         path = _video_path(ctx)

@@ -15,6 +15,8 @@ import subprocess
 import time
 from pathlib import Path
 
+from ..files import media_kind
+
 MAX_SEED = 2**32 - 1
 NEGATIVE_KEYS = ("negative", "negative_prompt")
 
@@ -60,6 +62,8 @@ def image_refs(params: dict, key: str, files, low: int, high: int) -> list[str]:
         raise ValueError(f"{key} must be a list of {low} to {high} image references")
     for ref in refs:
         files.resolve(ref)
+        if media_kind(ref) != "image":
+            raise ValueError(f"{key}: {ref} is not an image")
     return refs
 
 

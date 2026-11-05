@@ -63,8 +63,22 @@ const CARD_UI = {
   storyboard: { title: L("Storyboard"), text: "brief", images: ["subject_sheets", "setting_sheet"], fields: ["shots", "duration", "ratio"],
                 form: true, director: true },
   reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio"],
-                     form: true, director: true },
+                     form: true, director: true, video: true },
 };
+// Reference to video straight from the card. Images, clips and sounds, in one ordered
+// list: each gets its H3 label (the numbers are the app's, never typed), <Subject N>
+// for a subject, else its own <Video N> or <Audio N>, with the role the user or Gemma
+// gave it.
+const R2V_MAX = { image: 9, video: 3, audio: 3 }, R2V_MAX_REFS = 12;  // FastH3 OmniRef's limits (server h3.py)
+const { REF_KINDS, MEDIA_KINDS, AUDIO_RE: AUDIO } = F;
+const mediaOf = id => F.refMedia(refOf(id));
+function kindOf(a, i) {
+  const media = mediaOf(a.references[i]), k = a.kinds?.[i];
+  if (MEDIA_KINDS[media].includes(k)) return k;
+  return media === "image" ? (i === 0 ? "character" : "object") : MEDIA_KINDS[media][0];
+}
+// H3 labels of a card's references, in their order (P.h3AssignRefs).
+const refLabels = a => P.h3AssignRefs((a.references || []).map((id, i) => ({ media: mediaOf(id), kind: REF_KINDS[kindOf(a, i)][0] })));
 const IMAGE_LABELS = {
   image: L("Image"), references: L("References"), last_image: L("Last frame"), images: L("Key images"), clips: L("Clips"),
   subject_sheets: L("Subject sheets"), setting_sheet: L("Setting sheet"), photo: L("Photo"),
@@ -91,6 +105,7 @@ const findCard = id => {
 };
 // File reference of an image id (A1, C3#2), null while it has none.
 function refOf(id) {
+  if (String(id).includes("/")) return id;  // a file added on the card itself
   for (const m of conv?.messages || []) for (const a of m.attachments || []) if (a.id === id) return a.ref;
   const m = /^(C\d+)#(\d+)$/.exec(id || "");
   return m ? findCard(m[1])?.state.outputs?.[+m[2] - 1] || null : null;
@@ -127,6 +142,12 @@ function thumb(ref, caption) {
     const v = document.createElement("video");
     v.src = refURL(ref); v.controls = true; v.preload = "metadata"; v.playsInline = true;
     fig.appendChild(v);
+  } else if (ref && AUDIO.test(ref)) {
+    const box = fig.appendChild(document.createElement("div"));
+    box.className = "cc-sound";
+    box.textContent = "♪";
+    const au = box.appendChild(document.createElement("audio"));
+    au.src = refURL(ref); au.controls = true; au.preload = "metadata";
   } else if (ref) {
     const img = document.createElement("img");
     img.src = refURL(ref); img.alt = ""; img.loading = "lazy";
@@ -238,7 +259,8 @@ function renderCard(card, live = false) {
     el.appendChild(tx(document.createElement("p"), "Markets: {list}", { list: a.markets.map(m => t(G.MARKETS[m]?.label || m)).join(", ") })).className = "hint";
 
   const missing = [];
-  for (const key of ui.images || []) {
+  if (ui.video) el.appendChild(renderRefEditor(card, a, busy || live, missing));
+  for (const key of ui.video ? [] : ui.images || []) {
     const ids = [].concat(a[key] || []);
     if (!ids.length) continue;
     const row = document.createElement("div");
@@ -255,9 +277,17 @@ function renderCard(card, live = false) {
   const actions = document.createElement("div");
   actions.className = "cc-actions";
   if (ui.director) {
+    const blocked = live || busy || missing.length > 0;
+    if (ui.video) {
+      const again = ["done", "error", "cancelled"].includes(st.status);
+      const g = button(again ? "Generate the video again" : "🎞 Generate the video",
+        "Renders the clip now from these references, each one under its H3 label", () => runCard(card), "primary-btn");
+      g.disabled = blocked || !(a.references || []).some(id => mediaOf(id) !== "audio");
+      actions.appendChild(g);
+    }
     const b = button("🎬 Launch the director", "Switches to the Studio and starts the step-by-step review with this brief",
-      () => openInStudio(card, true), "primary-btn");
-    b.disabled = live || busy || missing.length > 0;
+      () => openInStudio(card, true), ui.video ? "secondary-btn" : "primary-btn");
+    b.disabled = blocked;
     const o = button("Open in the Studio", "Fills the Studio form without starting anything", () => openInStudio(card));
     o.disabled = b.disabled;
     actions.append(b, o);
@@ -303,6 +333,99 @@ function renderCard(card, live = false) {
   }
   translateTree(el);
   return el;
+}
+
+// References of a video card: each with its H3 label, its role and a remove button,
+// then a picker that adds an image or a clip of the conversation, or a file (image,
+// clip or sound) from the computer. FastH3 OmniRef takes 9 images, 3 clips and 3
+// sounds, 12 in all.
+function renderRefEditor(card, a, locked, missing) {
+  const ids = [...(a.references || [])], kinds = ids.map((_, i) => kindOf(a, i)), labels = refLabels(a);
+  const set = (nextIds, nextKinds) => { setDraft(card, "references", nextIds); setDraft(card, "kinds", nextKinds); renderLog(); };
+  const row = document.createElement("div");
+  row.className = "cc-images cc-refs";
+  row.appendChild(tx(document.createElement("span"),
+    "References ({n}/{max}): up to 9 images, 3 clips and 3 sounds, each under its H3 label", { n: ids.length, max: R2V_MAX_REFS }));
+  ids.forEach((id, i) => {
+    const ref = refOf(id);
+    if (!ref) missing.push(id);
+    const fig = thumb(ref, `${labels[i].label} · ${id.includes("/") ? fileName(id) : id}`);
+    const kind = document.createElement("select");
+    fillSelect(kind, MEDIA_KINDS[mediaOf(id)].map(k => [k, t(REF_KINDS[k][1])]), kinds[i]);
+    txAttr(kind, "aria-label", "Role of this reference in the clip");
+    kind.disabled = locked;
+    // A role can turn a clip into a subject or back: the labels move, so redraw.
+    kind.addEventListener("change", () => { kinds[i] = kind.value; set(ids, [...kinds]); });
+    fig.appendChild(kind);
+    if (!locked) fig.appendChild(button("✕", "Remove this reference", () => {
+      ids.splice(i, 1); kinds.splice(i, 1); set(ids, kinds);
+    }, "cc-x"));
+    row.appendChild(fig);
+  });
+  const count = media => ids.filter(id => mediaOf(id) === media).length;
+  const room = media => Math.max(0, Math.min(R2V_MAX[media] - count(media), R2V_MAX_REFS - ids.length));
+  const defaultKind = (media, at) => media === "image" ? (at === 0 ? "character" : "object") : MEDIA_KINDS[media][0];
+  if (!locked && ids.length < R2V_MAX_REFS) {
+    const add = document.createElement("select");
+    const free = conversationMedia().filter(x => !ids.includes(x.id) && room(x.media) > 0);
+    fillSelect(add, [["", t("＋ Add a reference…")], ...free.map(x => [x.id, x.id]), ["file", t("From the computer…")]], "");
+    txAttr(add, "aria-label", "Add a reference");
+    const file = document.createElement("input");
+    file.type = "file"; file.accept = "image/*,video/*,audio/*"; file.multiple = true; file.hidden = true;
+    add.addEventListener("change", () => {
+      if (add.value === "file") { add.value = ""; file.click(); return; }
+      const x = free.find(f => f.id === add.value);
+      if (x) set([...ids, x.id], [...kinds, defaultKind(x.media, ids.length)]);
+    });
+    file.addEventListener("change", async () => {
+      const left = { image: room("image"), video: room("video"), audio: room("audio") };
+      let total = R2V_MAX_REFS - ids.length;
+      const picked = [...file.files].filter(f => {
+        const media = /^(image|video|audio)\//.exec(f.type)?.[1];
+        if (!media || !left[media] || !total) return false;
+        left[media] -= 1; total -= 1;
+        return true;
+      });
+      if (picked.length < file.files.length)
+        notice(false, "At most 9 images, 3 clips and 3 sounds here, 12 in all: the extra files were ignored.");
+      try {
+        const refs = await Promise.all(picked.map(blob => F.imageRef({ name: blob.name, blob })));
+        set([...ids, ...refs], [...kinds, ...refs.map((ref, k) => defaultKind(mediaOf(ref), ids.length + k))]);
+      } catch (err) { warn(err); }
+    });
+    row.append(add, file);
+  }
+  return row;
+}
+// Images and clips the conversation holds: attachments, then the cards' outputs (an
+// H3 clip's last frame left out, as on the card).
+function conversationMedia() {
+  const out = [];
+  for (const m of conv?.messages || []) {
+    for (const att of m.attachments || []) out.push({ id: att.id, ref: att.ref, media: "image" });
+    for (const c of m.cards || []) (c.state?.outputs || []).forEach((ref, i) => {
+      if (VIDEO.test(ref)) out.push({ id: `${c.id}#${i + 1}`, ref, media: "video" });
+      else if (!(i > 0 && VIDEO.test(c.state.outputs[i - 1]))) out.push({ id: `${c.id}#${i + 1}`, ref, media: "image" });
+    });
+  }
+  return out;
+}
+
+// The six-field Ref2VA prompt of a video card. The brief names the references by their
+// ids (A1, C2#1…) or by tokens already; each id becomes its label (<Subject N>, or the
+// <Video N> or <Audio N> of a clip or sound that is not a subject). Gemma's vision
+// describes each image for subject_definitions (an undescribed one still goes).
+async function r2vCardPrompt(a) {
+  const refs = a.references.map(need), images = refs.filter((_, i) => mediaOf(a.references[i]) === "image");
+  const found = await F.describeRefs(images.map(ref => ({ name: fileName(ref), ref })));
+  const descs = refs.map(ref => found[images.indexOf(ref)] || "");
+  const subjects = refLabels(a).map((sub, i) => ({ ...sub, desc: descs[i] }));
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  let text = String(a.brief || "");
+  a.references.forEach((id, i) => {
+    if (!id.includes("/")) text = text.replace(new RegExp(`(?<![\\w#])${esc(id)}(?![\\w#])`, "g"), subjects[i].label);
+  });
+  return F.capH3(P.buildH3RefPrompt({ subjects, summary: P.h3Summary(text), body: P.h3RefBody(subjects, text) }));
 }
 
 // ── Progress of a card ────────────────────────────────────────────────────────
@@ -357,9 +480,10 @@ function need(id) {
 // card's id so its progress shows on it.
 async function submitCard(card, a) {
   const aspect = card.tool === "image_sequence" ? await G.seqAspect({ ref: need(a.images[0]) }) : undefined;
-  return withJobTag(card.id, () => startCard(card, a, aspect));
+  const prompt = card.tool === "reference_video" ? await r2vCardPrompt(a) : undefined;
+  return withJobTag(card.id, () => startCard(card, a, aspect, prompt));
 }
-function startCard(card, a, aspect) {
+function startCard(card, a, aspect, prompt) {
   const seed = Math.floor(Math.random() * 2 ** 31);
   const label = what => ["{id} · {what}", { id: card.id, what: t(what) }];
   const title = CARD_UI[card.tool].title, opts = { origin: ORIGIN, seed };
@@ -397,6 +521,9 @@ function startCard(card, a, aspect) {
       return [runJob("video-concat", { clips: a.clips.map(need) }, { origin: ORIGIN, label: label(title), sub: ["{n} clip(s)", { n: a.clips.length }] })];
     case "campaign":
       return G.runCampaign({ ...opts, text: a.brief, styleId: a.style, count: a.variants, duration: a.duration });
+    case "reference_video":
+      return [runJob("h3-r2v", { prompt, duration: a.duration, seed, aspect: a.ratio, references: a.references.map(need) }, {
+        origin: ORIGIN, label: label(title), sub: ["{info} · seed {seed}", { info: `${a.duration} s · ${a.references.length} ref.`, seed }] })];
   }
   throw new Error(`unknown card ${card.tool}`);
 }
@@ -458,7 +585,10 @@ async function enrichCard(card, area, btn) {
 // `launch`: a director card's own button, which starts the director once the form is
 // filled (the click is the user's Generate).
 async function openInStudio(card, launch = false) {
-  const a = argsOf(card), images = {}, cid = conv.id;
+  let a = argsOf(card);
+  const images = {}, cid = conv.id;
+  // Every reference goes with its role (the Studio's list keeps those of clips and sounds).
+  if (card.tool === "reference_video") a = { ...a, kinds: (a.references || []).map((_, i) => kindOf(a, i)) };
   try {
     for (const id of imageIds(card, a)) images[id] = { name: fileName(need(id)), ref: need(id) };
     const image = id => images[id] || null;

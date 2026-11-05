@@ -50,7 +50,11 @@ curl -s --data-binary @photo.png localhost:8090/api/inputs
 # {"ref": "inputs/3f9a…c1.png", "width": 1280, "height": 720}
 ```
 
-Le corps est l'image brute (PNG, JPEG ou WebP, 50 Mo au plus). Les images envoyées sont rangées
+Le corps est l'image brute (PNG, JPEG ou WebP, 50 Mo au plus). Une vidéo (MP4, MOV, WebM) ou un
+son (WAV, MP3, M4A, FLAC, Ogg), 200 Mo au plus, est aussi accepté, pour les références de
+`h3-r2v` ([H3.md](H3.md)) : ffprobe le lit, et la réponse est `{"ref", "kind"}` (`kind` vaut
+`image`, `video` ou `audio` ; la réponse d'une image donne aussi sa taille). Les autres moteurs
+refusent une référence qui n'est pas une image. Les images envoyées sont rangées
 sous une empreinte de leur contenu dans `<data>/input/`. Une **référence** est le chemin d'URL du
 fichier sans la barre initiale : `inputs/<nom>` pour une image envoyée, `outputs/<chemin>` pour un
 rendu (les `outputs` d'un job sont des références). Un plan peut donc utiliser directement les

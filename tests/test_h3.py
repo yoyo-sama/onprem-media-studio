@@ -5,6 +5,8 @@ prompt, <Picture N> numbering, the 5–15 s limit of FastVideo, the LoRA stack
 maths, the FP8 fallback, and the upscaler's checkpoint layout."""
 
 import json
+import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -210,7 +212,7 @@ def test_r2v_two_passes(client, engines):
     ("h3-t2v", {"prompt": "p", "loras": [{"name": "../style.safetensors"}]}, "file name"),
     ("h3-t2v", {"prompt": "p", "loras": [{"name": "missing.safetensors"}]}, "No such LoRA"),
     ("h3-t2v", {"prompt": "p", "loras": [{"name": "style.safetensors", "strength": 5}]}, "between -2 and 2"),
-    ("h3-r2v", {"prompt": "p", "references": []}, "1 to 9"),
+    ("h3-r2v", {"prompt": "p", "references": []}, "non-empty list"),
 ])
 def test_parameter_errors(client, pipeline, params, message):
     assert message in rejected(client, pipeline, params)
@@ -221,7 +223,69 @@ def test_r2v_cited_pictures_must_exist(client):
     sheets = [upload(client, 64, 64, c) for c in ("red", "green")]
     detail = rejected(client, "h3-r2v", {"prompt": "<Picture 1>, <Picture 3>", "references": sheets})
     assert "<Picture 3>" in detail
-    assert "1 to 9" in rejected(client, "h3-r2v", {"prompt": "p", "references": sheets * 5})
+    assert "at most 9 image" in rejected(client, "h3-r2v", {"prompt": "p", "references": sheets * 5})
+
+
+def media(client, tmp_path, kind, seconds=1):
+    """Upload a small clip (silent picture) or sound made by ffmpeg; its reference."""
+    path = tmp_path / ("clip.mp4" if kind == "video" else "sound.wav")
+    source = (["-f", "lavfi", "-i", f"color=c=blue:s=64x64:r=24:d={seconds}", "-c:v", "libx264", "-pix_fmt", "yuv420p"]
+              if kind == "video" else ["-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}"])
+    subprocess.run(["ffmpeg", "-v", "error", "-y", *source, str(path)], check=True)
+    resp = client.post("/api/inputs", content=path.read_bytes())
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["kind"] == kind
+    return resp.json()["ref"]
+
+
+needs_ffmpeg = pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
+
+
+@needs_ffmpeg
+def test_uploads_take_clips_and_sounds(client, tmp_path):
+    clip, sound = media(client, tmp_path, "video"), media(client, tmp_path, "audio")
+    assert clip.endswith(".mp4") and sound.endswith(".wav")
+    resp = client.post("/api/inputs", content=b"not a media file")
+    assert resp.status_code == 422 and "image, video or sound" in resp.json()["detail"]
+
+
+@needs_ffmpeg
+def test_r2v_sends_images_clips_and_sounds_in_order(client, engines, tmp_path):
+    sheet = upload(client, 192, 108)
+    clip, sound = media(client, tmp_path, "video"), media(client, tmp_path, "audio")
+    run(client, "h3-r2v", {"prompt": "<Subject 1> in <Picture 1>, moving as in <Video 1>, voice <Audio 1>",
+                           "references": [sheet, clip, sound], "preview": True})
+    (call,) = calls(engines)
+    assert [name for _, name in call["references"]] == [Path(r).name for r in (sheet, clip, sound)]
+
+
+@needs_ffmpeg
+def test_r2v_reference_limits_per_kind(client, tmp_path):
+    sheet = upload(client, 64, 64)
+    clip, sound = media(client, tmp_path, "video"), media(client, tmp_path, "audio")
+    assert "at most 3 video" in rejected(client, "h3-r2v", {"prompt": "p", "references": [clip] * 4})
+    assert "at most 3 audio" in rejected(client, "h3-r2v", {"prompt": "p", "references": [sheet] + [sound] * 4})
+    assert "at most 12" in rejected(client, "h3-r2v", {"prompt": "p", "references": [sheet] * 9 + [clip] * 3 + [sound]})
+    assert "image or video" in rejected(client, "h3-r2v", {"prompt": "p", "references": [sound]})
+    assert "<Video 2>" in rejected(client, "h3-r2v", {"prompt": "<Video 2>", "references": [sheet, clip]})
+    assert "<Audio 1>" in rejected(client, "h3-r2v", {"prompt": "<Audio 1>", "references": [sheet, clip]})
+
+
+def test_a_reference_clip_goes_silent_as_frames(monkeypatch, tmp_path):
+    """FastVideo would adopt a clip's soundtrack as an <Audio N> the prompt does not define."""
+    made = []
+    package = ModuleType("fastvideo.pipelines.basic.minimax_h3")
+    package.MiniMaxH3Reference = lambda **kw: made.append(kw) or kw
+    reference = ModuleType("fastvideo.pipelines.basic.minimax_h3.reference")
+    reference.decode_reference_video = lambda p: ("frames", 25.0, ("waveform", 48000))
+    for name, module in {"fastvideo": ModuleType("fastvideo"), "fastvideo.pipelines": ModuleType("x"),
+                         "fastvideo.pipelines.basic": ModuleType("x"), package.__name__: package,
+                         reference.__name__: reference}.items():
+        monkeypatch.setitem(sys.modules, name, module)
+    h3._reference(tmp_path / "clip.mp4")
+    h3._reference(tmp_path / "voice.wav")
+    assert made == [{"source": "frames", "media_type": "video", "fps": 25.0},
+                    {"source": str(tmp_path / "voice.wav"), "media_type": "audio"}]
 
 
 def test_nothing_renders_without_a_submission(client, engines):

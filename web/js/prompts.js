@@ -331,6 +331,40 @@
     return list.map((sub, i) => ({ ...sub, picture: i + 1, label: h3Subject(i + 1) }));
   }
 
+  // Clips and sounds as references (MiniMax's full-reference guide, FastVideo's
+  // presentation): images are <Picture N>, clips <Video N> and sounds <Audio N>, each
+  // kind numbered on its own in the order sent. A clip may give a subject (`source`
+  // is then its <Video N>) or only its camera movement and pacing; a sound is a
+  // voice, the music or the ambience, never a subject.
+  const H3_MEDIA_LABELS = { image: "Picture", video: "Video", audio: "Audio" };
+  const H3_MEDIA_ROLES = {
+    motion:   { def: s => `${s} is the camera-movement and pacing reference for the target video.`,
+                ret: s => `${s} (camera movement and pacing): weak_reference - only its camera movement, cuts, and rhythm guide the target video.` },
+    voice:    { def: (s, who, n) => `${s} is the voice-timbre reference for ${who} (S${n}).`,
+                ret: s => `${s}: reference - the speaker follows ${s}'s voice timbre and delivery without copying the original signal.`,
+                task: "audio reference" },
+    music:    { def: s => `${s} is the background music of the target video.`,
+                ret: s => `${s}: partially_copy - ${s} is reused as the audience-only score, under the scene's own sounds.`,
+                music: s => `${s} is directly reused as the audience-only score.`, task: "audio reuse" },
+    ambience: { def: s => `${s} is the ambience and sound-effects reference.`,
+                ret: s => `${s}: reference - the ambience and physical sounds follow ${s}'s texture without copying the signal.`,
+                sound: s => `Ambience and physical sounds follow the texture of ${s}.`, task: "audio reference" },
+  };
+  // `list` = [{media: "image" | "video" | "audio", kind, desc}] in the order sent. A
+  // subject kind (character, environment, reference) gets the next <Subject N>; a
+  // media role (motion, voice, music, ambience) keeps its own label.
+  function h3AssignRefs(list) {
+    const counts = { image: 0, video: 0, audio: 0 };
+    let subjects = 0;
+    return list.map(ref => {
+      const media = H3_MEDIA_LABELS[ref.media] ? ref.media : "image", n = ++counts[media];
+      const source = `<${H3_MEDIA_LABELS[media]} ${n}>`;
+      const subject = !H3_MEDIA_ROLES[ref.kind];
+      return { ...ref, media, source, ...(media === "image" ? { picture: n } : {}),
+               label: subject ? h3Subject(++subjects) : source };
+    });
+  }
+
   // One-line `summary`: the first sentence of the brief, bounded.
   function h3Summary(text) {
     const first = String(text || "").trim().split(/[.!?]/)[0].trim() || String(text || "").trim();
@@ -345,27 +379,41 @@
     return anchor + String(text || "").trim();
   }
 
-  // The six-field Ref2VA block. `subjects` comes from h3AssignSubjects.
+  // The six-field Ref2VA block. `subjects` comes from h3AssignSubjects, or from
+  // h3AssignRefs when clips or sounds are among the references.
   function buildH3RefPrompt({ subjects, summary, body }) {
-    const multiChar = subjects.filter(sub => sub.kind === "character").length > 1;
+    const chars = subjects.filter(sub => sub.kind === "character");
+    const multiChar = chars.length > 1;
+    let voices = 0;
     const defs = subjects.map(sub => {
+      const role = H3_MEDIA_ROLES[sub.kind];
+      if (role) {
+        if (sub.kind !== "voice") return role.def(sub.source);
+        // The n-th voice speaks for the n-th character, or for a narrator.
+        voices += 1;
+        return role.def(sub.source, chars[voices - 1]?.label || "the narrator", voices);
+      }
       const kind = H3_SUBJECT_KINDS[sub.kind] || H3_SUBJECT_KINDS.reference;
       const desc = (sub.desc || "").trim().replace(/[.\s]+$/, "");
       const lead = (multiChar && kind.leadMulti) || kind.lead;
-      return `${sub.label} ${lead} ${h3Picture(sub.picture)}${desc ? `, ${desc}` : ""}.`;
+      return `${sub.label} ${lead} ${sub.source || h3Picture(sub.picture)}${desc ? `, ${desc}` : ""}.`;
     }).join("\n");
     const ret = subjects.map(sub => {
+      if (H3_MEDIA_ROLES[sub.kind]) return H3_MEDIA_ROLES[sub.kind].ret(sub.source);
       const kind = H3_SUBJECT_KINDS[sub.kind] || H3_SUBJECT_KINDS.reference;
       return `${sub.label}: fully_preserved - ${kind.note}`;
     }).join("\n");
+    const roles = subjects.map(sub => ({ sub, role: H3_MEDIA_ROLES[sub.kind] })).filter(x => x.role);
+    const tasks = ["reference generation", ...new Set(roles.map(x => x.role.task).filter(Boolean))];
+    const layer = key => roles.filter(x => x.role[key]).map(x => x.role[key](x.sub.source)).join(" ");
     return [
       `subject_definitions:\n${defs || "—"}`,
-      `summary:\n[reference generation] ${summary}`,
+      `summary:\n[${tasks.join(" + ")}] ${summary}`,
       `retention_analysis:\n${ret || "—"}`,
       `detailed_description:\n${body}`,
       // The last two fields belong to the grammar: H3 expects them.
-      "overall_soundscape:\nNatural diegetic ambience consistent with the scene.",
-      "non_diegetic_music:\nNone."
+      `overall_soundscape:\n${layer("sound") || "Natural diegetic ambience consistent with the scene."}`,
+      `non_diegetic_music:\n${layer("music") || "None."}`
     ].join("\n\n");
   }
 
@@ -1095,7 +1143,7 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
     KEYFRAME_ANCHOR_SOLO, KEYFRAME_ANCHOR_DUAL, compileKeyframePrompt, stripKeyframeAnchor, ensureKeyframeAnchor,
     compileRelayKeyframePrompt, HOLD_MOTION,
     H3_PROMPT_CHARS, h3Subject, h3Picture, H3_TOKEN_STUB, H3_TOKEN_RE, h3TokensOut, h3TokensIn, h3NormalizeTokens,
-    h3AssignSubjects, h3Summary, h3RefBody, buildH3RefPrompt, capH3Prompt, h3VideoFrames, h3RealDuration,
+    h3AssignSubjects, h3AssignRefs, h3Summary, h3RefBody, buildH3RefPrompt, capH3Prompt, h3VideoFrames, h3RealDuration,
     h3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, h3CutBodyOf, restoreCameraClause,
     normalizeShotList, fallbackShots,
     SHEET_CLEAN, SHEET_TEMPLATES, SHEET_SIZE, sheetWords, charsheetPromptFrom, charsheetFromPhotoPrompt, locsheetPromptFrom,

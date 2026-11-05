@@ -48,7 +48,11 @@ curl -s --data-binary @photo.png localhost:8090/api/inputs
 # {"ref": "inputs/3f9a…c1.png", "width": 1280, "height": 720}
 ```
 
-The body is the raw image (PNG, JPEG or WebP, 50 MB at most). Uploads are stored under a content
+The body is the raw image (PNG, JPEG or WebP, 50 MB at most). A clip (MP4, MOV, WebM) or a
+sound (WAV, MP3, M4A, FLAC, Ogg), 200 MB at most, is accepted too, for the references of
+`h3-r2v` ([H3.md](H3.md)): ffprobe reads it, and the answer is `{"ref", "kind"}` (`kind` is
+`image`, `video` or `audio`; an image's answer also has its size). Other engines refuse a
+reference that is not an image. Uploads are stored under a content
 hash in `<data>/input/`. A **reference** is the file's URL path without the leading slash:
 `inputs/<name>` for an upload, `outputs/<path>` for a render (a job's `outputs` are references).
 A shot can thus use the sheets rendered by earlier jobs directly. References are checked when the
