@@ -98,7 +98,8 @@ to it.
   project saved with the 2509 storyboard resumes on Qwen Image 2.1.
 - No cloud generation (OpenAI, Gemini).
 - No Krea 2 LoRA, megapixel or turbo/steps controls; H3 LoRAs are uploaded files.
-- Reference to video takes image references only (no video or audio references).
+- The Studio's reference to video takes image references only; clips and sounds are added on
+  the assistant's card ([ASSISTANT.md](ASSISTANT.md)).
 - In the director, a reference-to-video clip plays under its button once rendered, and the
   button becomes "Regenerate the video": a new job on the same sheets, with the next seed.
 - The multi-image sequence uses the H3 video instruction (1.4 used LTX there).

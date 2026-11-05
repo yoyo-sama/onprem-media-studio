@@ -8,7 +8,7 @@ conception : [adr/](adr/).
 ```
 navigateur ──HTTP/WS──> studio (FastAPI, :8090)
                           ├─ /api/models   catalogue + téléchargement (huggingface_hub)
-                          ├─ /api/inputs   envoi d'image → référence pour les jobs
+                          ├─ /api/inputs   envoi d'image, de vidéo ou de son → référence pour les jobs
                           ├─ /api/jobs     file → un worker GPU → pipelines (diffusers, FastVideo)
                           ├─ /api/llm      llama-server (Gemma 4 26B-A4B, 127.0.0.1:8095)
                           ├─ /api/chat     assistant de création : rôles, conversations, cartes

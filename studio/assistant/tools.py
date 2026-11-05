@@ -133,15 +133,18 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
          "ratio": RATIO},
         ["brief"]),
     "reference_video": (
-        "Card: one MiniMax H3 clip that keeps characters, places and objects from reference images; the user "
-        "renders it from the card or opens the step-by-step director.",
+        "Card: one MiniMax H3 clip that keeps characters, places and objects from reference images (and clips); "
+        "the user can add clips and sounds on the card, renders it from the card or opens the step-by-step director.",
         {"brief": _str("What happens in the clip, in English, one continuous shot. Name each reference by its id "
                        "alone, as the subject of the sentence (\"A1 rides a motorcycle along a jungle track, A2 "
                        "charging behind him\"), never \"the man from A1\": each id becomes that reference's "
                        "<Subject N> token in the H3 prompt"),
-         "references": _ids("Reference images, main character first, " + IMAGE_ID, 0, 9),
-         "kinds": {"type": "array", "items": {"type": "string"}, "maxItems": 9,
-                   "description": "Role of each reference, in the same order: character, setting or object"},
+         # 12: the card also holds the clips and sounds the user adds (9 images, 3 clips, 3 sounds).
+         "references": _ids("Reference images (at most 9), main character first, or clips a card made, "
+                            + IMAGE_ID, 0, 12),
+         "kinds": {"type": "array", "items": {"type": "string"}, "maxItems": 12,
+                   "description": "Role of each reference, in the same order: character, setting or object; "
+                                  "a clip may also be motion (only its camera movement and pacing)"},
          "duration": DURATION, "ratio": RATIO},
         ["brief"]),
 }
@@ -168,8 +171,10 @@ ENGINE_NOTES = {
                   "the user approves each step. Sheets already in the conversation go in subject_sheets and "
                   "setting_sheet: the director keeps them and draws only the missing ones.",
     "reference_video": "reference_video: H3 keeps characters, places and objects from up to 9 reference images "
-                       "(each named by its id in the brief, with its kind); rendered from the card, or through the "
-                       "director, which draws sheets first.",
+                       "(each named by its id in the brief, with its kind); a clip a card made can join them, as a "
+                       "subject or for its camera movement, and the user can add clips and sounds (a voice, music, "
+                       "ambience) on the card; rendered from the card, or through the director, which draws sheets "
+                       "first and takes the images only.",
 }
 
 

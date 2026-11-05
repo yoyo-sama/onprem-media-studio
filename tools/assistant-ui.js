@@ -64,7 +64,11 @@ const CARDS = [
       return json(done[jid], 201);
     }
     if (p.startsWith("/api/jobs/")) return json(done[p.split("/").pop()] || {});
-    if (p === "/api/inputs") return json({ ref: "inputs/att.png" }, 201);
+    if (p === "/api/inputs") {
+      // The test's clip and sound are tagged in their first bytes.
+      const head = (req.postDataBuffer() || Buffer.alloc(0)).subarray(0, 5).toString();
+      return json({ ref: head === "VIDEO" ? "inputs/clip.mp4" : head === "AUDIO" ? "inputs/voice.wav" : "inputs/att.png" }, 201);
+    }
     if (p === "/api/loras") return json({ h3: [] });
     if (p === "/api/instructions") return json({});
     if (p === "/api/roles") return json(ROLES);
@@ -318,16 +322,33 @@ const CARDS = [
   await page.setInputFiles(`${c10} .cc-refs input[type=file]`, { name: "jungle.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
   await page.waitForFunction(sel => document.querySelectorAll(`${sel} .cc-refs figure`).length === 2, c10);
   await page.selectOption(`${c10} .cc-refs figure >> nth=1 >> select`, "setting");
+  // A clip and a sound: a clip is <Video 1> for its camera movement, or a subject; a sound is <Audio 1>.
+  await page.setInputFiles(`${c10} .cc-refs input[type=file]`, [
+    { name: "ride.mp4", mimeType: "video/mp4", buffer: Buffer.from("VIDEO clip") },
+    { name: "voice.wav", mimeType: "audio/wav", buffer: Buffer.from("AUDIO sound") }]);
+  await page.waitForFunction(sel => document.querySelectorAll(`${sel} .cc-refs figure`).length === 4, c10);
+  const caps10 = () => page.$$eval(`${c10} .cc-refs figcaption`, f => f.map(x => x.textContent));
+  let caps = await caps10();
+  check(caps[2] === "<Video 1> · clip.mp4" && caps[3] === "<Audio 1> · voice.wav", "C10: clip and sound labels: " + caps);
+  check(await page.$$eval(`${c10} .cc-refs figure >> nth=3 >> audio`, a => a.length) === 1, "C10: the sound has no player");
+  await page.selectOption(`${c10} .cc-refs figure >> nth=2 >> select`, "character");
+  caps = await caps10();
+  check(caps[2] === "<Subject 3> · clip.mp4", "C10: a clip as a character is not <Subject 3>: " + caps[2]);
+  await page.selectOption(`${c10} .cc-refs figure >> nth=2 >> select`, "motion");
   if (SHOTS) await (await page.$(c10)).screenshot({ path: `${SHOTS}/r2v-card-1440.png` });
   const before10 = jobs.length;
   check(jobs.length === before10, "C10: editing the references submitted a job");
   await page.click(`${c10} .cc-actions .primary-btn`);
   await page.waitForTimeout(2500);  // Gemma's vision (stubbed out, 1.5 s) describes each reference first
   const j10 = jobs[before10];
-  check(jobs.length === before10 + 1 && j10.pipeline === "h3-r2v" && j10.params.references.length === 2
-    && j10.params.references[0] === "inputs/att.png", "C10: not one h3-r2v job with both references: " + JSON.stringify(j10));
+  check(jobs.length === before10 + 1 && j10.pipeline === "h3-r2v"
+    && JSON.stringify(j10.params.references) === JSON.stringify(["inputs/att.png", "inputs/att.png", "inputs/clip.mp4", "inputs/voice.wav"]),
+    "C10: not one h3-r2v job with the four references in order: " + JSON.stringify(j10));
   const p10 = j10?.params.prompt || "";
-  check(p10.startsWith("subject_definitions:\n<Subject 1> is the main character in <Picture 1>.\n<Subject 2> is the location as defined by <Picture 2>.")
+  check(p10.startsWith("subject_definitions:\n<Subject 1> is the main character in <Picture 1>.\n<Subject 2> is the location as defined by <Picture 2>.\n"
+      + "<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n\n"
+      + "summary:\n[reference generation + audio reference] ")
+    && p10.includes("\n<Video 1> (camera movement and pacing): weak_reference - ") && p10.includes("\n<Audio 1>: reference - ")
     && p10.includes("detailed_description:\n<Subject 1> is in <Subject 2>. <Subject 1> rides a motorcycle") && !p10.includes("A1"),
     "C10: prompt not in the H3 grammar: " + p10);
   check(j10?.params.duration === 5 && j10.params.aspect === "16:9", "C10: settings");

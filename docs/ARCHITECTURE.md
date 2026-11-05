@@ -7,7 +7,7 @@ French version: [fr/ARCHITECTURE.md](fr/ARCHITECTURE.md). Design decisions: [adr
 ```
 browser ──HTTP/WS──> studio (FastAPI, :8090)
                        ├─ /api/models   catalog + download (huggingface_hub)
-                       ├─ /api/inputs   image upload → reference for jobs
+                       ├─ /api/inputs   image, clip or sound upload → reference for jobs
                        ├─ /api/jobs     queue → one GPU worker → pipelines (diffusers, FastVideo)
                        ├─ /api/llm      llama-server (Gemma 4 26B-A4B, 127.0.0.1:8095)
                        ├─ /api/chat     creative assistant: roles, conversations, cards

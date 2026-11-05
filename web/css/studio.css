@@ -1870,7 +1870,7 @@ body.library-open .assistant-chat { margin: 0; }
 .cc-images > span { flex: 1 0 100%; font-size: 11px; color: var(--text-2); }
 .cc-thumb { position: relative; margin: 0; width: 92px; display: flex; flex-direction: column; gap: 3px; }
 .cc-outputs .cc-thumb { width: 140px; }
-.cc-thumb img, .cc-thumb video, .cc-thumb .cc-missing {
+.cc-thumb img, .cc-thumb video, .cc-thumb .cc-missing, .cc-thumb .cc-sound {
   width: 100%;
   aspect-ratio: 1;
   object-fit: cover;
@@ -1880,6 +1880,10 @@ body.library-open .assistant-chat { margin: 0; }
 }
 .cc-thumb video { cursor: default; }
 .cc-thumb .cc-missing { border: 1px dashed var(--border-dark); cursor: default; }
+/* A sound: a square like the images, a note in it and the player at its foot. */
+.cc-thumb .cc-sound { position: relative; display: flex; align-items: center; justify-content: center; cursor: default;
+  font-size: 32px; color: var(--text-2); }
+.cc-thumb .cc-sound audio { position: absolute; left: 4px; right: 4px; bottom: 4px; width: calc(100% - 8px); height: 32px; }
 .cc-thumb figcaption { font-size: 11px; color: var(--text-2); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cc-thumb .cc-use { padding: 5px 8px; font-size: 11px; }
 .cc-refs .cc-thumb { width: 124px; }

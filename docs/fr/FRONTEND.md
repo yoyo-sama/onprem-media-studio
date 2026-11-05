@@ -99,7 +99,8 @@ ajoute une carte Import d'image reliée à elle.
   Image 2.1.
 - Plus de génération cloud (OpenAI, Gemini).
 - Ni LoRA Krea 2, ni mégapixels, ni turbo/steps ; les LoRA H3 sont des fichiers envoyés.
-- La référence vers vidéo ne prend que des images (ni vidéo ni audio de référence).
+- La référence vers vidéo du Studio ne prend que des images ; vidéos et sons s'ajoutent sur la
+  carte de l'assistant ([ASSISTANT.md](ASSISTANT.md)).
 - Dans le réalisateur, un clip de référence vers vidéo se lit sous son bouton une fois rendu, et
   le bouton devient « Régénérer la vidéo » : un nouveau job sur les mêmes planches, avec le seed
   suivant.

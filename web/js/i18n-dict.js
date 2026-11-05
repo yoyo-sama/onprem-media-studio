@@ -3657,15 +3657,45 @@ export const DICT = {
     es: "Regenerar el vídeo",
     de: "Video neu generieren",
   },
-  "Renders the clip now from these references, each one as <Subject N> in its order": {
-    fr: "Rend le clip tout de suite à partir de ces références, chacune devenant <Subject N> dans son ordre",
-    es: "Renderiza el clip ahora a partir de estas referencias, cada una como <Subject N> en su orden",
-    de: "Rendert den Clip sofort aus diesen Referenzen, jede als <Subject N> in ihrer Reihenfolge",
+  "Renders the clip now from these references, each one under its H3 label": {
+    fr: "Rend le clip tout de suite à partir de ces références, chacune sous son repère H3",
+    es: "Renderiza el clip ahora a partir de estas referencias, cada una con su etiqueta H3",
+    de: "Rendert den Clip sofort aus diesen Referenzen, jede unter ihrer H3-Marke",
   },
-  "References ({n}/{max}): each one is <Subject N> in this order": {
-    fr: "Références ({n}/{max}) : chacune est <Subject N> dans cet ordre",
-    es: "Referencias ({n}/{max}): cada una es <Subject N> en este orden",
-    de: "Referenzen ({n}/{max}): Jede ist <Subject N> in dieser Reihenfolge",
+  "References ({n}/{max}): up to 9 images, 3 clips and 3 sounds, each under its H3 label": {
+    fr: "Références ({n}/{max}) : jusqu'à 9 images, 3 vidéos et 3 sons, chacun sous son repère H3",
+    es: "Referencias ({n}/{max}): hasta 9 imágenes, 3 vídeos y 3 sonidos, cada uno con su etiqueta H3",
+    de: "Referenzen ({n}/{max}): bis zu 9 Bilder, 3 Clips und 3 Töne, jeweils unter ihrer H3-Marke",
+  },
+  "Camera movement and pacing": {
+    fr: "Mouvement de caméra et rythme",
+    es: "Movimiento de cámara y ritmo",
+    de: "Kamerabewegung und Rhythmus",
+  },
+  "Voice of a character": {
+    fr: "Voix d'un personnage",
+    es: "Voz de un personaje",
+    de: "Stimme einer Figur",
+  },
+  "Music": {
+    fr: "Musique",
+    es: "Música",
+    de: "Musik",
+  },
+  "Ambience and sounds": {
+    fr: "Ambiance et bruitages",
+    es: "Ambiente y efectos de sonido",
+    de: "Atmosphäre und Geräusche",
+  },
+  "At most 9 images, 3 clips and 3 sounds here, 12 in all: the extra files were ignored.": {
+    fr: "9 images, 3 vidéos et 3 sons au plus ici, 12 en tout : les autres fichiers ont été ignorés.",
+    es: "Aquí caben como máximo 9 imágenes, 3 vídeos y 3 sonidos, 12 en total: los demás archivos se han ignorado.",
+    de: "Hier höchstens 9 Bilder, 3 Clips und 3 Töne, insgesamt 12: Die übrigen Dateien wurden ignoriert.",
+  },
+  "The Studio takes image references only: the clips and sounds stay on the card, for “Generate the video”.": {
+    fr: "Le Studio ne prend que les images en référence : les vidéos et les sons restent sur la carte, pour « Générer la vidéo ».",
+    es: "El Studio solo admite imágenes como referencia: los vídeos y los sonidos se quedan en la tarjeta, para «Generar el vídeo».",
+    de: "Das Studio nimmt nur Bilder als Referenz: Clips und Töne bleiben auf der Karte, für „Video generieren“.",
   },
   "Object or other": {
     fr: "Objet ou autre",

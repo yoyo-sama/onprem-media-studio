@@ -180,7 +180,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
 
     @app.post("/api/inputs", status_code=201)
     async def upload_input(request: Request):
-        """Raw image bytes in the body; the answer's `ref` goes in a job's image fields."""
+        """Raw image, video or sound bytes in the body; the answer's `ref` (and `kind`) goes in a job's file fields."""
         try:
             return files.save_input(await request.body())
         except ValueError as exc:
