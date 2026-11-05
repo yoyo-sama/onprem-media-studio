@@ -95,11 +95,11 @@ l'image 1 sauf si `width` et `height` sont donnés tous les deux. Le prompt cite
 
 ## Vitesse
 
-Les poids sont lus d'un bloc, jamais projetés en mémoire, et le transformer passe par
-`torch.compile` ; mesures et bancs dans [H3.md](H3.md#mémoire-et-annulation) et
-[LESSONS.md](LESSONS.md) n°42–43. Sur le GB10 en 1920×1088 : Krea 2 environ 41 s par image,
-Qwen Image 2.1 environ 60 s, une fois compilé (le premier rendu à une nouvelle taille ajoute
-environ 20 s).
+Les poids sont lus d'un bloc, jamais projetés en mémoire, et le transformer de Qwen Image 2.1
+passe par `torch.compile` ; mesures et bancs dans [H3.md](H3.md#mémoire-et-annulation) et
+[LESSONS.md](LESSONS.md) n°42–43. Chargements sur le GB10, cache disque vidé : Krea 2 34 s
+(253 s avant). Rendus en 1280×720 : Krea 2 environ 20 s par image ; Qwen Image 2.1 en 1344×768
+environ 40 s une fois compilé (le premier rendu à une nouvelle taille ajoute environ 15 s).
 
 ## Qualification
 

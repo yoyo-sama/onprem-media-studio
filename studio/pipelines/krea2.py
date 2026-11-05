@@ -53,7 +53,9 @@ class Krea2TextToImage(Pipeline):
 
 def _build(path):
     from diffusers import Krea2Pipeline
-    return common.compile_transformer(common.from_pretrained(Krea2Pipeline, path))
+    # Not compiled: on the GB10 the first render at each size and image count paid about
+    # 33 s of compilation, against 0.7 s saved per step (8 steps) after it.
+    return common.from_pretrained(Krea2Pipeline, path)
 
 
 register(Krea2TextToImage())

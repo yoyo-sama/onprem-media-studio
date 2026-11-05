@@ -147,11 +147,13 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     `common.from_pretrained` charge lui-même les encodeurs de texte transformers avec le leur, et
     l'itérateur de poids de FastVideo reçoit un lecteur de fichier entier (`h3_runtime.WholeFile`)
     à la place de `safe_open`. (GB10, 2026-11-05)
-43. **Pas de FP8 torchao sur le GB10 ; torch.compile est l'accélération sûre.** Des poids et
-    activations dynamiques FP8 (échelles par ligne) prenaient 1 800 s par étape de Krea 2 au lieu
-    de 5,7. `torch.compile` du transformer, en mode par défaut, a fait gagner 12 % par étape sur
-    Krea 2 et 22 % sur Qwen Image 2.1 en 1920×1088, pour environ 20 s de compilation au premier
-    rendu de chaque taille. (GB10, 2026-11-05)
+43. **Pas de FP8 torchao sur le GB10 ; torch.compile seulement là où il est rentable.** Des poids
+    et activations dynamiques FP8 (échelles par ligne) prenaient 1 800 s par étape de Krea 2 au
+    lieu de 5,7. `torch.compile` du transformer, en mode par défaut, a fait gagner 22 % par étape
+    sur Qwen Image 2.1 en 1920×1088 (16 s par image) pour environ 15 s de compilation au premier
+    rendu de chaque taille dans un processus : gardé. Sur Krea 2, il faisait gagner 12 % (6 s par
+    image de 8 étapes) pour environ 33 s par nouvelle taille ou nombre d'images : écarté. (GB10,
+    2026-11-05)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

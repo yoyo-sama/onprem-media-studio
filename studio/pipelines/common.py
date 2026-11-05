@@ -133,9 +133,10 @@ def from_pretrained(cls, path: Path):
 
 def compile_transformer(pipe):
     """torch.compile of the denoiser, default mode: no CUDA graphs, whose state is per
-    thread (LESSONS #37). On the GB10 a step took 5.0 s instead of 5.7 (Krea 2) and 2.3 s
-    instead of 2.95 (Qwen Image 2.1) at 1920×1088; the first render at a new size pays
-    the compilation (about 20 s). Compiled kernels are kept on the data volume."""
+    thread (LESSONS #37). Used by Qwen Image 2.1 only (LESSONS #43): on the GB10 a step
+    took 2.3 s instead of 2.95 at 1920×1088, 16 s saved per image of 25 steps, for about
+    15 s of compilation on the first render at each size in a process. Compiled kernels
+    are kept on the data volume."""
     from ..config import Settings
     os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", str(Settings().data_dir / "cache" / "inductor"))
     pipe.transformer.compile()
