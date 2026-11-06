@@ -307,9 +307,12 @@ class H3TextToVideo(H3Pipeline):
         engine = _engine(ctx, model_dir, False, prec, params["loras"])
         ctx.progress(0.1, f"Rendering {params['width']}×{params['height']}, {params['frames']} frames")
         path = _video_path(ctx)
+        began = time.time()
         result = engine.generate(ctx, prompt=params["prompt"], width=params["width"], height=params["height"],
                                  frames=params["frames"], steps=contract(model_dir)["num_inference_steps"],
                                  seed=params["seed"], output=path, pil_image=pil_image, last_image=last_image)
+        print(f"render: {self.id} {params['width']}×{params['height']}, {params['frames']} frames "
+              f"in {time.time() - began:.1f} s", flush=True)
         return _outputs(result, path, ctx, params)
 
 
@@ -380,26 +383,39 @@ class H3ReferenceToVideo(H3Pipeline):
         # FastVideo resizes reference images to a 2048-pixel short edge, which is
         # what ref_image_size=max did in the validated workflow. Clips are decoded
         # once for both passes.
+        began = time.time()
         refs = [_reference(ctx.files.resolve(r)) for r in params["references"]]
         w1, h1, preview = params["pass1_width"], params["pass1_height"], params["preview"]
+        what = f"{params['width']}×{params['height']}, {params['frames']} frames, {len(refs)} reference(s)"
+        marks = [time.time()]
         path = _video_path(ctx)
         ctx.progress(0.1, f"Pass 1: {w1}×{h1}, {params['frames']} frames")
         with engine.overrides(latent_output=not preview):
             first = engine.generate(ctx, prompt=params["prompt"], width=w1, height=h1, frames=params["frames"],
                                     steps=terms["num_inference_steps"], seed=params["seed"], output=path,
                                     save=preview, references=refs)
+        marks.append(time.time())
         if preview:
+            print(f"render: {self.id} {what}, preview in {marks[-1] - began:.1f} s: "
+                  f"references {marks[0] - began:.1f} s, pass 1 {marks[1] - marks[0]:.1f} s", flush=True)
             return _outputs(first, path, ctx, params)
 
         ctx.progress(0.5, f"Latent upscale to {params['width']}×{params['height']}")
         latents, audio = refine_inputs(first.samples, first.audio, model_dir, paths[UPSCALER] / UPSCALER_FILE,
                                        terms, (w1, h1), params["seed"])
         indices = pdd_indices(REFINE_SIGMAS, terms["video_scheduler_shift"], terms["pdd_steps"], terms["grid_max_t"])
+        marks.append(time.time())
         ctx.progress(0.6, f"Pass 2: {len(indices) - 1} refine steps at {params['width']}×{params['height']}")
         with engine.overrides(pdd_step_indices=indices):
             second = engine.generate(ctx, prompt=params["prompt"], width=params["width"], height=params["height"],
                                      frames=params["frames"], steps=len(indices) - 1, seed=params["seed"],
                                      output=path, references=refs, latents=latents, audio_latents=audio)
+        marks.append(time.time())
+        # Each pass includes FastVideo's text and reference encoding; pass 2 also the VAE
+        # decoding and the MP4 (the first pass ends on latents).
+        print(f"render: {self.id} {what} in {marks[-1] - began:.1f} s: references {marks[0] - began:.1f} s, "
+              f"pass 1 {marks[1] - marks[0]:.1f} s, upscale {marks[2] - marks[1]:.1f} s, "
+              f"pass 2 and decoding {marks[3] - marks[2]:.1f} s", flush=True)
         return _outputs(second, path, ctx, params)
 
 
