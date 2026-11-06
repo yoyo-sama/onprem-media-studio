@@ -89,7 +89,7 @@
       "allow": ["2xNomosUni_span_multijpg.safetensors"],
       "gated": false,
       "license": "cc-by-4.0 (weights by Philip Hofmann, credited in NOTICE); SPAN network code Apache-2.0 through spandrel (MIT)",
-      "qualified": false
+      "qualified": true
     },
     {
       "id": "h3-latent-upscaler",

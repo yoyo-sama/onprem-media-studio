@@ -147,8 +147,8 @@ overall), the sound kept.
 
 The script posts one job per source as the click does and writes `qualify-upscale.json` (each
 source next to its copy); the log line gives the network's own time and, for a video, frames per
-second. `span-2x-nomosuni` stays `"qualified": false` until the copies are compared with their
-sources at 100 % on the GB10.
+second. The project owner compared the four copies with their sources at 100 % on 2026-11-06
+and accepted them: `span-2x-nomosuni` is `"qualified": true`.
 
 ## Qualification
 

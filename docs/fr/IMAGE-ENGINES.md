@@ -155,8 +155,8 @@ au total), son gardé.
 
 Le script poste un job par source comme le fait le clic et écrit `qualify-upscale.json` (chaque
 source à côté de sa copie) ; la ligne de journal donne le temps du réseau seul et, pour une
-vidéo, les images par seconde. `span-2x-nomosuni` reste `"qualified": false` tant que les copies
-n'ont pas été comparées à leurs sources à 100 % sur le GB10.
+vidéo, les images par seconde. Le responsable du projet a comparé les quatre copies à leurs
+sources à 100 % le 2026-11-06 et les a acceptées : `span-2x-nomosuni` est `"qualified": true`.
 
 ## Qualification
 
