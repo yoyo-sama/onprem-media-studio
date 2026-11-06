@@ -62,7 +62,7 @@ const CARD_UI = {
               enrich: () => "campaign" },
   storyboard: { title: L("Storyboard"), text: "brief", images: ["subject_sheets", "setting_sheet"], fields: ["shots", "duration", "ratio"],
                 form: true, director: true },
-  reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio"],
+  reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio", "music"],
                      form: true, director: true, video: true },
 };
 // Reference to video straight from the card. Images, clips and sounds, in one ordered
@@ -92,6 +92,7 @@ const FIELDS = {
   variants: { label: L("Variants"), min: 1, max: 4 },
   duration: { label: L("Video length (s)"), min: 5, max: 15 },
   shots: { label: L("Number of shots"), min: 4, max: 16 },
+  music: { label: L("Music"), text: true },
 };
 const STATUS = {
   proposed: ["", L("Proposed")], running: ["running", L("Running…")], done: ["done", L("Done")],
@@ -240,6 +241,10 @@ function renderCard(card, live = false) {
         input = document.createElement("select");
         fillSelect(input, def.options(), String(a[key]));
         input.addEventListener("change", () => setDraft(card, key, input.value));
+      } else if (def.text) {
+        input = document.createElement("input");
+        input.type = "text"; input.value = a[key] || ""; input.spellcheck = false;
+        input.addEventListener("input", () => setDraft(card, key, input.value));
       } else {
         input = document.createElement("input");
         input.type = "number"; input.min = def.min; input.max = def.max; input.value = a[key];
@@ -425,7 +430,8 @@ async function r2vCardPrompt(a) {
   a.references.forEach((id, i) => {
     if (!id.includes("/")) text = text.replace(new RegExp(`(?<![\\w#])${esc(id)}(?![\\w#])`, "g"), subjects[i].label);
   });
-  return F.capH3(P.buildH3RefPrompt({ subjects, summary: P.h3Summary(text), body: P.h3RefBody(subjects, text) }));
+  return F.capH3(P.buildH3RefPrompt({ subjects, summary: P.h3Summary(text), body: P.h3RefBody(subjects, text),
+                                       music: a.music }));
 }
 
 // ── Progress of a card ────────────────────────────────────────────────────────

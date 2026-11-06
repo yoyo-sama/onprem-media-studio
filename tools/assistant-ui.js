@@ -38,7 +38,7 @@ const CARDS = [
   card("C7", "storyboard", { brief: "A dwarf and an elf pick mushrooms", subject_sheets: ["C1#1", "A1"], setting_sheet: ["C1#1"],
                              shots: 4, duration: 5, ratio: "16:9" }),
   card("C10", "reference_video", { brief: "A1 rides a motorcycle along a jungle track, an elephant charging behind him.",
-                                  references: ["A1"], kinds: ["character"], duration: 5, ratio: "16:9" }),
+                                  references: ["A1"], kinds: ["character"], music: "A slow romantic piano score", duration: 5, ratio: "16:9" }),
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
@@ -349,7 +349,8 @@ const CARDS = [
       + "<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n\n"
       + "summary:\n[reference generation + audio reference] ")
     && p10.includes("\n<Video 1> (camera movement and pacing): weak_reference - ") && p10.includes("\n<Audio 1>: reference - ")
-    && p10.includes("detailed_description:\n<Subject 1> is in <Subject 2>. <Subject 1> rides a motorcycle") && !p10.includes("A1"),
+    && p10.includes("detailed_description:\n<Subject 1> is in <Subject 2>. <Subject 1> rides a motorcycle") && !p10.includes("A1")
+    && p10.endsWith("non_diegetic_music:\nA slow romantic piano score"),
     "C10: prompt not in the H3 grammar: " + p10);
   check(j10?.params.duration === 5 && j10.params.aspect === "16:9", "C10: settings");
   // The same card opened in the Studio: its clip and sound go to the reference list with

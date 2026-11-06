@@ -145,6 +145,8 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
          "kinds": {"type": "array", "items": {"type": "string"}, "maxItems": 12,
                    "description": "Role of each reference, in the same order: character, setting or object; "
                                   "a clip may also be motion (only its camera movement and pacing)"},
+         "music": _str("Background music the user asked for, in English (\"a slow romantic piano and strings "
+                       "score\"); leave it out when they asked for none"),
          "duration": DURATION, "ratio": RATIO},
         ["brief"]),
 }

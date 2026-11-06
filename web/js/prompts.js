@@ -380,8 +380,9 @@
   }
 
   // The six-field Ref2VA block. `subjects` comes from h3AssignSubjects, or from
-  // h3AssignRefs when clips or sounds are among the references.
-  function buildH3RefPrompt({ subjects, summary, body }) {
+  // h3AssignRefs when clips or sounds are among the references. `music` (optional):
+  // the score asked for in words, for non_diegetic_music.
+  function buildH3RefPrompt({ subjects, summary, body, music }) {
     const chars = subjects.filter(sub => sub.kind === "character");
     const multiChar = chars.length > 1;
     let voices = 0;
@@ -413,7 +414,7 @@
       `detailed_description:\n${body}`,
       // The last two fields belong to the grammar: H3 expects them.
       `overall_soundscape:\n${layer("sound") || "Natural diegetic ambience consistent with the scene."}`,
-      `non_diegetic_music:\n${layer("music") || "None."}`
+      `non_diegetic_music:\n${[layer("music"), String(music || "").trim()].filter(Boolean).join(" ") || "None."}`
     ].join("\n\n");
   }
 
