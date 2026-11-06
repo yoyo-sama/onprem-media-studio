@@ -53,9 +53,10 @@ planches, liste de plans, choix du rôle), cela faisait des milliers de jetons c
 chat faisaient pareil : 8 444 jetons cachés (150 s) pour une réponse de trois lignes, et une fois
 une boucle qui a rempli tout le contexte (29 220 jetons, 528 s) sans rien écrire. Les
 compilateurs envoient `enable_thinking: false`. Le chat garde la réflexion, utile au choix des
-outils, dans un budget : llama-server démarre avec `--reasoning-budget` `CHAT_THINKING_BUDGET`
-(2 048 jetons, environ 40 s, `studio/llm.py`), y clôt la réflexion par un court message, et le
-modèle écrit sa réponse. Une réponse entière du chat, réflexion comprise, est plafonnée à
+outils, dans un budget de `CHAT_THINKING_BUDGET` jetons (2 048, environ 40 s, `studio/llm.py`).
+Au-delà, le studio arrête cette génération et redemande la réponse sans réflexion
+(`llm: chat thought … asked again without thinking` dans le journal). llama.cpp b11982 n'a pas
+d'option `--reasoning-budget`, c'est donc le studio qui tient le budget. Une réponse entière du chat, réflexion comprise, est plafonnée à
 `CHAT_MAX_TOKENS` (2 048 + 4 096). Une réponse coupée au plafond, ou tout autre échec d'un
 tour, reste dans la conversation comme une erreur sous le nom du rôle, visible après un
 rechargement ; ce message n'est pas renvoyé au modèle.
