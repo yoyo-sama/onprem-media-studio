@@ -103,9 +103,10 @@ def test_reference_video_keeps_twelve_references_and_their_kinds_in_order():
     refs = [f"A{n}" for n in range(1, 10)] + ["C2#1", "inputs/a.mp4", "inputs/b.wav"]
     kinds = ["character", "object", "object", "setting", "object", "object", "object", "object", "character",
              "motion", "character", "voice"]
-    args, warnings = T.normalize("reference_video", {"brief": "A1 runs", "references": refs, "kinds": kinds},
-                                 lambda r: True)
+    args, warnings = T.normalize("reference_video", {"brief": "A1 runs", "references": refs, "kinds": kinds,
+                                                     "music": "a slow piano score"}, lambda r: True)
     assert args["references"] == refs and args["kinds"] == kinds and not warnings
+    assert args["music"] == "a slow piano score"
 
 
 def test_normalize_flags_unknown_images_and_refuses_bad_calls():
