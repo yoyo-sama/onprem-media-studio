@@ -48,8 +48,12 @@ each image or video render a `render:` line (encoding, steps, decoding; passes f
 
 llama-server lets Gemma 4 think by default. For the prompt compilers (enrichment, sheets, shot
 list, role routing) that meant thousands of hidden tokens per call: 44 to 81 s measured on the
-GB10 for answers of a few hundred tokens. Those calls send `enable_thinking: false`; the chat
-turns keep thinking, which helps choosing the tools.
+GB10 for answers of a few hundred tokens. The chat turns did the same: 8 444 hidden tokens (150 s)
+for a three-line answer, and once a loop that filled the whole context (29 220 tokens, 528 s)
+without writing anything. Every call now sends `enable_thinking: false`, and a chat answer is
+capped at `CHAT_MAX_TOKENS` (4 096, `studio/llm.py`). An answer cut at the cap, or any other
+failure of a turn, is kept in the conversation as an error under the role's name, so it shows
+after a reload; such a message is not sent back to the model.
 
 ## Roles
 

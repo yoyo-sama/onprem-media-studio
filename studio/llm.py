@@ -26,6 +26,9 @@ LLM_FILES = {
 # Room for the assistant's instructions, tools and conversation history; one slot,
 # so concurrent requests queue instead of splitting the context.
 CTX_SIZE = 32768
+# Longest answer of one chat turn. A turn left without a cap once thought in a loop
+# until the context was full (29 220 tokens, 528 s on the GB10) and showed nothing.
+CHAT_MAX_TOKENS = 4096
 
 
 class LlmError(RuntimeError):
@@ -137,13 +140,17 @@ class LlamaServer:
                temperature: float = 0.6) -> Iterator[tuple[str, object]]:
         """A chat completion, streamed: ("text", chunk) as the answer is written, then
         ("tool", {"id", "name", "arguments"}) for each tool call once complete.
-        Closing the iterator closes the connection, which stops the generation."""
+        Closing the iterator closes the connection, which stops the generation.
+        An answer cut at CHAT_MAX_TOKENS raises LlmError once its text has been yielded."""
         self.start()
-        body = {"messages": messages, "temperature": temperature, "stream": True}
+        # Without thinking, like the compile calls: with it, Gemma 4 wrote 8 000 hidden
+        # tokens (150 s) for a three-line answer, and once looped until the context was full.
+        body = {"messages": messages, "temperature": temperature, "stream": True,
+                "max_tokens": CHAT_MAX_TOKENS, "chat_template_kwargs": {"enable_thinking": False}}
         if tools:
             body["tools"] = tools
         calls: dict[int, dict] = {}
-        began, timings = time.time(), None
+        began, timings, finish = time.time(), None, None
         with httpx.stream("POST", f"{self.url}/v1/chat/completions", json=body, timeout=300) as resp:
             if resp.status_code != 200:
                 resp.read()
@@ -157,7 +164,9 @@ class LlamaServer:
                 try:
                     chunk = json.loads(data)
                     timings = chunk.get("timings") or timings
-                    delta = chunk["choices"][0].get("delta") or {}
+                    choice = chunk["choices"][0]
+                    finish = choice.get("finish_reason") or finish
+                    delta = choice.get("delta") or {}
                 except (ValueError, KeyError, IndexError, AttributeError):
                     continue
                 if delta.get("content"):
@@ -169,5 +178,7 @@ class LlamaServer:
                     call["name"] += fn.get("name") or ""
                     call["arguments"] += fn.get("arguments") or ""
         log_call("chat", time.time() - began, timings)
+        if finish == "length":
+            raise LlmError(f"the answer was cut at {CHAT_MAX_TOKENS} tokens")
         for i, call in sorted(calls.items()):
             yield "tool", {**call, "id": call["id"] or f"call_{i}"}
