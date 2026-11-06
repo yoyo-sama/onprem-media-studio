@@ -148,6 +148,11 @@ python tools/qualify/run_upscale.py   # dernières images Krea 2 et Qwen et dern
 docker logs studio 2>&1 | grep 'render: upscale-2x'
 ```
 
+Mesuré sur gb10-demo le 2026-11-06 (modèle déjà téléchargé) : une image de 1920×1088 (Krea 2
+ou Qwen) passe en 3840×2176 en 0,4 à 1,2 s de réseau, 3 à 4 s pour tout le job ; un clip H3 de
+5 s (124 images, 1280×736) passe en 2560×1472 en 20 s, dont 16 s dans le réseau (6,1 images/s
+au total), son gardé.
+
 Le script poste un job par source comme le fait le clic et écrit `qualify-upscale.json` (chaque
 source à côté de sa copie) ; la ligne de journal donne le temps du réseau seul et, pour une
 vidéo, les images par seconde. `span-2x-nomosuni` reste `"qualified": false` tant que les copies
