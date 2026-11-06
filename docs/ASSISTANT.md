@@ -50,8 +50,11 @@ llama-server lets Gemma 4 think by default. For the prompt compilers (enrichment
 list, role routing) that meant thousands of hidden tokens per call: 44 to 81 s measured on the
 GB10 for answers of a few hundred tokens. The chat turns did the same: 8 444 hidden tokens (150 s)
 for a three-line answer, and once a loop that filled the whole context (29 220 tokens, 528 s)
-without writing anything. Every call now sends `enable_thinking: false`, and a chat answer is
-capped at `CHAT_MAX_TOKENS` (4 096, `studio/llm.py`). An answer cut at the cap, or any other
+without writing anything. The compile calls send `enable_thinking: false`. The chat keeps
+thinking, which helps choosing the tools, within a budget: llama-server starts with
+`--reasoning-budget` `CHAT_THINKING_BUDGET` (2 048 tokens, about 40 s, `studio/llm.py`), ends the
+thinking there with a short message, and the model writes its answer. A whole chat answer,
+thinking included, is capped at `CHAT_MAX_TOKENS` (2 048 + 4 096). An answer cut at the cap, or any other
 failure of a turn, is kept in the conversation as an error under the role's name, so it shows
 after a reload; such a message is not sent back to the model.
 

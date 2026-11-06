@@ -26,9 +26,14 @@ LLM_FILES = {
 # Room for the assistant's instructions, tools and conversation history; one slot,
 # so concurrent requests queue instead of splitting the context.
 CTX_SIZE = 32768
-# Longest answer of one chat turn. A turn left without a cap once thought in a loop
-# until the context was full (29 220 tokens, 528 s on the GB10) and showed nothing.
-CHAT_MAX_TOKENS = 4096
+# Gemma 4 thinks before a chat answer, within a budget: left free, a three-line answer
+# cost 8 000 hidden tokens (150 s on the GB10), and one turn looped until the context
+# was full (29 220 tokens, 528 s) and showed nothing. At the budget, llama-server ends
+# the thinking with BUDGET_MESSAGE and the model writes its answer.
+CHAT_THINKING_BUDGET = 2048
+BUDGET_MESSAGE = "Enough thinking: I answer now."
+# Thinking and answer together; an answer cut there raises LlmError.
+CHAT_MAX_TOKENS = CHAT_THINKING_BUDGET + 4096
 
 
 class LlmError(RuntimeError):
@@ -75,6 +80,7 @@ class LlamaServer:
             "--mmproj", str(folder / mmproj),
             "--host", "127.0.0.1", "--port", str(self.settings.llm_port),
             "--ctx-size", str(CTX_SIZE), "--parallel", "1", "--n-gpu-layers", "99", "--jinja",
+            "--reasoning-budget", str(CHAT_THINKING_BUDGET), "--reasoning-budget-message", BUDGET_MESSAGE,
         ]
 
     def start(self) -> None:
@@ -143,10 +149,10 @@ class LlamaServer:
         Closing the iterator closes the connection, which stops the generation.
         An answer cut at CHAT_MAX_TOKENS raises LlmError once its text has been yielded."""
         self.start()
-        # Without thinking, like the compile calls: with it, Gemma 4 wrote 8 000 hidden
-        # tokens (150 s) for a three-line answer, and once looped until the context was full.
+        # Thinking stays on here, held to CHAT_THINKING_BUDGET by the server: it helps
+        # choosing the tools. The compile calls turn it off.
         body = {"messages": messages, "temperature": temperature, "stream": True,
-                "max_tokens": CHAT_MAX_TOKENS, "chat_template_kwargs": {"enable_thinking": False}}
+                "max_tokens": CHAT_MAX_TOKENS}
         if tools:
             body["tools"] = tools
         calls: dict[int, dict] = {}

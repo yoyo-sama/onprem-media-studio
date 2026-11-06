@@ -51,9 +51,12 @@ llama-server fait réfléchir Gemma 4 par défaut. Pour les compilateurs de prom
 planches, liste de plans, choix du rôle), cela faisait des milliers de jetons cachés par appel :
 44 à 81 s mesurées sur le GB10 pour des réponses de quelques centaines de jetons. Les tours du
 chat faisaient pareil : 8 444 jetons cachés (150 s) pour une réponse de trois lignes, et une fois
-une boucle qui a rempli tout le contexte (29 220 jetons, 528 s) sans rien écrire. Tous les appels
-envoient désormais `enable_thinking: false`, et une réponse du chat est plafonnée à
-`CHAT_MAX_TOKENS` (4 096, `studio/llm.py`). Une réponse coupée au plafond, ou tout autre échec d'un
+une boucle qui a rempli tout le contexte (29 220 jetons, 528 s) sans rien écrire. Les
+compilateurs envoient `enable_thinking: false`. Le chat garde la réflexion, utile au choix des
+outils, dans un budget : llama-server démarre avec `--reasoning-budget` `CHAT_THINKING_BUDGET`
+(2 048 jetons, environ 40 s, `studio/llm.py`), y clôt la réflexion par un court message, et le
+modèle écrit sa réponse. Une réponse entière du chat, réflexion comprise, est plafonnée à
+`CHAT_MAX_TOKENS` (2 048 + 4 096). Une réponse coupée au plafond, ou tout autre échec d'un
 tour, reste dans la conversation comme une erreur sous le nom du rôle, visible après un
 rechargement ; ce message n'est pas renvoyé au modèle.
 

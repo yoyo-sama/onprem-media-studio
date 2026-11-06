@@ -16,6 +16,8 @@ def test_command_uses_local_model_files(settings, store):
     # Room for the assistant's instructions and history, one slot.
     assert cmd[cmd.index("--ctx-size") + 1] == "32768"
     assert cmd[cmd.index("--parallel") + 1] == "1"
+    # The chat thinks within a budget, then answers.
+    assert cmd[cmd.index("--reasoning-budget") + 1] == "2048"
 
 
 def test_smaller_model_by_setting(store, monkeypatch, settings):
@@ -83,9 +85,9 @@ def test_stream_gives_text_then_complete_tool_calls(settings, store, monkeypatch
                    ("tool", {"id": "call_a", "name": "create_image", "arguments": '{"prompt": "a cat"}'}),
                    ("tool", {"id": "call_1", "name": "ask_choices", "arguments": "{}"})]
     assert fake.body["stream"] is True and fake.body["tools"] == [{"type": "function"}]
-    # A capped answer without hidden thinking: one once looped until the context was full.
+    # A capped answer, thinking left to the server's budget: one once looped until the context was full.
     assert fake.body["max_tokens"] == CHAT_MAX_TOKENS
-    assert fake.body["chat_template_kwargs"] == {"enable_thinking": False}
+    assert "chat_template_kwargs" not in fake.body
     # One line per call in the container log, with llama-server's own timings.
     line = capsys.readouterr().out
     assert line.startswith("llm: chat ") and "(prompt 900 tokens in 1.5 s, 40 generated in 0.8 s)" in line
