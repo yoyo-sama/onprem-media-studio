@@ -105,6 +105,59 @@ passe par `torch.compile` ; mesures et bancs dans [H3.md](H3.md#mémoire-et-annu
 (253 s avant). Rendus en 1280×720 : Krea 2 environ 20 s par image ; Qwen Image 2.1 en 1344×768
 environ 40 s une fois compilé (le premier rendu à une nouvelle taille ajoute environ 15 s).
 
+## Résolution ×2
+
+`upscale-2x` crée une copie d'une image ou d'une vidéo deux fois plus large et deux fois plus
+haute. Il tourne sur le clic « ⇱ Doubler la résolution » de la visionneuse de la galerie, jamais
+de lui-même après un rendu ; la copie arrive dans la galerie comme un nouveau fichier (titre
+« Résolution ×2 »), la source reste telle quelle.
+
+| | |
+|---|---|
+| Paramètre | `source` : une référence d'image ou de vidéo (`outputs/…` ou `inputs/…`) ; rien d'autre, pas de prompt |
+| Limites | image d'au plus 4096 px sur son grand côté (8192 px en sortie), vidéo d'au plus 1920 px (3840 px en sortie) ; refus 422 au-delà |
+| Réseau | SPAN, poids `2xNomosUni_span_multijpg` (id catalogue `span-2x-nomosuni`, 4,3 Mo), chargé par spandrel 0.4.2, en float16 sur le GPU, gardé en mémoire |
+| Vidéo | décodée par ffmpeg en RGB, agrandie image par image, encodée en H.264 CRF 18 à la cadence de la source, le son copié tel quel ; rien n'est gardé si le job échoue |
+| Sortie | PNG (métadonnées `studio` : `params.source`) ou MP4 tagué sous `outputs/upscale-2x/` |
+
+Licences : poids CC BY 4.0 (Philip Hofmann, crédité dans `NOTICE`), code du réseau SPAN
+Apache-2.0, spandrel MIT (son paquet principal ne porte que des architectures sous licence
+permissive). L'usage commercial est permis avec le crédit.
+
+**Pourquoi pas les upscalers de NVIDIA** (vérifié les 2026-11-05 et 06) : aucun ne tourne sur le
+GB10.
+
+- DLSS 5 est une fonction de jeu en temps réel : il lit la couleur et les vecteurs de mouvement
+  que le moteur de jeu produit à chaque image, par Streamline (Windows 10+, DirectX 11/12,
+  Vulkan) ou le plugin Unreal Engine 5, sur GeForce RTX 50. Il réécrit aussi la lumière de la
+  peau et des matières, ce qu'une copie fidèle ne doit pas faire.
+- Les ponts ComfyUI communautaires vers DLSS 5 pilotent les DLL NGX Windows de NVIDIA (une
+  « feature 18 » non documentée) dans un faux pipeline D3D12 ; sous Linux ils les font tourner
+  sous Wine, en x86-64 seulement. Ces DLL ne peuvent pas être livrées dans notre image.
+- Le RTX Video SDK est réservé à Windows ; son équivalent Linux `nvidia-vfx` (Maxine Video
+  Effects) n'a que des roues x86_64 et Windows, et NVIDIA a répondu sur le forum DGX Spark qu'il
+  n'y a « currently no plan to add NVIDIA VFX support on Spark ».
+
+SPAN a été choisi d'après une mesure tierce sur un DGX Spark (ai-muninn.com, 2026-08-07) : 362
+images H3 de 960×540 à 1920×1080 en 49 s avec SPAN contre 316 s avec Real-ESRGAN, sans
+différence visible rapportée. Notre propre mesure sur le GB10 :
+
+```bash
+docker compose up -d --build          # spandrel est une nouvelle dépendance de l'image
+python tools/qualify/run_upscale.py   # dernières images Krea 2 et Qwen et dernière vidéo H3
+docker logs studio 2>&1 | grep 'render: upscale-2x'
+```
+
+Mesuré sur gb10-demo le 2026-11-06 (modèle déjà téléchargé) : une image de 1920×1088 (Krea 2
+ou Qwen) passe en 3840×2176 en 0,4 à 1,2 s de réseau, 3 à 4 s pour tout le job ; un clip H3 de
+5 s (124 images, 1280×736) passe en 2560×1472 en 20 s, dont 16 s dans le réseau (6,1 images/s
+au total), son gardé.
+
+Le script poste un job par source comme le fait le clic et écrit `qualify-upscale.json` (chaque
+source à côté de sa copie) ; la ligne de journal donne le temps du réseau seul et, pour une
+vidéo, les images par seconde. Le responsable du projet a comparé les quatre copies à leurs
+sources à 100 % le 2026-11-06 et les a acceptées : `span-2x-nomosuni` est `"qualified": true`.
+
 ## Qualification
 
 Un moteur n'est qualifié que par un vrai rendu dont les images ont été regardées (LESSONS n°1),

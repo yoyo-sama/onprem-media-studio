@@ -21,7 +21,9 @@ en cache dans `STUDIO_DATA_DIR/cache/thumbs/`.
   l'ancien : un fichier existant n'est jamais écrasé.
 - **Un scan ne vide jamais l'index.** Si le dossier de sorties est absent, ou vide alors que l'index
   a des lignes, rien n'est retiré et `health.warning` le signale.
-- **La galerie ne soumet jamais de job.** « Réutiliser le prompt » dans le front n'écrit le brief
+- **Le service de galerie ne soumet jamais de job.** Dans le front, seul « ⇱ Doubler la
+  résolution » de la visionneuse en poste un, sur son clic (`upscale-2x`,
+  [IMAGE-ENGINES.md](IMAGE-ENGINES.md#résolution-2)) ; « Réutiliser le prompt » n'écrit le brief
   que sur un clic explicite, avec Annuler, et ne lance rien.
 - **Les routes d'écriture exigent la même origine** (`Origin` ou `Referer` égal à `Host`, et
   `Sec-Fetch-Site` absent ou `same-origin`), comme toute route qui déplace ou écrit des fichiers.

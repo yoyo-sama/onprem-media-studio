@@ -2582,6 +2582,31 @@ export const DICT = {
     es: "¿Actualizar el estudio ahora? El servidor se reinicia; los trabajos en curso bloquean la actualización.",
     de: "Studio jetzt aktualisieren? Der Server startet neu; laufende Jobs blockieren das Update.",
   },
+  "Upscale ×2": {
+    fr: "Résolution ×2",
+    es: "Resolución ×2",
+    de: "Auflösung ×2",
+  },
+  "Upscale ×2 failed: {error}": {
+    fr: "Le doublement de la résolution a échoué : {error}",
+    es: "No se ha podido duplicar la resolución: {error}",
+    de: "Auflösung verdoppeln fehlgeschlagen: {error}",
+  },
+  "Upscale ×2 started: the copy will appear in the gallery.": {
+    fr: "Doublement de la résolution lancé : la copie apparaîtra dans la galerie.",
+    es: "Duplicación de la resolución iniciada: la copia aparecerá en la galería.",
+    de: "Auflösung wird verdoppelt: Die Kopie erscheint in der Galerie.",
+  },
+  "⇱ Upscale ×2": {
+    fr: "⇱ Doubler la résolution",
+    es: "⇱ Duplicar la resolución",
+    de: "⇱ Auflösung verdoppeln",
+  },
+  "Makes a copy twice as wide and twice as tall (SPAN network, 4 MB downloaded on first use)": {
+    fr: "Crée une copie deux fois plus large et deux fois plus haute (réseau SPAN, 4 Mo téléchargés au premier usage)",
+    es: "Crea una copia el doble de ancha y el doble de alta (red SPAN, 4 MB descargados en el primer uso)",
+    de: "Erstellt eine Kopie, doppelt so breit und doppelt so hoch (SPAN-Netz, 4 MB beim ersten Mal heruntergeladen)",
+  },
   "Upload": {
     fr: "Téléverser",
     es: "Subir",

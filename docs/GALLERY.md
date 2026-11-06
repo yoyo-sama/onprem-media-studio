@@ -20,8 +20,9 @@ cached in `STUDIO_DATA_DIR/cache/thumbs/`.
   old one, so an existing file is never overwritten.
 - **A scan never wipes the index.** If the output folder is missing, or empty while the index has
   rows, nothing is removed and `health.warning` says so.
-- **The gallery never submits a job.** "Reuse prompt" in the front end writes the brief only on an
-  explicit click, with Undo, and launches nothing.
+- **The gallery service never submits a job.** In the front end, only "⇱ Upscale ×2" in the
+  lightbox posts one, on its click (`upscale-2x`, [IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2));
+  "Reuse prompt" writes the brief only on an explicit click, with Undo, and launches nothing.
 - **Write routes need the same origin** (`Origin` or `Referer` matching `Host`, and
   `Sec-Fetch-Site` absent or `same-origin`), like every route that moves or writes files.
 
