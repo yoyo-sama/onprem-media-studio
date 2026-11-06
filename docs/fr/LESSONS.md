@@ -155,6 +155,12 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     rendu de chaque taille dans un processus : gardé. Sur Krea 2, il faisait gagner 12 % (6 s par
     image de 8 étapes) pour environ 33 s par nouvelle taille ou nombre d'images : écarté. (GB10,
     2026-11-05)
+44. **Les upscalers de NVIDIA ne tournent pas sur le GB10.** DLSS 5 demande les buffers qu'un
+    moteur de jeu produit à chaque image, et Windows (Streamline, D3D12/Vulkan) ; ses ponts
+    ComfyUI chargent les DLL NGX Windows, au mieux sous Wine en Linux x86-64 ; le RTX Video SDK
+    est réservé à Windows et `nvidia-vfx` n'a pas de roue ARM64. L'agrandissement passe par un
+    réseau ouvert exécuté en PyTorch (SPAN par spandrel,
+    [IMAGE-ENGINES.md](IMAGE-ENGINES.md#résolution-2)). (2026-11-06)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

@@ -82,6 +82,16 @@
       "qualified": false
     },
     {
+      "id": "span-2x-nomosuni",
+      "label": "SPAN 2xNomosUni (Upscale ×2 of images and videos)",
+      "role": "upscaler",
+      "repo": "Phips/2xNomosUni_span_multijpg",
+      "allow": ["2xNomosUni_span_multijpg.safetensors"],
+      "gated": false,
+      "license": "cc-by-4.0 (weights by Philip Hofmann, credited in NOTICE); SPAN network code Apache-2.0 through spandrel (MIT)",
+      "qualified": false
+    },
+    {
       "id": "h3-latent-upscaler",
       "label": "MiniMax H3 latent upscaler (3D conv v1, LBH-123-AI)",
       "role": "upscaler",

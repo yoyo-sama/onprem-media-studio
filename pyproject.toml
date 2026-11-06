@@ -32,6 +32,9 @@ inference = [
     # torchao 0.14 (found on the GB10, 2026-10-29); 0.18 accepts it.
     "peft>=0.17,<0.19",
     "safetensors>=0.4",
+    # Upscale ×2 (SPAN network): the MIT package only, whose architectures are all under
+    # permissive licences (the non-commercial ones live in spandrel_extra_arches).
+    "spandrel==0.4.2",
 ]
 # MiniMax H3 runs on FastVideo, which is not on PyPI in a GB10 build: the Docker
 # image builds it from source (docker/Dockerfile, docker/fastvideo-requirements.txt).

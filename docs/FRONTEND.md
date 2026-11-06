@@ -26,7 +26,7 @@ in `web/js/vendor/`.
 | `web/js/chat.js` | Assistant mode: conversations, streamed replies, role choice, attachments, library pane, cards (Generate, ✨, Open in the Studio, Launch the director), role editor of the Models panel: [ASSISTANT.md](ASSISTANT.md) |
 | `web/js/mascot.js` | The assistant's animated character (inline SVG, moods in CSS): decoration only |
 | `web/js/director.js` | Storyboard and reference-to-video director: sheets, shots, shot images, cuts, animatic, Relay |
-| `web/js/gallery.js` | Studio gallery on `/api/gallery` (filters, lightbox, tags, trash) |
+| `web/js/gallery.js` | Studio gallery on `/api/gallery` (filters, lightbox, tags, trash, Upscale ×2) |
 | `web/js/canvas.js` | Canvas page: drawing, media overlays, properties panel, use cases, persistence, theme, language |
 | `web/js/canvas-nodes.js` | Canvas cards: inputs, properties, panel fields and what Generate submits |
 | `web/js/canvas-gallery.js` | Canvas gallery drawer (drag an image onto an Image import card) |
@@ -38,7 +38,8 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
 
 - **Nothing renders without a click.** Choosing a goal card, a pipeline, an engine, a language,
   adding a card or connecting cards submits nothing. Only Generate buttons (and the director's
-  step buttons) post to `/api/jobs`.
+  step buttons) post to `/api/jobs`, and "⇱ Upscale ×2" in the gallery lightbox, one job per
+  click ([IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2)).
 - **The director's first step draws nothing** (decided on 2026-11-01, unlike 1.4). "Open the
   studio" has Gemma write the subject and setting descriptions and the shot list, then opens
   the studio with no sheet. Each sheet is generated on its own click: from its fields, from a

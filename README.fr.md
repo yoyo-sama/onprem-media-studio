@@ -108,6 +108,8 @@ Ce dépôt ne contient aucun poids de modèle. Chaque modèle garde sa licence, 
   l'interface d'un produit commercial (la page d'état l'affiche). Voir [NOTICE](NOTICE).
 - **Upscaler latent MiniMax H3** (LBH-123-AI) : poids sous Apache-2.0 ; le code qui les exécute
   est celui de ce projet.
+- **SPAN 2xNomosUni** (résolution ×2, Philip Hofmann) : poids sous CC BY 4.0, crédités dans
+  [NOTICE](NOTICE) ; exécutés par spandrel (MIT).
 - **Krea 2** : accès restreint sur Hugging Face, licence acceptée par chaque utilisateur.
 - **Qwen Image 2.1** : Qwen Research License, **usage non commercial uniquement** ; un usage
   commercial demande une licence de Qwen. Toutes les retouches et images de plan l'utilisent.

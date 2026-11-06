@@ -99,6 +99,52 @@ Weights are read whole, never memory-mapped, and Qwen Image 2.1's transformer ru
 before). Renders at 1280×720: Krea 2 about 20 s per image; Qwen Image 2.1 at 1344×768 about 40 s
 once compiled (the first render at a new size adds about 15 s).
 
+## Upscale ×2
+
+`upscale-2x` makes a copy of an image or a video twice as wide and twice as tall. It runs on the
+"⇱ Upscale ×2" click in the gallery lightbox, never after a render on its own; the copy reaches
+the gallery as a new file (titled "Upscale ×2"), the source is left as it was.
+
+| | |
+|---|---|
+| Parameter | `source`: one image or video reference (`outputs/…` or `inputs/…`); nothing else, no prompt |
+| Limits | image at most 4096 px on its long side (8192 px out), video at most 1920 px (3840 px out); refused with 422 beyond |
+| Network | SPAN, weights `2xNomosUni_span_multijpg` (catalog id `span-2x-nomosuni`, 4.3 MB), loaded through spandrel 0.4.2, float16 on the GPU, kept in memory |
+| Video | decoded by ffmpeg to RGB, upscaled frame by frame, encoded H.264 CRF 18 at the source frame rate, the sound copied unchanged; nothing is kept if the job fails |
+| Output | PNG (`studio` metadata: `params.source`) or tagged MP4 under `outputs/upscale-2x/` |
+
+Licences: weights CC BY 4.0 (Philip Hofmann, credited in `NOTICE`), SPAN network code
+Apache-2.0, spandrel MIT (its main package carries only permissively licensed architectures).
+Commercial use is allowed with the credit.
+
+**Why not NVIDIA's upscalers** (checked on 2026-11-05/06): none runs on the GB10.
+
+- DLSS 5 is a real-time game feature: it reads the colour and motion vectors a game engine
+  produces each frame, through Streamline (Windows 10+, DirectX 11/12, Vulkan) or the Unreal
+  Engine 5 plugin, on GeForce RTX 50. It also relights skin and materials, which a faithful
+  copy must not do.
+- The community ComfyUI bridges to DLSS 5 drive NVIDIA's Windows NGX DLLs (an undocumented
+  feature 18) in a fake D3D12 pipeline; on Linux they run them under Wine, x86-64 only. The
+  DLLs cannot be shipped in our image.
+- The RTX Video SDK is Windows only; its Linux counterpart `nvidia-vfx` (Maxine Video Effects)
+  ships x86_64 and Windows wheels only, and NVIDIA answered on the DGX Spark forum that there
+  is "currently no plan to add NVIDIA VFX support on Spark".
+
+SPAN was chosen from a third-party measurement on a DGX Spark (ai-muninn.com, 2026-08-07): 362
+H3 frames from 960×540 to 1920×1080 in 49 s with SPAN against 316 s with Real-ESRGAN, no visible
+difference reported. Our own measure on the GB10:
+
+```bash
+docker compose up -d --build          # spandrel is a new dependency of the image
+python tools/qualify/run_upscale.py   # latest Krea 2 and Qwen images and the latest H3 video
+docker logs studio 2>&1 | grep 'render: upscale-2x'
+```
+
+The script posts one job per source as the click does and writes `qualify-upscale.json` (each
+source next to its copy); the log line gives the network's own time and, for a video, frames per
+second. `span-2x-nomosuni` stays `"qualified": false` until the copies are compared with their
+sources at 100 % on the GB10.
+
 ## Qualification
 
 An engine is qualified only by a real render whose images were looked at (LESSONS #1), on the

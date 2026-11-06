@@ -99,6 +99,8 @@ This repository does not contain model weights. Each model keeps its own licence
   in the interface of a commercial product (the status page shows it). See [NOTICE](NOTICE).
 - **MiniMax H3 latent upscaler** (LBH-123-AI): Apache-2.0 weights; the code that runs them is
   this project's.
+- **SPAN 2xNomosUni** (Upscale ×2, Philip Hofmann): CC BY 4.0 weights, credited in
+  [NOTICE](NOTICE); run through spandrel (MIT).
 - **Krea 2**: gated on Hugging Face, licence accepted per user.
 - **Qwen Image 2.1**: Qwen Research License, **non-commercial use only**; commercial use needs a
   licence from Qwen. Every image edit and shot image uses it.

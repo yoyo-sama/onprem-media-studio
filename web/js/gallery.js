@@ -2,18 +2,19 @@
 // docs/GALLERY.md): tabs, filters, date groups, selection, favourites, tags, trash,
 // renaming, and the lightbox with the details of an asset.
 //
-// The gallery never submits a job. "Reuse the prompt" writes the brief only on that
-// click, with Undo; "Use as input" and dragging a thumbnail only set an input.
+// The gallery submits one job only, on its own click: "Upscale ×2" in the lightbox.
+// "Reuse the prompt" writes the brief only on that click, with Undo; "Use as input"
+// and dragging a thumbnail only set an input.
 
 import { api, on } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
-import { $, log, notice, undoToast, warn } from "./ui.js";
+import { $, log, notice, runJob, undoToast, warn } from "./ui.js";
 
 export const ENGINE_LABELS = {
   "krea2-t2i": "Krea 2", "qwen-edit-2509": "Qwen Edit 2509", "qwen-image-2.1": "Qwen Image 2.1",
   "h3-t2v": L("MiniMax H3 · text to video"), "h3-i2v": L("MiniMax H3 · image to video"),
   "h3-r2v": L("MiniMax H3 · references"), "video-concat": L("Montage"), "image-grid": L("Contact sheet"),
-  "video-frames": L("Clip frames"),
+  "video-frames": L("Clip frames"), "upscale-2x": L("Upscale ×2"),
 };
 export const ORIGIN_LABELS = {
   studio: "Studio", campaign: L("Campaign"), markets: L("Local versions"), sequence: L("Multi-image sequence"),
@@ -497,6 +498,17 @@ async function lbTag(add, remove_) {
   renderMeta();
 }
 
+// One click, one job: the upscaled copy reaches the gallery when the job is done.
+async function upscale(a) {
+  tx($("lbMsg"), "Upscale ×2 started: the copy will appear in the gallery.");
+  try {
+    await runJob("upscale-2x", { source: a.ref }, { origin: "studio", label: ["Upscale ×2"], sub: ["{file}", { file: a.filename }] });
+  } catch (err) {
+    warn(err);
+    if (lbAsset === a) tx($("lbMsg"), "Upscale ×2 failed: {error}", { error: err.message });
+  }
+}
+
 function initLightbox() {
   const lb = $("lightbox");
   $("lightboxClose").addEventListener("click", closeLightbox);
@@ -532,6 +544,7 @@ function initLightbox() {
     closeLightbox();
     hooks.useAsInput?.(a);
   });
+  $("lbUpscale").addEventListener("click", () => { if (lbAsset) upscale(lbAsset); });
   $("lbReuse").addEventListener("click", () => {
     const a = lbAsset;
     if (!a?.prompt) return;

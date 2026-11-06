@@ -25,7 +25,7 @@ inclus avec sa licence MIT dans `web/js/vendor/`.
 | `web/js/chat.js` | Mode Assistant : conversations, réponses en flux, choix du rôle, pièces jointes, volet Bibliothèque, cartes (Générer, ✨, Ouvrir dans le Studio, Lancer le Réalisateur), éditeur de rôles du panneau Modèles : [ASSISTANT.md](ASSISTANT.md) |
 | `web/js/mascot.js` | Le personnage animé de l'assistant (SVG en ligne, humeurs en CSS) : pure décoration |
 | `web/js/director.js` | Réalisateur du storyboard et de la référence vers vidéo : planches, plans, images des plans, cuts, animatic, Relay |
-| `web/js/gallery.js` | Galerie du Studio sur `/api/gallery` (filtres, visionneuse, tags, corbeille) |
+| `web/js/gallery.js` | Galerie du Studio sur `/api/gallery` (filtres, visionneuse, tags, corbeille, résolution ×2) |
 | `web/js/canvas.js` | Page Canvas : dessin, médias superposés, panneau Propriétés, cas d'usage, sauvegarde, thème, langue |
 | `web/js/canvas-nodes.js` | Cartes du Canvas : entrées, propriétés, champs du panneau et ce que Générer soumet |
 | `web/js/canvas-gallery.js` | Tiroir de galerie du Canvas (glisser une image sur une carte Import d'image) |
@@ -37,7 +37,8 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
 
 - **Rien ne part en rendu sans un clic.** Choisir une carte d'objectif, un pipeline, un moteur,
   une langue, ajouter ou relier des cartes ne soumet rien. Seuls les boutons Générer (et les
-  boutons d'étape du réalisateur) postent sur `/api/jobs`.
+  boutons d'étape du réalisateur) postent sur `/api/jobs`, ainsi que « ⇱ Doubler la résolution »
+  dans la visionneuse de la galerie, un job par clic ([IMAGE-ENGINES.md](IMAGE-ENGINES.md#résolution-2)).
 - **La première étape du réalisateur ne dessine rien** (décidé le 2026-11-01, contrairement à la
   1.4). « Entrer dans le studio » fait écrire par Gemma les descriptions du sujet et du décor et
   la liste de plans, puis ouvre le studio sans planche. Chaque planche part sur son propre clic :

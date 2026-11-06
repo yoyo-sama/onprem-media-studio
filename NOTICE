@@ -9,3 +9,9 @@ installed in the Docker image; its code is not part of this repository.
 The MiniMax H3 latent upscaler weights (LBH-123-AI/Minimax_h3_latent_Upscaler) are licensed under
 the Apache License 2.0. The network that loads them (studio/pipelines/h3_upscaler.py) was written
 for this project.
+
+The Upscale ×2 weights, 2xNomosUni_span_multijpg by Philip Hofmann
+(https://github.com/Phhofm/models, https://huggingface.co/Phips/2xNomosUni_span_multijpg), are
+licensed under Creative Commons Attribution 4.0 (CC BY 4.0). They are downloaded at run time,
+unchanged, and run through spandrel (https://github.com/chaiNNer-org/spandrel, MIT License),
+whose SPAN network code is under the Apache License 2.0.

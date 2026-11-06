@@ -142,6 +142,11 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     image) for about 15 s of compilation on the first render at each size in a process: kept.
     On Krea 2 it saved 12 % (6 s per image of 8 steps) for about 33 s per new size or image
     count: not kept. (GB10, 2026-11-05)
+44. **NVIDIA's upscalers do not run on the GB10.** DLSS 5 needs a game engine's per-frame buffers
+    and Windows (Streamline, D3D12/Vulkan); its ComfyUI bridges load Windows NGX DLLs, under Wine
+    on Linux x86-64 at best; the RTX Video SDK is Windows only and `nvidia-vfx` has no ARM64 wheel.
+    Upscaling is done by an open network run in PyTorch (SPAN through spandrel,
+    [IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2)). (2026-11-06)
 
 ## 8. Front end (for the port in step 4)
 
