@@ -153,9 +153,11 @@ def upscale_frame(model, frame):
     import torch
     x = torch.from_numpy(frame.copy()).to(common.device()).permute(2, 0, 1)[None]
     x = x.to(model.dtype).div_(255)
+    # Everything after the network stays inside inference mode: its output is an
+    # inference tensor, and the in-place steps below are refused outside it.
     with torch.inference_mode():
         y = model(x)
-    return y.clamp_(0, 1).mul_(255).round_().to(torch.uint8)[0].permute(1, 2, 0).cpu().numpy()
+        return y.clamp_(0, 1).mul_(255).round_().to(torch.uint8)[0].permute(1, 2, 0).cpu().numpy()
 
 
 def _build(path):
