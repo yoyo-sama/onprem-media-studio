@@ -15,12 +15,14 @@ qwen-fast/, outside the model store: nothing is listed in the app (not qualified
 
 Inputs: the sheets and the thumbnail the cases use, rendered beforehand by
 run_image_cases.py (report inputs.json next to this file). Each case is rendered twice
-with the same seed and the second render is timed (the first one pays compilation and
-warm-up). Images: <data>/output/bench/qwen-fast/<case>-<variant>.png, and
-<case>-compare.png (base | lightning | turbo) after `compare`. A variant is judged on
+with its seed and the second render is timed (the first one pays compilation and
+warm-up), then once with each next seed (BENCH_SEEDS=3: seed+1 and seed+2). Images:
+<data>/output/bench/qwen-fast/<case>-<variant>-<seed>.png, and <case>-compare.png
+(one row per seed, columns base | lightning | turbo) after `compare`. A variant is judged on
 those images, never on its time alone (AGENTS.md: never trust a success status).
 """
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -34,6 +36,8 @@ VARIANTS = {
     "turbo": ("Qwen/Qwen-Image-2.1-Turbo", ["model_index.json", "scheduler/*", "transformer/*"]),
 }
 REPEATS = 2
+# Seeds per case: the case seed, then seed+1, seed+2… (BENCH_SEEDS, default 1).
+SEEDS = int(os.environ.get("BENCH_SEEDS", "1"))
 
 
 def substitute(value, outputs):
@@ -131,7 +135,11 @@ def render(variant: str) -> None:
     for case in cases:
         images = [common.open_image(Path(p)) for p in qwen.ordered_images(case)]
         width, height = (case["width"], case["height"]) if "width" in case else common.fit_area(*images[0].size)
-        for _ in range(REPEATS):
+        # The case seed first, rendered twice (the first render pays compilation and warm-up),
+        # then the next seeds once each.
+        seeds = [case["seed"]] * REPEATS + [case["seed"] + n for n in range(1, SEEDS)]
+        timed = []
+        for n, seed in enumerate(seeds):
             marks = []
 
             def mark(pipe_, step, timestep, tensors):
@@ -144,16 +152,21 @@ def render(variant: str) -> None:
             image = pipe(prompt=case["prompt"], image=images or None, width=width, height=height,
                          true_cfg_scale=1.0, num_images_per_prompt=1,
                          output_resolution=qwen.QWEN21_RESOLUTION,
-                         generator=torch.Generator(device).manual_seed(case["seed"]),
+                         generator=torch.Generator(device).manual_seed(seed),
                          callback_on_step_end=mark, **sampling).images[0]
             seconds = time.time() - began
-        image.save(out / f"{case['id']}-{variant}.png")
-        steps = [b - a for a, b in zip([began] + marks, marks)]
+            image.save(out / f"{case['id']}-{variant}-{seed}.png")
+            if n >= REPEATS - 1:
+                steps = [b - a for a, b in zip([began] + marks, marks)]
+                timed.append((seconds, steps))
+        seconds, steps = timed[0]
         results["cases"][case["id"]] = {
             "size": f"{width}x{height}", "images": len(images), "steps": len(steps),
             "seconds": round(seconds, 1), "decode": round(seconds - sum(steps), 1),
             "first_step": round(steps[0], 2),  # text + reference encoding and the KV prefill
             "next_steps": round(sum(steps[1:]) / max(1, len(steps) - 1), 2),
+            "seeds": sorted(set(seeds)),
+            "seconds_per_seed": [round(t, 1) for t, _ in timed],
         }
         print(f"{variant} {case['id']}: {results['cases'][case['id']]}", flush=True)
     # The schedule the last render really used (terminal 0 appended by the scheduler).
@@ -176,14 +189,19 @@ def compare() -> None:
         cells = [f"{r['cases'][cid]['seconds']} s ({r['cases'][cid]['steps']} × {r['cases'][cid]['next_steps']} s)"
                  if cid in r["cases"] else "-" for r in runs.values()]
         print(f"| {cid} | " + " | ".join(cells) + " |")
-        tiles = [(v, Image.open(out / f"{cid}-{v}.png")) for v in runs if (out / f"{cid}-{v}.png").is_file()]
+        seeds = next((r["cases"][cid]["seeds"] for r in runs.values() if cid in r["cases"]), [])
+        tiles = {(v, seed): out / f"{cid}-{v}-{seed}.png" for v in runs for seed in seeds}
+        tiles = {k: Image.open(f) for k, f in tiles.items() if f.is_file()}
         if tiles:
-            w, h = tiles[0][1].size
-            sheet = Image.new("RGB", (w * len(tiles), h + 40), "white")
+            # One row per seed, one column per variant.
+            w, h = next(iter(tiles.values())).size
+            sheet = Image.new("RGB", (w * len(runs), (h + 40) * len(seeds)), "white")
             draw = ImageDraw.Draw(sheet)
-            for n, (v, img) in enumerate(tiles):
-                sheet.paste(img.convert("RGB").resize((w, h)), (n * w, 40))
-                draw.text((n * w + 10, 10), v, fill="black", font_size=24)
+            for row, seed in enumerate(seeds):
+                for col, v in enumerate(runs):
+                    if (v, seed) in tiles:
+                        sheet.paste(tiles[v, seed].convert("RGB").resize((w, h)), (col * w, row * (h + 40) + 40))
+                    draw.text((col * w + 10, row * (h + 40) + 10), f"{v} · seed {seed}", fill="black", font_size=24)
             sheet.save(out / f"{cid}-compare.png")
     print("| load | " + " | ".join(f"{r['load']} s" for r in runs.values()) + " |")
     print("| peak | " + " | ".join(f"{r.get('peak_gb', '-')} GB" for r in runs.values()) + " |")

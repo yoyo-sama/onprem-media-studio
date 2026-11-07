@@ -2,6 +2,7 @@
 # Qwen Image 2.1 (25 steps) against Lightning v2 RL (4) and Turbo (8) on the Qwen
 # qualification cases (qwen_fast_bench.py). Run from the repository, stack up:
 #   sh tools/qualify/qwen_fast_bench.sh [base lightning turbo]
+#   BENCH_SEEDS=3 sh tools/qualify/qwen_fast_bench.sh   # 3 seeds per case
 # First run: renders 4 Krea 2 inputs on the server, downloads 43 GB (Lightning 28.5 GB,
 # Turbo 14.2 GB) into data/bench/qwen-fast/, about 45 min in all. Images in the gallery,
 # folder bench/qwen-fast. Remove the weights afterwards:
@@ -19,6 +20,6 @@ fi
 for variant in ${*:-base lightning turbo}; do
   docker restart studio >/dev/null   # nothing resident, all memory free
   sleep 15
-  docker exec studio python $dir/qwen_fast_bench.py "$variant"
+  docker exec -e BENCH_SEEDS="${BENCH_SEEDS:-1}" studio python $dir/qwen_fast_bench.py "$variant"
 done
 docker exec studio python $dir/qwen_fast_bench.py compare
