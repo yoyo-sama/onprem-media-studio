@@ -25,7 +25,9 @@ export const marketPrompt = (brief, id) =>
 // ── Text and image to image or video ──────────────────────────────────────────
 // One job per spec ({prompt, label}): one per market for local versions. `image` and
 // `last`, `refs` are file references. Returns the job promises.
-export function runPlain(wf, { specs, origin, ratio, count = 1, duration = 5, loras = [], image = null, last = null, refs = [], seed }) {
+// `mode`: the MOSS-Image mode (F.MOSS_MODES), for that engine only.
+export function runPlain(wf, { specs, origin, ratio, count = 1, duration = 5, loras = [], image = null, last = null, refs = [], seed,
+                               mode = F.MOSS_DEFAULT_MODE }) {
   const [width, height] = (wf.engine === "qwen-image-2.1" ? F.QWEN21_RATIOS : F.RATIOS)[ratio] || [];
   return specs.map((spec, i) => {
     const s = F.seedPlus(seed, i);
@@ -33,6 +35,9 @@ export function runPlain(wf, { specs, origin, ratio, count = 1, duration = 5, lo
     if (wf.id === "krea2_t2i" || wf.id === "qwen21_t2i") {
       params = { prompt: spec.prompt, width, height, count, seed: s };
       info = `${width}×${height}`;
+    } else if (wf.id === "moss_t2i") {
+      params = { prompt: spec.prompt, mode, width, height, count, seed: s };
+      info = `${width}×${height} · ${t(F.mossModeLabel(mode))}`;
     } else if (wf.id === "qwen21_i2i") {
       // The size follows the input image (~1 MP): the ratio plays no part here.
       params = { prompt: spec.prompt, images: [image, ...refs], seed: s };

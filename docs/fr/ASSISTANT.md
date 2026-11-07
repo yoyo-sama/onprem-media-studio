@@ -124,7 +124,7 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 
 | Outil | Carte | Ce que lance Générer |
 |---|---|---|
-| `create_image` | Prompt, moteur (Krea 2 / Qwen Image 2.1), ratio, variantes, style | `krea2-t2i` ou `qwen-image-2.1`, comme le formulaire Text2Image |
+| `create_image` | Prompt, moteur (Krea 2 / Qwen Image 2.1 / MOSS-Image), mode de MOSS-Image (affiché pour ce moteur seulement), ratio, variantes, style | `krea2-t2i`, `qwen-image-2.1` ou `moss-image`, comme le formulaire Text2Image |
 | `edit_image` | Consigne, image d'entrée, références, marchés | édition `qwen-image-2.1`, un job par marché, comme Image2Image |
 | `character_sheet`, `location_sheet` | Description, type de sujet, style ; une photo du sujet (planche sujet seulement) | `krea2-t2i` 1920×1088 avec les gabarits de planche de la 1.4 ; avec une photo, `qwen-image-2.1` la transforme en planche à la même taille, le gabarit précédé d'une phrase d'identité sur `<image1>` (`charsheetFromPhotoPrompt`, pas encore qualifié). Quand Gemma omet la photo alors que le message de l'utilisateur porte une seule image, cette image sert de photo (avec un avertissement sur la carte). Le menu du sujet du réalisateur a la même action : « 📷 Planche depuis une photo » |
 | `video_from_text` | Prompt, durée, ratio | `h3-t2v` |

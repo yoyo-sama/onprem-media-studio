@@ -66,10 +66,12 @@ class ModelStore:
         ]
 
     def remote_files(self, model_id: str) -> tuple[str, list[tuple[str, int]]]:
-        """Revision and (path, size) of every file the catalog asks for."""
+        """Revision and (path, size) of every file the catalog asks for. An entry's `revision`
+        pins the commit (a model whose own code the app imports); without it, the latest."""
         entry = self.entry(model_id)
         try:
-            info = self.api.model_info(entry["repo"], files_metadata=True, token=self.settings.hf_token)
+            info = self.api.model_info(entry["repo"], revision=entry.get("revision"), files_metadata=True,
+                                       token=self.settings.hf_token)
         except Exception as exc:  # gated, offline, renamed repository
             raise ModelError(f"Cannot read {entry['repo']}: {str(exc).rstrip('.')}.{_gated_hint(entry)}") from exc
         files = [(s.rfilename, s.size or 0) for s in info.siblings if _matches(s.rfilename, entry)]

@@ -93,7 +93,7 @@ def test_markets_match_the_front_end():
 def test_normalize_fills_defaults_and_clamps():
     args, warnings = T.normalize("create_image", '{"prompt": " a cat ", "count": 9, "ratio": "21:9", "x": 1}',
                                  lambda r: True)
-    assert args == {"prompt": "a cat", "engine": "krea2", "ratio": "16:9", "count": 4, "style": "none"}
+    assert args == {"prompt": "a cat", "engine": "krea2", "mode": "standard", "ratio": "16:9", "count": 4, "style": "none"}
     assert any("count 9" in w for w in warnings) and any("21:9" in w for w in warnings)
     assert any("ignored: x" in w for w in warnings)
 

@@ -19,12 +19,14 @@ class FakeApi:
 
     def __init__(self, fail: Exception | None = None):
         self.fail = fail
+        self.revisions = []
 
-    def model_info(self, repo, files_metadata, token):
+    def model_info(self, repo, revision, files_metadata, token):
+        self.revisions.append(revision)
         if self.fail:
             raise self.fail
         return SimpleNamespace(
-            sha="abc123",
+            sha=revision or "abc123",
             siblings=[SimpleNamespace(rfilename=f, size=s) for f, s in FILES.items()],
         )
 

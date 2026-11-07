@@ -44,9 +44,12 @@ const roleName = id => { const r = roles.find(x => x.id === id); return r ? t(r.
 // change; `images`: arguments holding image ids; `enrich`: the workflow whose Gemma
 // instruction ✨ uses; `form`: the Studio form can take the card over; `director`: the
 // card's Generate is the director's, in the Studio.
+// The Studio workflow of each engine of the image card.
+export const CARD_IMAGE_WORKFLOWS = { krea2: "krea2_t2i", qwen: "qwen21_t2i", moss: "moss_t2i" };
+const imageWorkflow = a => CARD_IMAGE_WORKFLOWS[a.engine] || "krea2_t2i";
 const CARD_UI = {
-  create_image: { title: L("Image"), text: "prompt", fields: ["engine", "ratio", "count", "style"], form: true,
-                  enrich: a => (a.engine === "qwen" ? "qwen21_t2i" : "krea2_t2i") },
+  create_image: { title: L("Image"), text: "prompt", fields: ["engine", "mode", "ratio", "count", "style"], form: true,
+                  enrich: imageWorkflow },
   edit_image: { title: L("Image editing"), text: "instruction", images: ["image", "references"], form: true,
                 enrich: () => "qwen21_i2i" },
   character_sheet: { title: L("Subject sheet"), text: "description", images: ["photo"], fields: ["kind", "style"] },
@@ -84,7 +87,11 @@ const IMAGE_LABELS = {
   subject_sheets: L("Subject sheets"), setting_sheet: L("Setting sheet"), photo: L("Photo"),
 };
 const FIELDS = {
-  engine: { label: L("Engine"), options: () => [["krea2", "Krea 2 Turbo"], ["qwen", "Qwen Image 2.1"]] },
+  engine: { label: L("Engine"), options: () => [["krea2", "Krea 2 Turbo"], ["qwen", "Qwen Image 2.1"], ["moss", "MOSS-Image"]],
+            redraw: true },
+  // `when`: shown only for these arguments; `redraw`: a change draws the card again.
+  // `dflt`: shown when a card from before the field has none (what the flow then sends).
+  mode: { label: L("Mode"), options: () => F.MOSS_MODES, when: a => a.engine === "moss", dflt: F.MOSS_DEFAULT_MODE },
   ratio: { label: L("Ratio"), options: () => Object.keys(F.RATIOS).map(r => [r, r]) },
   style: { label: L("Style"), options: () => Object.entries(P.STYLE_PACKS).map(([id, s]) => [id, s.label]) },
   kind: { label: L("Subject type"), options: () => [["human", L("Human")], ["other", L("Other (animal, creature, robot, object…)")]] },
@@ -235,12 +242,16 @@ function renderCard(card, live = false) {
     row.className = "cc-fields";
     for (const key of ui.fields) {
       const def = FIELDS[key], lab = document.createElement("label");
+      if (def.when && !def.when(a)) continue;
       lab.appendChild(tx(document.createElement("span"), def.label));
       let input;
       if (def.options) {
         input = document.createElement("select");
-        fillSelect(input, def.options(), String(a[key]));
-        input.addEventListener("change", () => setDraft(card, key, input.value));
+        fillSelect(input, def.options(), String(a[key] ?? def.dflt));
+        input.addEventListener("change", () => {
+          setDraft(card, key, input.value);
+          if (def.redraw) el.replaceWith(renderCard(card, live));
+        });
       } else if (def.text) {
         input = document.createElement("input");
         input.type = "text"; input.value = a[key] || ""; input.spellcheck = false;
@@ -498,8 +509,9 @@ function startCard(card, a, aspect, prompt) {
   switch (card.tool) {
     case "create_image": {
       const style = P.styleTextFor(a.style);
-      return G.runPlain(F.workflow(a.engine === "qwen" ? "qwen21_t2i" : "krea2_t2i"),
-        { ...opts, specs: [{ prompt: style ? `${a.prompt} ${style}` : a.prompt, label: label(title) }], ratio: a.ratio, count: a.count });
+      return G.runPlain(F.workflow(imageWorkflow(a)),
+        { ...opts, specs: [{ prompt: style ? `${a.prompt} ${style}` : a.prompt, label: label(title) }], ratio: a.ratio, count: a.count,
+          mode: a.mode });
     }
     case "edit_image": {
       const specs = a.markets?.length

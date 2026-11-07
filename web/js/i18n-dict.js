@@ -327,6 +327,31 @@ export const DICT = {
     es: "Personaje",
     de: "Figur",
   },
+  "MOSS-Image": {
+    fr: "MOSS-Image",
+    es: "MOSS-Image",
+    de: "MOSS-Image",
+  },
+  "Mode": {
+    fr: "Mode",
+    es: "Modo",
+    de: "Modus",
+  },
+  "Preview (4 steps)": {
+    fr: "Aperçu (4 étapes)",
+    es: "Vista previa (4 pasos)",
+    de: "Vorschau (4 Schritte)",
+  },
+  "Quality (25 steps)": {
+    fr: "Qualité (25 étapes)",
+    es: "Calidad (25 pasos)",
+    de: "Qualität (25 Schritte)",
+  },
+  "Standard (8 steps)": {
+    fr: "Standard (8 étapes)",
+    es: "Estándar (8 pasos)",
+    de: "Standard (8 Schritte)",
+  },
   "character": {
     fr: "personnage",
     es: "personaje",

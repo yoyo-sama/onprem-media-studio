@@ -35,7 +35,7 @@ request.
 | `studio/files.py` | `FileStore`: uploads, `inputs/…` and `outputs/…` references |
 | `studio/jobs.py` | `JobQueue`: submission, single worker, progress, cancellation, events |
 | `studio/pipelines/` | `Pipeline` contract and registry; one subclass per engine |
-| `studio/pipelines/krea2.py`, `qwen.py` | Image engines (Krea 2, Qwen Image 2.1): [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
+| `studio/pipelines/krea2.py`, `qwen.py`, `moss.py` | Image engines (Krea 2, Qwen Image 2.1, MOSS-Image): [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/h3.py` | Video engines (MiniMax H3: text, image, first/last image and references to video), geometry and refine schedule: [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | FastVideo adapter: Spark recipes, NVFP4 profile, latent output and refine-pass overrides, cancellation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | H3 latent upscaler (3D conv, LBH v1 checkpoint) and LoRA stack (exact merge into one side branch) |

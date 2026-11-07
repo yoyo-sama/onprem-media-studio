@@ -4,8 +4,8 @@
 Ollama, ni cloud : l'application fait tourner les modèles elle-même et télécharge les poids
 nécessaires à la première utilisation.
 
-Successeur d'AI Content Studio 1.4. Moteurs : Krea 2, Qwen Image 2.1, MiniMax H3 via
-FastH3, Gemma 4 26B-A4B pour l'enrichissement des prompts et l'assistant de création (un chat à
+Successeur d'AI Content Studio 1.4. Moteurs : Krea 2, Qwen Image 2.1, MOSS-Image,
+MiniMax H3 via FastH3, Gemma 4 26B-A4B pour l'enrichissement des prompts et l'assistant de création (un chat à
 rôles qui propose des cartes prêtes à lancer : [docs/fr/ASSISTANT.md](docs/fr/ASSISTANT.md)).
 
 > État : étape 4 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
@@ -90,7 +90,7 @@ dans le `PATH` ou dans `STUDIO_LLAMA_SERVER`.
 
 - [Architecture](docs/fr/ARCHITECTURE.md) : composants, API, cycle de vie d'un job, configuration,
   changement de nom
-- [Moteurs d'image](docs/fr/IMAGE-ENGINES.md) : jobs Krea 2 et Qwen Image 2.1, références d'images,
+- [Moteurs d'image](docs/fr/IMAGE-ENGINES.md) : jobs Krea 2, Qwen Image 2.1 et MOSS-Image, références d'images,
   qualification
 - [Moteurs vidéo](docs/fr/H3.md) : jobs MiniMax H3, référence vers vidéo en deux passes, repli de
   précision, pile de LoRA, qualification

@@ -62,10 +62,13 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
         {"role": _str("Id of the role taking over"), "goal": _str("What that role must achieve, one sentence")},
         ["role", "goal"]),
     "create_image": (
-        "Card: text to image. Krea 2 Turbo (default) for photorealism and posters; Qwen Image 2.1 when the image "
-        "must carry legible text.",
-        {"prompt": _str("Image prompt in English, positive wording"),
-         "engine": _enum("Engine", ["krea2", "qwen"], "krea2"), "ratio": RATIO,
+        "Card: text to image. Krea 2 Turbo (default) for photorealism and posters; Qwen Image 2.1 or MOSS-Image "
+        "when the image must carry legible text (MOSS-Image for long titles and lines of text, accents, Chinese).",
+        {"prompt": _str("Image prompt in English, positive wording; any text to draw goes in double quotes"),
+         "engine": _enum("Engine", ["krea2", "qwen", "moss"], "krea2"),
+         "mode": _enum("MOSS-Image only: preview (4 steps, fastest), standard (8 steps) or quality (25 steps, "
+                       "slowest, most faithful light)", ["preview", "standard", "quality"], "standard"),
+         "ratio": RATIO,
          "count": _int("Number of variants", 1, 4, 1), "style": STYLE},
         ["prompt"]),
     "edit_image": (
@@ -155,8 +158,9 @@ GENERATION_TOOLS = [n for n in SCHEMAS if n not in CONVERSATION_TOOLS]
 
 # One line per engine family, for the instructions of the roles that use it.
 ENGINE_NOTES = {
-    "create_image": "create_image: Krea 2 Turbo (photorealism, posters; no reliable text) or Qwen Image 2.1 "
-                    "(text in the image). Ratios 16:9, 9:16, 1:1, 4:5; 1 to 4 variants.",
+    "create_image": "create_image: Krea 2 Turbo (photorealism, posters; no reliable text), Qwen Image 2.1 "
+                    "(text in the image) or MOSS-Image (long text in the image; mode preview, standard or "
+                    "quality). Ratios 16:9, 9:16, 1:1, 4:5; 1 to 4 variants.",
     "edit_image": "edit_image: Qwen Image 2.1 editing. The input image is <image1>, up to 9 references "
                   "<image2>…<image10>; one image per render, at the input image's size.",
     "character_sheet": "character_sheet: one subject on a multi-view sheet (1920×1088, neutral light), drawn by "

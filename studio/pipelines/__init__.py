@@ -1,4 +1,4 @@
-"""Pipeline contract. Each generation engine (Krea 2, Qwen Image 2.1, H3, the ×2 upscaler) is one
+"""Pipeline contract. Each generation engine (Krea 2, Qwen Image 2.1, MOSS-Image, H3, the ×2 upscaler) is one
 Pipeline subclass registered in REGISTRY; the job queue knows nothing else.
 
 Pipelines receive final prompts: prompt compilation (sheet templates, shot
@@ -32,4 +32,4 @@ def register(pipeline: Pipeline) -> Pipeline:
     return pipeline
 
 
-from . import h3, krea2, montage, qwen, upscale  # noqa: E402,F401  (each module registers its engines)
+from . import h3, krea2, montage, moss, qwen, upscale  # noqa: E402,F401  (each module registers its engines)

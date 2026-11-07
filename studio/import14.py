@@ -144,7 +144,8 @@ def import_models(root: Path, store: ModelStore, say=print) -> None:
     for mid, entry in store.catalog.items():
         if store.installed(mid):
             continue
-        info = store.api.model_info(entry["repo"], files_metadata=True, token=store.settings.hf_token)
+        info = store.api.model_info(entry["repo"], revision=entry.get("revision"), files_metadata=True,
+                                    token=store.settings.hf_token)
         target, left = store.path(mid), 0
         for s in info.siblings:
             rel, size = s.rfilename, s.size or 0

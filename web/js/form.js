@@ -27,6 +27,7 @@ export const QWEN21_RATIOS = { "16:9": [1344, 768], "9:16": [768, 1344], "1:1": 
 export const WORKFLOWS = [
   { id: "krea2_t2i", pipeline: "text2image", label: "Krea 2 Turbo", engine: "krea2-t2i" },
   { id: "qwen21_t2i", pipeline: "text2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1" },
+  { id: "moss_t2i", pipeline: "text2image", label: "MOSS-Image", engine: "moss-image" },
   { id: "qwen21_i2i", pipeline: "image2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1" },
   { id: "h3_t2v", pipeline: "text2video", label: L("MiniMax H3 · native audio"), engine: "h3-t2v" },
   { id: "h3_i2v", pipeline: "image2video", label: L("MiniMax H3 · native audio"), engine: "h3-i2v" },
@@ -54,6 +55,13 @@ export const PIPELINES = [
   { id: "campaign", label: L("Full campaign (posters + thumbnails + teaser)"), scenario: ["campaign"],
     controls: ["duration", "variants", "style"] },
 ];
+
+// MOSS-Image modes (server moss.py): the turbo LoRA at 4 or 8 steps, or the SFT model at
+// 25 steps. The same three in the Studio, the Canvas card and the assistant's card.
+export const MOSS_MODES = [["preview", L("Preview (4 steps)")], ["standard", L("Standard (8 steps)")],
+                           ["quality", L("Quality (25 steps)")]];
+export const MOSS_DEFAULT_MODE = "standard";
+export const mossModeLabel = mode => (MOSS_MODES.find(m => m[0] === mode) || MOSS_MODES[1])[1];
 
 // Every engine a workflow's buttons can submit to (sheets, shot images, cuts…).
 export const workflowEngines = wf => wf?.engines || (wf?.engine ? [wf.engine] : []);
