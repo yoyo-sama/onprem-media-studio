@@ -33,9 +33,9 @@ prompt et réglages remplis. Rien ne part en rendu avant le clic de l'utilisateu
 Un seul LLM pour tout : **Gemma 4 26B-A4B** (mélange d'experts, environ 4 milliards de paramètres
 actifs par jeton), GGUF `ggml-org/gemma-4-26B-A4B-it-GGUF`, `Q4_0` (14,6 Go) plus son projecteur
 de vision (`mmproj` Q8_0, 0,8 Go), Apache-2.0. Il sert le chat et les enrichissements ✨ par le
-même `llama-server` (un processus, contexte de 32k, un seul emplacement).
-`STUDIO_LLM_MODEL=gemma4-e4b` revient à Gemma 4 E4B (8 Go) sur une machine plus petite. Les appels
-d'outils natifs passent par `llama-server --jinja` (gabarit de chat de Gemma 4).
+même `llama-server` (un processus, contexte de 32k, un seul emplacement). Qualifié sur le GB10
+le 2026-11-07 ; Gemma 4 E4B, le modèle plus petit proposé avant, a été retiré le même jour. Les
+appels d'outils natifs passent par `llama-server --jinja` (gabarit de chat de Gemma 4).
 
 Quand un moteur vidéo H3 doit se charger seul et que la mémoire manque, le serveur arrête d'abord
 `llama-server` (`common.LOW_MEMORY`) ; il redémarre à la requête LLM suivante.
@@ -166,6 +166,4 @@ lancé). Les
 ## Pas encore
 
 - Le Canvas n'a pas encore d'assistant ([ROADMAP.md](ROADMAP.md)).
-- Appels d'outils, vitesse et mémoire à côté de H3 sont à vérifier sur le GB10 avec le modèle
-  26B ; le fichier de brouillon MTP facultatif du dépôt GGUF (décodage plus rapide) n'est pas
-  utilisé.
+- Le fichier de brouillon MTP facultatif du dépôt GGUF (décodage plus rapide) n'est pas utilisé.

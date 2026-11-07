@@ -32,5 +32,5 @@ def test_instruction_checks(settings, store):
 
 def test_model_size_route(settings, store):
     with make_client(settings, store) as c:
-        assert c.get("/api/models/gemma4-e4b/size").json() == {"id": "gemma4-e4b", "bytes": 110}
+        assert c.get("/api/models/gemma4-26b-a4b/size").json() == {"id": "gemma4-26b-a4b", "bytes": 110}
         assert c.get("/api/models/nope/size").status_code == 404

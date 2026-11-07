@@ -26,8 +26,8 @@ class Settings:
     hf_token: str | None = field(default_factory=lambda: os.environ.get("HF_TOKEN") or None)
     llama_server: str = field(default_factory=lambda: os.environ.get("STUDIO_LLAMA_SERVER", "llama-server"))
     llm_port: int = field(default_factory=lambda: int(os.environ.get("STUDIO_LLM_PORT", "8095")))
-    # Catalog id of the LLM (prompt enrichment and the assistant): gemma4-26b-a4b or,
-    # with less memory, gemma4-e4b.
+    # Catalog id of the LLM (prompt enrichment and the assistant); gemma4-26b-a4b is the
+    # only one listed.
     llm_model: str = field(default_factory=lambda: os.environ.get("STUDIO_LLM_MODEL", "gemma4-26b-a4b"))
     # Seconds between two scans of the output folder by the gallery.
     gallery_scan: float = field(default_factory=lambda: float(os.environ.get("STUDIO_GALLERY_SCAN", "60")))
