@@ -139,7 +139,8 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
 43. **No torchao FP8 on the GB10; torch.compile only where it pays back.** FP8 weights and dynamic
     activations (per-row scales) took 1 800 s per Krea 2 step instead of 5.7. `torch.compile` of
     the transformer, default mode, saved 22 % per step on Qwen Image 2.1 at 1920×1088 (16 s per
-    image) for about 15 s of compilation on the first render at each size in a process: kept.
+    image) for about 15 s of compilation on the first render at each size in a process: kept
+    until Qwen went to 4 steps (#46), where it would save about 1 s per image.
     On Krea 2 it saved 12 % (6 s per image of 8 steps) for about 33 s per new size or image
     count: not kept. (GB10, 2026-11-05)
 44. **NVIDIA's upscalers do not run on the GB10.** DLSS 5 needs a game engine's per-frame buffers
@@ -155,6 +156,17 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     compose files from its labels; compose keeps the link as given. Its git runs as the owner of
     the repository, never as root (1.4 lesson). [GALLERY.md](GALLERY.md#docker-docker-compose)
     (2026-11-07)
+46. **Qwen Image 2.1 runs a step-distilled transformer, 4 steps instead of 25.**
+    lightx2v/Qwen-Image-2.1-Lightning-v2-RL replaces Qwen's own transformer (text encoder, VAE
+    and processor unchanged): 2.9 to 3.6 times faster on the five Qwen qualification cases, three
+    seeds each, with the identity of both sheet subjects kept in every shot image. Its 4 sigmas
+    are already shifted: the base repository's scheduler (dynamic exponential shifting, terminal
+    0.02) would shift them again, so a plain `FlowMatchEulerDiscreteScheduler(shift=1)` replaces
+    it. The file is FP32 (28.5 GB), loaded in BF16 (14 GB) in 26 to 41 s. Costs: more contrast
+    and saturation, stray structures in text to image (2 seeds out of 3); the drift of "keep the
+    rest" on an edit asking for rocks the image lacks came from the prompt (the base drifted
+    3/3 too). Qwen's official 8-step Turbo was only twice as fast, darker and duller.
+    `tools/qualify/qwen_fast_bench.sh` (promaxgb10-95c7, 2026-11-07)
 
 ## 8. Front end (for the port in step 4)
 

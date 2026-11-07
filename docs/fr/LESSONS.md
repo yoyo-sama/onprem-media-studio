@@ -152,7 +152,8 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     et activations dynamiques FP8 (échelles par ligne) prenaient 1 800 s par étape de Krea 2 au
     lieu de 5,7. `torch.compile` du transformer, en mode par défaut, a fait gagner 22 % par étape
     sur Qwen Image 2.1 en 1920×1088 (16 s par image) pour environ 15 s de compilation au premier
-    rendu de chaque taille dans un processus : gardé. Sur Krea 2, il faisait gagner 12 % (6 s par
+    rendu de chaque taille dans un processus : gardé jusqu'au passage de Qwen à 4 étapes (n°46),
+    où il ne ferait gagner qu'environ 1 s par image. Sur Krea 2, il faisait gagner 12 % (6 s par
     image de 8 étapes) pour environ 33 s par nouvelle taille ou nombre d'images : écarté. (GB10,
     2026-11-05)
 44. **Les upscalers de NVIDIA ne tournent pas sur le GB10.** DLSS 5 demande les buffers qu'un
@@ -169,6 +170,18 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     fichiers compose de ses étiquettes ; compose garde le lien tel quel. Son git tourne sous
     l'identité du propriétaire du dépôt, jamais en root (leçon de la 1.4).
     [GALLERY.md](GALLERY.md#docker-docker-compose) (2026-11-07)
+46. **Qwen Image 2.1 tourne avec un transformer distillé, 4 étapes au lieu de 25.**
+    lightx2v/Qwen-Image-2.1-Lightning-v2-RL remplace le transformer de Qwen (encodeur de texte,
+    VAE et processeur inchangés) : 2,9 à 3,6 fois plus rapide sur les cinq cas de qualification
+    Qwen, trois seeds chacun, avec l'identité des deux sujets des planches gardée dans chaque image
+    de plan. Ses 4 sigmas sont déjà décalés : le planificateur du dépôt de base (décalage
+    exponentiel dynamique, terminal 0,02) les décalerait une seconde fois, donc un simple
+    `FlowMatchEulerDiscreteScheduler(shift=1)` le remplace. Le fichier est en FP32 (28,5 Go),
+    chargé en BF16 (14 Go) en 26 à 41 s. Contreparties : plus de contraste et de saturation, des
+    structures parasites en texte vers image (2 seeds sur 3) ; la dérive de « garder le reste »
+    sur une retouche qui demande des rochers absents de l'image venait de la consigne (la base
+    dérivait aussi, 3/3). Le Turbo officiel de Qwen à 8 étapes n'allait que 2 fois plus vite,
+    plus sombre et plus terne. `tools/qualify/qwen_fast_bench.sh` (promaxgb10-95c7, 2026-11-07)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

@@ -10,9 +10,12 @@ covers every edit the 1.4 did with 2509.
 | Pipeline id | Model (catalog id) | diffusers class | Fixed settings |
 |---|---|---|---|
 | `krea2-t2i` | Krea 2 Turbo (`krea2-turbo`) | `Krea2Pipeline` | 8 steps, `guidance_scale=0` |
-| `qwen-image-2.1` | Qwen Image 2.1 (`qwen-image-2.1`) | `QwenImage21Pipeline` | 25 steps, `true_cfg_scale=1`, condition images at 1024 |
+| `qwen-image-2.1` | Qwen Image 2.1 (`qwen-image-2.1`: text encoder, VAE, processor) with the Lightning v2 RL transformer (`qwen-image-2.1-lightning`) | `QwenImage21Pipeline` | 4 steps on the Lightning sigmas, scheduler without dynamic shifting, `true_cfg_scale=1`, condition images at 1024 |
 
-These are the settings qualified in 1.4 (`workflows/api/krea2_t2i.json`, `qwen21_*.json`). Steps and guidance are not parameters: a distilled model breaks colour first
+Krea 2 keeps the settings qualified in 1.4 (`workflows/api/krea2_t2i.json`). Qwen Image 2.1 ran the
+1.4 ones (25 steps) until 2026-11-07, then took the step-distilled transformer of
+[lightx2v/Qwen-Image-2.1-Lightning-v2-RL](https://huggingface.co/lightx2v/Qwen-Image-2.1-Lightning-v2-RL)
+(LESSONS #46). Steps and guidance are not parameters: a distilled model breaks colour first
 when under-stepped (LESSONS #2), and nobody asked to tune them.
 
 Only one engine stays in GPU memory: starting a job on another engine unloads the previous one.
@@ -93,11 +96,12 @@ setting, as in 1.4: 2 sheets + 7), it edits: `count` is 1, size from image 1 unl
 
 ## Speed
 
-Weights are read whole, never memory-mapped, and Qwen Image 2.1's transformer runs through
-`torch.compile`; measures and benches in [H3.md](H3.md#memory-and-cancellation) and
+Weights are read whole, never memory-mapped; no engine runs through `torch.compile` any more
+(LESSONS #43, #46); measures and benches in [H3.md](H3.md#memory-and-cancellation) and
 [LESSONS.md](LESSONS.md) #42–43. Loads on the GB10, page cache dropped: Krea 2 34 s (253 s
-before). Renders at 1280×720: Krea 2 about 20 s per image; Qwen Image 2.1 at 1344×768 about 40 s
-once compiled (the first render at a new size adds about 15 s).
+before), Qwen Image 2.1 with Lightning 26–41 s. Renders: Krea 2 at 1280×720 about 20 s per image;
+Qwen Image 2.1 at 1344×768 (4 steps) 7 s for text to image, 13 s for a shot image with one
+subject, 16 s with two (40–50 s at 25 steps). `tools/qualify/qwen_fast_bench.sh` measures them.
 
 ## Upscale ×2
 
@@ -183,5 +187,8 @@ Only then set `"qualified": true` for the model in `studio/catalog.json`. Seeds 
   fixed then.
 - **LoRA loading on NGC 25.11:** peft 0.19+ refuses its torchao 0.14, so peft is pinned below 0.19.
 - **Style LoRAs** (1.4 Krea 2 and sheet LoRAs) are not ported yet.
+- **Qwen Image 2.1 with Lightning (2026-11-07):** benched on promaxgb10-95c7, 5 cases × 3 seeds:
+  identity of both sheet subjects kept in every shot image; more contrast and saturation than
+  the 25-step base, and stray structures in text to image (2 seeds out of 3).
 - **Qwen Image 2.1 licence:** Qwen Research License, non-commercial use only. Since 2509
   (Apache-2.0) was dropped, every edit and every shot image depends on it.

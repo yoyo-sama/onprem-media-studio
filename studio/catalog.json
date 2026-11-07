@@ -36,10 +36,20 @@
       "label": "Qwen Image 2.1",
       "role": "image",
       "repo": "Qwen/Qwen-Image-2.1",
-      "allow": ["model_index.json", "processor/*", "scheduler/*", "text_encoder/*", "transformer/*", "vae/*"],
+      "allow": ["model_index.json", "processor/*", "scheduler/*", "text_encoder/*", "vae/*"],
       "gated": false,
       "license": "Qwen Research License (non-commercial use only; commercial use needs a licence from Qwen)",
       "qualified": true
+    },
+    {
+      "id": "qwen-image-2.1-lightning",
+      "label": "Qwen Image 2.1 — Lightning v2 RL transformer (4 steps)",
+      "role": "image",
+      "repo": "lightx2v/Qwen-Image-2.1-Lightning-v2-RL",
+      "allow": ["config.json", "diffusion_pytorch_model.safetensors"],
+      "gated": false,
+      "license": "Qwen Research License (derived from Qwen Image 2.1; non-commercial use only)",
+      "qualified": false
     },
     {
       "id": "fasth3-v2-nvfp4",

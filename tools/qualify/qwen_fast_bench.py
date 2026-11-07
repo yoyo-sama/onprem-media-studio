@@ -5,9 +5,10 @@ Run by qwen_fast_bench.sh inside the container, one process per variant:
     python qwen_fast_bench.py compare                # table + side-by-side images
 
 Variants (the text encoder, VAE and processor always come from qwen-image-2.1):
-- base: Qwen/Qwen-Image-2.1, 25 steps, torch.compile, what the server runs (qwen.py);
-- lightning: lightx2v/Qwen-Image-2.1-Lightning-v2-RL, its 4 sigmas, no compile. The
-  transformer is stored in FP32 (28.5 GB) and loaded in BF16;
+- base: Qwen/Qwen-Image-2.1, 25 steps, torch.compile, what the server ran until 2026-11-07
+  (it needs Qwen's own transformer, which installs made since then no longer download);
+- lightning: lightx2v/Qwen-Image-2.1-Lightning-v2-RL, its 4 sigmas, no compile, what the
+  server runs since 2026-11-07. The transformer is stored in FP32 (28.5 GB) and loaded in BF16;
 - turbo: Qwen/Qwen-Image-2.1-Turbo, its 8 sigmas, no compile.
 Both distilled schedules are already shifted: they need a scheduler without dynamic
 shifting (the base one would shift them again). Their weights go to <data>/bench/
@@ -102,8 +103,10 @@ def build(variant: str, settings):
     pipe = QwenImage21Pipeline.from_pretrained(base, torch_dtype=torch.bfloat16, disable_mmap=True,
                                                **parts).to(device)
     if variant == "base":
-        common.compile_transformer(pipe)
-        sampling = {"num_inference_steps": qwen.QWEN21_STEPS}
+        # What the server ran until 2026-11-07: torch.compile, default mode, 25 steps.
+        os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", str(settings.data_dir / "cache" / "inductor"))
+        pipe.transformer.compile()
+        sampling = {"num_inference_steps": 25}
     elif variant == "lightning":
         config = json.loads((fast / "inference_config.json").read_text())
         pipe.scheduler = FlowMatchEulerDiscreteScheduler(**config["scheduler"])

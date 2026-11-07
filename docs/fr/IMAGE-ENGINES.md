@@ -10,9 +10,12 @@ couvre toutes les retouches que la 1.4 faisait avec 2509.
 | Id du pipeline | Modèle (id catalogue) | Classe diffusers | Réglages fixes |
 |---|---|---|---|
 | `krea2-t2i` | Krea 2 Turbo (`krea2-turbo`) | `Krea2Pipeline` | 8 étapes, `guidance_scale=0` |
-| `qwen-image-2.1` | Qwen Image 2.1 (`qwen-image-2.1`) | `QwenImage21Pipeline` | 25 étapes, `true_cfg_scale=1`, images de condition à 1024 |
+| `qwen-image-2.1` | Qwen Image 2.1 (`qwen-image-2.1` : encodeur de texte, VAE, processeur) avec le transformer Lightning v2 RL (`qwen-image-2.1-lightning`) | `QwenImage21Pipeline` | 4 étapes sur les sigmas de Lightning, planificateur sans décalage dynamique, `true_cfg_scale=1`, images de condition à 1024 |
 
-Ce sont les réglages qualifiés en 1.4 (`workflows/api/krea2_t2i.json`, `qwen21_*.json`). Étapes et guidance ne sont pas des paramètres : un modèle distillé casse
+Krea 2 garde les réglages qualifiés en 1.4 (`workflows/api/krea2_t2i.json`). Qwen Image 2.1 a tourné
+avec ceux de la 1.4 (25 étapes) jusqu'au 2026-11-07, puis a pris le transformer distillé de
+[lightx2v/Qwen-Image-2.1-Lightning-v2-RL](https://huggingface.co/lightx2v/Qwen-Image-2.1-Lightning-v2-RL)
+(LESSONS n°46). Étapes et guidance ne sont pas des paramètres : un modèle distillé casse
 d'abord la colorimétrie quand on lui retire des étapes (LESSONS n°2), et personne n'a demandé à
 les régler.
 
@@ -99,11 +102,12 @@ l'image 1 sauf si `width` et `height` sont donnés tous les deux. Le prompt cite
 
 ## Vitesse
 
-Les poids sont lus d'un bloc, jamais projetés en mémoire, et le transformer de Qwen Image 2.1
-passe par `torch.compile` ; mesures et bancs dans [H3.md](H3.md#mémoire-et-annulation) et
+Les poids sont lus d'un bloc, jamais projetés en mémoire ; plus aucun moteur ne passe par
+`torch.compile` (LESSONS n°43, n°46) ; mesures et bancs dans [H3.md](H3.md#mémoire-et-annulation) et
 [LESSONS.md](LESSONS.md) n°42–43. Chargements sur le GB10, cache disque vidé : Krea 2 34 s
-(253 s avant). Rendus en 1280×720 : Krea 2 environ 20 s par image ; Qwen Image 2.1 en 1344×768
-environ 40 s une fois compilé (le premier rendu à une nouvelle taille ajoute environ 15 s).
+(253 s avant), Qwen Image 2.1 avec Lightning 26 à 41 s. Rendus : Krea 2 en 1280×720 environ 20 s
+par image ; Qwen Image 2.1 en 1344×768 (4 étapes) 7 s en texte vers image, 13 s pour une image
+de plan à un sujet, 16 s à deux (40 à 50 s à 25 étapes). `tools/qualify/qwen_fast_bench.sh` les mesure.
 
 ## Résolution ×2
 
@@ -197,5 +201,8 @@ comparer la qualité, pas les pixels.
 - **Chargement de LoRA sur NGC 25.11 :** peft 0.19 et plus refuse son torchao 0.14, peft est donc
   épinglé sous 0.19.
 - **LoRA de style** (LoRA Krea 2 et de planche de la 1.4) pas encore portées.
+- **Qwen Image 2.1 avec Lightning (2026-11-07) :** banc sur promaxgb10-95c7, 5 cas × 3 seeds :
+  identité des deux sujets des planches gardée dans chaque image de plan ; plus de contraste et de
+  saturation que la base à 25 étapes, et des structures parasites en texte vers image (2 seeds sur 3).
 - **Licence Qwen Image 2.1 :** Qwen Research License, usage non commercial uniquement. 2509
   (Apache-2.0) ayant été retiré, toutes les retouches et toutes les images de plan en dépendent.
