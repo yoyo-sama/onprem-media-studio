@@ -3,6 +3,8 @@
     docker exec -i studio python - < tools/qualify/moss_bench.py               # every case
     docker exec -i studio python - --cases sft-turbo4 < tools/qualify/moss_bench.py
     docker exec -i studio python - --download-only < tools/qualify/moss_bench.py
+    docker exec -i studio python - --cases sft-turbo4,sft-turbo4-destripe --seeds 42,7,1234 \
+        --prompts poster-en,menu-fr,layout --out moss-seeds < tools/qualify/moss_bench.py
 
 MOSS-Image is not in the catalog (not qualified). This script downloads its weights to
 data/bench/moss-weights/ (about 41 GB, public repositories, Apache-2.0), never to
@@ -214,6 +216,9 @@ def sheet(images: list, path: Path):
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--cases", default=",".join(CASES), help="comma-separated, from: " + ", ".join(CASES))
+    parser.add_argument("--seeds", default=str(SEED), help="comma-separated seeds, each case renders every one")
+    parser.add_argument("--prompts", default=",".join(PROMPTS), help="comma-separated, from: " + ", ".join(PROMPTS))
+    parser.add_argument("--out", default="moss", help="folder under data/output/bench/ (a new one keeps earlier runs)")
     parser.add_argument("--download-only", action="store_true")
     parser.add_argument("--local", type=Path, help="tests only: local repositories instead of downloads")
     parser.add_argument("--size", type=int, help="tests only: square size instead of the real ones")
@@ -221,10 +226,13 @@ def main() -> int:
     cases = args.cases.split(",")
     if unknown := [c for c in cases if c not in CASES]:
         sys.exit(f"unknown cases {unknown}; known: {', '.join(CASES)}")
+    seeds, prompts = [int(s) for s in args.seeds.split(",")], args.prompts.split(",")
+    if unknown := [p for p in prompts if p not in PROMPTS]:
+        sys.exit(f"unknown prompts {unknown}; known: {', '.join(PROMPTS)}")
 
     from studio.config import Settings
     settings = Settings()
-    weights, out = settings.data_dir / "bench" / "moss-weights", settings.output_dir / "bench" / "moss"
+    weights, out = settings.data_dir / "bench" / "moss-weights", settings.output_dir / "bench" / args.out
     weights.mkdir(parents=True, exist_ok=True)
     out.mkdir(parents=True, exist_ok=True)
     free = shutil.disk_usage(weights).free / 1e9
@@ -238,13 +246,14 @@ def main() -> int:
     began = time.time()
     pipe = build_pipe(moss, snaps[SFT][0])
     sync()
-    results = {"load_s": round(time.time() - began, 1), "kernels": kernels(), "seed": SEED,
+    results = {"load_s": round(time.time() - began, 1), "kernels": kernels(), "seeds": seeds,
                "commits": {r: c for r, (_, c) in snaps.items()}, "prompts": {}, "cases": {}}
     print(f"load: SFT pipeline in {results['load_s']} s", flush=True)
 
     # Prompts encoded once (their time is per prompt, not per case), with the empty negative.
     embeds = {}
-    for name, prompt in PROMPTS.items():
+    for name in prompts:
+        prompt = PROMPTS[name]
         sync()
         t = time.time()
         embeds[name] = pipe.encode_prompt(prompt)
@@ -253,7 +262,7 @@ def main() -> int:
     negative = pipe.encode_prompt("")
     print("text encoder: " + ", ".join(f"{n} {s} s" for n, s in results["prompts"].items()), flush=True)
 
-    current, images = SFT, {name: [] for name in PROMPTS}
+    current, images = SFT, {(name, seed): [] for name in prompts for seed in seeds}
     for case in sorted(cases, key=lambda c: CASES[c]["model"] != SFT):  # SFT first, one swap
         spec = CASES[case]
         if spec["model"] != current:
@@ -277,21 +286,23 @@ def main() -> int:
         if torch.cuda.is_available():
             torch.cuda.reset_peak_memory_stats()
         timings = {}
-        for name in spec.get("prompts") or PROMPTS:
+        for name in [p for p in (spec.get("prompts") or PROMPTS) if p in prompts]:
             if name == "layout" and (width, height) != SIZE and not args.size:
                 continue  # the layout's boxes are for 1024×1024
-            (pos, pos_mask), (neg, neg_mask) = embeds[name], negative
-            sync()
-            t = time.time()
-            image = pipe(prompt_embeds=pos, prompt_attention_mask=pos_mask,
-                         negative_prompt_embeds=neg, negative_prompt_attention_mask=neg_mask,
-                         width=width, height=height, num_inference_steps=spec["steps"],
-                         guidance_scale=spec["cfg"], uncond_skip_layers=[22] if spec["cfg"] != 1 else [],
-                         generator=torch.Generator("cpu").manual_seed(SEED)).images[0]
-            sync()
-            timings[name] = round(time.time() - t, 1)
-            image.save(out / f"{name}--{case}.png")
-            images[name].append((case, image))
+            for seed in seeds:
+                (pos, pos_mask), (neg, neg_mask) = embeds[name], negative
+                sync()
+                t = time.time()
+                image = pipe(prompt_embeds=pos, prompt_attention_mask=pos_mask,
+                             negative_prompt_embeds=neg, negative_prompt_attention_mask=neg_mask,
+                             width=width, height=height, num_inference_steps=spec["steps"],
+                             guidance_scale=spec["cfg"], uncond_skip_layers=[22] if spec["cfg"] != 1 else [],
+                             generator=torch.Generator("cpu").manual_seed(seed)).images[0]
+                sync()
+                key = name if len(seeds) == 1 else f"{name} s{seed}"
+                timings[key] = round(time.time() - t, 1)
+                image.save(out / (f"{name}--{case}.png" if len(seeds) == 1 else f"{name}--{case}--s{seed}.png"))
+                images[(name, seed)].append((case, image))
         for handle in handles:
             handle.remove()
         peak = torch.cuda.max_memory_allocated() / 1e9 if torch.cuda.is_available() else 0
@@ -301,9 +312,9 @@ def main() -> int:
         print(f"{case}: {width}×{height}, {spec['steps']} steps, cfg {spec['cfg']}: "
               + ", ".join(f"{n} {s} s" for n, s in timings.items()) + f", peak {peak:.0f} GB", flush=True)
 
-    for name, row in images.items():
+    for (name, seed), row in images.items():
         if row:
-            sheet(row, out / f"sheet--{name}.png")
+            sheet(row, out / (f"sheet--{name}.png" if len(seeds) == 1 else f"sheet--{name}--s{seed}.png"))
     (out / "results.json").write_text(json.dumps(results, indent=1, ensure_ascii=False))
     print(f"done: images and sheets in {out}, timings in {out / 'results.json'}", flush=True)
     return 0
