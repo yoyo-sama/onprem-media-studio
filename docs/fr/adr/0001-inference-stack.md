@@ -56,7 +56,7 @@ copié et aucun n'est une dépendance.
 - **Krea 2 est à accès restreint :** l'utilisateur doit accepter sa licence sur Hugging Face et
   fournir `HF_TOKEN`.
 - **FastH3 en première/dernière image (I2V/FL2VA) :** OmniRef est validé. L'étape 3 utilise
-  FastH3 V2 (`FastVideo/FastH3-QAD-v2`, repli FP8 `FastVideo/FastVideo-FastH3-8-Step-V2-FP8`),
+  FastH3 V2 (`FastVideo/FastH3-QAD-v2`),
   dont le pipeline accepte première et dernière images, mais l'amont ne documente pour lui que le
   texte vers vidéo : à qualifier sur GB10.
 - **FastVideo exige torch 2.12** alors que l'image garde le torch de NGC 25.11 (2.10) ; FastVideo

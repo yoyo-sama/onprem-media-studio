@@ -1,7 +1,7 @@
 """H3 LoRA stack: several community LoRAs, each with its strength, folded into
 one adapter file that FastVideo loads as a single side branch.
 
-FastVideo holds one adapter per layer of a packed (NVFP4/FP8) transformer, so
+FastVideo holds one adapter per layer of a packed (NVFP4) transformer, so
 a stack is merged here. The merge is exact: concatenating the low-rank factors
 of n adapters along their rank gives a rank-(r1+…+rn) adapter whose product is
 the sum of the n products. Each adapter's strength and alpha/rank are folded

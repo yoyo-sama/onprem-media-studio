@@ -1,13 +1,10 @@
 """FastVideo adapter for the MiniMax H3 engines: one VideoGenerator in memory,
-built from the DGX Spark recipes FastVideo publishes, with an FP8 fallback.
+built from the DGX Spark recipes FastVideo publishes, in NVFP4.
 
 Recipes followed (FastVideo `examples/inference/basic/`):
 - FastH3 V2 (t2v, i2v, FL2VA): `basic_fasth3_spark_qad_v2_nvfp4.yaml`;
 - FastH3 OmniRef (Ref2VA): `basic_fasth3_omniref_spark.yaml` with its
-  lossless speed-ups and the 36-layer NVFP4 video decoder;
-- FP8 fallback: the FP8 checkpoints with bf16 sparse attention, as in the
-  recipe for GPUs without FP4 (`basic_fasth3_omniref_rtx4090.yaml`), but with
-  everything resident (a GB10 has the memory).
+  lossless speed-ups and the 36-layer NVFP4 video decoder.
 
 Two things are deliberately left out of the recipes: the precomputed AdaLN
 table (it would bypass the LoRA on the AdaLN layers and only holds the
@@ -23,7 +20,7 @@ to about 247 s on the GB10 with no visible loss (LESSONS.md #38).
 
 The generator runs in-process (one GPU: FastVideo's uniproc executor), so a
 cancelled job interrupts it directly. FastVideo reads its environment when the
-generator is built, which is why a precision or LoRA change builds a new one.
+generator is built, which is why a LoRA change builds a new one.
 
 fastvideo and torch are imported inside functions: the server and the unit
 tests run without them.
@@ -54,10 +51,6 @@ _NVFP4_ENV = {
     "FASTVIDEO_NVFP4_MM_BACKEND": "cudnn",
     "FASTVIDEO_NVFP4_MM_ROW_SPLIT": "table",
 }
-_FP8_ENV = {
-    "FASTVIDEO_H3_VSA_FP4": "0",
-    "FASTVIDEO_H3_VSA_FINE_ATTENTION": "emulator-bf16",
-}
 # OmniRef recipe only: bit-identical speed-ups and the reference-encode cache.
 _OMNIREF_ENV = {
     "FASTVIDEO_H3_GATE_CHUNK_ROWS": "8192",
@@ -68,8 +61,8 @@ _OMNIREF_ENV = {
     "FASTVIDEO_H3_REF2VA_MEMO_ENTRIES": "16",
 }
 # Keys this module may set; any of them not in a profile is removed, so that a
-# fallback to FP8 does not inherit NVFP4 settings from the previous build.
-_ALL_KEYS = set(_SPARK_ENV) | set(_NVFP4_ENV) | set(_FP8_ENV) | set(_OMNIREF_ENV) | {
+# V2 engine does not inherit OmniRef settings from the previous build.
+_ALL_KEYS = set(_SPARK_ENV) | set(_NVFP4_ENV) | set(_OMNIREF_ENV) | {
     "FASTVIDEO_H3_VAE_NVFP4_DECODER"}
 
 REFERENCE_SHORT_EDGE = 2048
@@ -82,29 +75,24 @@ class EngineSpec:
     """Everything a generator is built from; a different spec means a new generator."""
     model_dir: Path
     ref2va: bool
-    precision: str  # nvfp4 | fp8
     lora: Path | None = None
 
     def __str__(self) -> str:  # the engine: log line
-        return f"{self.model_dir.name} {self.precision}" + (f" + LoRA {self.lora.name}" if self.lora else "")
+        return self.model_dir.name + (f" + LoRA {self.lora.name}" if self.lora else "")
 
 
 def environment(spec: EngineSpec) -> dict[str, str]:
     env = dict(_SPARK_ENV)
-    env.update(_NVFP4_ENV if spec.precision == "nvfp4" else _FP8_ENV)
+    env.update(_NVFP4_ENV)
     if spec.ref2va:
         env.update(_OMNIREF_ENV)
-        decoder = spec.model_dir / "vae_decoder_nvfp4" / "decoder-nvfp4.safetensors"
-        if spec.precision == "nvfp4":
-            env["FASTVIDEO_H3_VAE_NVFP4_DECODER"] = str(decoder)
+        env["FASTVIDEO_H3_VAE_NVFP4_DECODER"] = str(spec.model_dir / "vae_decoder_nvfp4" / "decoder-nvfp4.safetensors")
     return env
 
 
 def experimental(spec: EngineSpec) -> dict:
     out = {"attention_backend": "VIDEO_SPARSE_ATTN_H3", "video_decode_backend": "h3-vae",
-           "h3_sequential_load": False}
-    if spec.precision == "nvfp4":
-        out["h3_vsa_fp4"] = dict(_FP4_ATTENTION)
+           "h3_sequential_load": False, "h3_vsa_fp4": dict(_FP4_ATTENTION)}
     if not spec.ref2va:
         # FastH3 V2 keeps its trained 64-token VSA layout and 0.8 sparsity.
         out.update({"VSA_sparsity": 0.8, "VSA_tile_size": 64, "inference_torch_compile": False,
@@ -176,8 +164,7 @@ class Engine:
         self.spec = spec
         _apply_env(environment(spec))
         _read_weights_whole()
-        quant = (QuantizationConfig(transformer_quant="NVFP4", layer_profile="h3_dit_vsa")
-                 if spec.precision == "nvfp4" else QuantizationConfig(transformer_quant="FP8"))
+        quant = QuantizationConfig(transformer_quant="NVFP4", layer_profile="h3_dit_vsa")
         components = ComponentConfig(lora_path=str(spec.lora) if spec.lora else None, lora_strength=1.0)
         if spec.ref2va:
             components.override_pipeline_cls_name = "MiniMaxH3Ref2VAModularPipeline"

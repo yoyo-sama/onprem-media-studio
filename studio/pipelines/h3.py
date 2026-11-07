@@ -31,7 +31,6 @@ import json
 import math
 import re
 import time
-import traceback
 from pathlib import Path
 
 from ..config import Settings
@@ -53,8 +52,8 @@ PASS1_MEGAPIXELS = 0.3        # first Ref2VA pass
 VAE_DOWNSAMPLE = 16
 NO_NEGATIVE = "MiniMax H3 runs without guidance (cfg 1), so a negative prompt is never used."
 
-V2 = {"nvfp4": "fasth3-v2-nvfp4", "fp8": "fasth3-v2-fp8"}
-OMNIREF = {"nvfp4": "fasth3-omniref-nvfp4", "fp8": "fasth3-omniref-fp8"}
+V2 = "fasth3-v2-nvfp4"
+OMNIREF = "fasth3-omniref-nvfp4"
 UPSCALER = "h3-latent-upscaler"
 UPSCALER_FILE = "minimax_h3_latent_upscaler_3d_conv_v1/minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors"
 
@@ -193,50 +192,13 @@ def _references(params: dict, files) -> list[str]:
     return refs
 
 
-# ── Precision and fallback ───────────────────────────────────────────────────
-
-# Process-wide: after an NVFP4 failure in "auto" mode, H3 stays on FP8 until
-# restart; after an NVFP4 success, a later failure is reported, not retried.
-_precision = {"fallback": False, "proven": False}
-
-
-def precision(settings: Settings) -> str:
-    if settings.h3_precision == "auto":
-        return "fp8" if _precision["fallback"] else "nvfp4"
-    return settings.h3_precision
-
-
-def _with_fallback(ctx, render, ids: dict[str, str], extra: list[str]):
-    """render(precision, model paths). In auto mode, a first NVFP4 failure
-    (kernels or packed weights not working on this GPU) retries once on FP8."""
-    settings = ctx.models.settings
-    chosen = precision(settings)
-    paths = ctx.models.ensure([ids[chosen], *extra], ctx.progress, ctx.cancelled)
-    try:
-        result = render(chosen, paths)
-    except ValueError:
-        raise  # a bad input (a LoRA, an image) fails the same way in FP8
-    except Exception as exc:
-        ctx.check()
-        if settings.h3_precision != "auto" or chosen != "nvfp4" or _precision["proven"]:
-            raise
-        traceback.print_exc()
-        _precision["fallback"] = True
-        ctx.progress(0, f"NVFP4 failed ({exc}); falling back to FP8 for this session")
-        paths = ctx.models.ensure([ids["fp8"], *extra], ctx.progress, ctx.cancelled)
-        return render("fp8", paths)
-    if chosen == "nvfp4":
-        _precision["proven"] = True
-    return result
-
-
-def _engine(ctx, model_dir: Path, ref2va: bool, prec: str, loras: list[dict]):
+def _engine(ctx, model_dir: Path, ref2va: bool, loras: list[dict]):
     from .h3_runtime import Engine, EngineSpec
     settings = ctx.models.settings
     lora = h3_lora.build(loras, settings.loras_dir / "h3", settings.data_dir / "cache" / "h3-loras")
-    spec = EngineSpec(model_dir=model_dir, ref2va=ref2va, precision=prec, lora=lora)
+    spec = EngineSpec(model_dir=model_dir, ref2va=ref2va, lora=lora)
     label = "FastH3 OmniRef" if ref2va else "FastH3"
-    ctx.progress(0, f"Loading MiniMax H3 ({label}, {prec.upper()})")
+    ctx.progress(0, f"Loading MiniMax H3 ({label}, NVFP4)")
     return common.load(("h3", spec), lambda: Engine(spec), alone=True)
 
 
@@ -282,17 +244,9 @@ def _open(ctx, ref: str):
 
 # ── Engines ──────────────────────────────────────────────────────────────────
 
-class H3Pipeline(Pipeline):
-    ids: dict[str, str] = V2
-    extra: list[str] = []
-
-    def needs(self, settings):
-        return [self.ids[precision(settings)], *self.extra]
-
-
-class H3TextToVideo(H3Pipeline):
+class H3TextToVideo(Pipeline):
     id = "h3-t2v"
-    models = [V2["nvfp4"]]
+    models = [V2]
 
     def validate(self, params, files):
         out = _common(params, files, {"aspect", "width", "height"})
@@ -300,11 +254,11 @@ class H3TextToVideo(H3Pipeline):
         return out
 
     def run(self, params, models, ctx):
-        return _with_fallback(ctx, lambda prec, paths: self._render(prec, paths, params, ctx), self.ids, [])
+        return self._render(models, params, ctx)
 
-    def _render(self, prec, paths, params, ctx, pil_image=None, last_image=None):
-        model_dir = paths[self.ids[prec]]
-        engine = _engine(ctx, model_dir, False, prec, params["loras"])
+    def _render(self, models, params, ctx, pil_image=None, last_image=None):
+        model_dir = models[V2]
+        engine = _engine(ctx, model_dir, False, params["loras"])
         ctx.progress(0.1, f"Rendering {params['width']}×{params['height']}, {params['frames']} frames")
         path = _video_path(ctx)
         result = engine.generate(ctx, prompt=params["prompt"], width=params["width"], height=params["height"],
@@ -340,15 +294,12 @@ class H3ImageToVideo(H3TextToVideo):
     def run(self, params, models, ctx):
         first = _open(ctx, params["image"])
         last = _open(ctx, params["last_image"]) if "last_image" in params else None
-        return _with_fallback(ctx, lambda prec, paths: self._render(prec, paths, params, ctx, first, last),
-                              self.ids, [])
+        return self._render(models, params, ctx, first, last)
 
 
-class H3ReferenceToVideo(H3Pipeline):
+class H3ReferenceToVideo(Pipeline):
     id = "h3-r2v"
-    ids = OMNIREF
-    extra = [UPSCALER]
-    models = [OMNIREF["nvfp4"], UPSCALER]
+    models = [OMNIREF, UPSCALER]
 
     def validate(self, params, files):
         out = _common(params, files, {"references", "aspect", "preview"})
@@ -370,13 +321,12 @@ class H3ReferenceToVideo(H3Pipeline):
         return out
 
     def run(self, params, models, ctx):
-        return _with_fallback(ctx, lambda prec, paths: self._render(prec, paths, params, ctx),
-                              self.ids, self.extra)
+        return self._render(models, params, ctx)
 
-    def _render(self, prec, paths, params, ctx):
-        model_dir = paths[self.ids[prec]]
+    def _render(self, models, params, ctx):
+        model_dir = models[OMNIREF]
         terms = contract(model_dir)
-        engine = _engine(ctx, model_dir, True, prec, params["loras"])
+        engine = _engine(ctx, model_dir, True, params["loras"])
         # FastVideo resizes reference images to a 2048-pixel short edge, which is
         # what ref_image_size=max did in the validated workflow. Clips are decoded
         # once for both passes.
@@ -392,7 +342,7 @@ class H3ReferenceToVideo(H3Pipeline):
             return _outputs(first, path, ctx, params)
 
         ctx.progress(0.5, f"Latent upscale to {params['width']}×{params['height']}")
-        latents, audio = refine_inputs(first.samples, first.audio, model_dir, paths[UPSCALER] / UPSCALER_FILE,
+        latents, audio = refine_inputs(first.samples, first.audio, model_dir, models[UPSCALER] / UPSCALER_FILE,
                                        terms, (w1, h1), params["seed"])
         indices = pdd_indices(REFINE_SIGMAS, terms["video_scheduler_shift"], terms["pdd_steps"], terms["grid_max_t"])
         ctx.progress(0.6, f"Pass 2: {len(indices) - 1} refine steps at {params['width']}×{params['height']}")

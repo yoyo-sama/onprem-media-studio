@@ -52,16 +52,6 @@
       "qualified": true
     },
     {
-      "id": "fasth3-v2-fp8",
-      "label": "MiniMax H3 — FastH3 V2 FP8 (fallback)",
-      "role": "video",
-      "repo": "FastVideo/FastVideo-FastH3-8-Step-V2-FP8",
-      "allow": ["fastvideo_inference.json", "model_index.json", "modular_model_index.json", "scheduler/*", "audio_scheduler/*", "text_encoder/*", "tokenizer/*", "processor/*", "vae/*", "audio_vae/*", "transformer/*"],
-      "gated": false,
-      "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA; products must show \"MiniMax H3\")",
-      "qualified": false
-    },
-    {
       "id": "fasth3-omniref-nvfp4",
       "label": "MiniMax H3 — FastH3 OmniRef NVFP4 (references to video)",
       "role": "video",
@@ -70,16 +60,6 @@
       "gated": false,
       "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA; products must show \"MiniMax H3\")",
       "qualified": true
-    },
-    {
-      "id": "fasth3-omniref-fp8",
-      "label": "MiniMax H3 — FastH3 OmniRef FP8 (fallback)",
-      "role": "video",
-      "repo": "FastVideo/FastH3-OmniRef-FP8",
-      "allow": ["fastvideo_inference.json", "modular_model_index.json", "scheduler/*", "audio_scheduler/*", "text_encoder/*", "tokenizer/*", "processor/*", "vae/*", "audio_vae/*", "transformer_ref/*"],
-      "gated": false,
-      "license": "MiniMax H3 Community License (excludes the EU, the UK, South Korea and the USA; products must show \"MiniMax H3\")",
-      "qualified": false
     },
     {
       "id": "span-2x-nomosuni",

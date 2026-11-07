@@ -38,7 +38,7 @@ requête LLM.
 | `studio/pipelines/` | Contrat `Pipeline` et registre ; une sous-classe par moteur |
 | `studio/pipelines/krea2.py`, `qwen.py` | Moteurs d'image (Krea 2, Qwen Image 2.1) : [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/h3.py` | Moteurs vidéo (MiniMax H3 : texte, image, première/dernière image et références vers vidéo), géométrie et plan d'affinage : [H3.md](H3.md) |
-| `studio/pipelines/h3_runtime.py` | Adaptateur FastVideo : recettes Spark, profils NVFP4/FP8, sortie latente et réglages de la passe d'affinage, annulation |
+| `studio/pipelines/h3_runtime.py` | Adaptateur FastVideo : recettes Spark, profil NVFP4, sortie latente et réglages de la passe d'affinage, annulation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | Upscaler latent H3 (convolutions 3D, checkpoint LBH v1) et pile de LoRA (fusion exacte en une seule branche parallèle) |
 | `studio/pipelines/montage.py` | Jobs CPU sur des fichiers rendus, avec ffmpeg et Pillow : `video-concat` (clips bout à bout), `image-grid` (planche contact), `video-frames` (images proches de la fin d'un clip, pour les transitions du Relay) |
 | `studio/pipelines/upscale.py` | `upscale-2x` : une image ou une vidéo deux fois plus grande par le réseau SPAN, sur un clic de la galerie : [IMAGE-ENGINES.md](IMAGE-ENGINES.md#résolution-2) |
@@ -62,8 +62,7 @@ requête LLM.
    nomme la fonction du front pour la galerie et n'est jamais lu par un pipeline). `Pipeline.validate` rejette une entrée
    invalide (paramètre inconnu, référence d'image absente) en 422 avant toute mise en file, et
    renvoie les paramètres que le job conserve, valeurs par défaut remplies et graine tirée.
-2. Le worker prend les jobs dans l'ordre. Les modèles manquants (`Pipeline.needs(settings)`,
-   c'est-à-dire `models` sauf quand un réglage les choisit, comme la précision H3) sont
+2. Le worker prend les jobs dans l'ordre. Les modèles manquants (`Pipeline.models`) sont
    téléchargés d'abord, dans le job, et le téléchargement apparaît dans la progression du job.
 3. `Pipeline.run(params, chemins_modèles, ctx)` rend et renvoie les fichiers écrits dans
    `ctx.output_dir` ; le job les liste sous forme de références (`outputs/…`). `ctx.files` résout
@@ -106,7 +105,6 @@ output/.trash/...           corbeille de la galerie (purge manuelle)
 | `STUDIO_LLM_PORT` | `8095` | Port local de llama-server |
 | `STUDIO_LLM_MODEL` | `gemma4-26b-a4b` | LLM de l'assistant et des enrichissements : `gemma4-26b-a4b` ou `gemma4-e4b` (machines plus petites) |
 | `STUDIO_DISK_RESERVE_GB` | `20` | Espace libre conservé après tout téléchargement |
-| `STUDIO_H3_PRECISION` | `auto` | MiniMax H3 : `auto` (NVFP4, FP8 si NVFP4 échoue), `nvfp4` ou `fp8` (H3.md) |
 | `STUDIO_GALLERY_SCAN` | `60` | Secondes entre deux scans du dossier de sorties par la galerie |
 | `STUDIO_UPDATE_BRANCH` | `main` | Branche suivie par la mise à jour depuis l'interface (dépôt git seulement) |
 

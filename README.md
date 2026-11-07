@@ -10,8 +10,7 @@ roles that proposes ready-to-run cards: [docs/ASSISTANT.md](docs/ASSISTANT.md)).
 > Status: step 4 of the [roadmap](docs/ROADMAP.md). The server, model downloads, job queue and
 > LLM bridge are in place, and the image engines (Krea 2, Qwen Image 2.1), Gemma 4 and the
 > MiniMax H3 video engines in NVFP4 (text, image, first/last image and references to video) are
-> qualified on the GB10 (2026-10-30). The H3 FP8 fallback has not been rendered yet. The Studio
-> and Canvas pages are ported from 1.4 ([front end](docs/FRONTEND.md)) and tested with simulated
+> qualified on the GB10 (2026-10-30). The Studio and Canvas pages are ported from 1.4 ([front end](docs/FRONTEND.md)) and tested with simulated
 > renders; their first pass on the GB10 is pending.
 
 Version française : [README.fr.md](README.fr.md).

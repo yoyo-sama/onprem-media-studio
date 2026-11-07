@@ -13,9 +13,6 @@ def test_catalog_entries_are_complete(store):
     for entry in store.catalog.values():
         assert {"id", "label", "role", "repo", "allow", "gated", "license", "qualified"} <= entry.keys()
         assert isinstance(entry["qualified"], bool)
-    # Qualified only by a real render inspected on the GB10: the FP8 fallbacks never rendered.
-    assert not store.catalog["fasth3-v2-fp8"]["qualified"]
-    assert not store.catalog["fasth3-omniref-fp8"]["qualified"]
 
 
 def test_download_fetches_only_allowed_files_and_marks_complete(store, fetch):
