@@ -204,5 +204,7 @@ comparer la qualité, pas les pixels.
 - **Qwen Image 2.1 avec Lightning (2026-11-07) :** banc sur promaxgb10-95c7, 5 cas × 3 seeds :
   identité des deux sujets des planches gardée dans chaque image de plan ; plus de contraste et de
   saturation que la base à 25 étapes, et des structures parasites en texte vers image (2 seeds sur 3).
+  Les rendus par le serveur sont identiques au banc au pixel près ; acceptés par le responsable du
+  projet, `"qualified": true`.
 - **Licence Qwen Image 2.1 :** Qwen Research License, usage non commercial uniquement. 2509
   (Apache-2.0) ayant été retiré, toutes les retouches et toutes les images de plan en dépendent.

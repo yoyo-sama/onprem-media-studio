@@ -49,7 +49,7 @@
       "allow": ["config.json", "diffusion_pytorch_model.safetensors"],
       "gated": false,
       "license": "Qwen Research License (derived from Qwen Image 2.1; non-commercial use only)",
-      "qualified": false
+      "qualified": true
     },
     {
       "id": "fasth3-v2-nvfp4",

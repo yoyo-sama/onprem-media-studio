@@ -189,6 +189,7 @@ Only then set `"qualified": true` for the model in `studio/catalog.json`. Seeds 
 - **Style LoRAs** (1.4 Krea 2 and sheet LoRAs) are not ported yet.
 - **Qwen Image 2.1 with Lightning (2026-11-07):** benched on promaxgb10-95c7, 5 cases × 3 seeds:
   identity of both sheet subjects kept in every shot image; more contrast and saturation than
-  the 25-step base, and stray structures in text to image (2 seeds out of 3).
+  the 25-step base, and stray structures in text to image (2 seeds out of 3). Renders through
+  the server equal the bench pixel for pixel; accepted by the project owner, `"qualified": true`.
 - **Qwen Image 2.1 licence:** Qwen Research License, non-commercial use only. Since 2509
   (Apache-2.0) was dropped, every edit and every shot image depends on it.
