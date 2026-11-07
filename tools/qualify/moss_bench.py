@@ -54,6 +54,7 @@ CASES = {
     "sft-25-destripe": dict(model=SFT, loras=[DESTRIPE], steps=25, cfg=3.0),
     "sft-turbo4": dict(model=SFT, loras=[TURBO4], steps=4, cfg=1.0),
     "sft-turbo4-destripe": dict(model=SFT, loras=[TURBO4, DESTRIPE], steps=4, cfg=1.0),
+    "sft-turbo8": dict(model=SFT, loras=[TURBO4], steps=8, cfg=1.0),
     "sft-dmd8": dict(model=SFT, loras=[DMD8], steps=8, cfg=1.0),
     "sft-turbo8-1920": dict(model=SFT, loras=[TURBO4], steps=8, cfg=1.0, size=(1920, 1088),
                             prompts=["poster-en", "portrait"]),  # sheet size; 6-8 steps above 1024²
