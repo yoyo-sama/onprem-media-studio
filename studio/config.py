@@ -31,8 +31,10 @@ class Settings:
     llm_model: str = field(default_factory=lambda: os.environ.get("STUDIO_LLM_MODEL", "gemma4-26b-a4b"))
     # Seconds between two scans of the output folder by the gallery.
     gallery_scan: float = field(default_factory=lambda: float(os.environ.get("STUDIO_GALLERY_SCAN", "60")))
-    # Branch the in-app update follows (bare-metal git checkout only).
+    # Branch the in-app update follows (bare-metal git checkout; under Docker, the updater's).
     update_branch: str = field(default_factory=lambda: os.environ.get("STUDIO_UPDATE_BRANCH", "main"))
+    # Docker: the `updater` service of compose.yaml, which pulls and rebuilds the image.
+    updater_url: str = field(default_factory=lambda: os.environ.get("STUDIO_UPDATER_URL", ""))
     # Free disk space kept after any download, in bytes.
     disk_reserve: int = field(default_factory=lambda: int(os.environ.get("STUDIO_DISK_RESERVE_GB", "20")) * 1024**3)
 

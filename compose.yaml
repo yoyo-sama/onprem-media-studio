@@ -4,6 +4,9 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
+      args:
+        # Set by the updater service only (the commit it rebuilds); empty for a build by hand.
+        STUDIO_COMMIT: ${STUDIO_COMMIT:-}
     image: studio:dev
     container_name: studio
     restart: unless-stopped
@@ -16,6 +19,8 @@ services:
       STUDIO_APP_NAME: ${STUDIO_APP_NAME:-OnPrem Media Studio}
       # LLM of the assistant and the enrichments: gemma4-26b-a4b (default) or gemma4-e4b (smaller).
       STUDIO_LLM_MODEL: ${STUDIO_LLM_MODEL:-gemma4-26b-a4b}
+      # In-app update: the updater service below.
+      STUDIO_UPDATER_URL: http://updater:8091
     volumes:
       # Models (hundreds of GB) and renders live outside the image.
       - ${STUDIO_DATA:-./data}:/data
@@ -27,3 +32,20 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+
+  # In-app update ("Update" panel): git pull in this folder, rebuild of the studio image,
+  # restart of the studio container once no job runs (docker/updater/server.py). No port is
+  # published: only the studio container reaches it. The Docker socket lets it run
+  # docker compose on the host, as you would.
+  updater:
+    build: docker/updater
+    image: studio-updater:dev
+    container_name: studio-updater
+    restart: unless-stopped
+    environment:
+      UPDATER_BRANCH: ${STUDIO_UPDATE_BRANCH:-main}
+      # Private repository: a GitHub token that can read it, in .env. Never written here.
+      UPDATER_GIT_TOKEN: ${STUDIO_GIT_TOKEN:-}
+    volumes:
+      - .:/repo
+      - /var/run/docker.sock:/var/run/docker.sock

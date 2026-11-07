@@ -77,7 +77,7 @@ def memory_info() -> dict | None:
 
 def create_app(settings: Settings | None = None, models: ModelStore | None = None,
                pipelines: dict[str, Pipeline] | None = None, llm: LlamaServer | None = None,
-               updater: update.Updater | None = None) -> FastAPI:
+               updater: update.Updater | update.RemoteUpdater | None = None) -> FastAPI:
     settings = settings or Settings()
     files = FileStore(settings.input_dir, settings.output_dir)
     models = models or ModelStore(settings)
@@ -111,7 +111,9 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
         gallery.stop()
         llm.stop()
 
-    updater = updater or update.Updater(REPO_DIR, settings.update_branch, busy, before_restart)
+    if updater is None:
+        updater = (update.RemoteUpdater(settings.updater_url, busy) if settings.updater_url
+                   else update.Updater(REPO_DIR, settings.update_branch, busy, before_restart))
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

@@ -36,6 +36,16 @@ docker compose up -d --build
 Modèles et rendus vont dans `./data` (à changer avec `STUDIO_DATA=/chemin` dans `.env`). Si le
 port 8090 est déjà pris (AI Content Studio 1.4 l'utilise), mettre `STUDIO_HOST_PORT=8096` dans `.env`.
 
+### Mises à jour
+
+Le panneau « Mise à jour » de l'interface tire le dépôt, reconstruit l'image (le studio reste
+utilisable pendant ce temps), puis redémarre le studio dès qu'aucun job ne tourne ; modèles et
+rendus restent en place. C'est le service `updater` de `compose.yaml` qui s'en charge
+([docs/fr/GALLERY.md](docs/fr/GALLERY.md#docker-docker-compose)). Pour un dépôt privé, mettre dans
+`.env` un jeton GitHub qui peut le lire (`STUDIO_GIT_TOKEN=github_pat_...`, *fine-grained*,
+*Contents : read-only*), puis `docker compose up -d`. À la main, dans ce dossier :
+`git pull && docker compose up -d --build`.
+
 ### Réutiliser les fichiers d'AI Content Studio 1.4
 
 Sur une machine où la 1.4 est installée, cette commande copie dans `./data` ce que la 2.0 peut
@@ -62,8 +72,7 @@ scripts/install.sh --check     # vérifie pilote, toolkit CUDA 13, GPU, Python, 
 scripts/install.sh             # compile et démarre le service systemd « studio »
 ```
 
-Voir [docs/fr/INSTALL.md](docs/fr/INSTALL.md). Le bare metal est la seule installation mise à jour
-depuis l'interface.
+Voir [docs/fr/INSTALL.md](docs/fr/INSTALL.md).
 
 ## Lancer sans Docker (développement)
 

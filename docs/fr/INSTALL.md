@@ -4,7 +4,7 @@ Version anglaise (de référence) : [../INSTALL.md](../INSTALL.md).
 
 `scripts/install.sh` installe le studio sans Docker, comme service systemd, sur DGX OS (GB10,
 ARM64) ou Ubuntu 22.04/24.04 (ARM64 ou x86_64) avec un GPU NVIDIA. Docker reste la voie de test sur
-le GB10 (README) ; le bare metal est la voie d'exploitation, et la seule avec la mise à jour depuis
+le GB10 (README) ; le bare metal est la voie d'exploitation. Les deux se mettent à jour depuis
 l'interface.
 
 ## Prérequis
@@ -99,7 +99,7 @@ rm -rf ~/.local/share/studio              # modèles et rendus, si tu veux aussi
 |---|---|---|
 | torch | NGC PyTorch 25.11 (2.10, CUDA 13.0) | PyPI 2.12.0 (CUDA 13.0), la version de FastVideo |
 | Toolkit CUDA | dans l'image | celui du système (13.x) |
-| Mises à jour | reconstruire l'image | depuis l'interface |
+| Mises à jour | depuis l'interface : pull, reconstruction de l'image, conteneur recréé (service `updater`) | depuis l'interface : pull, redémarrage sur place |
 | Données | `./data` (`STUDIO_DATA`) | `~/.local/share/studio` (`--data`) |
 
 Les deux compilent llama.cpp et FastVideo aux mêmes versions épinglées (`tests/test_install.py` le

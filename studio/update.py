@@ -7,7 +7,9 @@ server then restarts itself in place (same process id, so systemd or a terminal
 keeps it), unless the update changed the dependencies: the install script must
 then run again, and the answer says so.
 
-A Docker image is not a git checkout: it is updated by rebuilding the image.
+A Docker image is not a git checkout: there, `RemoteUpdater` forwards to the
+`updater` service of compose.yaml (docker/updater/server.py), which pulls, rebuilds
+the image and recreates the studio container.
 """
 
 import os
@@ -18,11 +20,15 @@ import time
 from pathlib import Path
 from typing import Callable
 
+import httpx
+
 STATUS_TTL = 60
 # A change under these paths needs the install script, not just a restart.
 REINSTALL_PATHS = ("pyproject.toml", "docker/", "scripts/install.sh")
 DOCKER_HINT = ("This installation is not a git checkout (Docker image): update the repository with git pull, "
                "then rebuild with docker compose up -d --build.")
+UPDATER_DOWN = ("The update service does not answer: in the repository folder, run docker compose up -d "
+                "(after a git pull if the updater service is missing from compose.yaml).")
 
 
 class UpdateError(Exception):
@@ -113,7 +119,38 @@ class Updater:
         self.restart()
 
 
-def router(updater: Updater):
+class RemoteUpdater:
+    """The Docker installation: the `updater` service does the work, this side checks the
+    job queue first (the studio container is recreated at the end of an update)."""
+
+    def __init__(self, url: str, busy: Callable[[], int]):
+        self.url, self.busy = url.rstrip("/"), busy
+
+    def status(self) -> dict:
+        try:
+            return httpx.get(self.url + "/status", timeout=30).raise_for_status().json()
+        except (httpx.HTTPError, ValueError):
+            return {"mode": "none", "available": False, "message": UPDATER_DOWN}
+
+    def apply(self) -> dict:
+        busy = self.busy()
+        if busy:
+            raise UpdateError(409, f"{busy} job(s) queued or running: wait for them or cancel them, "
+                                   "the studio restarts after an update")
+        try:
+            r = httpx.post(self.url + "/apply", timeout=300)  # the pull can be slow; the build runs after
+        except httpx.HTTPError:
+            raise UpdateError(502, UPDATER_DOWN) from None
+        try:
+            body = r.json()
+        except ValueError:
+            raise UpdateError(502, f"The update service answered {r.status_code}") from None
+        if r.status_code != 200:
+            raise UpdateError(r.status_code, body.get("detail") or f"The update service answered {r.status_code}")
+        return body
+
+
+def router(updater: Updater | RemoteUpdater):
     from fastapi import APIRouter, Depends
     from fastapi.responses import JSONResponse
 

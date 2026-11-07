@@ -13,7 +13,7 @@ navigateur ──HTTP/WS──> studio (FastAPI, :8090)
                           ├─ /api/llm      llama-server (Gemma 4 26B-A4B, 127.0.0.1:8095)
                           ├─ /api/chat     assistant de création : rôles, conversations, cartes
                           ├─ /api/gallery  index des sorties : recherche, miniatures, tags, corbeille
-                          ├─ /api/update   mise à jour d'un dépôt git depuis l'interface
+                          ├─ /api/update   mise à jour depuis l'interface : dépôt git, ou service updater (Docker)
                           ├─ /api/loras    liste et téléversement de LoRA
                           ├─ /api/instructions  consignes Gemma remplacées dans les paramètres
                           ├─ /api/ws       événements de jobs et de téléchargements
@@ -46,7 +46,8 @@ requête LLM.
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |
 | `studio/llm.py` | `LlamaServer` : démarrage à la demande (contexte de 32k, un emplacement), appel chat OpenAI, appel en flux avec outils, vision par images base64 ; arrêté quand un moteur H3 a besoin de la mémoire |
 | `studio/gallery.py` | `Gallery` : index SQLite/FTS5 des sorties, miniatures, tags, favoris, renommage, corbeille : [GALLERY.md](GALLERY.md) |
-| `studio/update.py`, `loras.py` | Mise à jour depuis l'interface (avance rapide git, redémarrage sur place) et téléversement de LoRA : [GALLERY.md](GALLERY.md) |
+| `studio/update.py`, `loras.py` | Mise à jour depuis l'interface (avance rapide git et redémarrage sur place, ou transmise au service updater sous Docker) et téléversement de LoRA : [GALLERY.md](GALLERY.md) |
+| `docker/updater/server.py` | Le service `updater` de `compose.yaml` : pull, reconstruction de l'image, conteneur du studio recréé une fois la file vide : [GALLERY.md](GALLERY.md#docker-docker-compose) |
 | `studio/assistant/` | Assistant de création : registre des rôles (`roles.py`, rôles livrés dans `roles/*.md`), outils et leurs vérifications (`tools.py`), routage, tours et conversations (`chat.py`, `/api/chat`, `/api/roles`, `/api/chats`) : [ASSISTANT.md](ASSISTANT.md) |
 | `studio/instructions.py` | Consignes Gemma remplacées depuis l'interface, gardées dans `STUDIO_DATA_DIR/instructions.json` (`/api/instructions`) ; celles par défaut vivent dans `web/js/prompts.js` |
 | `studio/guard.py` | Contrôle de même origine des routes qui déplacent ou écrivent des fichiers |
@@ -106,7 +107,9 @@ output/.trash/...           corbeille de la galerie (purge manuelle)
 | `STUDIO_LLM_MODEL` | `gemma4-26b-a4b` | LLM de l'assistant et des enrichissements : `gemma4-26b-a4b` ou `gemma4-e4b` (machines plus petites) |
 | `STUDIO_DISK_RESERVE_GB` | `20` | Espace libre conservé après tout téléchargement |
 | `STUDIO_GALLERY_SCAN` | `60` | Secondes entre deux scans du dossier de sorties par la galerie |
-| `STUDIO_UPDATE_BRANCH` | `main` | Branche suivie par la mise à jour depuis l'interface (dépôt git seulement) |
+| `STUDIO_UPDATE_BRANCH` | `main` | Branche suivie par la mise à jour depuis l'interface (bare metal, et le service updater via `.env`) |
+| `STUDIO_UPDATER_URL` | — | Docker : le service updater (`compose.yaml` met `http://updater:8091`) |
+| `STUDIO_GIT_TOKEN` | — | Docker, dans `.env` : jeton GitHub avec lequel le service updater lit un dépôt privé ; jamais journalisé |
 
 ## Changer le nom du produit
 

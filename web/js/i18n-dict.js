@@ -37,6 +37,11 @@ export const DICT = {
     es: "Una cadena de segmentos de vídeo cortos en lugar de un único plano largo: cada segmento tiene su prompt y su duración, y la coherencia viene del encadenamiento. Enlace 🔗: el segmento retoma exactamente el último fotograma del anterior. Enlace 🎞: un corte deliberado, se compone una nueva imagen de plano sobre las láminas aprobadas.",
     de: "Eine Kette kurzer Videosegmente statt einer langen Einstellung: Jedes Segment hat seinen Prompt und seine Länge, die Kohärenz entsteht durch die Verkettung. Verbindung 🔗: Das Segment übernimmt exakt das letzte Bild des vorigen. Verbindung 🎞: ein bewusster Schnitt, ein neues Einstellungsbild wird auf den freigegebenen Bögen komponiert.",
   },
+  "A new version is available ({from} → {to}). The image is rebuilt, then the studio restarts.": {
+    fr: "Une nouvelle version est disponible ({from} → {to}). L'image est reconstruite, puis le studio redémarre.",
+    es: "Hay una nueva versión disponible ({from} → {to}). La imagen se reconstruye y luego el estudio se reinicia.",
+    de: "Eine neue Version ist verfügbar ({from} → {to}). Das Image wird neu gebaut, dann startet das Studio neu.",
+  },
   "A new version is available ({from} → {to}). The server restarts after the update.": {
     fr: "Une nouvelle version est disponible ({from} → {to}). Le serveur redémarre après la mise à jour.",
     es: "Hay una nueva versión disponible ({from} → {to}). El servidor se reinicia tras la actualización.",
@@ -266,6 +271,11 @@ export const DICT = {
     fr: "Brief",
     es: "Brief",
     de: "Briefing",
+  },
+  "Building the new image: a few minutes, longer when dependencies changed. The studio keeps working meanwhile.": {
+    fr: "Construction de la nouvelle image : quelques minutes, davantage si les dépendances ont changé. Le studio reste utilisable pendant ce temps.",
+    es: "Construyendo la nueva imagen: unos minutos, más si cambiaron las dependencias. El estudio sigue funcionando mientras tanto.",
+    de: "Das neue Image wird gebaut: einige Minuten, länger wenn sich Abhängigkeiten geändert haben. Das Studio bleibt währenddessen nutzbar.",
   },
   "Camera": {
     fr: "Caméra",
@@ -796,6 +806,11 @@ export const DICT = {
     fr: "Plan d'ensemble",
     es: "Gran plano general",
     de: "Weite Totale",
+  },
+  "Failed": {
+    fr: "Échec",
+    es: "Error",
+    de: "Fehlgeschlagen",
   },
   "Face": {
     fr: "Visage",
@@ -1501,6 +1516,11 @@ export const DICT = {
     fr: "Bande-annonce narrative (plusieurs plans)",
     es: "Tráiler narrativo (varios planos)",
     de: "Erzählerischer Trailer (mehrere Einstellungen)",
+  },
+  "New image ready: the studio restarts once the running jobs are done.": {
+    fr: "Nouvelle image prête : le studio redémarre dès que les jobs en cours sont terminés.",
+    es: "Nueva imagen lista: el estudio se reinicia en cuanto terminen los trabajos en curso.",
+    de: "Neues Image bereit: Das Studio startet neu, sobald die laufenden Jobs fertig sind.",
   },
   "New file name": {
     fr: "Nouveau nom du fichier",

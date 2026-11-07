@@ -161,6 +161,14 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     est réservé à Windows et `nvidia-vfx` n'a pas de roue ARM64. L'agrandissement passe par un
     réseau ouvert exécuté en PyTorch (SPAN par spandrel,
     [IMAGE-ENGINES.md](IMAGE-ENGINES.md#résolution-2)). (2026-11-06)
+45. **Un `docker compose` lancé depuis un conteneur doit voir le projet à son chemin sur l'hôte.**
+    Compose résout `./data` par rapport au dossier du projet et transmet le chemin absolu au démon
+    de l'hôte : lancé depuis `/repo`, il monterait un `/repo/data` vide de l'hôte et
+    retéléchargerait tous les modèles. Le service updater relie le dossier de l'hôte (sa propre
+    étiquette `com.docker.compose.project.working_dir`) à `/repo` et reprend nom de projet et
+    fichiers compose de ses étiquettes ; compose garde le lien tel quel. Son git tourne sous
+    l'identité du propriétaire du dépôt, jamais en root (leçon de la 1.4).
+    [GALLERY.md](GALLERY.md#docker-docker-compose) (2026-11-07)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
