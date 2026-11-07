@@ -19,11 +19,6 @@ class Pipeline:
         `files` is the FileStore that resolves image references."""
         return params
 
-    def needs(self, settings) -> list[str]:
-        """Catalog ids to download before run(); `models` unless the choice
-        depends on a setting (the H3 precision)."""
-        return self.models
-
     def run(self, params: dict, models: dict[str, Path], ctx) -> list[Path]:
         """Render and return the files written under ctx.output_dir."""
         raise NotImplementedError

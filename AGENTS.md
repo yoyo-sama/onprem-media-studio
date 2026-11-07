@@ -23,7 +23,7 @@ python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.jso
 ```
 
 Image engines, their parameters and what they guarantee: `docs/IMAGE-ENGINES.md`; MiniMax H3
-video engines (FastVideo, two-pass Ref2VA, FP8 fallback, LoRA stack): `docs/H3.md`; Studio and
+video engines (FastVideo, two-pass Ref2VA, NVFP4, LoRA stack): `docs/H3.md`; Studio and
 Canvas front end, its rules and tests: `docs/FRONTEND.md`; creative assistant (chat, roles in
 `studio/assistant/roles/*.md`, cards): `docs/ASSISTANT.md`. Pipelines get
 final prompts; prompt compilers belong to the front end (ADR 0001).

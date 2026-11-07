@@ -53,7 +53,7 @@ is a dependency.
   from MiniMax.
 - **Krea 2 is gated:** the user must accept its licence on Hugging Face and provide `HF_TOKEN`.
 - **FastH3 for first/last frame (I2V/FL2VA):** OmniRef is validated. Step 3 uses FastH3 V2
-  (`FastVideo/FastH3-QAD-v2`, FP8 fallback `FastVideo/FastVideo-FastH3-8-Step-V2-FP8`), whose
+  (`FastVideo/FastH3-QAD-v2`), whose
   pipeline takes first and last images, but upstream records only text to video for it: to
   qualify on GB10.
 - **FastVideo pins torch 2.12** while the image keeps the NGC 25.11 torch (2.10); FastVideo is

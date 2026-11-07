@@ -176,7 +176,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
 
     @app.get("/api/pipelines")
     def list_pipelines():
-        return [{"id": p.id, "models": p.needs(settings)} for p in jobs.pipelines.values()]
+        return [{"id": p.id, "models": p.models} for p in jobs.pipelines.values()]
 
     @app.post("/api/inputs", status_code=201)
     async def upload_input(request: Request):

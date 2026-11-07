@@ -11,8 +11,7 @@ rôles qui propose des cartes prêtes à lancer : [docs/fr/ASSISTANT.md](docs/fr
 > État : étape 4 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
 > modèles, la file de jobs et le pont LLM sont en place, et les moteurs d'image (Krea 2, Qwen Image
 > 2.1), Gemma 4 et les moteurs vidéo MiniMax H3 en NVFP4 (texte, image, première/dernière image et
-> références vers vidéo) sont qualifiés sur le GB10 (2026-10-30). Le repli FP8 de H3 n'a pas encore
-> été rendu. Les pages Studio et Canvas sont portées de la 1.4 ([interface](docs/fr/FRONTEND.md))
+> références vers vidéo) sont qualifiés sur le GB10 (2026-10-30). Les pages Studio et Canvas sont portées de la 1.4 ([interface](docs/fr/FRONTEND.md))
 > et testées avec des rendus simulés ; leur premier passage sur le GB10 reste à faire.
 
 English version: [README.md](README.md).

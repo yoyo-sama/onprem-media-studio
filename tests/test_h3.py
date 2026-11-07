@@ -2,7 +2,7 @@
 that records each request. What is checked is what the validated workflow and
 1.4 fix: the 17n+5 grid, the two-pass geometry and refine schedule, the verbatim
 prompt, <Picture N> numbering, the 5–15 s limit of FastVideo, the LoRA stack
-maths, the FP8 fallback, and the upscaler's checkpoint layout."""
+maths, and the upscaler's checkpoint layout."""
 
 import json
 import shutil
@@ -90,7 +90,7 @@ class FakeEngine:
 
     def generate(self, ctx, **kw):
         self.calls.append({**kw, **self.state})
-        if self.log.get("fail_nvfp4") and self.spec.precision == "nvfp4":
+        if self.log.get("fail"):
             raise RuntimeError("CUDA error: no kernel image is available for execution on the device")
         if kw.get("save", True):
             kw["output"].write_bytes(b"mp4")
@@ -114,7 +114,6 @@ def engines(monkeypatch, settings):
     monkeypatch.setattr(common, "load", load)
     monkeypatch.setattr(h3, "_reference", lambda path: ("ref", path.name))
     monkeypatch.setattr(h3, "refine_inputs", lambda *a: (log.setdefault("refine", a), ("latents", "audio"))[1])
-    monkeypatch.setattr(h3, "_precision", {"fallback": False, "proven": False})
     return log
 
 
@@ -151,7 +150,8 @@ def test_t2v_renders_verbatim_at_the_final_size(client, engines):
     assert call["prompt"] == prompt
     assert (call["width"], call["height"], call["frames"], call["steps"]) == (1280, 736, 124, 9)
     assert call["seed"] == job["params"]["seed"]
-    assert engines["engines"][0].spec.precision == "nvfp4" and not engines["engines"][0].spec.ref2va
+    assert not engines["engines"][0].spec.ref2va
+    assert engines["engines"][0].spec.model_dir.name == "fasth3-v2-nvfp4"
     video, last = job["outputs"]
     assert video.startswith("outputs/h3-t2v/") and video.endswith(".mp4")
     assert last.endswith(".png") and client.get("/" + last).status_code == 200
@@ -294,52 +294,30 @@ def test_nothing_renders_without_a_submission(client, engines):
     assert client.get("/api/jobs").json() == [] and engines["engines"] == []
 
 
-def test_auto_precision_falls_back_to_fp8_once(client, engines, store):
-    engines["fail_nvfp4"] = True
-    job = run(client, "h3-t2v", {"prompt": "p"})
-    nvfp4, fp8 = engines["engines"]
-    assert nvfp4.spec.precision == "nvfp4" and fp8.spec.precision == "fp8"
-    assert fp8.spec.model_dir == store.path("fasth3-v2-fp8")
-    assert job["outputs"][0].endswith(".mp4")
-    # The fallback sticks for the session: the next job asks for FP8 straight away.
-    assert REGISTRY["h3-t2v"].needs(store.settings) == ["fasth3-v2-fp8"]
-    run(client, "h3-t2v", {"prompt": "p"})
-    assert engines["engines"][-1].spec.precision == "fp8"
-
-
-def test_no_fallback_after_nvfp4_worked(client, engines):
-    run(client, "h3-t2v", {"prompt": "p"})
-    engines["fail_nvfp4"] = True
+def test_an_engine_failure_is_reported(client, engines):
+    engines["fail"] = True
     resp = client.post("/api/jobs", json={"pipeline": "h3-t2v", "params": {"prompt": "p"}})
     job = wait_for(client, resp.json()["id"])
     assert job["status"] == "error" and "no kernel image" in job["error"]
-
-
-def test_forced_precision(monkeypatch, settings):
-    monkeypatch.setenv("STUDIO_H3_PRECISION", "fp8")
-    from studio.config import Settings
-    assert REGISTRY["h3-r2v"].needs(Settings()) == ["fasth3-omniref-fp8", "h3-latent-upscaler"]
-    monkeypatch.setenv("STUDIO_H3_PRECISION", "fp4")
-    with pytest.raises(ValueError):
-        Settings()
+    assert len(engines["engines"]) == 1  # no retry on another checkpoint
 
 
 # ── FastVideo adapter ────────────────────────────────────────────────────────
 
 def test_environment_profiles(tmp_path, monkeypatch):
-    nvfp4 = h3_runtime.EngineSpec(tmp_path, ref2va=True, precision="nvfp4")
-    env = h3_runtime.environment(nvfp4)
+    env = h3_runtime.environment(h3_runtime.EngineSpec(tmp_path, ref2va=True))
     assert env["FASTVIDEO_H3_VSA_FP4"] == "1" and env["FASTVIDEO_LORA_SIDE_BRANCH"] == "1"
     assert env["FASTVIDEO_H3_VAE_NVFP4_DECODER"].endswith("vae_decoder_nvfp4/decoder-nvfp4.safetensors")
     assert "FASTVIDEO_H3_ADALN_TABLE" not in env  # would bypass the LoRA and the refine timesteps
-    fp8 = h3_runtime.environment(h3_runtime.EngineSpec(tmp_path, ref2va=True, precision="fp8"))
-    assert fp8["FASTVIDEO_H3_VSA_FP4"] == "0" and "FASTVIDEO_H3_VAE_NVFP4_DECODER" not in fp8
-    # A fallback build must not inherit the NVFP4 settings of the previous one.
+    v2_env = h3_runtime.environment(h3_runtime.EngineSpec(tmp_path, ref2va=False))
+    assert v2_env["FASTVIDEO_H3_VSA_FP4"] == "1" and "FASTVIDEO_H3_VAE_NVFP4_DECODER" not in v2_env
+    # A V2 build must not inherit the OmniRef settings of the previous one.
     monkeypatch.setattr(h3_runtime.os, "environ", {})
     h3_runtime._apply_env(env)
-    h3_runtime._apply_env(fp8)
-    assert "FASTVIDEO_NVFP4_MM_BACKEND" not in h3_runtime.os.environ
-    v2 = h3_runtime.experimental(h3_runtime.EngineSpec(tmp_path, ref2va=False, precision="nvfp4"))
+    h3_runtime._apply_env(v2_env)
+    assert "FASTVIDEO_H3_VAE_NVFP4_DECODER" not in h3_runtime.os.environ
+    assert "FASTVIDEO_H3_REF2VA_MEMO_ENTRIES" not in h3_runtime.os.environ
+    v2 = h3_runtime.experimental(h3_runtime.EngineSpec(tmp_path, ref2va=False))
     assert v2["VSA_tile_size"] == 64 and v2["h3_vsa_fp4"]["enabled"]
 
 
@@ -553,6 +531,6 @@ def test_an_h3_engine_is_named_shortly_in_the_log(monkeypatch, capsys):
     from studio.pipelines.h3_runtime import EngineSpec
     monkeypatch.setattr(common, "_resident", {})
     monkeypatch.setattr(common, "free_memory", lambda: 200 * 1024**3)
-    spec = EngineSpec(model_dir=Path("/data/models/fasth3-omniref-nvfp4"), ref2va=True, precision="nvfp4")
+    spec = EngineSpec(model_dir=Path("/data/models/fasth3-omniref-nvfp4"), ref2va=True)
     common.load(("h3", spec), lambda: object(), alone=True)
-    assert capsys.readouterr().out.startswith("engine: h3 fasth3-omniref-nvfp4 nvfp4 loaded in ")
+    assert capsys.readouterr().out.startswith("engine: h3 fasth3-omniref-nvfp4 loaded in ")

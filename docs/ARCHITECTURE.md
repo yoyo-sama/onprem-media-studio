@@ -37,7 +37,7 @@ request.
 | `studio/pipelines/` | `Pipeline` contract and registry; one subclass per engine |
 | `studio/pipelines/krea2.py`, `qwen.py` | Image engines (Krea 2, Qwen Image 2.1): [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/h3.py` | Video engines (MiniMax H3: text, image, first/last image and references to video), geometry and refine schedule: [H3.md](H3.md) |
-| `studio/pipelines/h3_runtime.py` | FastVideo adapter: Spark recipes, NVFP4/FP8 profiles, latent output and refine-pass overrides, cancellation |
+| `studio/pipelines/h3_runtime.py` | FastVideo adapter: Spark recipes, NVFP4 profile, latent output and refine-pass overrides, cancellation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | H3 latent upscaler (3D conv, LBH v1 checkpoint) and LoRA stack (exact merge into one side branch) |
 | `studio/pipelines/montage.py` | CPU jobs on rendered files with ffmpeg and Pillow: `video-concat` (clips end to end), `image-grid` (contact sheet), `video-frames` (frames near a clip's end, for Relay transitions) |
 | `studio/pipelines/upscale.py` | `upscale-2x`: an image or a video twice as large through the SPAN network, on a gallery click: [IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2) |
@@ -61,9 +61,8 @@ request.
    names the front-end feature for the gallery and is never read by a pipeline). `Pipeline.validate` rejects bad input
    (unknown parameter, missing image reference) with 422 before anything is queued, and returns
    the parameters the job keeps, defaults filled in and seed drawn.
-2. The worker picks jobs in order. Missing models (`Pipeline.needs(settings)`, which is `models`
-   unless a setting chooses them, like the H3 precision) are downloaded first, inside the job,
-   and the download shows in the job's own progress.
+2. The worker picks jobs in order. Missing models (`Pipeline.models`) are downloaded first,
+   inside the job, and the download shows in the job's own progress.
 3. `Pipeline.run(params, model_paths, ctx)` renders and returns the files written under
    `ctx.output_dir`; the job lists them as references (`outputs/…`). `ctx.files` resolves image
    references. `ctx.progress()` reports progress and raises if the job was cancelled; the image
@@ -103,7 +102,6 @@ output/.trash/...         gallery trash (purged by hand)
 | `STUDIO_LLM_PORT` | `8095` | Loopback port of llama-server |
 | `STUDIO_LLM_MODEL` | `gemma4-26b-a4b` | LLM of the assistant and the enrichments: `gemma4-26b-a4b` or `gemma4-e4b` (smaller machines) |
 | `STUDIO_DISK_RESERVE_GB` | `20` | Free space kept after any download |
-| `STUDIO_H3_PRECISION` | `auto` | MiniMax H3: `auto` (NVFP4, FP8 if NVFP4 fails), `nvfp4` or `fp8` (H3.md) |
 | `STUDIO_GALLERY_SCAN` | `60` | Seconds between two gallery scans of the output folder |
 | `STUDIO_UPDATE_BRANCH` | `main` | Branch the in-app update follows (git checkout only) |
 

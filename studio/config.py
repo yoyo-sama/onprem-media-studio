@@ -29,9 +29,6 @@ class Settings:
     # Catalog id of the LLM (prompt enrichment and the assistant): gemma4-26b-a4b or,
     # with less memory, gemma4-e4b.
     llm_model: str = field(default_factory=lambda: os.environ.get("STUDIO_LLM_MODEL", "gemma4-26b-a4b"))
-    # MiniMax H3 precision: auto (NVFP4, falling back to FP8 if NVFP4 fails on
-    # this GPU), nvfp4 or fp8.
-    h3_precision: str = field(default_factory=lambda: os.environ.get("STUDIO_H3_PRECISION", "auto"))
     # Seconds between two scans of the output folder by the gallery.
     gallery_scan: float = field(default_factory=lambda: float(os.environ.get("STUDIO_GALLERY_SCAN", "60")))
     # Branch the in-app update follows (bare-metal git checkout only).
@@ -54,7 +51,3 @@ class Settings:
     @property
     def output_dir(self) -> Path:
         return self.data_dir / "output"
-
-    def __post_init__(self):
-        if self.h3_precision not in ("auto", "nvfp4", "fp8"):
-            raise ValueError(f"STUDIO_H3_PRECISION must be auto, nvfp4 or fp8, not {self.h3_precision!r}")
