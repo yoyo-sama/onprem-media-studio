@@ -147,6 +147,14 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     on Linux x86-64 at best; the RTX Video SDK is Windows only and `nvidia-vfx` has no ARM64 wheel.
     Upscaling is done by an open network run in PyTorch (SPAN through spandrel,
     [IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2)). (2026-11-06)
+45. **`docker compose` run from a container must see the project at its host path.** Compose
+    resolves `./data` against the project folder and hands the absolute path to the host's
+    daemon: run from `/repo`, it would mount an empty `/repo/data` of the host and download every
+    model again. The updater service links the host folder (its own
+    `com.docker.compose.project.working_dir` label) to `/repo` and passes the project name and
+    compose files from its labels; compose keeps the link as given. Its git runs as the owner of
+    the repository, never as root (1.4 lesson). [GALLERY.md](GALLERY.md#docker-docker-compose)
+    (2026-11-07)
 
 ## 8. Front end (for the port in step 4)
 

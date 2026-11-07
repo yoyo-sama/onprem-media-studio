@@ -93,8 +93,11 @@ qui devinaient le pipeline, des URL sous `/outputs/` au lieu de `/comfy/view`.
 
 ## Mise à jour depuis l'interface
 
-Seulement pour une installation qui est un **dépôt git** (bare metal, `scripts/install.sh`). Une
-image Docker se met à jour en la reconstruisant ; son état le dit.
+Deux installations, deux façons, derrière les mêmes routes et le même panneau « Mise à jour ».
+
+### Bare metal (dépôt git)
+
+Pour une installation qui est un **dépôt git** (`scripts/install.sh`).
 
 - `GET /api/update/status` → `{mode: "git"|"none", branch, local, remote, available, message}`.
   Compare `HEAD` à la branche distante (`STUDIO_UPDATE_BRANCH`, `main` par défaut) par
@@ -107,6 +110,53 @@ image Docker se met à jour en la reconstruisant ; son état le dit.
     `/api/health` puis recharge la page ;
   - si `pyproject.toml`, `docker/` ou `scripts/install.sh` ont changé, il ne redémarre pas et
     demande de relancer `scripts/install.sh`, qui réinstalle puis redémarre le service.
+
+### Docker (`docker compose`)
+
+Le conteneur du studio ne contient pas de dépôt git et ne peut pas reconstruire sa propre image. Un
+second service de `compose.yaml`, `updater` (`docker/updater/server.py`, bibliothèque standard
+Python sur l'image `docker:cli`), le fait à côté : le dossier du dépôt est monté sur `/repo` et la
+socket Docker lui permet de lancer `docker compose` sur l'hôte, comme tu le ferais. Il ne publie
+aucun port ; le studio le joint à `STUDIO_UPDATER_URL` (`http://updater:8091`) et lui transmet
+`/api/update/*` (`RemoteUpdater` dans `studio/update.py`).
+
+- `GET /api/update/status` → `{mode: "docker", state, log, error, branch, local, remote, running,
+  available, message}`. `running` est le commit dont est construite l'image du studio en marche
+  (étiquette d'image `studio.commit`, posée par l'argument de build `STUDIO_COMMIT` que seul
+  l'updater passe ; vide pour une image construite à la main). La mise à jour est proposée quand la
+  branche distante a de nouveaux commits, ou quand l'image en marche est plus ancienne que le dépôt
+  (un `git pull` sans reconstruction, un build en échec). `state` vaut `idle`, `building`,
+  `waiting` ou `restarting` ; `log` garde les dernières lignes du build ; `error` le dernier échec,
+  jusqu'à la mise à jour suivante.
+- `POST /api/update/apply` (même origine) : le studio refuse des jobs en file ou en cours (409),
+  l'updater refuse une autre branche, des modifications locales de fichiers suivis et une mise à
+  jour déjà en cours. Il lance `git pull --ff-only` **sous l'identité du propriétaire du dépôt**
+  (jamais en root : un objet de `.git` appartenant à root casse le git de l'utilisateur), répond
+  `{updated, from, to, rebuilding}`, puis en arrière-plan :
+  1. `docker compose build studio` : le studio reste utilisable pendant ce temps, et garde la
+     version précédente si le build échoue ;
+  2. attend que la file du studio soit vide (`/api/health`, toutes les 10 s) : un job lancé pendant
+     le build n'est pas coupé ;
+  3. `docker compose up -d --no-deps --no-build studio` : le conteneur est recréé sur la nouvelle
+     image, avec le même volume de données ;
+  4. supprime l'image précédente dès que plus rien ne l'utilise.
+
+  La page suit `state`, affiche la dernière ligne du build et se recharge quand le nouveau studio
+  répond.
+- **Chemins.** Compose résout les chemins relatifs de `compose.yaml` (le volume `./data`) par
+  rapport au dossier du projet et les transmet au démon de l'hôte. L'updater lit ses propres
+  étiquettes compose (nom du projet, dossier sur l'hôte, fichiers compose) et relie dans son
+  conteneur le dossier de l'hôte à `/repo` : son `docker compose` voit exactement la configuration
+  d'un lancement sur l'hôte (même source de volume, aucune recréation parasite). Les valeurs
+  utilisées par `compose.yaml` doivent vivre dans `.env`, pas dans des `export` du shell, pour
+  survivre à une mise à jour.
+- **Dépôt privé.** `git ls-remote` et `git pull` tournent sans les gestionnaires d'identifiants de
+  l'hôte. Pour un dépôt privé, mets dans `.env` un jeton GitHub qui peut le lire
+  (`STUDIO_GIT_TOKEN=...`, un jeton *fine-grained* avec *Contents : read-only* sur ce dépôt), puis
+  lance `docker compose up -d` une fois. Il est transmis à git par l'environnement, jamais sur une
+  ligne de commande, et n'est jamais journalisé.
+- L'updater ne se met pas à jour lui-même : un changement de `docker/updater/` ou de son service
+  dans `compose.yaml` demande un `docker compose up -d --build` à la main.
 
 ## Téléversement de LoRA
 

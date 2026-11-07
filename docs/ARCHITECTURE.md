@@ -12,7 +12,7 @@ browser ──HTTP/WS──> studio (FastAPI, :8090)
                        ├─ /api/llm      llama-server (Gemma 4 26B-A4B, 127.0.0.1:8095)
                        ├─ /api/chat     creative assistant: roles, conversations, cards
                        ├─ /api/gallery  index of the outputs: search, thumbnails, tags, trash
-                       ├─ /api/update   in-app update of a git checkout
+                       ├─ /api/update   in-app update: git checkout, or the updater service (Docker)
                        ├─ /api/loras    LoRA list and upload
                        ├─ /api/instructions  Gemma instructions replaced in the settings
                        ├─ /api/ws       job and download events
@@ -45,7 +45,8 @@ request.
 | `tools/qualify/` | Qualification cases built from the 1.4 prompt compilers, and their runner |
 | `studio/llm.py` | `LlamaServer`: start on demand (32k context, one slot), OpenAI chat call, streamed call with tools, vision via base64 images; stopped when an H3 engine needs the memory |
 | `studio/gallery.py` | `Gallery`: SQLite/FTS5 index of the outputs, thumbnails, tags, favourites, rename, trash: [GALLERY.md](GALLERY.md) |
-| `studio/update.py`, `loras.py` | In-app update (git fast-forward, restart in place) and LoRA upload: [GALLERY.md](GALLERY.md) |
+| `studio/update.py`, `loras.py` | In-app update (git fast-forward and restart in place, or forwarded to the updater service under Docker) and LoRA upload: [GALLERY.md](GALLERY.md) |
+| `docker/updater/server.py` | The `updater` service of `compose.yaml`: pull, image rebuild, studio container recreated once the queue is empty: [GALLERY.md](GALLERY.md#docker-docker-compose) |
 | `studio/assistant/` | Creative assistant: role registry (`roles.py`, shipped roles in `roles/*.md`), tools and their checks (`tools.py`), routing, turns and conversations (`chat.py`, `/api/chat`, `/api/roles`, `/api/chats`): [ASSISTANT.md](ASSISTANT.md) |
 | `studio/instructions.py` | Gemma instructions replaced in the interface, kept in `STUDIO_DATA_DIR/instructions.json` (`/api/instructions`); the defaults live in `web/js/prompts.js` |
 | `studio/guard.py` | Same-origin check of the routes that move or write files |
@@ -105,7 +106,9 @@ output/.trash/...         gallery trash (purged by hand)
 | `STUDIO_DISK_RESERVE_GB` | `20` | Free space kept after any download |
 | `STUDIO_H3_PRECISION` | `auto` | MiniMax H3: `auto` (NVFP4, FP8 if NVFP4 fails), `nvfp4` or `fp8` (H3.md) |
 | `STUDIO_GALLERY_SCAN` | `60` | Seconds between two gallery scans of the output folder |
-| `STUDIO_UPDATE_BRANCH` | `main` | Branch the in-app update follows (git checkout only) |
+| `STUDIO_UPDATE_BRANCH` | `main` | Branch the in-app update follows (bare metal, and the updater service through `.env`) |
+| `STUDIO_UPDATER_URL` | — | Docker: the updater service (`compose.yaml` sets `http://updater:8091`) |
+| `STUDIO_GIT_TOKEN` | — | Docker, in `.env`: GitHub token the updater service reads a private repository with; never logged |
 
 ## Renaming the product
 

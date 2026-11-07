@@ -34,6 +34,15 @@ open http://localhost:8090
 Models and renders go to `./data` (change with `STUDIO_DATA=/path` in `.env`). If port 8090 is
 already taken (AI Content Studio 1.4 uses it), set `STUDIO_HOST_PORT=8096` in `.env`.
 
+### Updates
+
+The "Update" panel of the interface pulls the repository, rebuilds the image (the studio keeps
+working meanwhile), then restarts the studio once no job runs; models and renders stay. The
+`updater` service of `compose.yaml` does it ([docs/GALLERY.md](docs/GALLERY.md#docker-docker-compose)).
+For a private repository, put a GitHub token that can read it in `.env`
+(`STUDIO_GIT_TOKEN=github_pat_...`, fine-grained, *Contents: read-only*), then `docker compose up -d`.
+By hand, in this folder: `git pull && docker compose up -d --build`.
+
 ### Reuse files from AI Content Studio 1.4
 
 On a machine where 1.4 is installed, this copies into `./data` what 2.0 can use from its ComfyUI
@@ -58,8 +67,7 @@ scripts/install.sh --check     # checks driver, CUDA 13 toolkit, GPU, Python, di
 scripts/install.sh             # builds and starts the "studio" systemd service
 ```
 
-See [docs/INSTALL.md](docs/INSTALL.md). Bare metal is the only installation updated from the
-interface.
+See [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Run without Docker (development)
 

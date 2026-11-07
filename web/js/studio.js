@@ -795,22 +795,73 @@ async function uploadLoraFile() {
   finally { status.textContent = ""; $("loraUploadBtn").disabled = false; }
 }
 
-async function loadUpdate() {
-  let s;
-  try { s = await api.updateStatus(); }
-  catch (err) { tx($("updateState"), "Offline"); tx($("updateText"), "{error}", { error: err.message }); return; }
-  $("updateBtn").hidden = !s.available;
-  const short = h => (h || "").slice(0, 7);
-  if (s.available) {
+// Bare metal: the server pulls and restarts in place. Docker (mode "docker"): the updater
+// service pulls, rebuilds the image, waits for the queue to empty and recreates the studio
+// container; the page follows its state, then reloads.
+const UPDATE_STEPS = {
+  building: L("Building the new image: a few minutes, longer when dependencies changed. The studio keeps working meanwhile."),
+  waiting: L("New image ready: the studio restarts once the running jobs are done."),
+  restarting: L("Restarting…"),
+};
+const shortSha = h => (h || "").slice(0, 7);
+let followingUpdate = false;
+function showUpdate(s) {
+  const log = $("updateLog"), last = (s.log || []).at(-1);
+  log.hidden = !(s.state && s.state !== "idle" && last);
+  log.textContent = last || "";   // build output, in English
+  $("updateBtn").hidden = !s.available || (s.state && s.state !== "idle");
+  if (s.state && s.state !== "idle") {
+    tx($("updateState"), "Running");
+    tx($("updateText"), UPDATE_STEPS[s.state] || "Restarting…");
+  } else if (s.error) {
+    tx($("updateState"), "Failed");
+    $("updateText").textContent = s.error;   // server text, in English
+  } else if (s.available && s.message) {
     tx($("updateState"), "Available");
-    tx($("updateText"), "A new version is available ({from} → {to}). The server restarts after the update.", { from: short(s.local), to: short(s.remote) });
+    $("updateText").textContent = s.message;
+  } else if (s.available) {
+    tx($("updateState"), "Available");
+    if (s.mode === "docker") {
+      tx($("updateText"), "A new version is available ({from} → {to}). The image is rebuilt, then the studio restarts.",
+         { from: shortSha(s.running || s.local), to: shortSha(s.remote) });
+    } else {
+      tx($("updateText"), "A new version is available ({from} → {to}). The server restarts after the update.",
+         { from: shortSha(s.local), to: shortSha(s.remote) });
+    }
   } else if (s.message) {
     tx($("updateState"), s.mode === "none" ? "Not available" : "Up to date");
     $("updateText").textContent = s.message;   // server text, in English
   } else {
     tx($("updateState"), "Up to date");
-    tx($("updateText"), "Version {version} is the latest.", { version: short(s.local) });
+    tx($("updateText"), "Version {version} is the latest.", { version: shortSha(s.local) });
   }
+}
+async function loadUpdate() {
+  let s;
+  try { s = await api.updateStatus(); }
+  catch (err) { tx($("updateState"), "Offline"); tx($("updateText"), "{error}", { error: err.message }); return; }
+  showUpdate(s);
+  if (s.mode === "docker" && s.state && s.state !== "idle") followRebuild();
+}
+// Polls the updater until the rebuilt studio answers (reload) or the update failed.
+async function followRebuild() {
+  if (followingUpdate) return;
+  followingUpdate = true;
+  try {
+    for (let down = 0; down < 200;) {
+      await new Promise(res => setTimeout(res, 3000));
+      let s;
+      try { s = await api.updateStatus(); }
+      catch { down++; tx($("updateState"), "Running"); tx($("updateText"), "Restarting…"); continue; }
+      if (s.mode !== "docker") { down++; continue; }   // the updater does not answer for now
+      down = 0;
+      showUpdate(s);
+      if (s.state && s.state !== "idle") continue;
+      if (!s.error) location.reload();
+      return;
+    }
+    tx($("updateText"), "The server did not come back: check the service on the machine.");
+  } finally { followingUpdate = false; }
 }
 async function applyUpdate() {
   if (!confirm(t("Update the studio now? The server restarts; jobs in progress block the update."))) return;
@@ -820,6 +871,11 @@ async function applyUpdate() {
     const r = await api.updateApply();
     if (r.message) $("updateText").textContent = r.message;
     if (!r.updated) { tx($("updateText"), "Already up to date."); return; }
+    if (r.rebuilding) {
+      showUpdate({ mode: "docker", state: "building" });
+      await followRebuild();
+      return;
+    }
     if (!r.restarting) return;
     tx($("updateText"), "Restarting…");
     // The page reloads once the server answers again.

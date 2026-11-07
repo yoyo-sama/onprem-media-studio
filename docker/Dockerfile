@@ -67,6 +67,11 @@ COPY studio ./studio
 COPY web ./web
 RUN export PIP_CONSTRAINT="${PIP_CONSTRAINT:+$PIP_CONSTRAINT }/etc/studio-base-constraints.txt" \
  && pip install --no-cache-dir ".[inference]"
+# The commit the image is built from: the updater service passes it (docker/updater) and
+# compares it with the repository; a build by hand leaves it empty. Last, so a new value
+# never invalidates a cached layer.
+ARG STUDIO_COMMIT=
+LABEL studio.commit=${STUDIO_COMMIT}
 EXPOSE 8090
 VOLUME ["/data"]
 CMD ["python", "-m", "studio"]

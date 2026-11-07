@@ -87,8 +87,11 @@ under `/outputs/` instead of `/comfy/view`.
 
 ## In-app update
 
-Only for an installation that is a **git checkout** (bare metal, `scripts/install.sh`). A Docker
-image is updated by rebuilding it; its status says so.
+Two installations, two ways, behind the same routes and the same "Update" panel.
+
+### Bare metal (git checkout)
+
+For an installation that is a **git checkout** (`scripts/install.sh`).
 
 - `GET /api/update/status` → `{mode: "git"|"none", branch, local, remote, available, message}`.
   It compares `HEAD` with the remote branch (`STUDIO_UPDATE_BRANCH`, default `main`) by
@@ -100,6 +103,50 @@ image is updated by rebuilding it; its status says so.
     id: systemd and a terminal both keep it); the front end waits for `/api/health` and reloads;
   - if `pyproject.toml`, `docker/` or `scripts/install.sh` changed, it does not restart and asks
     for `scripts/install.sh` to be run again, which reinstalls and restarts the service.
+
+### Docker (`docker compose`)
+
+The studio container holds no git checkout and cannot rebuild its own image. A second service of
+`compose.yaml`, `updater` (`docker/updater/server.py`, Python standard library on the
+`docker:cli` image), does it next to it: the repository folder is mounted at `/repo` and the
+Docker socket lets it run `docker compose` on the host, as you would. It publishes no port; the
+studio reaches it at `STUDIO_UPDATER_URL` (`http://updater:8091`) and forwards `/api/update/*`
+there (`RemoteUpdater` in `studio/update.py`).
+
+- `GET /api/update/status` → `{mode: "docker", state, log, error, branch, local, remote, running,
+  available, message}`. `running` is the commit the running studio image was built from (image
+  label `studio.commit`, set by the build argument `STUDIO_COMMIT` that only the updater passes;
+  empty for an image built by hand). The update is offered when the remote branch has new commits,
+  or when the running image is older than the checkout (a `git pull` without rebuild, a failed
+  build). `state` is `idle`, `building`, `waiting` or `restarting`; `log` holds the last lines of
+  the build; `error` the last failure, until the next update.
+- `POST /api/update/apply` (same origin): the studio refuses queued or running jobs (409), the
+  updater refuses another branch, local changes to tracked files and an update already running. It
+  runs `git pull --ff-only` **as the owner of the repository** (never as root: a root-owned object
+  in `.git` breaks the user's own git), answers `{updated, from, to, rebuilding}`, then in the
+  background:
+  1. `docker compose build studio`: the studio keeps working meanwhile, and keeps the previous
+     version if the build fails;
+  2. waits until the studio's queue is empty (`/api/health`, every 10 s): a job started during
+     the build is not cut;
+  3. `docker compose up -d --no-deps --no-build studio`: the container is recreated on the new
+     image, with the same data volume;
+  4. removes the previous image once nothing uses it.
+
+  The page follows `state`, shows the last build line, and reloads when the new studio answers.
+- **Paths.** Compose resolves the relative paths of `compose.yaml` (the `./data` volume) against
+  the project folder and hands them to the host's daemon. The updater reads its own compose labels
+  (project name, host folder, compose files) and links the host folder to `/repo` inside its
+  container, so its `docker compose` sees exactly the configuration of a run on the host (same
+  volume source, no spurious recreation). Values used by `compose.yaml` must live in `.env`, not
+  in shell exports, to survive an update.
+- **Private repository.** `git ls-remote` and `git pull` run without the host's credential
+  helpers. For a private repository, put a GitHub token that can read it in `.env`
+  (`STUDIO_GIT_TOKEN=...`, a fine-grained token with *Contents: read-only* on this repository),
+  then `docker compose up -d` once. It is handed to git through the environment, never on a
+  command line, and never logged.
+- The updater does not update itself: a change to `docker/updater/` or to its service in
+  `compose.yaml` takes a `docker compose up -d --build` by hand.
 
 ## LoRA upload
 
