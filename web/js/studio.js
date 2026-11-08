@@ -963,7 +963,8 @@ function initRail() {
     let open = false;
     document.querySelectorAll(".flyout").forEach(f => { f.hidden = f.dataset.flyout !== name; open ||= !f.hidden; });
     document.querySelector(".app-rail").classList.toggle("expanded", open);
-    if (name === "models") { loadModels(); loadLoras(); loadInstructionPanel(); loadRolePanel(); loadUpdate(); }
+    if (name === "models") { loadModels(); loadLoras(); loadInstructionPanel(); loadRolePanel(); }
+    if (name === "monitor") loadUpdate();
   }));
 }
 

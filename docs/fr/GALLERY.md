@@ -103,7 +103,7 @@ qui devinaient le pipeline, des URL sous `/outputs/` au lieu de `/comfy/view`.
 
 ## Mise à jour depuis l'interface
 
-Deux installations, deux façons, derrière les mêmes routes et le même panneau « Mise à jour ».
+Deux installations, deux façons, derrière les mêmes routes et la même ligne « Mise à jour » du panneau Moniteur, entre Version et GPU.
 
 ### Bare metal (dépôt git)
 

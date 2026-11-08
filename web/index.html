@@ -39,6 +39,12 @@
         <div class="gauge" style="--accent:#ef601b;" id="gaugeQueue"><div class="arc"></div><strong>—</strong><span>Queue</span></div>
       </div>
       <div class="metric-row"><span>Version</span><strong id="appVersion" data-raw>—</strong></div>
+      <div class="metric-row"><span>Update</span><strong id="updateState">…</strong></div>
+      <div class="update-detail">
+        <p class="hint" id="updateText"></p>
+        <p class="hint update-log" id="updateLog" data-raw hidden></p>
+        <button type="button" class="control-btn primary" id="updateBtn" hidden>Update and restart</button>
+      </div>
       <div class="metric-row"><span>GPU</span><strong id="gpuName" data-raw>—</strong></div>
       <div class="metric-row"><span>Prompt LLM</span><strong id="llmState">—</strong></div>
       <div class="metric-row"><span>Last job</span><strong id="latency" data-raw>—</strong></div>
@@ -108,12 +114,6 @@
             <button type="button" class="control-btn" id="roleEditReset">Restore the original</button>
           </div>
         </div>
-      </details>
-      <details class="right-card" open>
-        <summary class="panel-title"><span class="live-dot">Update</span><span id="updateState">…</span></summary>
-        <p id="updateText"></p>
-        <p class="hint update-log" id="updateLog" data-raw hidden></p>
-        <button type="button" class="control-btn primary" id="updateBtn" hidden>Update and restart</button>
       </details>
     </div>
   </nav>
