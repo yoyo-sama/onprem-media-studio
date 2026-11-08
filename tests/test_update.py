@@ -7,6 +7,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
+from studio import loras
 from studio.main import create_app
 from studio.update import Updater
 
@@ -127,5 +128,20 @@ def test_lora_upload(client, settings):
     for name in ("../x.safetensors", "x.bin", ".hidden.safetensors", ".safetensors"):
         assert client.post(f"/api/loras/h3?name={name}", content=b"w", headers=SAME_ORIGIN).status_code == 422, name
     assert client.post("/api/loras/ltx?name=x.safetensors", content=b"w", headers=SAME_ORIGIN).status_code == 404
+    # A name with an engine prefix only goes to that engine's folder.
+    resp = client.post("/api/loras/h3?name=krea_2_Unlocked.safetensors", content=b"w", headers=SAME_ORIGIN)
+    assert resp.status_code == 422 and "loras/krea2/" in resp.json()["detail"]
+    assert client.post("/api/loras/krea2?name=krea_2_Unlocked.safetensors", content=b"w",
+                       headers=SAME_ORIGIN).status_code == 201
     assert client.get("/api/loras").json()["h3"] == [{"name": "style.safetensors", "size": 7}]
+    assert client.get("/api/loras").json()["krea2"] == [{"name": "krea_2_Unlocked.safetensors", "size": 1}]
     assert [p.name for p in (settings.loras_dir / "h3").iterdir()] == ["style.safetensors"]  # no .part left
+
+
+@pytest.mark.parametrize("name, folder", [
+    ("H3_neon.safetensors", "h3"), ("h3_neon.safetensors", "h3"), ("Qwen_2.1-Unchained-V1.safetensors", "qwen21"),
+    ("Qwen_2.1_Unlocked_V1.safetensors", "qwen21"), ("krea_2_Unlocked_V3.safetensors", "krea2"),
+    ("Moss_gouache.safetensors", "moss"), ("retroanime.safetensors", None), ("Qwen_2.0_old.safetensors", None),
+    ("H3neon.safetensors", None)])
+def test_lora_folder_from_its_name(name, folder):
+    assert loras.folder_for(name) == folder

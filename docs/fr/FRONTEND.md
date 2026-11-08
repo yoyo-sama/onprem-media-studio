@@ -117,6 +117,9 @@ ajoute une carte Import d'image reliée à elle.
   Image2Image montrent la pile du moteur choisi (chacun garde la sienne) ; la carte Canvas
   « Création d'image » garde une pile par moteur et « Édition d'image » une pile Qwen. Un job
   d'image n'envoie `loras` que si sa pile a des lignes.
+  Un fichier envoyé dont le nom commence par `H3_`, `Qwen_2.1`, `Krea_2` ou `Moss_` (casse
+  indifférente) va dans le dossier de ce moteur : le panneau Modèles choisit et verrouille le
+  dossier, et le serveur refuse un tel fichier envoyé dans un autre dossier (422).
 - Les références en plus de la référence vers vidéo prennent jusqu'à 7 images, 3 vidéos et 3 sons
   (comme en 1.4), dans une seule liste (`F.r2vPlan`). Chaque image est le `<Subject N>` suivant ;
   une vidéo a un rôle (mouvement de caméra et rythme, ou un sujet), un son aussi (voix d'un

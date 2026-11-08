@@ -18,6 +18,9 @@ SUFFIX = ".safetensors"
 MAX_BYTES = 8 * 1024**3
 MAX_STACK = 4
 MIN_STRENGTH, MAX_STRENGTH = -2.0, 2.0
+# File name prefix → folder, any case (the project owner's naming, 2026-11-08): an upload
+# whose name starts with one of them goes to that folder, whatever folder was chosen.
+PREFIXES = (("h3_", "h3"), ("qwen_2.1", "qwen21"), ("krea_2", "krea2"), ("moss_", "moss"))
 
 
 def check_name(name: str) -> str:
@@ -25,6 +28,11 @@ def check_name(name: str) -> str:
             or len(name) > 200 or len(name) <= len(SUFFIX):
         raise ValueError(f"The file name must be a bare name ending in {SUFFIX}")
     return name
+
+
+def folder_for(name: str) -> str | None:
+    """The folder a file name's prefix names, or None (the uploader's choice then)."""
+    return next((folder for prefix, folder in PREFIXES if name.lower().startswith(prefix)), None)
 
 
 def check_stack(loras, root: Path, folder: str) -> list[dict]:
@@ -85,6 +93,9 @@ def router(root: Path):
             check_name(name)
         except ValueError as exc:
             raise HTTPException(422, str(exc))
+        named = folder_for(name)
+        if named and named != folder:
+            raise HTTPException(422, f"{name} is named for loras/{named}/, not loras/{folder}/")
         dest_dir = root / folder
         dest_dir.mkdir(parents=True, exist_ok=True)
         final = dest_dir / name

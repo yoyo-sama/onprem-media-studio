@@ -115,6 +115,9 @@ to it.
   single `lora` property comes back as a one-row stack. Text2Image and Image2Image show the stack
   of the chosen engine (each keeps its own); the Canvas "Image creation" card keeps one stack per
   engine and "Image editing" a Qwen one. An image job sends `loras` only when its stack has rows.
+  An uploaded file whose name starts with `H3_`, `Qwen_2.1`, `Krea_2` or `Moss_` (any case) goes
+  to that engine's folder: the Models panel picks and locks the folder, and the server refuses
+  such a file sent to another folder (422).
 - Reference to video's extra references take up to 7 images, 3 clips and 3 sounds (as in 1.4),
   in one list (`F.r2vPlan`). Each image is the next `<Subject N>`; a clip has a role (camera
   movement and pacing, or a subject) and a sound one too (voice of a character, music, ambience

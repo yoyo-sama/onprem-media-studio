@@ -10,6 +10,9 @@ export const MAX_LORAS = 4;  // studio/loras.py MAX_STACK
 // Folder → the engine family it serves (product names, not translated).
 export const LORA_FOLDERS = { h3: "MiniMax H3", krea2: "Krea 2", qwen21: "Qwen Image 2.1", moss: "MOSS-Image" };
 export const STRENGTH = { min: -2, max: 2, step: 0.05 };
+// File name prefix → folder, any case (studio/loras.py PREFIXES): an upload named so goes there.
+const PREFIXES = [["h3_", "h3"], ["qwen_2.1", "qwen21"], ["krea_2", "krea2"], ["moss_", "moss"]];
+export const folderForName = name => (PREFIXES.find(([p]) => name.toLowerCase().startsWith(p)) || [])[1] || null;
 
 // folder → file names, as the page last read them; `onLoraFiles` hears each new list.
 let files = {};

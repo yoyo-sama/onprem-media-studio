@@ -3857,10 +3857,15 @@ export const DICT = {
     es: "LoRA (hasta 4, cada una con su intensidad)",
     de: "LoRA (bis zu 4, jede mit ihrer Stärke)",
   },
-  "Style LoRAs, one folder per engine. Up to 4 of them, each with its strength, can be stacked on a render of that engine.": {
-    fr: "LoRA de style, un dossier par moteur. Jusqu'à 4, chacune avec sa force, peuvent s'empiler sur un rendu de ce moteur.",
-    es: "LoRA de estilo, una carpeta por motor. Se pueden apilar hasta 4, cada una con su intensidad, en un render de ese motor.",
-    de: "Stil-LoRAs, ein Ordner pro Engine. Bis zu 4, jede mit ihrer Stärke, lassen sich bei einem Rendering dieser Engine stapeln.",
+  "Style LoRAs, one folder per engine. Up to 4 of them, each with its strength, can be stacked on a render of that engine. A file named H3_…, Qwen_2.1…, Krea_2… or Moss_… goes to that engine's folder by itself.": {
+    fr: "LoRA de style, un dossier par moteur. Jusqu'à 4, chacune avec sa force, peuvent s'empiler sur un rendu de ce moteur. Un fichier nommé H3_…, Qwen_2.1…, Krea_2… ou Moss_… va tout seul dans le dossier de ce moteur.",
+    es: "LoRA de estilo, una carpeta por motor. Se pueden apilar hasta 4, cada una con su intensidad, en un render de ese motor. Un archivo llamado H3_…, Qwen_2.1…, Krea_2… o Moss_… va solo a la carpeta de ese motor.",
+    de: "Stil-LoRAs, ein Ordner pro Engine. Bis zu 4, jede mit ihrer Stärke, lassen sich bei einem Rendering dieser Engine stapeln. Eine Datei namens H3_…, Qwen_2.1…, Krea_2… oder Moss_… landet von selbst im Ordner dieser Engine.",
+  },
+  "Goes to the {engine} folder (from its name).": {
+    fr: "Va dans le dossier {engine} (d'après son nom).",
+    es: "Va a la carpeta {engine} (según su nombre).",
+    de: "Kommt in den Ordner {engine} (nach seinem Namen).",
   },
   "LoRA {n}": {
     fr: "LoRA {n}",

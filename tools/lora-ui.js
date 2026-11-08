@@ -6,7 +6,7 @@
 // MOSS-Image), one stack per LoRA folder, takes up to 4 files (each once) with their
 // strengths, editing it submits nothing, and Generate sends exactly the rows on screen;
 // a workflow without LoRAs sends none, and coming back finds the stack as it was. The
-// Models panel uploads into the chosen folder. In the Canvas, a card saved with the old
+// Models panel uploads into the chosen folder, or the one an engine prefix of the file name names. In the Canvas, a card saved with the old
 // single `lora` property comes back as a one-row stack, and Generate sends the stack.
 // With a folder, screenshots of the Studio form and the Canvas panel.
 // Exit 0 = all green, 1 = a check failed, 2 = the test could not run.
@@ -139,6 +139,15 @@ const LISTING = { h3: FILES.map(name => ({ name, size: 2 ** 20 })), krea2: [{ na
   await page.click("#loraUploadBtn");
   await page.waitForFunction(() => !document.getElementById("loraUploadBtn").disabled);
   check(JSON.stringify(uploads) === JSON.stringify([["/api/loras/h3", "new-style.safetensors"]]), `upload: ${JSON.stringify(uploads)}`);
+  // A name with an engine prefix picks (and locks) its folder, whatever was chosen.
+  await page.selectOption("#loraFolderSelect", "h3");
+  await page.setInputFiles("#loraFile", { name: "Qwen_2.1-Unchained-V1.safetensors", mimeType: "application/octet-stream", buffer: Buffer.from("abc") });
+  check(await page.inputValue("#loraFolderSelect") === "qwen21" && await page.isDisabled("#loraFolderSelect"),
+    "a Qwen_2.1 file name does not select and lock the qwen21 folder");
+  await page.click("#loraUploadBtn");
+  await page.waitForFunction(() => !document.getElementById("loraUploadBtn").disabled);
+  check(JSON.stringify(uploads[1]) === JSON.stringify(["/api/loras/qwen21", "Qwen_2.1-Unchained-V1.safetensors"]), `prefixed upload: ${JSON.stringify(uploads[1])}`);
+  check(!(await page.isDisabled("#loraFolderSelect")), "the folder select stays locked after the upload");
   check((await page.$$("#loraList .model")).length === Object.values(LISTING).flat().length,
     "the Models panel does not list every LoRA");
 
