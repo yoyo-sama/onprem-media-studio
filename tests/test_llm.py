@@ -163,3 +163,30 @@ def test_compiler_calls_do_not_think(settings, store, monkeypatch, capsys):
     assert sent["chat_template_kwargs"] == {"enable_thinking": False}
     assert sent["response_format"] == {"type": "json_object"}
     assert capsys.readouterr().out.startswith("llm: call ")
+
+
+def test_a_lost_connection_is_an_llm_error(settings, store, monkeypatch):
+    """llama-server stopped for a video engine, or crashed, in the middle of an answer:
+    the assistant gets an LlmError it reports, not a stream cut without a word."""
+    import httpx
+
+    class Broken(FakeStream):
+        def iter_lines(self):
+            yield sse({"content": "Half"})
+            raise httpx.RemoteProtocolError("peer closed connection")
+
+    monkeypatch.setattr("studio.llm.httpx.stream", Broken([]))
+    server = LlamaServer(settings, store)
+    monkeypatch.setattr(server, "start", lambda: None)
+    out = []
+    with pytest.raises(LlmError, match="stopped answering"):
+        for event in server.stream([]):
+            out.append(event)
+    assert out == [("text", "Half")]
+
+    def refused(url, json, timeout):
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr("studio.llm.httpx.post", refused)
+    with pytest.raises(LlmError, match="did not answer"):
+        server.chat("sys", "hi")

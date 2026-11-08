@@ -50,7 +50,7 @@ request.
 | `studio/assistant/` | Creative assistant: role registry (`roles.py`, shipped roles in `roles/*.md`), tools and their checks (`tools.py`), routing, turns and conversations (`chat.py`, `/api/chat`, `/api/roles`, `/api/chats`): [ASSISTANT.md](ASSISTANT.md) |
 | `studio/instructions.py` | Gemma instructions replaced in the interface, kept in `STUDIO_DATA_DIR/instructions.json` (`/api/instructions`); the defaults live in `web/js/prompts.js` |
 | `studio/guard.py` | Same-origin check of the routes that move or write files |
-| `studio/main.py` | HTTP/WebSocket API and static files; `/api/health` gives the app, GPU, memory, LLM state and the number of jobs in the queue |
+| `studio/main.py` | HTTP/WebSocket API and static files; `/api/health` gives the app, GPU, memory, LLM state, the number of jobs in the queue, of model downloads outside a job, and whether the queue is held for an update |
 | `web/index.html`, `web/canvas.html` | Front end: the Studio and the Canvas, ported from 1.4, no build step: [FRONTEND.md](FRONTEND.md) |
 | `web/js/prompts.js` | Prompt compilers and Gemma instructions of 1.4, one copy for both pages (prompts are compiled in the front end, ADR 0001) |
 | `tools/parity-prompts.js`, `tools/prompt-systems.js` | Front-end regression tests against 1.4: prompt parity and the Gemma instruction per engine: [FRONTEND.md](FRONTEND.md#tests) |

@@ -51,7 +51,7 @@ requête LLM.
 | `studio/assistant/` | Assistant de création : registre des rôles (`roles.py`, rôles livrés dans `roles/*.md`), outils et leurs vérifications (`tools.py`), routage, tours et conversations (`chat.py`, `/api/chat`, `/api/roles`, `/api/chats`) : [ASSISTANT.md](ASSISTANT.md) |
 | `studio/instructions.py` | Consignes Gemma remplacées depuis l'interface, gardées dans `STUDIO_DATA_DIR/instructions.json` (`/api/instructions`) ; celles par défaut vivent dans `web/js/prompts.js` |
 | `studio/guard.py` | Contrôle de même origine des routes qui déplacent ou écrivent des fichiers |
-| `studio/main.py` | API HTTP/WebSocket et fichiers statiques ; `/api/health` donne l'application, le GPU, la mémoire, l'état du LLM et le nombre de jobs en file |
+| `studio/main.py` | API HTTP/WebSocket et fichiers statiques ; `/api/health` donne l'application, le GPU, la mémoire, l'état du LLM, le nombre de jobs en file et de téléchargements de modèles hors job, et si la file est en attente d'une mise à jour |
 | `web/index.html`, `web/canvas.html` | Front end : le Studio et le Canvas, portés de la 1.4, sans étape de build : [FRONTEND.md](FRONTEND.md) |
 | `web/js/prompts.js` | Compilateurs de prompts et consignes Gemma de la 1.4, une seule copie pour les deux pages (les prompts sont compilés côté front, ADR 0001) |
 | `tools/parity-prompts.js`, `tools/prompt-systems.js` | Tests de non-régression du front contre la 1.4 : parité des prompts et consigne Gemma par moteur : [FRONTEND.md](FRONTEND.md#tests) |

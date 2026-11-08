@@ -5,7 +5,7 @@ import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -16,7 +16,8 @@ from .assistant.roles import Roles
 from .config import APP_VERSION, Settings
 from .files import FileStore
 from .gallery import Gallery
-from .jobs import JobQueue
+from .guard import same_origin
+from .jobs import Held, JobQueue
 from .llm import LlamaServer, LlmError
 from .models import ModelError, ModelStore
 from .pipelines import REGISTRY, Pipeline, common
@@ -39,6 +40,10 @@ class JobRequest(BaseModel):
     pipeline: str
     params: dict = {}
     origin: str | None = None
+
+
+class HoldRequest(BaseModel):
+    seconds: float
 
 
 class ChatRequest(BaseModel):
@@ -104,8 +109,14 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
 
     jobs.listeners += [index_outputs, broadcast]
 
-    def busy() -> int:
+    # Models downloaded from the models panel, outside any job: an update waits for them too.
+    downloads: set[str] = set()
+
+    def queued() -> int:
         return sum(j.status in ("queued", "running") for j in list(jobs.jobs.values()))
+
+    def busy() -> int:
+        return queued() + len(downloads)
 
     def before_restart() -> None:
         gallery.stop()
@@ -143,7 +154,8 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     @app.get("/api/health")
     def health():
         return {"app": settings.app_name, "version": APP_VERSION, "gpu": gpu_info(), "memory": memory_info(),
-                "llm": llm.state, "llm_model": llm.model_id, "queue": busy()}
+                "llm": llm.state, "llm_model": llm.model_id, "queue": queued(), "downloads": len(downloads),
+                "held": jobs.held}
 
     @app.get("/api/models")
     def list_models():
@@ -168,10 +180,13 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
         def run():
             def progress(frac, msg):
                 broadcast({"type": "model", "id": model_id, "progress": frac, "message": msg})
+            downloads.add(model_id)
             try:
                 models.download(model_id, progress)
             except ModelError as exc:
                 broadcast({"type": "model", "id": model_id, "error": str(exc)})
+            finally:
+                downloads.discard(model_id)
 
         threading.Thread(target=run, name=f"download-{model_id}", daemon=True).start()
         return {"id": model_id, "status": "downloading"}
@@ -196,10 +211,21 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     def submit_job(req: JobRequest):
         try:
             return jobs.submit(req.pipeline, req.params, req.origin).public()
+        except Held as exc:
+            raise HTTPException(503, str(exc))
         except KeyError as exc:
             raise HTTPException(404, str(exc.args[0]))
         except ValueError as exc:
             raise HTTPException(422, str(exc))
+
+    @app.post("/api/update/hold", dependencies=[Depends(same_origin)])
+    def hold_queue(req: HoldRequest):
+        """The Docker updater: refuse new jobs for `seconds` (at most 10 min, 0 lifts it)
+        while it waits for the running ones and recreates the container."""
+        if not 0 <= req.seconds <= 600:
+            raise HTTPException(422, "seconds must be between 0 and 600")
+        jobs.hold(req.seconds)
+        return {"held": jobs.held, "queue": busy()}
 
     @app.get("/api/jobs/{job_id}")
     def get_job(job_id: str):

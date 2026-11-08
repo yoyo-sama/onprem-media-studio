@@ -167,6 +167,18 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     rest" on an edit asking for rocks the image lacks came from the prompt (the base drifted
     3/3 too). Qwen's official 8-step Turbo was only twice as fast, darker and duller.
     `tools/qualify/qwen_fast_bench.sh` (promaxgb10-95c7, 2026-11-07)
+47. **State held across a slow call must not be written back whole.** Jobs live in memory and a
+    page asks for the jobs it waited on after a restart: ids restarting at `job-1` could hand it
+    another job, so they carry a per-start prefix (`job-<6 hex>-<n>`). An assistant turn keeps
+    its conversation for the whole of Gemma's answer while the browser reports a card's render:
+    written back whole, the turn put the card back to "running" without its outputs. Cards carry
+    the time of their last change, the turn's save keeps the newer state from disk, and a card
+    report is one locked load-change-write. (2026-11-08)
+48. **Waiting for an empty queue is not enough before a restart.** The Docker updater looked at
+    the queue every 10 s, then recreated the container: a click in between was accepted, then
+    killed. It now holds the queue (new jobs refused with 503 and a message, renewed at each look,
+    lapsing on its own) from the wait to the restart, and counts model downloads as work.
+    (2026-11-08)
 
 ## 8. Front end (for the port in step 4)
 

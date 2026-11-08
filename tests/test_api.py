@@ -147,3 +147,26 @@ def test_front_end_is_revalidated(settings, store):
         assert res.status_code == 200 and res.headers["cache-control"] == "no-cache"
         again = client.get("/js/studio.js", headers={"If-None-Match": res.headers["etag"]})
         assert again.status_code == 304
+
+
+def test_job_ids_differ_from_one_start_to_the_next(settings, store):
+    """Jobs live in memory: a page that waited for a job before a restart must get a 404
+    for it after, never another job that took the same id."""
+    ids = []
+    for _ in range(2):
+        app = create_app(settings, models=store, pipelines={"echo": Echo()}, llm=FakeLlm())
+        with TestClient(app) as c:
+            ids.append(c.post("/api/jobs", json={"pipeline": "echo", "params": {"prompt": "x"}}).json()["id"])
+    assert ids[0] != ids[1] and all(i.startswith("job-") and i.endswith("-1") for i in ids)
+
+
+def test_a_held_queue_refuses_new_jobs(client):
+    origin = {"Origin": "http://testserver"}
+    assert client.post("/api/update/hold", json={"seconds": 30}).status_code == 403
+    assert client.post("/api/update/hold", json={"seconds": 900}, headers=origin).status_code == 422
+    assert client.post("/api/update/hold", json={"seconds": 30}, headers=origin).json()["held"] is True
+    refused = client.post("/api/jobs", json={"pipeline": "echo", "params": {"prompt": "x"}})
+    assert refused.status_code == 503 and "update" in refused.json()["detail"]
+    client.post("/api/update/hold", json={"seconds": 0}, headers=origin)
+    job = client.post("/api/jobs", json={"pipeline": "echo", "params": {"prompt": "x"}}).json()
+    assert wait_for(client, job["id"])["status"] == "done"

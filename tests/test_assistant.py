@@ -314,6 +314,33 @@ def test_card_left_running_by_a_restart_fails(tmp_path, files):
     assert C.find_card(later.load(conv["id"]), "C1")["state"] == {"status": "error", "error": C.LOST_JOB}
 
 
+def test_a_render_reported_during_a_turn_is_kept(tmp_path, files):
+    """The user runs card C1, then writes again; the render ends while Gemma answers.
+    The turn's save must not put back its stale copy of C1 ("running", no outputs)."""
+    llm = ScriptedLlm(streams=[[tool("create_image", {"prompt": "a fox"})]])
+    a = make(tmp_path, files, llm)
+    conv, _ = run(a, {"text": "go", "role": "assistant"})
+    C.update_card(a.conversations, files, conv["id"], "C1", {"status": "running"})
+    out = files.roots["outputs"] / "krea2-t2i"
+    out.mkdir()
+    (out / "fox.png").write_bytes(PNG)
+
+    def answer_while_rendering():
+        yield "text", "Working on it."
+        C.update_card(a.conversations, files, conv["id"], "C1",
+                      {"status": "done", "outputs": ["outputs/krea2-t2i/fox.png"]})
+        yield "text", " Done."
+
+    llm.streams.append(answer_while_rendering())
+    conv, events = run(a, {"conversation": conv["id"], "text": "and a cat?"})
+    assert events[-1] == {"type": "done"}
+    saved = a.conversations.load(conv["id"])
+    assert C.find_card(saved, "C1")["state"] == {"status": "done", "outputs": ["outputs/krea2-t2i/fox.png"]}
+    assert saved["messages"][-1]["text"] == "Working on it. Done."
+    # Merged into the turn's own copy too: what the model sees next names the result.
+    assert C.resolve_id(conv, "C1#1") == "outputs/krea2-t2i/fox.png"
+
+
 def test_history_alternates_and_merges(tmp_path, files):
     conv = C.Conversations(tmp_path).new("assistant")
     conv["messages"] = [

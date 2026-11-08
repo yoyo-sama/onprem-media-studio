@@ -127,11 +127,17 @@ there (`RemoteUpdater` in `studio/update.py`).
   background:
   1. `docker compose build studio`: the studio keeps working meanwhile, and keeps the previous
      version if the build fails;
-  2. waits until the studio's queue is empty (`/api/health`, every 10 s): a job started during
-     the build is not cut;
+  2. holds the studio's queue (`POST /api/update/hold`: new jobs are refused with 503 and a
+     message, the hold renewed every 10 s and lapsing after 60 s if the updater stops) and waits
+     until no job is queued or running and no model is downloading (`/api/health`, every 10 s): a
+     job started during the build is not cut, and none can start between the last look and the
+     restart (LESSONS #48);
   3. `docker compose up -d --no-deps --no-build studio`: the container is recreated on the new
      image, with the same data volume;
   4. removes the previous image once nothing uses it.
+
+  The updater never rebuilds itself: after an update that changes `docker/updater/`, run
+  `docker compose up -d --build updater` once in the repository folder.
 
   The page follows `state`, shows the last build line, and reloads when the new studio answers.
 - **Paths.** Compose resolves the relative paths of `compose.yaml` (the `./data` volume) against
