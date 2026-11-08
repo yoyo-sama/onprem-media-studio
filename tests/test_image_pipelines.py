@@ -15,7 +15,7 @@ from PIL import Image
 
 from studio.main import create_app
 from studio.models import MARKER
-from studio.pipelines import REGISTRY, common
+from studio.pipelines import REGISTRY, common, qwen
 
 from .test_api import FakeLlm, wait_for
 
@@ -160,7 +160,8 @@ def test_21_text_to_image(client, fake):
     run(client, "qwen-image-2.1", {"prompt": "p", "width": 1344, "height": 768, "count": 3})
     call = fake.calls[-1]
     assert call["image"] is None and (call["width"], call["height"]) == (1344, 768)
-    assert call["num_images_per_prompt"] == 3 and call["num_inference_steps"] == 25
+    assert call["num_images_per_prompt"] == 3 and call["sigmas"] == qwen.LIGHTNING_SIGMAS
+    assert call["num_inference_steps"] == 4
     assert call["true_cfg_scale"] == 1.0 and "negative_prompt" not in call
 
 
