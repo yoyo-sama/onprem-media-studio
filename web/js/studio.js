@@ -15,6 +15,7 @@ import {
 import { initModelNotice, showModelNotice } from "./model-notice.js";
 import { initGallery } from "./gallery.js";
 import * as F from "./form.js";
+import { LORA_FOLDERS, renderLoraStack, setLoraFiles } from "./lora-stack.js";
 import * as D from "./director.js";
 import * as G from "./generate.js";
 import { CARD_IMAGE_WORKFLOWS, attachAsset, initChat, loadRolePanel, reusePrompt as chatReusePrompt, showAssistant } from "./chat.js";
@@ -66,7 +67,7 @@ function selectScenario(scenario, pipeline = SCENARIOS[scenario].pipeline) {
 const CONTROL_WRAPS = {
   image: "imageInputWrap", duration: "durationWrap", markets: "marketsWrap", seq: "seqWrap",
   shots: "shotCountWrap", hold: "holdWrap", variants: "variantsWrap", ratio: "ratioWrap", style: "styleWrap",
-  lora: "loraWrap", sheetTemplate: "sheetTemplateWrap", skipSheets: "skipSheetsWrap",
+  sheetTemplate: "sheetTemplateWrap", skipSheets: "skipSheetsWrap",
 };
 
 function refreshPipelineOptions() {
@@ -105,6 +106,7 @@ function updateModelLabel() {
   if (ctx === "r2v") tx($("refCapLabel"), "Extra references: up to 7 images, 3 clips and 3 sounds");
   else tx($("refCapLabel"), "Extra reference images (at most {max})", { max: F.REF_CAPS[ctx] || 7 });
   renderRefs();
+  renderFormLoras();
   updateResumeButton();
   D.refreshSessionBar();
 }
@@ -789,28 +791,35 @@ async function saveInstruction(reset) {
   } catch (err) { warn(err); }
 }
 
-let h3Loras = [];
+// The LoRA stack of the form follows the current workflow's folder (F.loraFolder).
+function renderFormLoras() {
+  const folder = F.loraFolder(F.currentWorkflow());
+  $("loraWrap").hidden = !folder;
+  if (folder) renderLoraStack($("loraStack"), { folder, stack: F.loraStack(folder) });
+}
 async function loadLoras() {
-  try { h3Loras = (await api.loras()).h3 || []; } catch (err) { warn(err); }
-  $("loraList").replaceChildren(...h3Loras.map(l => {
+  let listing = {};
+  try { listing = await api.loras(); } catch (err) { warn(err); }
+  setLoraFiles(listing);
+  const folders = Object.keys(listing);
+  fillSelect($("loraFolderSelect"), folders.map(f => [f, LORA_FOLDERS[f] || f]), $("loraFolderSelect").value);
+  $("loraList").replaceChildren(...folders.flatMap(folder => listing[folder].map(l => {
     const row = document.createElement("div");
     row.className = "model";
     row.innerHTML = `<strong data-raw></strong><small data-raw></small>`;
     row.querySelector("strong").textContent = l.name;
-    row.querySelector("small").textContent = `${(l.size / 2 ** 20).toFixed(1)} MiB`;
+    row.querySelector("small").textContent = `${LORA_FOLDERS[folder] || folder} · ${(l.size / 2 ** 20).toFixed(1)} MiB`;
     return row;
-  }));
-  fillSelect($("loraSelect"), [["", "None"], ...h3Loras.map(l => [l.name, l.name.replace(/\.safetensors$/, "")])], $("loraSelect").value);
-  // File names are not translated.
-  [...$("loraSelect").options].slice(1).forEach(o => { o.dataset.raw = ""; });
+  })));
+  renderFormLoras();
 }
 async function uploadLoraFile() {
-  const file = $("loraFile").files[0], status = $("loraUploadStatus");
+  const file = $("loraFile").files[0], folder = $("loraFolderSelect").value, status = $("loraUploadStatus");
   if (!file) { log("warn", "No LoRA file selected."); return; }
   if (!file.name.toLowerCase().endsWith(".safetensors")) { log("warn", "{name} refused: a .safetensors file is required.", { name: file.name }); return; }
   $("loraUploadBtn").disabled = true;
   try {
-    await uploadLora(file, frac => { status.textContent = pct(Math.round(frac * 100)); });
+    await uploadLora(file, folder, frac => { status.textContent = pct(Math.round(frac * 100)); });
     log("ok", "LoRA {name} uploaded.", { name: file.name });
     $("loraFile").value = "";
     loadLoras();

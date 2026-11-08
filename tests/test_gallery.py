@@ -12,7 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 from PIL import Image, PngImagePlugin
 
-from studio.gallery import Gallery, GalleryError, extract, png_metadata
+from studio.gallery import Gallery, GalleryError, extract, lora_list, png_metadata
 from studio.main import create_app
 from studio.pipelines import common
 
@@ -104,6 +104,18 @@ def test_png_metadata_written_by_the_engines_is_read_back(tmp_path):
     assert last.name == "clip-1.png" and extract(last, "x/clip-1.png")["app"] == 0
 
 
+def test_lora_stack_is_read_back_with_strengths(tmp_path):
+    params = {"prompt": "p", "loras": [{"name": "a.safetensors", "strength": 0.75}, {"name": "b.safetensors"},
+                                       {"name": "c.safetensors", "strength": "x"}, {"strength": 1}]}
+    ctx = SimpleNamespace(output_dir=tmp_path, job=SimpleNamespace(pipeline="krea2-t2i", origin="text2image", id="j"))
+    (path,) = common.save_images([Image.new("RGB", (8, 6))], ctx, params)
+    assert extract(path, "krea2-t2i/" + path.name)["loras"] == [
+        {"name": "a.safetensors", "strength": 0.75}, {"name": "b.safetensors", "strength": 1.0},
+        {"name": "c.safetensors", "strength": None}]
+    # Rows indexed before strengths were kept hold bare names.
+    assert lora_list('["a.safetensors"]') == [{"name": "a.safetensors", "strength": None}]
+
+
 def test_damaged_png_is_listed_without_metadata(tmp_path):
     path = png(tmp_path / "a.png", meta("p"))
     data = path.read_bytes()
@@ -122,10 +134,12 @@ def test_video_metadata_is_tagged_then_read_back(tmp_path):
     subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "testsrc=size=64x48:rate=24", "-t", "1",
                     "-pix_fmt", "yuv420p", str(video)], check=True)
     ctx = SimpleNamespace(job=SimpleNamespace(pipeline="h3-t2v", origin="text2video"))
-    common.tag_video(video, ctx, {"prompt": "é \"q\"", "seed": 3, "loras": [{"name": "s.safetensors", "strength": 1}]})
+    common.tag_video(video, ctx, {"prompt": "é \"q\"", "seed": 3, "loras": [{"name": "s.safetensors", "strength": 1},
+                                                                                     {"name": "t.safetensors", "strength": -0.5}]})
     assert sorted(os.listdir(video.parent)) == ["clip.mp4"]
     found = extract(video, "h3-t2v/clip.mp4")
-    assert (found["prompt"], found["seed"], found["loras"], found["origin"]) == ("é \"q\"", 3, ["s.safetensors"], "text2video")
+    assert (found["prompt"], found["seed"], found["loras"], found["origin"]) == ("é \"q\"", 3, [
+        {"name": "s.safetensors", "strength": 1.0}, {"name": "t.safetensors", "strength": -0.5}], "text2video")
     assert (found["w"], found["h"]) == (64, 48) and found["duration"] == pytest.approx(1, abs=0.1)
 
 

@@ -87,7 +87,7 @@ of what was already moved.
 An **Asset**: `key` (POSIX path under the output folder, no leading slash), `filename`, `folder`,
 `type`, `url` (`/outputs/<key>?v=<mtime>`), `ref` (`outputs/<key>`, what a job takes as an image
 reference), `thumb`, `ts` (ms), `prompt` (400 characters in lists), `pipeline`, `origin`,
-`loras`, `seed`, `w`, `h`, `duration`, `size`, `fav`, `tags`, `app` (false for a working image hidden from
+`loras` (`[{name, strength}]`, strength null for a file indexed before strengths were kept), `seed`, `w`, `h`, `duration`, `size`, `fav`, `tags`, `app` (false for a working image hidden from
 the `app` scope), `trash` (`{origKey, at}` or null).
 
 Changes from 1.4: no ComfyUI graph to walk (metadata is explicit), no `model` facet (the engine
@@ -165,10 +165,20 @@ there (`RemoteUpdater` in `studio/update.py`).
 
 ## LoRA upload
 
-- `GET /api/loras` → `{"h3": [{name, size}]}`.
-- `POST /api/loras/h3?name=<file>.safetensors` (same origin), raw file in the body, 8 GB at most.
-  The file is written under a hidden temporary name, then linked to its final name: an existing
-  LoRA is never replaced (409).
+One folder per engine family, `STUDIO_DATA_DIR/loras/<folder>/` (`FOLDERS` in
+`studio/loras.py`; `h3` for MiniMax H3).
+
+- `GET /api/loras` → `{"<folder>": [{name, size}], …}`.
+- `POST /api/loras/<folder>?name=<file>.safetensors` (same origin), raw file in the body, 8 GB at
+  most. The file is written under a hidden temporary name, then linked to its final name: an
+  existing LoRA is never replaced (409). The Models panel has an Engine select for the folder.
+
+A job sends a **stack**: `loras: [{"name": "<file>.safetensors", "strength": -2…2}]`, at most 4
+entries, each file once, `[]` for none. Every engine that takes LoRAs checks it with
+`loras.check_stack(value, loras_dir, "<folder>")` (422 otherwise) and names it in its log lines
+with `loras.describe()` ("a.safetensors ×0.8, b.safetensors ×1"). The Studio form and the Canvas
+cards edit it with `web/js/lora-stack.js` ([FRONTEND.md](FRONTEND.md)); the lightbox shows it with
+the strengths.
 
 Only MiniMax H3 takes LoRAs in 2.0 (`docs/H3.md` § LoRA stack). 1.4 also had Krea 2 style LoRAs;
 the Krea 2 engine does not take them yet.

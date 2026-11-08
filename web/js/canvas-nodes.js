@@ -11,6 +11,7 @@
 import { api, on, refURL, waitJob } from "./api.js";
 import { L, t } from "./i18n.js";
 import * as F from "./form.js";
+import { stackParams } from "./lora-stack.js";
 
 const P = window.Prompts;
 
@@ -62,12 +63,9 @@ function done(node, ref, text = "Done: {name}", params) {
 
 // Seeds: 0 draws one, below 2^31 so the offsets added per shot stay in range.
 const seedOf = node => node.properties.seed || Math.floor(Math.random() * 2 ** 31);
-const lorasOf = node => (node.properties.lora ? [{ name: node.properties.lora, strength: 1 }] : []);
-
-// H3 LoRA files, read once by the page (api.loras).
-let h3Loras = [];
-export function setLoras(names) { h3Loras = names; }
-const LORAS = () => [["", L("None")], ...h3Loras.map(n => [n, n.replace(/\.safetensors$/, "")])];
+// LoRA stacks of a card, one per folder (`properties.loras`, edited by a "loras" panel
+// field); a job sends the one of its engine's folder.
+const lorasOf = (node, folder) => stackParams(node.properties.loras?.[folder]);
 const STYLES = () => Object.entries(P.STYLE_PACKS).map(([id, s]) => [id, s.label]);
 const styleLabel = id => t(P.STYLE_PACKS[id]?.label || id);
 const RATIOS = () => Object.keys(F.RATIOS).map(r => [r, r]);
@@ -251,13 +249,13 @@ export const CARDS = {
     engines: p => [p.engine === "r2v" ? "h3-r2v" : "h3-i2v"],
     modelProp: "engine", modelValues: [["i2v", "MiniMax H3"], ["r2v", "MiniMax H3 (r2v)"]],
     inputs: ["keyframes"], outputs: ["cuts"], size: [340, 260],
-    props: { engine: "i2v", duration: 5, lora: "", seed: 0, cuts: [] },
+    props: { engine: "i2v", duration: 5, loras: {}, seed: 0, cuts: [] },
     meta: n => t("MiniMax H3 {engine} · {d} s/shot · {n} cuts",
       { engine: n.properties.engine, d: n.properties.duration, n: n.properties.cuts.length }),
     fields: [
       { k: "engine", label: L("Video engine"), type: "select", values: () => CARDS["adv/cutvideo"].modelValues },
       { k: "duration", label: L("Duration / shot (s)"), type: "number", ...H3_DURATION },
-      { k: "lora", label: L("H3 style (LoRA)"), type: "select", values: LORAS, when: n => n.properties.engine === "i2v" },
+      { k: "loras", label: L("H3 style (LoRA)"), type: "loras", folder: () => "h3", when: n => n.properties.engine === "i2v" },
       { k: "seed", label: L("Seed (0 = auto)"), type: "number", min: 0 },
     ],
     async generate(node) {
@@ -280,7 +278,7 @@ export const CARDS = {
             body: P.h3CutBodyText(shots[k], subjects, null, styleId) }), onWarn), references: [charRef, locRef, keyframes[k]] };
         } else {
           params = { prompt: P.buildH3CutPrompt(shots[k], charDesc, locDesc, null, duration, null, false, styleId, onWarn),
-            image: keyframes[k], loras: lorasOf(node) };
+            image: keyframes[k], loras: lorasOf(node, "h3") };
         }
         jobs.push(await submit(node, r2v ? "h3-r2v" : "h3-i2v", { ...params, duration, seed: F.seedPlus(seed, 31 + k) }));
         setStatus(node, "running", "Cuts ({k}/{n} submitted)…", { k: k + 1, n: shots.length });
@@ -310,14 +308,14 @@ export const CARDS = {
     subject: "brief", preview: "brief",
     inputs: ["charsheet", "locsheet", SLOT_IMG_REF], outputs: ["video"], size: [360, 300],
     autogrow: [[SLOT_IMG_REF, F.REF_CAPS.r2v]],
-    props: { brief: "", ratio: "16:9", duration: 5, lora: "", seed: 0 },
+    props: { brief: "", ratio: "16:9", duration: 5, loras: {}, seed: 0 },
     meta: n => `MiniMax H3 r2v · ${n.properties.ratio} · ${n.properties.duration} s`,
     fields: [
       { k: "brief", label: L("Brief"), type: "textarea", enrich: () => "h3_r2v",
         placeholder: "the lighthouse keeper walks slowly across the lantern room and looks out of the window" },
       { k: "ratio", label: L("Aspect ratio"), type: "select", values: RATIOS },
       { k: "duration", label: L("Duration (s)"), type: "number", ...H3_DURATION },
-      { k: "lora", label: L("H3 style (LoRA)"), type: "select", values: LORAS },
+      { k: "loras", label: L("H3 style (LoRA)"), type: "loras", folder: () => "h3" },
       { k: "seed", label: L("Seed (0 = auto)"), type: "number", min: 0 },
     ],
     async generate(node) {
@@ -334,7 +332,7 @@ export const CARDS = {
       const prompt = P.capH3Prompt(P.buildH3RefPrompt({ subjects, summary: P.h3Summary(brief), body: P.h3RefBody(subjects, brief) }),
         () => { capped = true; });
       setStatus(node, "running", "MiniMax H3 r2v running…");
-      const job = await run(node, "h3-r2v", { prompt, duration: p.duration, seed: F.seedPlus(seedOf(node), 201), loras: lorasOf(node),
+      const job = await run(node, "h3-r2v", { prompt, duration: p.duration, seed: F.seedPlus(seedOf(node), 201), loras: lorasOf(node, "h3"),
         aspect: p.ratio, references: [charRef, locRef, ...extras] });
       done(node, output(job, ".mp4"), capped ? "Done: {name}. H3 prompt cut to 7,000 characters (model limit)." : undefined);
     },
@@ -399,13 +397,13 @@ export const CARDS = {
     engines: () => ["h3-i2v"],
     subject: "prompt", preview: "prompt",
     inputs: ["image"], outputs: ["video"], size: [340, 260],
-    props: { prompt: "", duration: 5, lora: "" },
+    props: { prompt: "", duration: 5, loras: {} },
     meta: n => `MiniMax H3 i2v · ${n.properties.duration} s`,
     fields: [
       { k: "prompt", label: L("Prompt (motion)"), type: "textarea", enrich: () => "h3_i2v",
         placeholder: "The scene continues with natural motion; slow push-in." },
       { k: "duration", label: L("Duration (s)"), type: "number", ...H3_DURATION },
-      { k: "lora", label: L("H3 style (LoRA)"), type: "select", values: LORAS },
+      { k: "loras", label: L("H3 style (LoRA)"), type: "loras", folder: () => "h3" },
     ],
     async generate(node) {
       const p = node.properties, image = upstreamRef(node, 0);
@@ -416,7 +414,7 @@ export const CARDS = {
       // H3 expects at the head of the prompt the moment the input image stands for.
       const prompt = P.capH3Prompt(`${P.h3Alignment(false, p.duration)}\n\n${text}`, () => { capped = true; });
       setStatus(node, "running", "{engine} running…", { engine: "MiniMax H3" });
-      const job = await run(node, "h3-i2v", { prompt, duration: p.duration, seed: seedOf(node), loras: lorasOf(node), image });
+      const job = await run(node, "h3-i2v", { prompt, duration: p.duration, seed: seedOf(node), loras: lorasOf(node, "h3"), image });
       done(node, output(job, ".mp4"), capped ? "Done: {name}. H3 prompt cut to 7,000 characters (model limit)." : undefined);
     },
   },
@@ -462,6 +460,12 @@ for (const [type, card] of Object.entries(CARDS)) {
   }
   Card.title = card.label;
   Card.prototype.onConfigure = function () {
+    // Canvases saved before LoRA stacks held one H3 file at full strength.
+    if ("lora" in this.properties) {
+      const name = this.properties.lora;
+      delete this.properties.lora;
+      if ("loras" in card.props) this.properties.loras = name ? { h3: [{ name, strength: 1 }] } : {};
+    }
     setStatus(this, this.properties.outFile ? "done" : "idle");
     if (card.autogrow) autogrow(this, card.autogrow, card.size[1]);  // the free input of a restored card
   };

@@ -6,7 +6,8 @@
 import { api, connect } from "./api.js";
 import { LANG, L, setLang, t, tx } from "./i18n.js";
 import * as F from "./form.js";
-import { CARDS, STATUS_COLOR, SLOT_IMG_REF, importFile, onChange, setLoras, setStatus } from "./canvas-nodes.js";
+import { CARDS, STATUS_COLOR, SLOT_IMG_REF, importFile, onChange, setStatus } from "./canvas-nodes.js";
+import { renderLoraStack, setLoraFiles } from "./lora-stack.js";
 import { initGallery } from "./canvas-gallery.js";
 import { initModelNotice, showModelNotice } from "./model-notice.js";
 import { $, MOBILE, fillSelect, initTheme } from "./ui.js";
@@ -517,6 +518,14 @@ function fieldInput(node, f, s) {
     };
     return el;
   }
+  if (f.type === "loras") {
+    // One stack per folder: an engine switch keeps the other engine's stack.
+    const stacks = node.properties.loras ??= {}, folder = f.folder(node);
+    const box = renderLoraStack(document.createElement("div"), {
+      folder, stack: (stacks[folder] ??= []), onChange: () => setProp(node, f.k, stacks) });
+    box.setAttribute("role", "group");
+    return box;
+  }
   if (f.type === "file") {
     const el = document.createElement("input");
     el.type = "file";
@@ -568,9 +577,11 @@ function showProps(node) {
     const id = "pf-" + f.k;
     const label = document.createElement("label");
     label.htmlFor = id;
+    label.id = id + "-label";
     label.textContent = t(f.label);
     const input = fieldInput(node, f, s);
     input.id = id;
+    if (f.type === "loras") input.setAttribute("aria-labelledby", label.id);
     row.append(label, input);
     if (f.hint) {
       const hint = document.createElement("div");
@@ -633,7 +644,8 @@ initModelNotice();
 requestAnimationFrame(syncOverlays);
 if (MOBILE.matches) { setSheet(graph._nodes.length ? "" : "palette"); fitView(); }
 connect();
-api.loras().then(r => setLoras((r.h3 || []).map(l => l.name)), err => console.warn("Canvas: LoRA list unavailable", err));
+api.loras().then(r => { setLoraFiles(r); if (selected) showProps(selected); },
+  err => console.warn("Canvas: LoRA list unavailable", err));
 
 // Hooks for automated tests.
 window.__canvas = { graph, lgcanvas, save, addNode, CARDS, showProps, fitView, get selected() { return selected; } };

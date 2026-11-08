@@ -94,7 +94,8 @@ cours de route répond 500 avec la liste de ce qui a déjà été déplacé.
 Un **Asset** : `key` (chemin POSIX sous le dossier de sorties, sans `/` initial), `filename`,
 `folder`, `type`, `url` (`/outputs/<clé>?v=<mtime>`), `ref` (`outputs/<clé>`, ce qu'un job prend
 comme référence d'image), `thumb`, `ts` (ms), `prompt` (400 caractères dans les listes),
-`pipeline`, `origin`, `loras`, `seed`, `w`, `h`, `duration`, `size`, `fav`, `tags`, `app` (faux
+`pipeline`, `origin`, `loras` (`[{name, strength}]`, force nulle pour un fichier indexé avant que
+les forces soient gardées), `seed`, `w`, `h`, `duration`, `size`, `fav`, `tags`, `app` (faux
 pour une image de travail masquée du périmètre `app`), `trash` (`{origKey, at}` ou null).
 
 Écarts avec la 1.4 : plus de graphe ComfyUI à parcourir (les métadonnées sont explicites), plus de
@@ -177,10 +178,21 @@ aucun port ; le studio le joint à `STUDIO_UPDATER_URL` (`http://updater:8091`) 
 
 ## Téléversement de LoRA
 
-- `GET /api/loras` → `{"h3": [{name, size}]}`.
-- `POST /api/loras/h3?name=<fichier>.safetensors` (même origine), fichier brut dans le corps,
-  8 Go au plus. Le fichier est écrit sous un nom temporaire caché, puis lié à son nom définitif :
-  une LoRA existante n'est jamais remplacée (409).
+Un dossier par famille de moteurs, `STUDIO_DATA_DIR/loras/<dossier>/` (`FOLDERS` dans
+`studio/loras.py` ; `h3` pour MiniMax H3).
+
+- `GET /api/loras` → `{"<dossier>": [{name, size}], …}`.
+- `POST /api/loras/<dossier>?name=<fichier>.safetensors` (même origine), fichier brut dans le
+  corps, 8 Go au plus. Le fichier est écrit sous un nom temporaire caché, puis lié à son nom
+  définitif : une LoRA existante n'est jamais remplacée (409). Le panneau Modèles a un menu
+  Moteur pour le dossier.
+
+Un job envoie une **pile** : `loras: [{"name": "<fichier>.safetensors", "strength": -2…2}]`, 4
+entrées au plus, chaque fichier une seule fois, `[]` pour aucune. Chaque moteur qui prend des LoRA
+la vérifie avec `loras.check_stack(valeur, loras_dir, "<dossier>")` (422 sinon) et la nomme dans
+ses lignes de journal avec `loras.describe()` (« a.safetensors ×0.8, b.safetensors ×1 »). Le
+formulaire du Studio et les cartes du Canvas l'éditent avec `web/js/lora-stack.js`
+([FRONTEND.md](FRONTEND.md)) ; la visionneuse l'affiche avec les forces.
 
 Seul MiniMax H3 prend des LoRA en 2.0 (`docs/H3.md` § pile de LoRA). La 1.4 avait aussi des LoRA
 de style Krea 2 ; le moteur Krea 2 ne les prend pas encore.

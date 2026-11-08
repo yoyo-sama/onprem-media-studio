@@ -78,7 +78,7 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
       const head = (req.postDataBuffer() || Buffer.alloc(0)).subarray(0, 5).toString();
       return json({ ref: head === "VIDEO" ? "inputs/clip.mp4" : head === "AUDIO" ? "inputs/voice.wav" : "inputs/att.png" }, 201);
     }
-    if (p === "/api/loras") return json({ h3: [] });
+    if (p === "/api/loras") return json({ h3: [{ name: "neon.safetensors", size: 1 }, { name: "anime.safetensors", size: 1 }] });
     if (p === "/api/instructions") return json({});
     if (p === "/api/roles") return json(ROLES);
     if (p === "/api/llm/chat") {
@@ -196,6 +196,16 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(jobs[0]?.origin === "assistant", "origin");
   check(cardPosts[0]?.[1].status === "running" && cardPosts[0][1].args.ratio === "1:1", "running report lacks the edited args");
   await page.waitForSelector('.chat-card[data-card="C3"] .primary-btn:not([disabled])');
+  // LoRA chips: none on an engine without LoRAs; on the H3 card, a click turns one on,
+  // its strength shows beside it, and nothing is submitted.
+  check(!(await page.$('.chat-card[data-card="C1"] .lora-chips:not([hidden]) .lora-chip')), "C1 (Krea 2) shows H3 LoRA chips");
+  await page.click('.chat-card[data-card="C3"] .lora-chip[data-lora="neon.safetensors"]');
+  await page.click('.chat-card[data-card="C3"] .lora-chip[data-lora="anime.safetensors"]');
+  await page.fill('.chat-card[data-card="C3"] .lora-chip-wrap:has([data-lora="anime.safetensors"]) input', "0.6");
+  await page.dispatchEvent('.chat-card[data-card="C3"] .lora-chip-wrap:has([data-lora="anime.safetensors"]) input', "change");
+  check(await page.getAttribute('.chat-card[data-card="C3"] .lora-chip[data-lora="neon.safetensors"]', "aria-pressed") === "true", "C3: the LoRA chip did not turn on");
+  check(jobs.length === 1, "turning a LoRA chip on submitted a job");
+  if (SHOTS) await (await page.$('.chat-card[data-card="C3"]')).screenshot({ path: `${SHOTS}/card-loras-1440.png` });
   await page.click('.chat-card[data-card="C3"] .primary-btn');
   // The card shows its job's progress while it renders.
   await page.waitForSelector('.chat-card[data-card="C3"] .cc-progress');
@@ -210,6 +220,8 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   await page.waitForSelector('.chat-card[data-card="C3"] .status.done');
   check(!(await page.$('.chat-card[data-card="C3"] .cc-progress')), "progress still shown after the render");
   check(jobs.length === 2 && jobs[1].pipeline === "h3-i2v" && jobs[1].params.image === "outputs/job-1.png", "C3 job wrong: " + JSON.stringify(jobs[1]));
+  check(JSON.stringify(jobs[1]?.params.loras) === JSON.stringify([{ name: "neon.safetensors", strength: 1 }, { name: "anime.safetensors", strength: 0.6 }]),
+    "C3: the job does not carry the LoRAs turned on: " + JSON.stringify(jobs[1]?.params.loras));
   check((await page.$$('.chat-card[data-card="C3"] .cc-outputs figure')).length === 1, "C3 should show the clip only (last frame hidden)");
   // Open in the Studio: switches to the Studio, fills the form, starts nothing.
   await page.click('.chat-card[data-card="C5"] .cc-actions button >> nth=1');
@@ -366,6 +378,7 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
     && p10.endsWith("non_diegetic_music:\nA slow romantic piano score"),
     "C10: prompt not in the H3 grammar: " + p10);
   check(j10?.params.duration === 5 && j10.params.aspect === "16:9", "C10: settings");
+  check(JSON.stringify(j10?.params.loras) === "[]", "C10: LoRAs sent though none was turned on: " + JSON.stringify(j10?.params.loras));
   // The same card opened in the Studio: its clip and sound go to the reference list with
   // their roles; skipping the sheets, the two images are subjects 1 and 2 and one job
   // carries the four references.

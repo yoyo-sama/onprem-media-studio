@@ -81,11 +81,12 @@ export const api = {
 // URL of a file reference (`outputs/…`, `inputs/…`).
 export const refURL = ref => "/" + String(ref).split("/").map(encodeURIComponent).join("/");
 
-// LoRA upload with progress (fetch has no upload progress). Resolves with the server's answer.
-export function uploadLora(file, onProgress) {
+// LoRA upload into a folder (studio/loras.py FOLDERS) with progress (fetch has no
+// upload progress). Resolves with the server's answer.
+export function uploadLora(file, folder, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/loras/h3?name=${encodeURIComponent(file.name)}`);
+    xhr.open("POST", `/api/loras/${encodeURIComponent(folder)}?name=${encodeURIComponent(file.name)}`);
     xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress?.(e.loaded / e.total); };
     xhr.onload = () => {
       let data = null;

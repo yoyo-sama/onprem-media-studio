@@ -33,6 +33,7 @@ import re
 import time
 from pathlib import Path
 
+from .. import loras as lora_files
 from ..files import media_kind
 from . import Pipeline, common, h3_lora, register
 
@@ -160,7 +161,7 @@ def _common(params: dict, files, extra: set[str]) -> dict:
     common.check_keys(params, {"prompt", "duration", "seed", "loras", *extra}, NO_NEGATIVE)
     out = {"prompt": _prompt(params), "duration": _duration(params)}
     out["frames"] = frames_for(out["duration"])
-    out["loras"] = h3_lora.check(params.get("loras", []), files.loras_dir / "h3")
+    out["loras"] = lora_files.check_stack(params.get("loras", []), files.loras_dir, "h3")
     out["seed"] = common.seed(params)
     return out
 
@@ -195,9 +196,9 @@ def _engine(ctx, model_dir: Path, ref2va: bool, loras: list[dict]):
     from .h3_runtime import Engine, EngineSpec
     settings = ctx.models.settings
     lora = h3_lora.build(loras, settings.loras_dir / "h3", settings.data_dir / "cache" / "h3-loras")
-    spec = EngineSpec(model_dir=model_dir, ref2va=ref2va, lora=lora)
+    spec = EngineSpec(model_dir=model_dir, ref2va=ref2va, lora=lora, lora_names=lora_files.describe(loras))
     label = "FastH3 OmniRef" if ref2va else "FastH3"
-    ctx.progress(0, f"Loading MiniMax H3 ({label}, NVFP4)")
+    ctx.progress(0, f"Loading MiniMax H3 ({label}, NVFP4)" + (f" + LoRA {spec.lora_names}" if loras else ""))
     return common.load(("h3", spec), lambda: Engine(spec), alone=True)
 
 

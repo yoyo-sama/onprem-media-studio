@@ -150,8 +150,12 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
   tagged with the card's id when submitted (`withJobTag` in `web/js/ui.js`).
 - The prompt and the settings of a card can be edited before Generate; ✨ Enrich rewrites the
   card's prompt with the engine's own Gemma instruction (`Prompts.briefEnrichSystem`), with Undo.
+- A card whose engine takes LoRAs (the H3 video cards today) shows one chip per LoRA file of that
+  engine: a click turns it on (strength 1, editable beside it) or off, 4 at most, and Generate
+  sends them (`renderLoraChips` of `web/js/lora-stack.js`). The choice stays in the page, not in
+  the card's arguments (Gemma's tool call has no LoRA), so a reload starts the card without it.
 - "Open in the Studio" switches to the Studio and fills the form (pipeline, engine, settings,
-  images, brief), starting nothing; Undo puts the brief and the pipeline back.
+  images, brief, the LoRAs turned on), starting nothing; Undo puts the brief and the pipeline back.
 - "Launch the director" (storyboard and reference-to-video cards) fills the form the same way,
   then its click is the Generate click: the director's first step starts and every next step
   waits for the user's approval, as always.

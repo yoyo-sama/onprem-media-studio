@@ -17,6 +17,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+from studio import loras
 from studio.main import create_app
 from studio.models import MARKER
 from studio.pipelines import REGISTRY, common, h3, h3_lora, h3_runtime
@@ -457,10 +458,32 @@ def test_lora_stack_is_the_exact_sum():
                           -(b2 @ a2), atol=1e-5)
 
 
-def test_lora_check():
-    assert h3_lora.check([], Path("/nonexistent")) == []
-    with pytest.raises(ValueError, match="at most"):
-        h3_lora.check([{"name": "a.safetensors"}] * 5, Path("/nonexistent"))
+def test_lora_stack_check(tmp_path):
+    (tmp_path / "h3").mkdir()
+    for name in "abcde":
+        (tmp_path / "h3" / f"{name}.safetensors").write_bytes(b"x")
+    assert loras.check_stack([], tmp_path, "h3") == []
+    stack = loras.check_stack([{"name": "a.safetensors", "strength": 0.8}, {"name": "b.safetensors"}], tmp_path, "h3")
+    assert stack == [{"name": "a.safetensors", "strength": 0.8}, {"name": "b.safetensors", "strength": 1.0}]
+    assert loras.describe(stack) == "a.safetensors ×0.8, b.safetensors ×1"
+    with pytest.raises(ValueError, match="at most 4"):
+        loras.check_stack([{"name": f"{n}.safetensors"} for n in "abcde"], tmp_path, "h3")
+    with pytest.raises(ValueError, match="twice"):
+        loras.check_stack([{"name": "a.safetensors"}, {"name": "a.safetensors", "strength": 0.5}], tmp_path, "h3")
+    with pytest.raises(ValueError, match="No such LoRA: loras/qwen21/a.safetensors"):
+        loras.check_stack([{"name": "a.safetensors"}], tmp_path, "qwen21")
+    for bad in ({"name": ".a.safetensors"}, {"name": "a.bin"}, {"name": "a.safetensors", "weight": 1},
+                {"name": "a.safetensors", "strength": True}, {"name": "a.safetensors", "strength": -2.5}):
+        with pytest.raises(ValueError):
+            loras.check_stack([bad], tmp_path, "h3")
+
+
+def test_engine_log_line_names_the_stack():
+    spec = h3_runtime.EngineSpec(model_dir=Path("/m/fasth3"), ref2va=False, lora=Path("/c/0123.safetensors"),
+                                 lora_names="a.safetensors ×0.8, b.safetensors ×1")
+    assert str(spec) == "fasth3 + LoRA a.safetensors ×0.8, b.safetensors ×1"
+    # The description is not part of the generator's identity: the merged file is.
+    assert spec == h3_runtime.EngineSpec(model_dir=Path("/m/fasth3"), ref2va=False, lora=Path("/c/0123.safetensors"))
 
 
 # ── Latent upscaler ──────────────────────────────────────────────────────────

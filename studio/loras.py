@@ -1,8 +1,11 @@
-"""LoRA files: list and upload. Port of the 1.4 updater's upload route.
+"""LoRA files: list, upload, and the stack a job sends. Port of the 1.4 updater's
+upload route.
 
-Only MiniMax H3 takes LoRAs in 2.0 (studio/pipelines/h3_lora.py); its files
-live in STUDIO_DATA_DIR/loras/h3/ and are referenced by file name. An upload
-never replaces an existing file.
+Each engine family that takes LoRAs has its folder, STUDIO_DATA_DIR/loras/<folder>/
+(MiniMax H3: loras/h3/, applied by studio/pipelines/h3_lora.py). A job sends a stack,
+`loras: [{"name": <file name>, "strength": <number>}]`, at most MAX_STACK entries,
+which every engine validates with check_stack(). An upload never replaces an
+existing file.
 """
 
 import os
@@ -12,6 +15,8 @@ from pathlib import Path
 FOLDERS = {"h3"}
 SUFFIX = ".safetensors"
 MAX_BYTES = 8 * 1024**3
+MAX_STACK = 4
+MIN_STRENGTH, MAX_STRENGTH = -2.0, 2.0
 
 
 def check_name(name: str) -> str:
@@ -19,6 +24,35 @@ def check_name(name: str) -> str:
             or len(name) > 200 or len(name) <= len(SUFFIX):
         raise ValueError(f"The file name must be a bare name ending in {SUFFIX}")
     return name
+
+
+def check_stack(loras, root: Path, folder: str) -> list[dict]:
+    """Validated stack: [{"name", "strength"}], every file inside root/folder, each once."""
+    if not isinstance(loras, list) or len(loras) > MAX_STACK:
+        raise ValueError(f"loras must be a list of at most {MAX_STACK} entries")
+    out = []
+    for item in loras:
+        if not isinstance(item, dict) or set(item) - {"name", "strength"}:
+            raise ValueError('Each LoRA is {"name": <file name>, "strength": <number>}')
+        name, strength = item.get("name"), item.get("strength", 1.0)
+        try:
+            check_name(name)
+        except ValueError:
+            raise ValueError(f"LoRA name must be a {SUFFIX} file name in loras/{folder}/, got {name!r}")
+        if not (root / folder / name).is_file():
+            raise ValueError(f"No such LoRA: loras/{folder}/{name}")
+        if any(x["name"] == name for x in out):
+            raise ValueError(f"LoRA {name} is listed twice: give it one strength instead")
+        if isinstance(strength, bool) or not isinstance(strength, (int, float)) \
+                or not MIN_STRENGTH <= strength <= MAX_STRENGTH:
+            raise ValueError(f"LoRA strength must be a number between {MIN_STRENGTH:g} and {MAX_STRENGTH:g}")
+        out.append({"name": name, "strength": float(strength)})
+    return out
+
+
+def describe(loras: list[dict]) -> str:
+    """The stack for log lines and progress messages: "a.safetensors ×0.8, b.safetensors ×1"."""
+    return ", ".join(f"{x['name']} ×{x['strength']:g}" for x in loras)
 
 
 def listing(root: Path) -> dict:
