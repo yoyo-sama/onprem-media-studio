@@ -216,8 +216,12 @@ Only then set `"qualified": true` for the model in `studio/catalog.json`. Seeds 
 
 ## Known gaps
 
-- **MOSS-Image is not qualified yet** (`"qualified": false`): the bench images were judged, the
-  renders through the app are not yet.
+- **MOSS-Image qualification (promaxgb10-95c7, 2026-11-07):** the three modes rendered through
+  the app came out pixel-identical to the bench images at the same seed (preview 10 s,
+  standard 18 s, quality 69 s at 1024², engine load 36 s), a cancelled render left no LoRA hook
+  behind, and the project owner accepted them on 2026-11-08: both catalog entries are
+  `"qualified": true`. Known limits: Preview may double a word of a title, Standard pulls
+  towards warm sunset light.
 - **Qualification (gb10-demo, 2026-10-29/30):** every Krea 2 (7/7) and Qwen Image 2.1 (4/4) case
   rendered, and the project owner accepted the renders on 2026-10-30: both models are
   `"qualified": true`. There was no side-by-side comparison with 1.4; a difference found later is

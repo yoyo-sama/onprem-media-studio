@@ -230,8 +230,12 @@ comparer la qualité, pas les pixels.
 
 ## Manques connus
 
-- **MOSS-Image pas encore qualifié** (`"qualified": false`) : les images du banc ont été jugées,
-  pas encore les rendus passés par l'application.
+- **Qualification de MOSS-Image (promaxgb10-95c7, 2026-11-07) :** les trois modes rendus par
+  l'application sont identiques au pixel près aux images du banc à graine égale (Aperçu 10 s,
+  Standard 18 s, Qualité 69 s en 1024², chargement du moteur 36 s), un rendu annulé n'a laissé
+  aucun crochet de LoRA, et le responsable du projet les a validés le 2026-11-08 : les deux
+  entrées du catalogue sont `"qualified": true`. Limites connues : Aperçu peut doubler un mot d'un
+  titre, Standard tire vers une lumière chaude de coucher de soleil.
 - **Qualification (gb10-demo, 2026-10-29/30) :** tous les cas Krea 2 (7/7) et Qwen Image 2.1 (4/4)
   ont rendu, et le responsable du projet a validé les rendus le 2026-10-30 : les deux modèles sont
   `"qualified": true`. Il n'y a pas eu de comparaison côte à côte avec la 1.4 ; un écart trouvé

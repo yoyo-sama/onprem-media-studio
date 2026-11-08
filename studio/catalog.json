@@ -50,7 +50,7 @@
       "allow": ["model_index.json", "pipeline_moss_image.py", "scheduler/*", "text_encoder/*", "tokenizer/*", "transformer/*", "vae/*"],
       "gated": false,
       "license": "apache-2.0",
-      "qualified": false
+      "qualified": true
     },
     {
       "id": "moss-image-turbo-lora",
@@ -61,7 +61,7 @@
       "allow": ["moss_image_sft_4step_v2.0.safetensors"],
       "gated": false,
       "license": "apache-2.0",
-      "qualified": false
+      "qualified": true
     },
     {
       "id": "fasth3-v2-nvfp4",
