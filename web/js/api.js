@@ -126,8 +126,16 @@ export function connect() {
   socket.onopen = async () => {
     for (const fn of listeners.open) fn();
     for (const id of [...waits.keys()]) {
-      try { const job = await api.job(id); for (const fn of listeners.job) fn(job); settle(job); }
-      catch { /* the server lost the job (restart): reported by the next wait */ }
+      let job;
+      try { job = await api.job(id); }
+      catch (err) {
+        // Jobs live in the server's memory: after a restart the job is gone. Without this
+        // its card kept its last progress and its timer forever.
+        if (err.status !== 404) continue;
+        job = { id, status: "error", error: "the server restarted during this job, which was lost: launch it again" };
+      }
+      for (const fn of listeners.job) fn(job);
+      settle(job);
     }
   };
   socket.onclose = () => { socket = null; setTimeout(connect, 3000); };
