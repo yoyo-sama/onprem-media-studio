@@ -27,10 +27,10 @@ export const QWEN21_RATIOS = { "16:9": [1344, 768], "9:16": [768, 1344], "1:1": 
 // automatically (the storyboard and Ref2VA flows write their own prompts; their ✨
 // button has its own instruction, see Prompts.briefEnrichSystem).
 export const WORKFLOWS = [
-  { id: "krea2_t2i", pipeline: "text2image", label: "Krea 2 Turbo", engine: "krea2-t2i" },
-  { id: "qwen21_t2i", pipeline: "text2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1" },
-  { id: "moss_t2i", pipeline: "text2image", label: "MOSS-Image", engine: "moss-image" },
-  { id: "qwen21_i2i", pipeline: "image2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1" },
+  { id: "krea2_t2i", pipeline: "text2image", label: "Krea 2 Turbo", engine: "krea2-t2i", loras: "krea2" },
+  { id: "qwen21_t2i", pipeline: "text2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1", loras: "qwen21" },
+  { id: "moss_t2i", pipeline: "text2image", label: "MOSS-Image", engine: "moss-image", loras: "moss" },
+  { id: "qwen21_i2i", pipeline: "image2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1", loras: "qwen21" },
   { id: "h3_t2v", pipeline: "text2video", label: L("MiniMax H3 · native audio"), engine: "h3-t2v", loras: "h3" },
   { id: "h3_i2v", pipeline: "image2video", label: L("MiniMax H3 · native audio"), engine: "h3-i2v", loras: "h3" },
   { id: "h3_sequence", pipeline: "sequence", label: L("MiniMax H3 · first and last frames"), engine: "h3-i2v", loras: "h3" },

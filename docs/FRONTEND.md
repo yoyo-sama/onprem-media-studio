@@ -109,9 +109,12 @@ to it.
   image card), with a Mode select shown for that engine only: Preview (4 steps), Standard (8,
   default) or Quality (25). It uses the Krea 2 ratio table (multiples of 16).
 - No cloud generation (OpenAI, Gemini).
-- No Krea 2 LoRA, megapixel or turbo/steps controls; H3 LoRAs are uploaded files. A render takes
-  a stack of up to 4 LoRAs, each with its strength (1.4: one file at full strength); a Canvas
-  saved with the old single `lora` property comes back as a one-row stack.
+- No megapixel or turbo/steps controls; LoRAs are uploaded files, one folder per engine family
+  (H3, Krea 2, Qwen Image 2.1, MOSS-Image). A render takes a stack of up to 4 LoRAs, each with
+  its strength (1.4: one file at full strength, Krea 2 and H3 only); a Canvas saved with the old
+  single `lora` property comes back as a one-row stack. Text2Image and Image2Image show the stack
+  of the chosen engine (each keeps its own); the Canvas "Image creation" card keeps one stack per
+  engine and "Image editing" a Qwen one. An image job sends `loras` only when its stack has rows.
 - Reference to video's extra references take up to 7 images, 3 clips and 3 sounds (as in 1.4),
   in one list (`F.r2vPlan`). Each image is the next `<Subject N>`; a clip has a role (camera
   movement and pacing, or a subject) and a sound one too (voice of a character, music, ambience

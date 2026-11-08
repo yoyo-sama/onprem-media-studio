@@ -2,7 +2,8 @@
 upload route.
 
 Each engine family that takes LoRAs has its folder, STUDIO_DATA_DIR/loras/<folder>/
-(MiniMax H3: loras/h3/, applied by studio/pipelines/h3_lora.py). A job sends a stack,
+(MiniMax H3: loras/h3/, applied by studio/pipelines/h3_lora.py; Krea 2, Qwen Image 2.1
+and MOSS-Image: loras/krea2/, loras/qwen21/, loras/moss/, see image_lora.py). A job sends a stack,
 `loras: [{"name": <file name>, "strength": <number>}]`, at most MAX_STACK entries,
 which every engine validates with check_stack(). An upload never replaces an
 existing file.
@@ -12,7 +13,7 @@ import os
 import tempfile
 from pathlib import Path
 
-FOLDERS = {"h3"}
+FOLDERS = {"h3", "krea2", "qwen21", "moss"}
 SUFFIX = ".safetensors"
 MAX_BYTES = 8 * 1024**3
 MAX_STACK = 4

@@ -110,9 +110,13 @@ ajoute une carte Import d'image reliée à elle.
   image de l'assistant), avec un menu Mode affiché pour ce moteur seulement : Aperçu (4 étapes),
   Standard (8, par défaut) ou Qualité (25). Il prend la table de ratios de Krea 2 (multiples de 16).
 - Plus de génération cloud (OpenAI, Gemini).
-- Ni LoRA Krea 2, ni mégapixels, ni turbo/steps ; les LoRA H3 sont des fichiers envoyés. Un rendu
-  prend une pile de 4 LoRA au plus, chacune avec sa force (1.4 : un fichier à pleine force) ; un
-  Canvas enregistré avec l'ancienne propriété `lora` revient avec une pile d'une ligne.
+- Ni mégapixels, ni turbo/steps ; les LoRA sont des fichiers envoyés, un dossier par famille de
+  moteurs (H3, Krea 2, Qwen Image 2.1, MOSS-Image). Un rendu prend une pile de 4 LoRA au plus,
+  chacune avec sa force (1.4 : un fichier à pleine force, Krea 2 et H3 seulement) ; un Canvas
+  enregistré avec l'ancienne propriété `lora` revient avec une pile d'une ligne. Text2Image et
+  Image2Image montrent la pile du moteur choisi (chacun garde la sienne) ; la carte Canvas
+  « Création d'image » garde une pile par moteur et « Édition d'image » une pile Qwen. Un job
+  d'image n'envoie `loras` que si sa pile a des lignes.
 - Les références en plus de la référence vers vidéo prennent jusqu'à 7 images, 3 vidéos et 3 sons
   (comme en 1.4), dans une seule liste (`F.r2vPlan`). Chaque image est le `<Subject N>` suivant ;
   une vidéo a un rôle (mouvement de caméra et rythme, ou un sujet), un son aussi (voix d'un

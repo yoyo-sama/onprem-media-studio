@@ -23,6 +23,9 @@ class FakeEngine:
         self.calls = []
         self.step_delay = 0.0
 
+    def use_loras(self, stack, folder):
+        self.loras = (stack, folder)
+
     def render(self, prompt, width, height, steps, guidance, turbo, count, seed, callback):
         self.calls.append(dict(prompt=prompt, width=width, height=height, steps=steps, guidance=guidance,
                                turbo=turbo, count=count, seed=seed))

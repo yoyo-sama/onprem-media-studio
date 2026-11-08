@@ -117,7 +117,7 @@ def test_update_routes(client):
 
 
 def test_lora_upload(client, settings):
-    assert client.get("/api/loras").json() == {"h3": []}
+    assert client.get("/api/loras").json() == {"h3": [], "krea2": [], "moss": [], "qwen21": []}
     url = "/api/loras/h3?name=style.safetensors"
     assert client.post(url, content=b"weights").status_code == 403
     assert client.post(url, content=b"weights", headers=SAME_ORIGIN).json() == {"folder": "h3", "name": "style.safetensors",
@@ -126,6 +126,6 @@ def test_lora_upload(client, settings):
     assert (settings.loras_dir / "h3" / "style.safetensors").read_bytes() == b"weights"
     for name in ("../x.safetensors", "x.bin", ".hidden.safetensors", ".safetensors"):
         assert client.post(f"/api/loras/h3?name={name}", content=b"w", headers=SAME_ORIGIN).status_code == 422, name
-    assert client.post("/api/loras/krea2?name=x.safetensors", content=b"w", headers=SAME_ORIGIN).status_code == 404
-    assert client.get("/api/loras").json() == {"h3": [{"name": "style.safetensors", "size": 7}]}
+    assert client.post("/api/loras/ltx?name=x.safetensors", content=b"w", headers=SAME_ORIGIN).status_code == 404
+    assert client.get("/api/loras").json()["h3"] == [{"name": "style.safetensors", "size": 7}]
     assert [p.name for p in (settings.loras_dir / "h3").iterdir()] == ["style.safetensors"]  # no .part left

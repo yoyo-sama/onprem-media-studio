@@ -19,6 +19,10 @@ The turbo LoRA (fp32, rank 128) stays UNMERGED, as fp32 forward hooks added for 
 render and removed after it: its deltas are below bf16's rounding step and would vanish
 once merged into the bf16 weights (the authors' warning; LESSONS #30 for H3).
 
+Style LoRAs (loras/moss/, ComfyUI or diffusers files) are applied the same way, each with
+its strength, on top of the turbo LoRA in the turbo modes. They are trained on the SFT or
+Base model at 50 steps with guidance: how they hold at 4 or 8 turbo steps is for the eye.
+
 The initial noise is drawn on the CPU, as in the bench: a seed gives the image of the
 bench sheets. A negative prompt is refused: the quality mode's negative branch is part
 of the model's settings, and the turbo modes run without guidance.
@@ -30,7 +34,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import Pipeline, common, register
+from .. import loras as lora_files
+from . import Pipeline, common, image_lora, register
 
 SFT, TURBO = "moss-image-sft", "moss-image-turbo-lora"
 TURBO_FILE = "moss_image_sft_4step_v2.0.safetensors"
@@ -39,6 +44,7 @@ MODES = {"preview": (4, 1.0, True), "standard": (8, 1.0, True), "quality": (25, 
 DEFAULT_MODE = "standard"
 UNCOND_SKIP_LAYERS = [22]  # the official negative branch skips block 22
 SIZE_MULTIPLE = 16         # the pipeline works on 16-pixel latent cells
+LORA_FOLDER = "moss"
 NO_NEGATIVE = "MOSS-Image uses its own negative branch in quality mode and none in the other modes."
 
 
@@ -47,7 +53,7 @@ class MossImage(Pipeline):
     models = [SFT, TURBO]
 
     def validate(self, params, files):
-        common.check_keys(params, {"prompt", "mode", "width", "height", "count", "seed"}, NO_NEGATIVE)
+        common.check_keys(params, {"prompt", "mode", "width", "height", "count", "seed", "loras"}, NO_NEGATIVE)
         mode = params.get("mode", DEFAULT_MODE)
         if mode not in MODES:
             raise ValueError(f"mode must be one of {', '.join(MODES)}")
@@ -58,6 +64,7 @@ class MossImage(Pipeline):
             "height": common.integer(params, "height", 1024, 256, 2048, SIZE_MULTIPLE),
             "count": common.integer(params, "count", 1, 1, 4),
             "seed": common.seed(params),
+            "loras": lora_files.check_stack(params.get("loras", []), files.loras_dir, LORA_FOLDER),
         }
 
     def run(self, params, models, ctx):
@@ -65,12 +72,13 @@ class MossImage(Pipeline):
         ctx.progress(0, "Loading MOSS-Image")
         engine = common.load(self.id, lambda: MossRuntime(models[SFT], models[TURBO] / TURBO_FILE),
                              common.disk_size(models[SFT]) + common.disk_size(models[TURBO]))
+        engine.use_loras(params["loras"], ctx.files.loras_dir / LORA_FOLDER)
         callback = common.step_progress(ctx, steps, f"MOSS-Image {params['mode']}")
         began = time.time()
         images = engine.render(params["prompt"], params["width"], params["height"], steps, guidance, turbo,
                                params["count"], params["seed"], callback)
-        common.log_render(self.id, f"{params['mode']} {params['width']}×{params['height']} ×{params['count']}",
-                          began, callback.marks)
+        common.log_render(self.id, f"{params['mode']} {params['width']}×{params['height']} ×{params['count']}"
+                          + image_lora.label(params["loras"]), began, callback.marks)
         return common.save_images(images, ctx, params)
 
 
@@ -93,12 +101,30 @@ class MossRuntime:
             text_encoder=text_encoder, tokenizer=AutoTokenizer.from_pretrained(sft / "tokenizer"), vae=vae).to(dev)
         self.lora = {name: (down.to(dev, torch.float32), up.to(dev, torch.float32), scale)
                      for name, (down, up, scale) in read_lora(turbo_file, transformer).items()}
+        # The style LoRAs of the last render, on the GPU, and their strengths.
+        self.styles, self.style_key, self.strengths = [], [], []
+
+    def use_loras(self, stack: list[dict], folder: Path) -> None:
+        """Read the job's style LoRAs (again only when the files changed) with their strengths."""
+        import torch
+        files = [folder / item["name"] for item in stack]
+        key = [(f.name, f.stat().st_size, f.stat().st_mtime_ns) for f in files]
+        if key != self.style_key:
+            self.styles, self.style_key = [], []  # a refused file leaves none
+            dev = common.device()
+            self.styles = [{name: (down.to(dev, torch.float32), up.to(dev, torch.float32), scale)
+                            for name, (down, up, scale) in read_lora(f, self.pipe.transformer).items()}
+                           for f in files]
+            self.style_key = key
+        self.strengths = [item["strength"] for item in stack]
 
     def render(self, prompt, width, height, steps, guidance, turbo, count, seed, callback):
         import torch
         with contextlib.ExitStack() as stack:
             if turbo:
                 stack.enter_context(lora_hooks(self.pipe.transformer, self.lora))
+            for layers, strength in zip(self.styles, self.strengths):
+                stack.enter_context(lora_hooks(self.pipe.transformer, layers, strength))
             stack.enter_context(step_callback(self.pipe, callback))
             return self.pipe(prompt=prompt, width=width, height=height, num_inference_steps=steps,
                              guidance_scale=guidance, uncond_skip_layers=UNCOND_SKIP_LAYERS if guidance != 1 else [],
@@ -116,20 +142,25 @@ def _official_module(sft: Path):
     return sys.modules[name]
 
 
-SUFFIXES = {".lora_down.weight": "down", ".lora_up.weight": "up", ".alpha": "alpha"}
-PREFIX = "diffusion_model."
+SUFFIXES = {".lora_down.weight": "down", ".lora_up.weight": "up", ".lora_A.weight": "down",
+            ".lora_B.weight": "up", ".alpha": "alpha"}
+# ComfyUI and kohya files name the layers under diffusion_model., diffusers files under transformer.
+PREFIXES = ("diffusion_model.", "transformer.")
 
 
 def read_lora(path: Path, transformer) -> dict:
-    """Linear layer name → (down, up, alpha / rank) of a kohya LoRA file. A key that matches
-    no Linear layer, or a layer without both halves, refuses the whole file."""
+    """Linear layer name → (down, up, alpha / rank) of a LoRA file (kohya, ComfyUI or diffusers
+    keys). Without an .alpha key, the alpha of the file's diffusers metadata, else the rank.
+    A key that matches no Linear layer, or a layer without both halves, refuses the whole file."""
     import torch
     from safetensors.torch import load_file
     linears = {n for n, m in transformer.named_modules() if isinstance(m, torch.nn.Linear)}
+    default_alpha = _metadata_alpha(path)
     parts, unknown = {}, []
     for key, tensor in load_file(str(path)).items():
         suffix = next((s for s in SUFFIXES if key.endswith(s)), None)
-        name = key[len(PREFIX):-len(suffix)] if suffix and key.startswith(PREFIX) else None
+        prefix = next((p for p in PREFIXES if key.startswith(p)), None)
+        name = key[len(prefix):-len(suffix)] if suffix and prefix else None
         if name not in linears:
             unknown.append(key)
             continue
@@ -138,13 +169,31 @@ def read_lora(path: Path, transformer) -> dict:
     if unknown or incomplete or not parts:
         raise ValueError(f"{path.name}: {len(unknown)} key(s) match no layer (e.g. {unknown[:3]}), "
                          f"{len(incomplete)} layer(s) lack down or up (e.g. {incomplete[:3]})")
-    return {n: (p["down"], p["up"], float(p.get("alpha", p["down"].shape[0])) / p["down"].shape[0])
+    return {n: (p["down"], p["up"], float(p.get("alpha", default_alpha or p["down"].shape[0])) / p["down"].shape[0])
             for n, p in parts.items()}
 
 
+def _metadata_alpha(path: Path) -> float | None:
+    """lora_alpha of the LoraConfig diffusers writes into a LoRA file's metadata, if any. A
+    per-layer rank or alpha pattern refuses the file: one alpha would not be the right one."""
+    import json
+
+    from safetensors import safe_open
+    with safe_open(str(path), framework="pt") as f:
+        raw = (f.metadata() or {}).get("lora_adapter_metadata")
+    if not raw:
+        return None
+    # A pipeline's save_lora_weights prefixes the keys with the component ("transformer.r").
+    config = {k.removeprefix("transformer."): v for k, v in json.loads(raw).items()}
+    if config.get("rank_pattern") or config.get("alpha_pattern"):
+        raise ValueError(f"{path.name}: per-layer rank or alpha patterns are not supported")
+    return config.get("lora_alpha")
+
+
 @contextlib.contextmanager
-def lora_hooks(transformer, lora: dict):
-    """y = W x + alpha/rank · up(down(x)), in fp32, on each layer of `lora` while inside."""
+def lora_hooks(transformer, lora: dict, strength: float = 1.0):
+    """y = W x + strength · alpha/rank · up(down(x)), in fp32, on each layer of `lora` while inside.
+    Hooks on one layer add up: a stack is the sum of its LoRAs."""
     modules = dict(transformer.named_modules())
     handles = []
 
@@ -152,7 +201,7 @@ def lora_hooks(transformer, lora: dict):
         return lambda module, args, out: out + (scale * ((args[0].float() @ down.T) @ up.T)).to(out.dtype)
     try:
         for name, (down, up, scale) in lora.items():
-            handles.append(modules[name].register_forward_hook(hook_for(down, up, scale)))
+            handles.append(modules[name].register_forward_hook(hook_for(down, up, scale * strength)))
         yield
     finally:
         for handle in handles:

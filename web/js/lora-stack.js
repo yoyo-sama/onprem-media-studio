@@ -8,7 +8,7 @@ import { tx, txAttr } from "./i18n.js";
 
 export const MAX_LORAS = 4;  // studio/loras.py MAX_STACK
 // Folder → the engine family it serves (product names, not translated).
-export const LORA_FOLDERS = { h3: "MiniMax H3" };
+export const LORA_FOLDERS = { h3: "MiniMax H3", krea2: "Krea 2", qwen21: "Qwen Image 2.1", moss: "MOSS-Image" };
 export const STRENGTH = { min: -2, max: 2, step: 0.05 };
 
 // folder → file names, as the page last read them; `onLoraFiles` hears each new list.

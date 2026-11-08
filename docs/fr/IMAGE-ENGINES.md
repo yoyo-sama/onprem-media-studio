@@ -80,6 +80,7 @@ texte `studio`.
 | `prompt` | obligatoire | Tel quel |
 | `width`, `height` | 1024 | 256–2048, multiple de 16 |
 | `count` | 1 | 1 à 4 images d'une même graine (les « variantes » de la 1.4) |
+| `loras` | `[]` | Jusqu'à 4 fichiers de `loras/krea2/` avec leur force : [LoRA de style](#lora-de-style) |
 
 ### `qwen-image-2.1`
 
@@ -90,7 +91,8 @@ multiple de 32 inférieur, 1280×720 sortirait donc en 1280×704 ; prendre 1344�
 `images` (1 à 10) ou la forme plan `subjects` (1–2) + `setting` + `references` (0 à 7 images en
 plus après le décor, comme en 1.4 : 2 planches + 7), il retouche : `count` vaut 1, taille d'après
 l'image 1 sauf si `width` et `height` sont donnés tous les deux. Le prompt cite les images
-`<image1>`, `<image2>`… dans l'ordre des entrées.
+`<image1>`, `<image2>`… dans l'ordre des entrées. `loras` : jusqu'à 4 fichiers de `loras/qwen21/`,
+sous les deux formes ([LoRA de style](#lora-de-style)).
 
 ### `moss-image`
 
@@ -105,7 +107,8 @@ Texte vers image seulement. `mode` choisit les étapes et la guidance, rien d'au
 `width`, `height` 256–2048, multiples de 16 (1024 par défaut) ; `count` 1 à 4. Un `negative` est
 refusé : la branche négative du mode Qualité fait partie des réglages du modèle. Le texte à écrire
 se met entre guillemets droits dans le prompt ; le modèle lit aussi le prompt de mise en page JSON
-officiel (une boîte par élément).
+officiel (une boîte par élément). `loras` : jusqu'à 4 fichiers de `loras/moss/`, dans tous les
+modes ([LoRA de style](#lora-de-style)).
 
 ## MOSS-Image
 
@@ -129,6 +132,36 @@ promaxgb10-95c7 (Fizgig, KOOK, les LoRA DMD et Kromoss y ont été écartés).
   du banc.
 - **Non utilisés :** `lora.safetensors` du dépôt turbo (réécrit sur place par son auteur), la LoRA
   destripe (les bandes de la SFT sont invisibles à l'œil à ces nombres d'étapes).
+
+## LoRA de style
+
+Chaque moteur d'image prend une pile de 4 LoRA au plus, `loras: [{"name": <fichier>, "strength": -2…2}]`,
+comme MiniMax H3 ([H3.md](H3.md)) ; `[]` ou pas de clé rend sans LoRA. Chaque moteur lit son
+propre dossier, alimenté depuis le panneau Modèles : `loras/krea2/` (Krea 2), `loras/qwen21/`
+(Qwen Image 2.1, texte vers image et retouches), `loras/moss/` (MOSS-Image) ; un fichier d'un
+autre dossier est refusé à la soumission. Les parcours storyboard et campagne n'envoient aucune
+LoRA d'image.
+
+- **Jamais fusionnées.** Les écarts d'une LoRA sont pour la plupart sous le pas d'arrondi du
+  bf16 (LESSONS #30) : chacune tourne en branche à côté des poids, qui restent ceux qualifiés.
+  Krea 2 et Qwen chargent la pile en adaptateurs PEFT pondérés par `set_adapters`
+  (`image_lora.py`) ; ils restent chargés tant que le rendu suivant demande les mêmes fichiers,
+  et un rendu sans LoRA les décharge, il fait donc tourner le moteur exactement tel que qualifié.
+  MOSS-Image, dont le pipeline est le code du modèle, ajoute pour le rendu un crochet fp32 par
+  couche et par LoRA, par-dessus sa LoRA turbo dans les modes turbo, comme il le faisait déjà pour
+  la LoRA turbo.
+- **Formats.** Les fichiers Krea 2 et Qwen sont lus par le chargeur diffusers du moteur (ComfyUI
+  `diffusion_model.`, kohya `lora_unet_`/`lora_down`, AI-Toolkit, diffusers/PEFT). MOSS lit les
+  fichiers ComfyUI (`diffusion_model.`) et diffusers (`transformer.`), `lora_down`/`lora_up` ou
+  `lora_A`/`lora_B`, avec les clés `.alpha` ou l'alpha des métadonnées diffusers du fichier.
+- **Rien d'ignoré en silence.** diffusers se contente d'avertir pour les clés qui ne tombent sur
+  aucune couche et rend sans elles ; ici un fichier qui en a une seule (clés d'encodeur de texte
+  comprises) fait échouer le job et en cite quelques-unes.
+- **Sur les moteurs distillés.** Les LoRA de la communauté sont entraînées sur Qwen Image 2.1 de
+  base, Krea 2 et MOSS-Image SFT/Base à leur nombre d'étapes complet ; ici elles tournent sur
+  Lightning (4 étapes), Krea 2 Turbo (8 étapes) et les modes turbo de MOSS. Aucun des trois ne
+  compile son transformer, une LoRA ne coûte donc aucune recompilation. La tenue de chaque LoRA à
+  ces nombres d'étapes se juge sur le rendu.
 
 ## Les fonctions de la 1.4 sur ces moteurs
 
@@ -246,7 +279,9 @@ comparer la qualité, pas les pixels.
   plus tard sera corrigé à ce moment-là.
 - **Chargement de LoRA sur NGC 25.11 :** peft 0.19 et plus refuse son torchao 0.14, peft est donc
   épinglé sous 0.19.
-- **LoRA de style** (LoRA Krea 2 et de planche de la 1.4) pas encore portées.
+- **LoRA de style (2026-11-08) :** les LoRA Krea 2 de la 1.4 ne sont pas importées par
+  `studio.import14` (les envoyer depuis le panneau Modèles) ; aucune LoRA d'image n'est encore
+  qualifiée sur le GB10.
 - **Qwen Image 2.1 avec Lightning (2026-11-07) :** banc sur promaxgb10-95c7, 5 cas × 3 seeds :
   identité des deux sujets des planches gardée dans chaque image de plan ; plus de contraste et de
   saturation que la base à 25 étapes, et des structures parasites en texte vers image (2 seeds sur 3).

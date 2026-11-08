@@ -2,7 +2,8 @@
 // NODE_PATH=$(npm root -g) node tools/lora-ui.js [screenshot folder]
 //
 // The LoRA stack in a headless Chromium (Playwright), /api stubbed: in the Studio, the
-// stack shows for the H3 workflows only, takes up to 4 files (each once) with their
+// stack shows for the workflows whose engine takes LoRAs (H3, Krea 2, Qwen Image 2.1,
+// MOSS-Image), one stack per LoRA folder, takes up to 4 files (each once) with their
 // strengths, editing it submits nothing, and Generate sends exactly the rows on screen;
 // a workflow without LoRAs sends none, and coming back finds the stack as it was. The
 // Models panel uploads into the chosen folder. In the Canvas, a card saved with the old
@@ -24,7 +25,8 @@ const server = http.createServer((req, res) => {
   fs.createReadStream(file).pipe(res);
 });
 const FILES = ["anime.safetensors", "film-grain.safetensors", "neon.safetensors", "sketch.safetensors", "watercolor.safetensors"];
-const LISTING = { h3: FILES.map(name => ({ name, size: 2 ** 20 })) };
+const LISTING = { h3: FILES.map(name => ({ name, size: 2 ** 20 })), krea2: [{ name: "realism.safetensors", size: 2 ** 20 }],
+                  qwen21: [], moss: [{ name: "gouache.safetensors", size: 2 ** 20 }] };
 
 (async () => {
   await new Promise(r => server.listen(0, "127.0.0.1", r));
@@ -69,7 +71,8 @@ const LISTING = { h3: FILES.map(name => ({ name, size: 2 ** 20 })) };
   await page.waitForFunction(() => document.querySelector("#loraFolderSelect option"));
   const rows = () => page.$$eval("#loraStack .lora-row", rs => rs.map(r => [r.querySelector("select").value, r.querySelector("input").value]));
   await page.selectOption("#pipelineSelect", "text2image");
-  check(await page.isHidden("#loraWrap"), "text2image (no LoRA folder yet) shows the LoRA stack");
+  check(await page.isVisible("#loraWrap"), "text2image (Krea 2) hides the LoRA stack");
+  check((await rows()).length === 0, "the Krea 2 stack does not start empty");
   await page.selectOption("#pipelineSelect", "text2video");
   check(await page.isVisible("#loraWrap"), "text2video hides the LoRA stack");
   check((await rows()).length === 0, "the stack does not start empty");
@@ -110,7 +113,23 @@ const LISTING = { h3: FILES.map(name => ({ name, size: 2 ** 20 })) };
   await page.waitForFunction(() => !document.getElementById("generateBtn").disabled);
   await page.waitForTimeout(300);
   const img = jobs.slice(1);
-  check(img.length >= 1 && img.every(j => !j.params.loras || !j.params.loras.length), `text2image sent LoRAs: ${JSON.stringify(img.map(j => j.params.loras))}`);
+  check(img.length >= 1 && img.every(j => j.pipeline === "krea2-t2i" && !("loras" in j.params)),
+    `text2image with an empty Krea 2 stack sent LoRAs: ${JSON.stringify(img.map(j => j.params.loras))}`);
+  // Krea 2's own stack: its folder's files only.
+  await page.click("#loraStack .lora-add");
+  check(JSON.stringify(await rows()) === JSON.stringify([["realism.safetensors", "1"]]), `Krea 2 stack: ${JSON.stringify(await rows())}`);
+  let before = jobs.length;
+  await page.click("#generateBtn");
+  await page.waitForFunction(() => !document.getElementById("generateBtn").disabled);
+  await page.waitForTimeout(300);
+  check(jobs.length > before && jobs.slice(before).every(j => j.pipeline === "krea2-t2i"
+    && JSON.stringify(j.params.loras) === JSON.stringify([{ name: "realism.safetensors", strength: 1 }])),
+    `Krea 2 job loras: ${JSON.stringify(jobs.slice(before).map(j => j.params.loras))}`);
+  // MOSS-Image: another folder, so another stack.
+  await page.selectOption("#modelSelect", "moss_t2i");
+  check((await rows()).length === 0, "MOSS-Image shows the Krea 2 stack");
+  await page.selectOption("#modelSelect", "krea2_t2i");
+  check((await rows()).length === 1, "coming back to Krea 2 lost its stack");
   await page.selectOption("#pipelineSelect", "text2video");
   check((await rows()).length === 2, "coming back to text2video lost the stack");
 
@@ -120,7 +139,8 @@ const LISTING = { h3: FILES.map(name => ({ name, size: 2 ** 20 })) };
   await page.click("#loraUploadBtn");
   await page.waitForFunction(() => !document.getElementById("loraUploadBtn").disabled);
   check(JSON.stringify(uploads) === JSON.stringify([["/api/loras/h3", "new-style.safetensors"]]), `upload: ${JSON.stringify(uploads)}`);
-  check((await page.$$("#loraList .model")).length === FILES.length, "the Models panel does not list every LoRA");
+  check((await page.$$("#loraList .model")).length === Object.values(LISTING).flat().length,
+    "the Models panel does not list every LoRA");
 
   // ── Canvas ──
   jobs.length = 0;
