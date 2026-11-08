@@ -39,8 +39,9 @@ final prompts; prompt compilers belong to the front end (ADR 0001).
 - **WanGP and Maestro are references only** (non-commercial licence): read them to understand,
   never copy code from them and never depend on them.
 - **Models in scope**: Krea 2, Qwen Image 2.1 (Qwen-Image-Edit 2509 dropped on 2026-10-29),
-  MiniMax H3 through FastH3, Gemma 4 as the only LLM, for the prompts and the creative assistant
-  (26B-A4B, qualified on 2026-11-07; E4B dropped the same day). No LTX.
+  MOSS-Image SFT with its turbo LoRA (text to image, added on 2026-11-07), MiniMax H3 through
+  FastH3, Gemma 4 as the only LLM, for the prompts and the creative assistant (26B-A4B, qualified
+  on 2026-11-07; E4B dropped the same day). No LTX.
 - **Nothing renders without a click**: no code path submits a job on its own.
 - **The user's prompt is sent verbatim**; graph invariants (anchoring blocks) are re-appended by
   code. See `docs/LESSONS.md` § 2–3.

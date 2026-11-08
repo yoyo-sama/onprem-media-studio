@@ -39,6 +39,7 @@ const CARDS = [
                              shots: 4, duration: 5, ratio: "16:9" }),
   card("C10", "reference_video", { brief: "A1 rides a motorcycle along a jungle track, an elephant charging behind him.",
                                   references: ["A1"], kinds: ["character"], music: "A slow romantic piano score", duration: 5, ratio: "16:9" }),
+  card("C11", "create_image", { prompt: 'A cafe chalkboard reading "Menu du jour"', engine: "krea2", ratio: "16:9", count: 1, style: "none" }),
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
@@ -383,8 +384,22 @@ const CARDS = [
   check(pS.includes("\n<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n")
     && pS.includes("summary:\n[reference generation + audio reference] "), "Studio r2v: prompt: " + pS);
   await page.$eval("#skipSheetsToggle", el => { el.checked = false; el.dispatchEvent(new Event("change", { bubbles: true })); });
-  // A reload opens on the welcome; the conversation stays in the list.
+  // MOSS-Image: the Mode field shows for that engine only (Standard on a card that has
+  // none), and the chosen mode reaches the job.
   await page.click('.rail-mode[data-mode="assistant"]');
+  const c11 = '.chat-card[data-card="C11"]', selects = () => page.$$eval(`${c11} .cc-fields select`, els => els.map(e => e.value));
+  check(JSON.stringify(await selects()) === '["krea2","16:9","none"]', "MOSS: a Mode field on a Krea 2 card: " + JSON.stringify(await selects()));
+  await page.selectOption(`${c11} .cc-fields select >> nth=0`, "moss");
+  check(JSON.stringify(await selects()) === '["moss","standard","16:9","none"]', "MOSS: Mode field missing or not on Standard: " + JSON.stringify(await selects()));
+  await page.selectOption(`${c11} .cc-fields select >> nth=1`, "quality");
+  const before11 = jobs.length;
+  check(before11 === jobs.length, "MOSS: a field change submitted a job");
+  await page.click(`${c11} .primary-btn`);
+  await page.waitForSelector(`${c11} .status.done`);
+  const j11 = jobs[before11];
+  check(jobs.length === before11 + 1 && j11.pipeline === "moss-image" && j11.params.mode === "quality" && j11.params.width === 1280
+    && j11.params.prompt === 'A cafe chalkboard reading "Menu du jour"', "MOSS card job: " + JSON.stringify(j11));
+  // A reload opens on the welcome; the conversation stays in the list.
   await page.reload({ waitUntil: "load" });
   await page.waitForTimeout(600);
   check(await page.isVisible("#chatStarters") && (await page.$$("#chatLog > *")).length === 0, "reload did not open on the welcome");

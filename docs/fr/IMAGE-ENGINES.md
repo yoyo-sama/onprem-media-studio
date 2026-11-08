@@ -3,19 +3,21 @@
 Version anglaise (de référence) : [../IMAGE-ENGINES.md](../IMAGE-ENGINES.md). Leçons derrière
 chaque règle : [LESSONS.md](LESSONS.md) § 4–5.
 
-Deux moteurs, chacun un pipeline de job (`studio/pipelines/`), tous deux sur diffusers 0.42.1 avec
-les poids officiels. Qwen-Image-Edit 2509 a été retiré le 2026-10-29 (pas requis) : Qwen Image 2.1
-couvre toutes les retouches que la 1.4 faisait avec 2509.
+Trois moteurs, chacun un pipeline de job (`studio/pipelines/`), sur diffusers 0.42.1 avec les
+poids officiels. Qwen-Image-Edit 2509 a été retiré le 2026-10-29 (pas requis) : Qwen Image 2.1
+couvre toutes les retouches que la 1.4 faisait avec 2509. MOSS-Image a été ajouté le 2026-11-07
+pour le texte dans l'image (voir [MOSS-Image](#moss-image)).
 
 | Id du pipeline | Modèle (id catalogue) | Classe diffusers | Réglages fixes |
 |---|---|---|---|
 | `krea2-t2i` | Krea 2 Turbo (`krea2-turbo`) | `Krea2Pipeline` | 8 étapes, `guidance_scale=0` |
 | `qwen-image-2.1` | Qwen Image 2.1 (`qwen-image-2.1` : encodeur de texte, VAE, processeur) avec le transformer Lightning v2 RL (`qwen-image-2.1-lightning`) | `QwenImage21Pipeline` | 4 étapes sur les sigmas de Lightning, planificateur sans décalage dynamique, `true_cfg_scale=1`, images de condition à 1024 |
+| `moss-image` | MOSS-Image SFT (`moss-image-sft`) + LoRA turbo (`moss-image-turbo-lora`) | `MOSSImagePipeline` (code du modèle) | selon `mode` : 4 ou 8 étapes avec la LoRA turbo sans guidance, ou 25 étapes en guidance 3 |
 
 Krea 2 garde les réglages qualifiés en 1.4 (`workflows/api/krea2_t2i.json`). Qwen Image 2.1 a tourné
 avec ceux de la 1.4 (25 étapes) jusqu'au 2026-11-07, puis a pris le transformer distillé de
 [lightx2v/Qwen-Image-2.1-Lightning-v2-RL](https://huggingface.co/lightx2v/Qwen-Image-2.1-Lightning-v2-RL)
-(LESSONS n°46). Étapes et guidance ne sont pas des paramètres : un modèle distillé casse
+(LESSONS n°46). MOSS-Image tourne avec les réglages de son banc GB10, un jeu par `mode`. Étapes et guidance ne sont pas des paramètres : un modèle distillé casse
 d'abord la colorimétrie quand on lui retire des étapes (LESSONS n°2), et personne n'a demandé à
 les régler.
 
@@ -90,11 +92,49 @@ plus après le décor, comme en 1.4 : 2 planches + 7), il retouche : `count` vau
 l'image 1 sauf si `width` et `height` sont donnés tous les deux. Le prompt cite les images
 `<image1>`, `<image2>`… dans l'ordre des entrées.
 
+### `moss-image`
+
+Texte vers image seulement. `mode` choisit les étapes et la guidance, rien d'autre ne le fait :
+
+| `mode` | Réglages | Banc GB10, 1024² |
+|---|---|---|
+| `preview` (Aperçu) | LoRA turbo, 4 étapes, guidance 1 (pas de passe négative) | environ 11 s ; le titre d'une affiche avait un mot doublé sur 2 graines sur 3 |
+| `standard` (par défaut) | LoRA turbo, 8 étapes, guidance 1 | environ 19 s ; texte exact sur 3 graines sur 3, tire vers une lumière chaude de coucher de soleil |
+| `quality` (Qualité) | SFT seule, 25 étapes, guidance 3, branche négative du modèle (prompt vide, bloc 22 sauté) | environ 72 s ; texte exact, lumière et ambiance les plus fidèles |
+
+`width`, `height` 256–2048, multiples de 16 (1024 par défaut) ; `count` 1 à 4. Un `negative` est
+refusé : la branche négative du mode Qualité fait partie des réglages du modèle. Le texte à écrire
+se met entre guillemets droits dans le prompt ; le modèle lit aussi le prompt de mise en page JSON
+officiel (une boîte par élément).
+
+## MOSS-Image
+
+`OpenMOSS-Team/MOSS-Image-SFT` (Apache-2.0) : un DiT à flux unique de 5,1 G paramètres en bf16
+(10,2 Go), l'encodeur de texte Qwen3.5-9B (16,8 Go) et le VAE à petit décodeur de FLUX.2, environ
+28 Go sur disque plus 1,2 Go pour la LoRA turbo (`akhaliq/MOSS-Image-SFT-4-steps`, fichier
+`moss_image_sft_4step_v2.0.safetensors`, Apache-2.0). Pic mémoire au banc : 30 à 34,5 Go. Choisi
+par le responsable du projet le 2026-11-07 après `tools/qualify/moss_bench.py` sur
+promaxgb10-95c7 (Fizgig, KOOK, les LoRA DMD et Kromoss y ont été écartés).
+
+- **Code.** diffusers 0.42 n'a pas de pipeline MOSS : `studio/pipelines/moss.py` importe
+  `pipeline_moss_image.py` depuis le dossier du modèle téléchargé. Le catalogue fige les deux
+  dépôts aux commits qu'a fait tourner le banc (`revision`) : un nouveau commit en amont ne change
+  rien tant que le catalogue ne change pas. Ce fichier n'a pas de rappel par étape : progression et
+  annulation s'accrochent au `step` du planificateur.
+- **LoRA turbo non fusionnée.** fp32, rang 128, appliquée en crochets `forward` le temps du rendu
+  puis retirée. Ses écarts sont sous le pas d'arrondi du bf16 et disparaîtraient à la fusion
+  (avertissement des auteurs ; même leçon que les LoRA H3, LESSONS n°30). Une clé qui ne
+  correspond à aucune couche fait refuser le fichier.
+- **Graines.** Le bruit est tiré sur le CPU, comme au banc : une graine donne l'image des planches
+  du banc.
+- **Non utilisés :** `lora.safetensors` du dépôt turbo (réécrit sur place par son auteur), la LoRA
+  destripe (les bandes de la SFT sont invisibles à l'œil à ces nombres d'étapes).
+
 ## Les fonctions de la 1.4 sur ces moteurs
 
 | Fonction 1.4 | Jobs |
 |---|---|
-| Text2Image | `krea2-t2i`, table de ratios 16:9 1280×720, 9:16 720×1280, 1:1 1024², 4:5 832×1040 ; ou `qwen-image-2.1` sans image, en multiples de 32 (16:9 1344×768) |
+| Text2Image | `krea2-t2i`, table de ratios 16:9 1280×720, 9:16 720×1280, 1:1 1024², 4:5 832×1040 ; ou `qwen-image-2.1` sans image, en multiples de 32 (16:9 1344×768) ; ou `moss-image` (nouveau en 2.0) avec la table de ratios de Krea 2 et son `mode` |
 | Image2Image / localisation | `qwen-image-2.1` avec `images` (image d'entrée + jusqu'à 9 références) ; un job par marché |
 | Images de campagne | `krea2-t2i` : affiche 832×1216 et vignette 1280×720 (variantes), réseau social 1024×1024 (1), graines `seed+200`, `+201`, `+202` ; le teaser vidéo arrive avec l'étape 3 |
 | Planches sujet et décor | `krea2-t2i` en 1920×1088, une image chacune |
@@ -194,6 +234,12 @@ comparer la qualité, pas les pixels.
 
 ## Manques connus
 
+- **Qualification de MOSS-Image (promaxgb10-95c7, 2026-11-07) :** les trois modes rendus par
+  l'application sont identiques au pixel près aux images du banc à graine égale (Aperçu 10 s,
+  Standard 18 s, Qualité 69 s en 1024², chargement du moteur 36 s), un rendu annulé n'a laissé
+  aucun crochet de LoRA, et le responsable du projet les a validés le 2026-11-08 : les deux
+  entrées du catalogue sont `"qualified": true`. Limites connues : Aperçu peut doubler un mot d'un
+  titre, Standard tire vers une lumière chaude de coucher de soleil.
 - **Qualification (gb10-demo, 2026-10-29/30) :** tous les cas Krea 2 (7/7) et Qwen Image 2.1 (4/4)
   ont rendu, et le responsable du projet a validé les rendus le 2026-10-30 : les deux modèles sont
   `"qualified": true`. Il n'y a pas eu de comparaison côte à côte avec la 1.4 ; un écart trouvé

@@ -3,19 +3,21 @@
 French version: [fr/IMAGE-ENGINES.md](fr/IMAGE-ENGINES.md). Lessons behind each rule:
 [LESSONS.md](LESSONS.md) § 4–5.
 
-Two engines, each a job pipeline (`studio/pipelines/`), both on diffusers 0.42.1 with the
+Three engines, each a job pipeline (`studio/pipelines/`), on diffusers 0.42.1 with the
 official weights. Qwen-Image-Edit 2509 was dropped on 2026-10-29 (not required): Qwen Image 2.1
-covers every edit the 1.4 did with 2509.
+covers every edit the 1.4 did with 2509. MOSS-Image was added on 2026-11-07 for text in the
+image (see [MOSS-Image](#moss-image)).
 
 | Pipeline id | Model (catalog id) | diffusers class | Fixed settings |
 |---|---|---|---|
 | `krea2-t2i` | Krea 2 Turbo (`krea2-turbo`) | `Krea2Pipeline` | 8 steps, `guidance_scale=0` |
 | `qwen-image-2.1` | Qwen Image 2.1 (`qwen-image-2.1`: text encoder, VAE, processor) with the Lightning v2 RL transformer (`qwen-image-2.1-lightning`) | `QwenImage21Pipeline` | 4 steps on the Lightning sigmas, scheduler without dynamic shifting, `true_cfg_scale=1`, condition images at 1024 |
+| `moss-image` | MOSS-Image SFT (`moss-image-sft`) + turbo LoRA (`moss-image-turbo-lora`) | `MOSSImagePipeline` (the model's own code) | per `mode`: 4 or 8 steps with the turbo LoRA and no guidance, or 25 steps at guidance 3 |
 
 Krea 2 keeps the settings qualified in 1.4 (`workflows/api/krea2_t2i.json`). Qwen Image 2.1 ran the
 1.4 ones (25 steps) until 2026-11-07, then took the step-distilled transformer of
 [lightx2v/Qwen-Image-2.1-Lightning-v2-RL](https://huggingface.co/lightx2v/Qwen-Image-2.1-Lightning-v2-RL)
-(LESSONS #46). Steps and guidance are not parameters: a distilled model breaks colour first
+(LESSONS #46). MOSS-Image runs the settings of its GB10 bench, one set per `mode`. Steps and guidance are not parameters: a distilled model breaks colour first
 when under-stepped (LESSONS #2), and nobody asked to tune them.
 
 Only one engine stays in GPU memory: starting a job on another engine unloads the previous one.
@@ -84,11 +86,48 @@ multiples of **32** (256–2048): diffusers floors 2.1 sizes to 32, so 1280×720
 setting, as in 1.4: 2 sheets + 7), it edits: `count` is 1, size from image 1 unless `width` and
 `height` are both given. The prompt cites images as `<image1>`, `<image2>`… in slot order.
 
+### `moss-image`
+
+Text to image only. `mode` picks the steps and guidance, nothing else does:
+
+| `mode` | Settings | GB10 bench, 1024² |
+|---|---|---|
+| `preview` | turbo LoRA, 4 steps, guidance 1 (no negative pass) | about 11 s; a poster title had a doubled word on 2 seeds of 3 |
+| `standard` (default) | turbo LoRA, 8 steps, guidance 1 | about 19 s; text exact on 3 seeds of 3, pulls towards warm sunset light |
+| `quality` | SFT alone, 25 steps, guidance 3, the model's negative branch (empty prompt, block 22 skipped) | about 72 s; text exact, the most faithful light and atmosphere |
+
+`width`, `height` 256–2048, multiples of 16 (default 1024); `count` 1–4. A `negative` is refused:
+the quality mode's negative branch is part of the model's settings. Text to draw goes in double
+quotes in the prompt; the model also reads the official JSON layout prompt (boxes per item).
+
+## MOSS-Image
+
+`OpenMOSS-Team/MOSS-Image-SFT` (Apache-2.0): a 5.1B single-stream DiT in bf16 (10.2 GB), the
+Qwen3.5-9B text encoder (16.8 GB) and the FLUX.2 small-decoder VAE, about 28 GB on disk plus
+1.2 GB for the turbo LoRA (`akhaliq/MOSS-Image-SFT-4-steps`, file
+`moss_image_sft_4step_v2.0.safetensors`, Apache-2.0). Peak memory in the bench: 30–34.5 GB.
+Chosen by the project owner on 2026-11-07 after `tools/qualify/moss_bench.py` on promaxgb10-95c7
+(Fizgig, KOOK, the DMD LoRAs and Kromoss were set aside there).
+
+- **Code.** diffusers 0.42 has no MOSS pipeline: `studio/pipelines/moss.py` imports
+  `pipeline_moss_image.py` from the downloaded model folder. The catalog pins both repositories
+  to the commits the bench ran (`revision`), so a new upstream commit changes nothing until the
+  catalog does. That file has no step callback: progress and cancellation hook the scheduler's
+  `step`.
+- **Turbo LoRA unmerged.** fp32, rank 128, applied as forward hooks for the render and removed
+  after it. Its deltas are below bf16's rounding step and would vanish if merged (the authors'
+  warning; the same lesson as the H3 LoRAs, LESSONS #30). A key that matches no layer refuses
+  the file.
+- **Seeds.** The noise is drawn on the CPU, as in the bench: a seed gives the image of the bench
+  sheets.
+- **Not used:** `lora.safetensors` of the turbo repository (rewritten in place by its author),
+  the destripe LoRA (SFT's banding is invisible by eye at these step counts).
+
 ## The 1.4 features on these engines
 
 | 1.4 feature | Jobs |
 |---|---|
-| Text2Image | `krea2-t2i`, ratio table 16:9 1280×720, 9:16 720×1280, 1:1 1024², 4:5 832×1040; or `qwen-image-2.1` without images, at multiples of 32 (16:9 1344×768) |
+| Text2Image | `krea2-t2i`, ratio table 16:9 1280×720, 9:16 720×1280, 1:1 1024², 4:5 832×1040; or `qwen-image-2.1` without images, at multiples of 32 (16:9 1344×768); or `moss-image` (new in 2.0) with the Krea 2 ratio table and its `mode` |
 | Image2Image / localisation | `qwen-image-2.1` with `images` (input image + up to 9 references); one job per market |
 | Campaign images | `krea2-t2i`: poster 832×1216 and thumbnail 1280×720 (variants), social 1024×1024 (1), seeds `seed+200`, `+201`, `+202`; the teaser video comes with step 3 |
 | Subject and setting sheets | `krea2-t2i` at 1920×1088, one image each |
@@ -181,6 +220,12 @@ Only then set `"qualified": true` for the model in `studio/catalog.json`. Seeds 
 
 ## Known gaps
 
+- **MOSS-Image qualification (promaxgb10-95c7, 2026-11-07):** the three modes rendered through
+  the app came out pixel-identical to the bench images at the same seed (preview 10 s,
+  standard 18 s, quality 69 s at 1024², engine load 36 s), a cancelled render left no LoRA hook
+  behind, and the project owner accepted them on 2026-11-08: both catalog entries are
+  `"qualified": true`. Known limits: Preview may double a word of a title, Standard pulls
+  towards warm sunset light.
 - **Qualification (gb10-demo, 2026-10-29/30):** every Krea 2 (7/7) and Qwen Image 2.1 (4/4) case
   rendered, and the project owner accepted the renders on 2026-10-30: both models are
   `"qualified": true`. There was no side-by-side comparison with 1.4; a difference found later is

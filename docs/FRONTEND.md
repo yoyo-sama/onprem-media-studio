@@ -54,7 +54,7 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
   buttons of both pages: Krea 2 → `KREA2_ENRICH_SYSTEM`, MiniMax H3 text/image to video and
   the multi-image sequence → `H3_VIDEO_ENRICH_SYSTEM`, reference to video →
   `R2V_BRIEF_ENRICH_SYSTEM`, storyboard briefs and sheets → `SHEET_BRIEF_ENRICH_SYSTEM`,
-  Qwen Image 2.1 → the generic `ENRICH_SYSTEM`. `<Subject N>` and `<imageN>` tokens cross Gemma
+  Qwen Image 2.1 and MOSS-Image → the generic `ENRICH_SYSTEM`. `<Subject N>` and `<imageN>` tokens cross Gemma
   as stand-ins and are checked on the way back.
 - **These five instructions can be replaced** in the Studio's Models panel ("Gemma
   instructions"): the server keeps the texts in `STUDIO_DATA_DIR/instructions.json`
@@ -97,6 +97,9 @@ to it.
 - Qwen-Image-Edit 2509 is gone (2026-10-29): image editing and shot images use Qwen Image 2.1,
   whose sizes are multiples of 32 (`QWEN21_RATIOS`: 1344×768, 768×1344, 1024², 896×1120). A
   project saved with the 2509 storyboard resumes on Qwen Image 2.1.
+- New in 2.0: MOSS-Image in Text2Image (Studio, the Canvas "Image creation" card, the assistant's
+  image card), with a Mode select shown for that engine only: Preview (4 steps), Standard (8,
+  default) or Quality (25). It uses the Krea 2 ratio table (multiples of 16).
 - No cloud generation (OpenAI, Gemini).
 - No Krea 2 LoRA, megapixel or turbo/steps controls; H3 LoRAs are uploaded files.
 - Reference to video's extra references take up to 7 images, 3 clips and 3 sounds (as in 1.4),

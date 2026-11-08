@@ -53,7 +53,7 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
   des deux pages : Krea 2 → `KREA2_ENRICH_SYSTEM`, MiniMax H3 texte/image vers vidéo et la
   séquence multi-images → `H3_VIDEO_ENRICH_SYSTEM`, référence vers vidéo →
   `R2V_BRIEF_ENRICH_SYSTEM`, briefs de storyboard et planches → `SHEET_BRIEF_ENRICH_SYSTEM`,
-  Qwen Image 2.1 → la consigne générique `ENRICH_SYSTEM`. Les jetons `<Subject N>` et `<imageN>`
+  Qwen Image 2.1 et MOSS-Image → la consigne générique `ENRICH_SYSTEM`. Les jetons `<Subject N>` et `<imageN>`
   traversent Gemma sous forme de substituts et sont vérifiés au retour.
 - **Ces cinq consignes peuvent être remplacées** dans le panneau Modèles du Studio (« Consignes
   Gemma ») : le serveur garde les textes dans `STUDIO_DATA_DIR/instructions.json`
@@ -98,6 +98,9 @@ ajoute une carte Import d'image reliée à elle.
   par Qwen Image 2.1, dont les tailles sont des multiples de 32 (`QWEN21_RATIOS` : 1344×768,
   768×1344, 1024², 896×1120). Un projet enregistré avec le storyboard 2509 reprend sur Qwen
   Image 2.1.
+- Nouveau en 2.0 : MOSS-Image en Text2Image (Studio, carte « Création d'image » du Canvas, carte
+  image de l'assistant), avec un menu Mode affiché pour ce moteur seulement : Aperçu (4 étapes),
+  Standard (8, par défaut) ou Qualité (25). Il prend la table de ratios de Krea 2 (multiples de 16).
 - Plus de génération cloud (OpenAI, Gemini).
 - Ni LoRA Krea 2, ni mégapixels, ni turbo/steps ; les LoRA H3 sont des fichiers envoyés.
 - Les références en plus de la référence vers vidéo prennent jusqu'à 7 images, 3 vidéos et 3 sons

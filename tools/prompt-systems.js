@@ -95,6 +95,7 @@ const canvas = (id, type, props, field, expect, extra = {}) => ({ id, page: "can
 const SCENARIOS = [
   studio("S-krea2", "campaign", "text2image", "krea2_t2i", "a red fox in the snow", ["KREA2_ENRICH_SYSTEM"], { user: "\nPRIMARY_STYLE: " }),
   studio("S-qwen21-t2i", "campaign", "text2image", "qwen21_t2i", "a red fox in the snow", ["ENRICH_SYSTEM"]),
+  studio("S-moss-t2i", "campaign", "text2image", "moss_t2i", "a red fox in the snow", ["ENRICH_SYSTEM"]),
   studio("S-qwen21-i2i", "localization", "image2image", "qwen21_i2i", "put the fox of <image1> in <image2>", ["ENRICH_SYSTEM"],
          { user: "Q21IMAGEREF1", written: "<image2>" }),
   studio("S-h3-t2v", "campaign", "text2video", "h3_t2v", "a fox runs; slow push-in.", ["H3_VIDEO_ENRICH_SYSTEM"]),
@@ -106,6 +107,8 @@ const SCENARIOS = [
   // Automatic enrichment: one call before the job, and the job gets the enriched prompt.
   studio("S-auto-krea2", "campaign", "text2image", "krea2_t2i", "a red fox in the snow", ["KREA2_ENRICH_SYSTEM"],
          { auto: true, job: "krea2-t2i" }),
+  studio("S-auto-moss", "campaign", "text2image", "moss_t2i", "a red fox in the snow", ["ENRICH_SYSTEM"],
+         { auto: true, job: "moss-image" }),
   // A workflow that builds its own prompts is never enriched generically: Gemma's first
   // call writes the character sheet.
   studio("S-auto-storyboard", "storyboard", "storyboard", "storyboard_qwen21", "a fox hunts at dawn",
@@ -118,6 +121,7 @@ const SCENARIOS = [
   canvas("C-mine-video", "simple/video", { prompt: "the fox turns its head" }, "prompt", ["MINE"], { instructions: { h3_video: MINE } }),
   canvas("C-krea2", "simple/krea2", { engine: "krea2", prompt: "a red fox in the snow" }, "prompt", ["KREA2_ENRICH_SYSTEM"]),
   canvas("C-qwen21", "simple/krea2", { engine: "qwen21", prompt: "a red fox in the snow" }, "prompt", ["ENRICH_SYSTEM"]),
+  canvas("C-moss", "simple/krea2", { engine: "moss", prompt: "a red fox in the snow" }, "prompt", ["ENRICH_SYSTEM"]),
   canvas("C-edit", "simple/qwen_edit", { instruction: "put the fox of <image1> in <image2>" }, "instruction", ["ENRICH_SYSTEM"],
          { user: "Q21IMAGEREF2", written: "<image2>" }),
   canvas("C-video", "simple/video", { prompt: "the fox turns its head" }, "prompt", ["H3_VIDEO_ENRICH_SYSTEM"]),

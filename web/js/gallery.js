@@ -11,7 +11,7 @@ import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
 import { $, log, notice, runJob, undoToast, warn } from "./ui.js";
 
 export const ENGINE_LABELS = {
-  "krea2-t2i": "Krea 2", "qwen-edit-2509": "Qwen Edit 2509", "qwen-image-2.1": "Qwen Image 2.1",
+  "krea2-t2i": "Krea 2", "qwen-edit-2509": "Qwen Edit 2509", "qwen-image-2.1": "Qwen Image 2.1", "moss-image": "MOSS-Image",
   "h3-t2v": L("MiniMax H3 · text to video"), "h3-i2v": L("MiniMax H3 · image to video"),
   "h3-r2v": L("MiniMax H3 · references"), "video-concat": L("Montage"), "image-grid": L("Contact sheet"),
   "video-frames": L("Clip frames"), "upscale-2x": L("Upscale ×2"),

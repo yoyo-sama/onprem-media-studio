@@ -17,7 +17,7 @@ import { initGallery } from "./gallery.js";
 import * as F from "./form.js";
 import * as D from "./director.js";
 import * as G from "./generate.js";
-import { attachAsset, initChat, loadRolePanel, reusePrompt as chatReusePrompt, showAssistant } from "./chat.js";
+import { CARD_IMAGE_WORKFLOWS, attachAsset, initChat, loadRolePanel, reusePrompt as chatReusePrompt, showAssistant } from "./chat.js";
 
 const P = F.P;
 const brief = $("brief");
@@ -94,6 +94,7 @@ function updateModelLabel() {
   const wf = F.currentWorkflow();
   $("modelLabel").textContent = wf ? t(wf.label) : "—";
   showModelNotice($("modelNotice"), F.workflowEngines(wf));
+  $("mossModeWrap").hidden = wf?.engine !== "moss-image";
   // The last frame (FL2VA) belongs to H3 image to video.
   $("lastImageWrap").hidden = wf?.id !== "h3_i2v";
   if ($("lastImageWrap").hidden) $("lastImageInput").value = "";
@@ -545,7 +546,7 @@ async function generatePlain(wf, seed) {
   const lastFile = $("lastImageInput").files[0];
   if (wf.id === "h3_i2v" && lastFile) last = await F.imageRef({ name: lastFile.name, blob: lastFile });
   G.runPlain(wf, { specs, origin: markets.length ? "markets" : "studio", ratio: $("ratioSelect").value,
-    count, duration, loras, image, last, refs, seed }).forEach(detach);
+    count, duration, loras, image, last, refs, seed, mode: $("mossModeSelect").value }).forEach(detach);
 }
 
 // Each pair of images becomes an H3 segment from the first to the last frame, then the
@@ -568,7 +569,7 @@ function generateCampaign(seed) {
 // and the brief, on the user's click. Starts nothing; Undo puts the brief and the
 // pipeline back (the images stay, as with "Reuse the prompt").
 const CARD_FORM = {
-  create_image: a => ["text2image", a.engine === "qwen" ? "qwen21_t2i" : "krea2_t2i", a.prompt],
+  create_image: a => ["text2image", CARD_IMAGE_WORKFLOWS[a.engine] || "krea2_t2i", a.prompt],
   edit_image: a => ["image2image", "qwen21_i2i", a.instruction],
   video_from_text: a => ["text2video", "h3_t2v", a.prompt],
   video_from_image: a => ["image2video", "h3_i2v", a.prompt],
@@ -587,6 +588,7 @@ async function openCardInForm(tool, a, image, quiet = false) {
   $("modelSelect").value = wfId;
   updateModelLabel();
   if (a.ratio) $("ratioSelect").value = a.ratio;
+  if (a.mode) $("mossModeSelect").value = a.mode;
   if (a.count || a.variants) $("variants").value = a.count || a.variants;
   if (a.duration) $("videoDuration").value = a.duration;
   if (a.shots) $("shotCount").value = a.shots;
@@ -1011,6 +1013,7 @@ function boot() {
   initRail();
   initForm();
   renderStyleOptions();
+  fillSelect($("mossModeSelect"), F.MOSS_MODES, F.MOSS_DEFAULT_MODE);
   renderSheetTemplateOptions();
   renderMarkets();
   renderAutoEnrich();

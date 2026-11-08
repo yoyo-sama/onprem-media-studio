@@ -3,8 +3,8 @@
 **Private AI image and video studio that runs entirely on your own machine.** No ComfyUI, no
 Ollama, no cloud: the app runs the models itself and downloads the weights it needs on first use.
 
-Successor of AI Content Studio 1.4. Engines: Krea 2, Qwen Image 2.1, MiniMax H3
-through FastH3, Gemma 4 26B-A4B for prompt enrichment and the creative assistant (a chat with
+Successor of AI Content Studio 1.4. Engines: Krea 2, Qwen Image 2.1, MOSS-Image,
+MiniMax H3 through FastH3, Gemma 4 26B-A4B for prompt enrichment and the creative assistant (a chat with
 roles that proposes ready-to-run cards: [docs/ASSISTANT.md](docs/ASSISTANT.md)).
 
 > Status: step 4 of the [roadmap](docs/ROADMAP.md). The server, model downloads, job queue and
@@ -83,7 +83,7 @@ the `PATH` or in `STUDIO_LLAMA_SERVER`.
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md): components, API, job lifecycle, configuration, renaming
-- [Image engines](docs/IMAGE-ENGINES.md): Krea 2 and Qwen Image 2.1 jobs, image references, qualification
+- [Image engines](docs/IMAGE-ENGINES.md): Krea 2, Qwen Image 2.1 and MOSS-Image jobs, image references, qualification
 - [Video engines](docs/H3.md): MiniMax H3 jobs, the two-pass reference-to-video, precision
   fallback, LoRA stack, qualification
 - [Creative assistant](docs/ASSISTANT.md): the assistant mode, its roles, cards and model

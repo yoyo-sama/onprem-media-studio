@@ -42,6 +42,28 @@
       "qualified": true
     },
     {
+      "id": "moss-image-sft",
+      "label": "MOSS-Image SFT (text to image, text in the image)",
+      "role": "image",
+      "repo": "OpenMOSS-Team/MOSS-Image-SFT",
+      "revision": "f972bd4b4b9e3852133cc5da954d87bc32cd8fb9",
+      "allow": ["model_index.json", "pipeline_moss_image.py", "scheduler/*", "text_encoder/*", "tokenizer/*", "transformer/*", "vae/*"],
+      "gated": false,
+      "license": "apache-2.0",
+      "qualified": true
+    },
+    {
+      "id": "moss-image-turbo-lora",
+      "label": "MOSS-Image turbo LoRA (Preview and Standard modes)",
+      "role": "image",
+      "repo": "akhaliq/MOSS-Image-SFT-4-steps",
+      "revision": "2ded95c37a029360245926fe72e475e30039bbfb",
+      "allow": ["moss_image_sft_4step_v2.0.safetensors"],
+      "gated": false,
+      "license": "apache-2.0",
+      "qualified": true
+    },
+    {
       "id": "fasth3-v2-nvfp4",
       "label": "MiniMax H3 — FastH3 V2 NVFP4 (text or images to video)",
       "role": "video",

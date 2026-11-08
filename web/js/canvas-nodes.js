@@ -71,6 +71,13 @@ const LORAS = () => [["", L("None")], ...h3Loras.map(n => [n, n.replace(/\.safet
 const STYLES = () => Object.entries(P.STYLE_PACKS).map(([id, s]) => [id, s.label]);
 const styleLabel = id => t(P.STYLE_PACKS[id]?.label || id);
 const RATIOS = () => Object.keys(F.RATIOS).map(r => [r, r]);
+// Engines of the Image creation card: server engine, label, Studio workflow (its ✨ instruction).
+const IMAGE_ENGINES = {
+  krea2: { engine: "krea2-t2i", label: "Krea 2 Turbo", workflow: "krea2_t2i" },
+  qwen21: { engine: "qwen-image-2.1", label: "Qwen Image 2.1", workflow: "qwen21_t2i" },
+  moss: { engine: "moss-image", label: "MOSS-Image", workflow: "moss_t2i" },
+};
+const imageEngine = p => IMAGE_ENGINES[p.engine] || IMAGE_ENGINES.krea2;
 const SUBJECT_KINDS = () => [["auto", L("Auto")], ["human", L("Human")], ["other", L("Other (animal, object…)")]];
 
 // ── Upstream cards ────────────────────────────────────────────────────────────
@@ -334,28 +341,30 @@ export const CARDS = {
   },
   "simple/krea2": {
     label: L("Image creation"), tech: "t2i", grad: ["#fdf1dd", "#e8cf9f"],
-    engines: p => [p.engine === "qwen21" ? "qwen-image-2.1" : "krea2-t2i"],
-    modelProp: "engine", modelValues: [["krea2", "Krea 2 Turbo"], ["qwen21", "Qwen Image 2.1"]],
+    engines: p => [imageEngine(p).engine],
+    modelProp: "engine", modelValues: Object.entries(IMAGE_ENGINES).map(([id, e]) => [id, e.label]),
     subject: "prompt", preview: "prompt",
     outputs: ["image"], size: [320, 240],
-    props: { engine: "krea2", prompt: "", ratio: "1:1" },
+    // `mode` is read by MOSS-Image only; it stays in the properties across an engine switch.
+    props: { engine: "krea2", prompt: "", ratio: "1:1", mode: F.MOSS_DEFAULT_MODE },
     meta: n => {
-      const [w, h] = imageSize(n);
-      return `${n.properties.engine === "qwen21" ? "Qwen Image 2.1" : "Krea 2 Turbo"} · ${w}×${h}`;
+      const [w, h] = imageSize(n), e = imageEngine(n.properties);
+      return `${e.label}${e.engine === "moss-image" ? ` · ${t(F.mossModeLabel(n.properties.mode))}` : ""} · ${w}×${h}`;
     },
     fields: [
       { k: "engine", label: L("Engine"), type: "select", values: () => CARDS["simple/krea2"].modelValues },
-      { k: "prompt", label: L("Prompt"), type: "textarea", enrich: n => (n.properties.engine === "qwen21" ? "qwen21_t2i" : "krea2_t2i"),
+      { k: "mode", label: L("Mode"), type: "select", values: () => F.MOSS_MODES, when: n => n.properties.engine === "moss" },
+      { k: "prompt", label: L("Prompt"), type: "textarea", enrich: n => imageEngine(n.properties).workflow,
         placeholder: "a cinematic photo of a lighthouse at sunset" },
       { k: "ratio", label: L("Aspect ratio"), type: "select", values: RATIOS },
     ],
     async generate(node) {
-      const p = node.properties, prompt = p.prompt.trim();
+      const p = node.properties, prompt = p.prompt.trim(), e = imageEngine(p);
       if (!prompt) return setStatus(node, "error", "Error: write the prompt first.");
       const [width, height] = imageSize(node);
-      setStatus(node, "running", "{engine} running…", { engine: p.engine === "qwen21" ? "Qwen Image 2.1" : "Krea 2" });
-      const job = await run(node, p.engine === "qwen21" ? "qwen-image-2.1" : "krea2-t2i",
-        { prompt, width, height, count: 1, seed: seedOf(node) });
+      setStatus(node, "running", "{engine} running…", { engine: e.label });
+      const job = await run(node, e.engine, { prompt, width, height, count: 1, seed: seedOf(node),
+        ...(e.engine === "moss-image" ? { mode: p.mode || F.MOSS_DEFAULT_MODE } : {}) });
       done(node, output(job, ".png"));
     },
   },

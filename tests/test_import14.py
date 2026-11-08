@@ -26,7 +26,7 @@ class Api:
     def __init__(self, files: dict[str, bytes]):
         self.files = files
 
-    def model_info(self, repo, files_metadata, token):
+    def model_info(self, repo, revision, files_metadata, token):
         return SimpleNamespace(sha="rev", siblings=[
             SimpleNamespace(rfilename=f, size=len(d), lfs=SimpleNamespace(sha256=sha(d)))
             for f, d in self.files.items()])
