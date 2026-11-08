@@ -18,7 +18,7 @@ renders before the user clicks Generate on a card.
   and "＋ New conversation" goes back to the welcome at any time.
 - **Library**: the "Library" button opens the job queue and the gallery beside the chat (over it
   on a phone). A gallery image used from the assistant ("→ Use as input", or dragged onto the
-  chat) becomes an attachment of the next message; "Reuse the prompt" copies it into the message
+  chat) becomes an attachment of the next message (a clip is refused: attachments are images); "Reuse the prompt" copies it into the message
   box, with Undo.
 - **Character**: a small animated character (`web/js/mascot.js`) welcomes the user and shows what
   the assistant is doing: it listens while the user types, thinks until the reply starts, talks

@@ -47,6 +47,13 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
   automatique lui donnait : son job est celui qu'envoyait la 1.4.
 - **Le brief n'appartient qu'à l'utilisateur.** Les exemples sont des placeholders, jamais des
   valeurs ; un brief vide ne lance rien.
+- **« → Utiliser en entrée » suit le pipeline affiché** (images et vidéos, carte de la galerie
+  ou visionneuse). Séquence : l'image rejoint la séquence. Pipeline à image d'entrée
+  (Image2Image, Image2Video) : elle devient l'entrée. Vidéo depuis des références : l'image ou la
+  vidéo rejoint la liste des références ; storyboard Qwen 2.1 : l'image. Text2Video ouvre
+  Image2Video avec l'image, tout autre pipeline Image2Image. Une vidéo que le pipeline ne prend
+  pas est refusée avec un message. Le formulaire ne quitte jamais un pipeline qui peut prendre
+  l'élément, et aucun job ne part.
 - **Le prompt de l'utilisateur part tel quel** ; les blocs d'ancrage et squelettes de planche
   sont remis par le code, jamais envoyés à Gemma.
 - **Une consigne Gemma par modèle.** `Prompts.briefEnrichSystem(workflow)` route les boutons ✨
