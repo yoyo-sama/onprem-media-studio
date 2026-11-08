@@ -556,6 +556,52 @@ def test_fastvideo_weights_are_read_whole(tmp_path):
         assert f.get_tensor("a").shape == (2, 3)
 
 
+def test_the_nvfp4_export_is_read_by_ranges_as_safetensors_reads_it(tmp_path):
+    torch = pytest.importorskip("torch")
+    from safetensors import safe_open
+    from safetensors.torch import save_file
+    from studio.pipelines.h3_runtime import RangeFile
+    tensors = {"a::weight": torch.randint(0, 255, (3, 5), dtype=torch.uint8),
+               "a::scale": torch.randn(4, dtype=torch.float32).to(torch.float8_e4m3fn),
+               "a::alpha": torch.randn(2, 2, dtype=torch.bfloat16),
+               "b::empty": torch.zeros(0, 3), "b::index": torch.arange(7, dtype=torch.int64)}
+    path = str(tmp_path / "export.safetensors")
+    save_file(tensors, path, metadata={"skip_blocks": "[1, 2]"})
+    with RangeFile(path, framework="pt", device="cpu") as f, safe_open(path, framework="pt") as ref:
+        assert sorted(f.keys()) == sorted(ref.keys()) and f.metadata() == ref.metadata()
+        for key in ref.keys():
+            got, want = f.get_tensor(key), ref.get_tensor(key)
+            assert got.dtype == want.dtype and got.shape == want.shape
+            assert got.view(torch.uint8).tolist() == want.view(torch.uint8).tolist()
+
+
+def test_range_reads_replace_safe_open_only_while_the_export_loads(monkeypatch):
+    import types
+    safetensors = pytest.importorskip("safetensors")
+    from studio.pipelines import h3_runtime
+    seen = []
+
+    def load_export(model, path, device):
+        from safetensors import safe_open
+        seen.append(safe_open)
+        return 350
+    nvfp4 = types.SimpleNamespace(load_minimax_h3_nvfp4_dit_export=load_export)
+    loader = types.SimpleNamespace(safe_open=None)
+    for name, module in {"fastvideo": types.ModuleType("fastvideo"),
+                         "fastvideo.layers": types.ModuleType("l"), "fastvideo.models": types.ModuleType("m"),
+                         "fastvideo.layers.quantization": types.SimpleNamespace(nvfp4_config=nvfp4),
+                         "fastvideo.layers.quantization.nvfp4_config": nvfp4,
+                         "fastvideo.models.loader": types.SimpleNamespace(weight_utils=loader),
+                         "fastvideo.models.loader.weight_utils": loader}.items():
+        monkeypatch.setitem(sys.modules, name, module)
+    mapped = safetensors.safe_open
+    h3_runtime._read_weights_whole()
+    h3_runtime._read_weights_whole()  # a second engine does not wrap it twice
+    assert nvfp4.load_minimax_h3_nvfp4_dit_export(None, "x", "cuda") == 350
+    assert seen == [h3_runtime.RangeFile] and safetensors.safe_open is mapped
+    assert loader.safe_open is h3_runtime.WholeFile
+
+
 def test_an_h3_engine_is_named_shortly_in_the_log(monkeypatch, capsys):
     from studio.pipelines.h3_runtime import EngineSpec
     monkeypatch.setattr(common, "POOL", common.EnginePool())

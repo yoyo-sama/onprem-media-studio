@@ -147,7 +147,10 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     `common.from_pretrained` charge lui-même les encodeurs de texte transformers avec le leur, et
     l'itérateur de poids de FastVideo reçoit un lecteur de fichier entier (`h3_runtime.WholeFile`)
     à la place de `safe_open` : FastH3 OmniRef se charge alors en 147 s au lieu d'environ 285 s.
-    (GB10, 2026-11-05)
+    (GB10, 2026-11-05) Chaque chargeur qui ouvre son propre fichier demande le même soin : l'export
+    NVFP4 compacté de H3 a son propre chargeur, encore projeté, qui lisait 11,9 Go en 68 s, près de la
+    moitié d'un chargement H3 ; il reçoit maintenant un lecteur par plages
+    (`h3_runtime.RangeFile`) pour ce seul appel. (GB10, 2026-11-08)
 43. **Pas de FP8 torchao sur le GB10 ; torch.compile seulement là où il est rentable.** Des poids
     et activations dynamiques FP8 (échelles par ligne) prenaient 1 800 s par étape de Krea 2 au
     lieu de 5,7. `torch.compile` du transformer, en mode par défaut, a fait gagner 22 % par étape

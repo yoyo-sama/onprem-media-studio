@@ -135,7 +135,10 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     reaches only its own models, so `common.from_pretrained` loads the transformers text
     encoders itself with theirs, and FastVideo's weight iterator gets a whole-file reader
     (`h3_runtime.WholeFile`) in place of `safe_open`: FastH3 OmniRef then loads in 147 s instead
-    of about 285 s. (GB10, 2026-11-05)
+    of about 285 s. (GB10, 2026-11-05) Each loader that opens its own file needs the same care:
+    the packed NVFP4 export of H3 has its own loader, still mapped, which read 11.9 GB in 68 s,
+    almost half of an H3 load; it now gets a range reader (`h3_runtime.RangeFile`)
+    for that call only. (GB10, 2026-11-08)
 43. **No torchao FP8 on the GB10; torch.compile only where it pays back.** FP8 weights and dynamic
     activations (per-row scales) took 1 800 s per Krea 2 step instead of 5.7. `torch.compile` of
     the transformer, default mode, saved 22 % per step on Qwen Image 2.1 at 1920×1088 (16 s per

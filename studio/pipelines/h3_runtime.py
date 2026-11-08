@@ -143,9 +143,73 @@ class WholeFile:
         return self._tensors[name].to(self._device)
 
 
+# safetensors dtype names (the file header) and their torch dtypes, looked up by name so that
+# the module imports without torch.
+_DTYPES = {"BOOL": "bool", "U8": "uint8", "I8": "int8", "I16": "int16", "U16": "uint16",
+           "I32": "int32", "U32": "uint32", "I64": "int64", "U64": "uint64", "F16": "float16",
+           "BF16": "bfloat16", "F32": "float32", "F64": "float64",
+           "F8_E4M3": "float8_e4m3fn", "F8_E5M2": "float8_e5m2"}
+
+
+class RangeFile:
+    """Stands in for safetensors' safe_open while FastVideo loads the packed NVFP4 export of the
+    transformer (one 11.9 GB file): each tensor is read with a plain seek and read instead of
+    through a memory map. Mapped, that file took 68 s to read on the GB10 (0.17 GB/s) and was
+    the longest step of an H3 load. Tensor by tensor rather than whole, so the load does not hold
+    a second copy of the file. Only what that loader uses: keys, get_tensor, metadata."""
+
+    def __init__(self, path, framework: str = "pt", device: str = "cpu"):
+        import json
+        self._file = open(path, "rb")
+        size = int.from_bytes(self._file.read(8), "little")
+        header = json.loads(self._file.read(size))
+        self._metadata = header.pop("__metadata__", None)
+        self._header, self._start, self._device = header, 8 + size, device
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self._file.close()
+
+    def keys(self):
+        return list(self._header)
+
+    def metadata(self):
+        return self._metadata
+
+    def get_tensor(self, name):
+        import torch
+        entry = self._header[name]
+        dtype = getattr(torch, _DTYPES[entry["dtype"]])
+        begin, end = entry["data_offsets"]
+        if end == begin:
+            return torch.empty(entry["shape"], dtype=dtype, device=self._device)
+        data = bytearray(end - begin)
+        self._file.seek(self._start + begin)
+        if self._file.readinto(data) != len(data):
+            raise OSError(f"{self._file.name}: {name} is cut short")
+        return torch.frombuffer(data, dtype=dtype).reshape(entry["shape"]).to(self._device)
+
+
 def _read_weights_whole() -> None:
+    from fastvideo.layers.quantization import nvfp4_config
     from fastvideo.models.loader import weight_utils
     weight_utils.safe_open = WholeFile
+    load = nvfp4_config.load_minimax_h3_nvfp4_dit_export
+    if getattr(load, "reads_ranges", False):
+        return
+
+    def load_export(*args, **kwargs):
+        # The loader imports safe_open from safetensors when called: replaced for that call only.
+        import safetensors
+        mapped, safetensors.safe_open = safetensors.safe_open, RangeFile
+        try:
+            return load(*args, **kwargs)
+        finally:
+            safetensors.safe_open = mapped
+    load_export.reads_ranges = True
+    nvfp4_config.load_minimax_h3_nvfp4_dit_export = load_export
 
 
 def _apply_env(env: dict[str, str]) -> None:
