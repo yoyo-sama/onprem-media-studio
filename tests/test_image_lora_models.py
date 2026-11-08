@@ -25,13 +25,18 @@ def save(path: Path, tensors: dict, metadata: dict | None = None) -> Path:
 
 def tiny_qwen():
     """A one-block Qwen Image 2.1 transformer inside an object that loads LoRAs like the pipeline."""
-    from diffusers import QwenImage21Transformer2DModel
+    from diffusers import DiffusionPipeline, QwenImage21Transformer2DModel
     from diffusers.loaders import QwenImageLoraLoaderMixin
+
+    class TinyQwenPipeline(DiffusionPipeline, QwenImageLoraLoaderMixin):
+        """QwenImage21Pipeline's base classes, with the transformer as its only component."""
+
+        def __init__(self, transformer):
+            super().__init__()
+            self.register_modules(transformer=transformer)
+
     torch.manual_seed(0)
-    transformer = QwenImage21Transformer2DModel(**_small_config(QwenImage21Transformer2DModel))
-    pipe = type("TinyQwenPipeline", (QwenImageLoraLoaderMixin,), {"hf_device_map": None})()
-    pipe.transformer = transformer
-    return pipe
+    return TinyQwenPipeline(QwenImage21Transformer2DModel(**_small_config(QwenImage21Transformer2DModel)))
 
 
 def _small_config(cls):
