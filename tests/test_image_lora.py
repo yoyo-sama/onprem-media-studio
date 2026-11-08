@@ -131,17 +131,26 @@ def test_apply_loads_only_on_a_change_and_unloads_for_no_lora(tmp_path, monkeypa
     assert pipe.log == [("unload",)]
 
 
-def test_a_refused_file_leaves_no_half_stack(tmp_path, monkeypatch):
-    for name in ("a", "b"):
+def test_every_file_is_checked_before_any_is_loaded(tmp_path, monkeypatch):
+    """Once an adapter is in, its layers are PEFT wrappers: checking file 2 after loading file 1
+    refused every stack on the GB10 (2026-11-08). A refused file leaves no adapter loaded."""
+    for name in ("a", "b", "c"):
         (tmp_path / f"{name}.safetensors").write_bytes(b"x")
-
-    def check(pipe, path):
-        if path.name == "b.safetensors":
-            raise ValueError("LoRA b.safetensors: 3 key(s) match no layer")
-    monkeypatch.setattr(image_lora, "_check", check)
     pipe = RecordingPipe()
-    with pytest.raises(ValueError, match="match no layer"):
-        image_lora.apply(pipe, [{"name": "a.safetensors", "strength": 1}, {"name": "b.safetensors", "strength": 1}], tmp_path)
+
+    def check(pipe_, path):
+        pipe_.log.append(("check", path.name))
+        if path.name == "c.safetensors":
+            raise ValueError("LoRA c.safetensors: 3 key(s) match no layer")
+    monkeypatch.setattr(image_lora, "_check", check)
+    stack = [{"name": "a.safetensors", "strength": 1.0}, {"name": "b.safetensors", "strength": 0.5}]
+    image_lora.apply(pipe, stack, tmp_path)
+    assert [e[0] for e in pipe.log] == ["check", "check", "load", "load", "set"]
     pipe.log.clear()
-    image_lora.apply(pipe, [{"name": "a.safetensors", "strength": 1}], tmp_path)
-    assert pipe.log[0] == ("unload",)  # the a loaded before the refusal is not reused half-set
+    with pytest.raises(ValueError, match="match no layer"):
+        image_lora.apply(pipe, [stack[0], {"name": "c.safetensors", "strength": 1.0}], tmp_path)
+    assert pipe.log == [("unload",), ("check", "a.safetensors"), ("check", "c.safetensors")]
+    assert not pipe.transformer.peft_config  # nothing half-loaded
+    pipe.log.clear()
+    image_lora.apply(pipe, stack, tmp_path)  # the next render loads its stack from scratch
+    assert [e[0] for e in pipe.log] == ["check", "check", "load", "load", "set"]

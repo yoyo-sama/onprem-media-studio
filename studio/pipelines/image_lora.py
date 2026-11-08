@@ -51,8 +51,11 @@ def apply(pipe, stack: list[dict], folder: Path) -> None:
         pipe.studio_loras = None  # until every file is loaded: a refused file leaves no half stack
         if getattr(pipe.transformer, "peft_config", None):
             pipe.unload_lora_weights()  # the original layers back, not adapters left disabled
-        for n, f in enumerate(files):
+        # Every file is checked against the plain layers before any is loaded: once one adapter
+        # is in, its layers are PEFT wrappers, no longer Linear, and a stack could not be checked.
+        for f in files:
             _check(pipe, f)
+        for n, f in enumerate(files):
             pipe.load_lora_weights(str(f.parent), weight_name=f.name, adapter_name=f"lora{n}",
                                    local_files_only=True)
         pipe.studio_loras = key

@@ -29,7 +29,7 @@ def tiny_qwen():
     from diffusers.loaders import QwenImageLoraLoaderMixin
     torch.manual_seed(0)
     transformer = QwenImage21Transformer2DModel(**_small_config(QwenImage21Transformer2DModel))
-    pipe = type("TinyQwenPipeline", (QwenImageLoraLoaderMixin,), {})()
+    pipe = type("TinyQwenPipeline", (QwenImageLoraLoaderMixin,), {"hf_device_map": None})()
     pipe.transformer = transformer
     return pipe
 
