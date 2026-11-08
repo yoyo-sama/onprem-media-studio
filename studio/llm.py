@@ -106,14 +106,17 @@ class LlamaServer:
             self.stop()
             raise LlmError(f"llama-server not ready after {self.startup_timeout:.0f} s")
 
-    def stop(self) -> None:
-        if self.proc and self.proc.poll() is None:
-            self.proc.terminate()
-            try:
-                self.proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                self.proc.kill()
-        self.proc = None
+    def stop(self) -> bool:
+        """Stop llama-server; True when it was running."""
+        proc, self.proc = self.proc, None
+        if proc is None or proc.poll() is not None:
+            return False
+        proc.terminate()
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        return True
 
     def chat(self, system: str, prompt: str, images: list[str] | None = None,
              json_mode: bool = True, temperature: float = 0.7) -> str:

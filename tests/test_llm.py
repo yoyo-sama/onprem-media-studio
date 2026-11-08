@@ -190,3 +190,12 @@ def test_a_lost_connection_is_an_llm_error(settings, store, monkeypatch):
     monkeypatch.setattr("studio.llm.httpx.post", refused)
     with pytest.raises(LlmError, match="did not answer"):
         server.chat("sys", "hi")
+
+
+def test_stop_says_whether_it_stopped_a_running_server(settings, store):
+    import subprocess
+    import sys
+    server = LlamaServer(settings, store)
+    assert server.stop() is False
+    server.proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    assert server.stop() is True and server.proc is None and server.state == "stopped"

@@ -38,7 +38,9 @@ E4B, the smaller model offered before, was dropped the same day. Native tool cal
 `llama-server --jinja` (Gemma 4's chat template).
 
 When an H3 video engine has to load alone and memory is short, the server stops `llama-server`
-first (`common.LOW_MEMORY`); it starts again on the next LLM request.
+first (`common.LOW_MEMORY`), and it always stops it before a reference-to-video render (`h3-r2v`):
+with Gemma loaded next to it, a two-pass r2v left 10.9 GiB available and pushed 5.6 GB to swap
+(LESSONS #49). It starts again on the next LLM request (about 27 s cold).
 
 Each Gemma call writes one line to the container log, with llama-server's timings, and so does
 each model load: `docker logs studio --since 30m 2>&1 | grep "llm:"` tells a slow model from a

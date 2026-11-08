@@ -43,7 +43,7 @@ request.
 | `studio/pipelines/upscale.py` | `upscale-2x`: an image or a video twice as large through the SPAN network, on a gallery click: [IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2) |
 | `studio/pipelines/common.py` | Parameter checks, the pipelines kept in memory (least recently used freed when the next does not fit), step progress, PNG output |
 | `tools/qualify/` | Qualification cases built from the 1.4 prompt compilers, and their runner |
-| `studio/llm.py` | `LlamaServer`: start on demand (32k context, one slot), OpenAI chat call, streamed call with tools, vision via base64 images; stopped when an H3 engine needs the memory |
+| `studio/llm.py` | `LlamaServer`: start on demand (32k context, one slot), OpenAI chat call, streamed call with tools, vision via base64 images; stopped when an H3 engine needs the memory, and before every r2v render |
 | `studio/gallery.py` | `Gallery`: SQLite/FTS5 index of the outputs, thumbnails, tags, favourites, rename, trash: [GALLERY.md](GALLERY.md) |
 | `studio/update.py`, `loras.py` | In-app update (git fast-forward and restart in place, or forwarded to the updater service under Docker) and LoRA upload: [GALLERY.md](GALLERY.md) |
 | `docker/updater/server.py` | The `updater` service of `compose.yaml`: pull, image rebuild, studio container recreated once the queue is empty: [GALLERY.md](GALLERY.md#docker-docker-compose) |

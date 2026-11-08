@@ -203,6 +203,19 @@ def test_r2v_two_passes(client, engines, capsys):
     assert all(part in log for part in ("references ", "pass 1 ", "upscale ", "pass 2 and decoding "))
 
 
+def test_r2v_stops_the_llm_first_and_t2v_keeps_it(client, engines, monkeypatch, capsys):
+    """Gemma next to a two-pass r2v pushed the GB10 into swap: an r2v stops it before
+    rendering, a t2v (19 GiB left with Gemma loaded) keeps it."""
+    stops = []
+    monkeypatch.setattr(common, "LOW_MEMORY", [lambda: stops.append(len(engines["engines"])) or True])
+    run(client, "h3-t2v", {"prompt": "a kite"})
+    assert stops == []
+    sheets = [upload(client, 192, 108, "red")]
+    run(client, "h3-r2v", {"prompt": "<Picture 1> walks", "references": sheets})
+    assert stops == [1]  # before the r2v engine was loaded
+    assert "engine: LLM stopped to leave its memory to h3-r2v" in capsys.readouterr().out
+
+
 @pytest.mark.parametrize("pipeline,params,message", [
     ("h3-t2v", {"prompt": "p", "duration": 3}, "5 to 15 s"),
     ("h3-t2v", {"prompt": "p", "duration": 16}, "between 5 and 15"),

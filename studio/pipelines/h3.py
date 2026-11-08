@@ -329,6 +329,10 @@ class H3ReferenceToVideo(Pipeline):
     def _render(self, models, params, ctx):
         model_dir = models[OMNIREF]
         terms = contract(model_dir)
+        # With Gemma loaded next to it (17 GB), a two-pass r2v left 10.9 GiB available on the
+        # GB10 and pushed 5.6 GB to swap (promaxgb10-95c7, 2026-11-08, LESSONS #49): Gemma is
+        # stopped before each r2v render and starts again on the next LLM request (~27 s cold).
+        common.free_llm(self.id)
         engine = _engine(ctx, model_dir, True, params["loras"])
         # FastVideo resizes reference images to a 2048-pixel short edge, which is
         # what ref_image_size=max did in the validated workflow. Clips are decoded

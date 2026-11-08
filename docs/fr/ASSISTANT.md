@@ -38,7 +38,10 @@ le 2026-11-07 ; Gemma 4 E4B, le modèle plus petit proposé avant, a été retir
 appels d'outils natifs passent par `llama-server --jinja` (gabarit de chat de Gemma 4).
 
 Quand un moteur vidéo H3 doit se charger seul et que la mémoire manque, le serveur arrête d'abord
-`llama-server` (`common.LOW_MEMORY`) ; il redémarre à la requête LLM suivante.
+`llama-server` (`common.LOW_MEMORY`), et il l'arrête toujours avant un rendu de références vers
+vidéo (`h3-r2v`) : avec Gemma chargé à côté, un r2v en deux passes ne laissait que 10,9 Gio
+disponibles et envoyait 5,6 Go en swap (LESSONS n° 49). Il redémarre à la requête LLM suivante
+(environ 27 s à froid).
 
 Chaque appel à Gemma écrit une ligne dans le journal du conteneur, avec les temps de
 llama-server, de même que chaque chargement du modèle : `docker logs studio --since 30m 2>&1 |

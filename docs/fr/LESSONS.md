@@ -196,6 +196,20 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     tué. Il met désormais la file en attente (nouveaux jobs refusés en 503 avec un message,
     attente renouvelée à chaque contrôle et qui tombe d'elle-même) de l'attente jusqu'au
     redémarrage, et compte les téléchargements de modèles comme du travail. (2026-11-08)
+49. **Épingler ce qui a été qualifié, et mesurer la mémoire avant de se fier à un budget.** Seul
+    MOSS épinglait son commit Hugging Face et la plupart des dépendances Python de l'image étaient
+    des intervalles ouverts, alors que la mise à jour intégrée reconstruit l'image : une nouvelle
+    installation ou une reconstruction pouvait faire tourner d'autres poids ou un autre
+    transformers que ceux qualifiés. Chaque modèle qualifié épingle désormais le commit relevé
+    dans les marqueurs `.complete` de promaxgb10-95c7, et `docker/constraints.txt` reprend les
+    versions exactes du `pip freeze` de cette image. Mesuré là-bas le même jour (121,6 Gio) : un
+    `h3-r2v` en deux passes (5 s, deux références) avec Gemma chargé a fait passer MemAvailable de
+    95,4 à 10,9 Gio et envoyé 5,6 Go en swap, sans OOM ; `h3-t2v` gardait 19,4 Gio. Gemma (17 Go)
+    est désormais arrêté avant chaque rendu r2v. Mesuré aussi : H3 se charge en 161 à 180 s ;
+    Krea 2 libère H3 pour se charger (71 s) ; l'Upscale ×2 d'un clip de 124 images prend 22 s,
+    dont 80 % dans le réseau (NVENC est présent mais l'encodage n'est pas le goulot) ;
+    llama-server b11982+ n'a plus `--no-mmap` (`-lm`), et un cache KV quantifié n'économisait
+    rien au repos. (2026-11-08)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

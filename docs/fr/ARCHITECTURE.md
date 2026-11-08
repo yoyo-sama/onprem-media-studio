@@ -44,7 +44,7 @@ requête LLM.
 | `studio/pipelines/upscale.py` | `upscale-2x` : une image ou une vidéo deux fois plus grande par le réseau SPAN, sur un clic de la galerie : [IMAGE-ENGINES.md](IMAGE-ENGINES.md#résolution-2) |
 | `studio/pipelines/common.py` | Contrôle des paramètres, pipelines gardés en mémoire (le moins récemment utilisé libéré quand le suivant ne tient pas), progression par étape, sortie PNG |
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |
-| `studio/llm.py` | `LlamaServer` : démarrage à la demande (contexte de 32k, un emplacement), appel chat OpenAI, appel en flux avec outils, vision par images base64 ; arrêté quand un moteur H3 a besoin de la mémoire |
+| `studio/llm.py` | `LlamaServer` : démarrage à la demande (contexte de 32k, un emplacement), appel chat OpenAI, appel en flux avec outils, vision par images base64 ; arrêté quand un moteur H3 a besoin de la mémoire, et avant chaque rendu r2v |
 | `studio/gallery.py` | `Gallery` : index SQLite/FTS5 des sorties, miniatures, tags, favoris, renommage, corbeille : [GALLERY.md](GALLERY.md) |
 | `studio/update.py`, `loras.py` | Mise à jour depuis l'interface (avance rapide git et redémarrage sur place, ou transmise au service updater sous Docker) et téléversement de LoRA : [GALLERY.md](GALLERY.md) |
 | `docker/updater/server.py` | Le service `updater` de `compose.yaml` : pull, reconstruction de l'image, conteneur du studio recréé une fois la file vide : [GALLERY.md](GALLERY.md#docker-docker-compose) |
