@@ -1,3 +1,4 @@
+import json
 import time
 
 import pytest
@@ -170,3 +171,49 @@ def test_a_held_queue_refuses_new_jobs(client):
     client.post("/api/update/hold", json={"seconds": 0}, headers=origin)
     job = client.post("/api/jobs", json={"pipeline": "echo", "params": {"prompt": "x"}}).json()
     assert wait_for(client, job["id"])["status"] == "done"
+
+
+class Seeded(Echo):
+    """Echo with a seed drawn at validation, and a computed key the client may not send."""
+
+    id = "seeded"
+
+    def validate(self, params, files):
+        if set(params) - {"prompt", "seed", "wait"}:
+            raise ValueError("Unknown parameter")
+        out = dict(super().validate(params, files))
+        out["seed"] = params.get("seed", 1234)
+        out["computed"] = len(params["prompt"])
+        return out
+
+
+def test_jobs_cut_by_a_restart_come_back_interrupted_and_run_again_on_a_click(settings, store):
+    origin = {"Origin": "http://testserver"}
+    pipes = {"echo": Echo(), "seeded": Seeded()}
+    app = create_app(settings, models=store, pipelines=pipes, llm=FakeLlm())
+    with TestClient(app) as c:
+        done = c.post("/api/jobs", json={"pipeline": "echo", "params": {"prompt": "a"}}).json()
+        wait_for(c, done["id"])
+    # A job running when the server stopped: what jobs.json holds at that moment.
+    history = settings.data_dir / "jobs.json"
+    saved = json.loads(history.read_text())
+    saved.append({**saved[0], "id": "job-old-9", "pipeline": "seeded", "status": "running", "outputs": [],
+                  "params": {"prompt": "b", "seed": 1234, "computed": 1}, "request": {"prompt": "b"}})
+    history.write_text(json.dumps(saved))
+
+    app = create_app(settings, models=store, pipelines=pipes, llm=FakeLlm())
+    with TestClient(app) as c:
+        jobs = {j["id"]: j for j in c.get("/api/jobs").json()}
+        assert jobs[done["id"]]["status"] == "done" and not jobs[done["id"]]["interrupted"]
+        lost = c.get("/api/jobs/job-old-9").json()
+        assert lost["status"] == "error" and lost["interrupted"] and "restarted" in lost["error"]
+        # Nothing ran by itself: the lost job waits for a click.
+        assert all(j["status"] != "queued" for j in jobs.values())
+        assert c.post(f"/api/jobs/{done['id']}/retry", headers=origin).status_code == 422
+        assert c.post("/api/jobs/job-old-9/retry").status_code == 403
+        again = c.post("/api/jobs/job-old-9/retry", headers=origin).json()
+        # The parameters as first sent, with the seed the lost job had drawn.
+        assert again["request"] == {"prompt": "b", "seed": 1234} and again["params"]["seed"] == 1234
+        assert wait_for(c, again["id"])["status"] == "done"
+        assert c.get("/api/jobs/job-old-9").json()["retried_as"] == again["id"]
+        assert c.post("/api/jobs/job-old-9/retry", headers=origin).status_code == 422

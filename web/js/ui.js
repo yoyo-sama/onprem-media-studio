@@ -154,6 +154,30 @@ export function initJobs() {
   refreshQueue();
   on("job", onJobEvent);
   setInterval(renderSessionJobs, 1000);
+  showInterrupted();
+}
+
+// Jobs a server restart cut (read back by the server from its job history): listed once
+// with a "Launch again" button. Nothing runs again without that click.
+async function showInterrupted() {
+  let jobs = [];
+  try { jobs = await api.jobs(); } catch { return; }
+  for (const job of jobs.filter(j => j.interrupted && !j.retried_as).slice(-8).reverse()) {
+    const el = document.createElement("div");
+    el.className = "job";
+    el.innerHTML = `<div><strong data-raw></strong><span class="sub"></span></div><button type="button" class="secondary-btn"></button>`;
+    el.querySelector("strong").textContent = job.pipeline;
+    tx(el.querySelector(".sub"), "Cut by a server restart");
+    const btn = tx(el.querySelector("button"), "Launch again");
+    btn.addEventListener("click", () => {
+      el.remove();
+      refreshQueue();
+      runJob(job.pipeline, job.request, { origin: job.origin, label: ["Launched again: {pipeline}", { pipeline: job.pipeline }],
+                                          submit: () => api.retry(job.id) }).catch(warn);
+    });
+    $("jobList").append(el);
+  }
+  refreshQueue();
 }
 
 // A job submitted while a tag is set (`withJobTag`, read when runJob is called) is
@@ -170,9 +194,10 @@ export function withJobTag(tag, fn) {
 }
 
 // `label` and `sub` are [English template, params] pairs, shown translated.
-export async function runJob(pipeline, params, { origin, label, sub = ["", {}] } = {}) {
+// `submit` replaces the plain submission (a job launched again by its id).
+export async function runJob(pipeline, params, { origin, label, sub = ["", {}], submit } = {}) {
   const token = cancelToken, tag = jobTag;
-  const job = await api.submit(pipeline, params, origin);
+  const job = await (submit ? submit() : api.submit(pipeline, params, origin));
   for (const fn of submitHandlers) fn(job, tag);
   const el = document.createElement("div");
   el.className = "job fade-in";

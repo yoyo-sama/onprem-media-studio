@@ -73,10 +73,16 @@ requête LLM.
    FastVideo (H3.md).
 4. Statut : `queued → running → done | error | cancelled`. Chaque changement est poussé sur
    `/api/ws` ; les sorties d'un job terminé sont dans la galerie avant l'envoi de son événement
-   `done`. Les jobs vivent dans la mémoire du serveur : un redémarrage (`docker compose up -d
-   --build`, une mise à jour) perd celui qui tourne. À la reconnexion du socket, une page qui
-   attend encore un job que le serveur ne connaît plus (404) le marque en échec (« the server
-   restarted during this job ») au lieu de garder sa dernière progression indéfiniment. Une carte
+   `done`. Un redémarrage (`docker compose up -d --build`, une mise à jour) coupe le job en cours
+   et ceux en file. Les 200 derniers jobs sont gardés dans `STUDIO_DATA_DIR/jobs.json`, écrit à
+   chaque changement de statut : après un redémarrage, un job qui était en file ou en cours est
+   relu en échec avec `interrupted: true` (« the server restarted during this job »), et la file
+   de jobs du Studio l'affiche avec un bouton « Relancer » (`POST /api/jobs/{id}/retry` : mêmes
+   paramètres que ceux envoyés au départ, même seed). Il ne repart jamais tout seul. Les
+   identifiants de job portent un préfixe propre à chaque démarrage (`job-<6 hex>-<n>`) : une page
+   ne confond jamais un nouveau job avec celui qu'elle attendait. À la reconnexion du socket, une
+   page qui attend encore un job lit son état, en échec si un redémarrage l'a coupé, au lieu de
+   garder sa dernière progression indéfiniment. Une carte
    de l'assistant enregistrée comme en cours avant le démarrage du serveur est relue en échec pour
    la même raison, et son bouton fonctionne de nouveau.
 

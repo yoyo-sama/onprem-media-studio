@@ -2,9 +2,17 @@
 
 A job exists only because a client posted it: nothing in the backend creates
 one on its own (LESSONS.md, "nothing renders without a click").
+
+The last jobs are kept in STUDIO_DATA_DIR/jobs.json, written at each change of
+status. After a restart they are listed again; a job the restart cut (queued or
+running) is read back as failed and `interrupted`, and runs again only on a click
+(`retry`), never by itself.
 """
 
 import itertools
+import json
+import os
+import tempfile
 import queue
 import re
 import secrets
@@ -21,6 +29,8 @@ from .pipelines import Pipeline
 
 Listener = Callable[[dict], None]
 ORIGIN = re.compile(r"[a-z0-9_-]{1,40}")
+HISTORY = 200  # jobs kept in jobs.json
+INTERRUPTED = "the server restarted during this job, which was lost: launch it again"
 
 
 class Cancelled(Exception):
@@ -47,6 +57,13 @@ class Job:
     created: float = field(default_factory=time.time)
     started: float | None = None
     finished: float | None = None
+    # Cut by a restart (read back from jobs.json); `retried_as` names the job its
+    # "launch again" click submitted.
+    interrupted: bool = False
+    retried_as: str | None = None
+    # The parameters as the client sent them, before validate() normalised them: what
+    # "launch again" submits (normalised ones hold computed keys a pipeline refuses).
+    request: dict = field(default_factory=dict)
 
     def public(self) -> dict:
         return asdict(self)
@@ -77,7 +94,8 @@ class JobContext:
 
 
 class JobQueue:
-    def __init__(self, pipelines: dict[str, Pipeline], models: ModelStore, files: FileStore):
+    def __init__(self, pipelines: dict[str, Pipeline], models: ModelStore, files: FileStore,
+                 history: Path | None = None):
         self.pipelines = pipelines
         self.models = models
         self.files = files
@@ -91,6 +109,13 @@ class JobQueue:
         self._boot = secrets.token_hex(3)
         self._ids = itertools.count(1)
         self._held_until = 0.0
+        # Status changes and the worker's pick of the next job happen under this lock:
+        # a cancel at the moment a job starts can no longer report "cancelled" for a job
+        # that runs.
+        self._lock = threading.RLock()
+        self.history = history
+        self._saved: dict[str, str] = {}
+        self._restore()
         self._worker = threading.Thread(target=self._run, name="job-worker", daemon=True)
 
     def start(self) -> None:
@@ -101,8 +126,45 @@ class JobQueue:
 
     def emit(self, job: Job) -> None:
         event = {"type": "job", "job": job.public()}
+        if self._saved.get(job.id) != job.status:
+            self._save()
         for listener in list(self.listeners):
             listener(event)
+
+    # ── History ──
+
+    def _restore(self) -> None:
+        if self.history is None:
+            return
+        try:
+            saved = json.loads(self.history.read_text())
+        except (OSError, ValueError):
+            return
+        for item in saved if isinstance(saved, list) else []:
+            try:
+                job = Job(**item)
+            except TypeError:
+                continue  # written by another version
+            if job.status in ("queued", "running"):
+                job.status, job.error, job.interrupted = "error", INTERRUPTED, True
+                job.finished = job.finished or time.time()
+            self.jobs[job.id] = job
+        self._save()
+
+    def _save(self) -> None:
+        if self.history is None:
+            return
+        with self._lock:
+            jobs = list(self.jobs.values())[-HISTORY:]
+            self._saved = {j.id: j.status for j in jobs}
+            try:
+                self.history.parent.mkdir(parents=True, exist_ok=True)
+                fd, tmp = tempfile.mkstemp(dir=self.history.parent, prefix=".jobs-")
+                with os.fdopen(fd, "w") as f:
+                    json.dump([j.public() for j in jobs], f, ensure_ascii=False)
+                os.replace(tmp, self.history)
+            except OSError as exc:
+                print(f"jobs: history not written: {exc}", flush=True)
 
     def hold(self, seconds: float) -> None:
         """Refuse new jobs for `seconds` (0 lifts it). The Docker updater holds the queue
@@ -123,28 +185,52 @@ class JobQueue:
             raise KeyError(f"Unknown pipeline: {pipeline}")
         if origin is not None and not ORIGIN.fullmatch(origin):
             raise ValueError("origin must be 1 to 40 lowercase letters, digits, '-' or '_'")
+        request = params
         params = self.pipelines[pipeline].validate(params, self.files)
-        job = Job(id=f"job-{self._boot}-{next(self._ids)}", pipeline=pipeline, params=params, origin=origin)
-        self.jobs[job.id] = job
-        self._pending.put(job.id)
+        job = Job(id=f"job-{self._boot}-{next(self._ids)}", pipeline=pipeline, params=params, origin=origin,
+                  request=request)
+        with self._lock:
+            self.jobs[job.id] = job
+            self._pending.put(job.id)
         self.emit(job)
         return job
 
+    def retry(self, job_id: str) -> Job:
+        """Submit an interrupted job again, same pipeline, parameters (seed included) and
+        origin: the user's click on "launch again". Once only."""
+        old = self.jobs[job_id]
+        if not old.interrupted:
+            raise ValueError("Only a job interrupted by a restart can be launched again this way")
+        if old.retried_as:
+            raise ValueError(f"Already launched again as {old.retried_as}")
+        request = dict(old.request)
+        if old.params.get("seed") is not None and request.get("seed") is None:
+            request["seed"] = old.params["seed"]  # the seed the lost job drew: the same render
+        job = self.submit(old.pipeline, request, old.origin)
+        old.retried_as = job.id
+        self._save()
+        return job
+
     def cancel(self, job_id: str) -> Job:
-        job = self.jobs[job_id]
-        if job.status == "queued":
-            job.status, job.finished = "cancelled", time.time()
-            self.emit(job)
-        elif job.status == "running":
-            self.cancel_requests.add(job_id)
+        with self._lock:
+            job = self.jobs[job_id]
+            if job.status == "queued":
+                job.status, job.finished = "cancelled", time.time()
+            elif job.status == "running":
+                self.cancel_requests.add(job_id)
+                return job
+            else:
+                return job
+        self.emit(job)
         return job
 
     def _run(self) -> None:
         while (job_id := self._pending.get()) is not None:
             job = self.jobs[job_id]
-            if job.status != "queued":
-                continue
-            job.status, job.started = "running", time.time()
+            with self._lock:
+                if job.status != "queued":
+                    continue
+                job.status, job.started = "running", time.time()
             self.emit(job)
             ctx = JobContext(job, self)
             try:

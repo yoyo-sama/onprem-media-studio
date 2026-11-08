@@ -48,6 +48,7 @@ export const api = {
   job: id => get(`/api/jobs/${encodeURIComponent(id)}`),
   submit: (pipeline, params, origin) => post("/api/jobs", { pipeline, params, origin }),
   cancel: id => post(`/api/jobs/${encodeURIComponent(id)}/cancel`),
+  retry: id => post(`/api/jobs/${encodeURIComponent(id)}/retry`),
   // Raw image bytes in, {ref, width, height} out: `ref` goes in a job's image fields.
   upload: blob => call("POST", "/api/inputs", undefined, blob),
   chat: body => post("/api/llm/chat", body),

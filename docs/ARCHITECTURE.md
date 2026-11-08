@@ -70,10 +70,15 @@ request.
    engines call it at every denoising step, so a cancel stops a render within one step. The video
    engines interrupt FastVideo directly (H3.md).
 4. Status: `queued → running → done | error | cancelled`. Every change is pushed on `/api/ws`;
-   a finished job's outputs are in the gallery before its `done` event is sent. Jobs live in the
-   server's memory: a restart (`docker compose up -d --build`, an update) loses the running one.
-   When the socket reconnects, a page still waiting for a job the server no longer knows (404)
-   marks it as failed with "the server restarted during this job", instead of keeping its last
+   a finished job's outputs are in the gallery before its `done` event is sent. A restart
+   (`docker compose up -d --build`, an update) cuts the running job and the queued ones. The last
+   200 jobs are kept in `STUDIO_DATA_DIR/jobs.json`, written at each change of status: after a
+   restart, a job that was queued or running is read back as failed with `interrupted: true`
+   ("the server restarted during this job"), and the Studio's job queue lists it with a "Launch
+   again" button (`POST /api/jobs/{id}/retry`: same parameters as first sent, same seed). It
+   never runs again by itself. Job ids carry a per-start prefix (`job-<6 hex>-<n>`), so a page
+   never mistakes a new job for the one it waited on. When the socket reconnects, a page still
+   waiting for a job reads its state, failed if a restart cut it, instead of keeping its last
    progress forever. An assistant card stored as running before the server started is read
    back as failed for the same reason, so its button works again.
 

@@ -87,7 +87,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     files = FileStore(settings.input_dir, settings.output_dir)
     models = models or ModelStore(settings)
     llm = llm or LlamaServer(settings, models)
-    jobs = JobQueue(REGISTRY if pipelines is None else pipelines, models, files)
+    jobs = JobQueue(REGISTRY if pipelines is None else pipelines, models, files, settings.data_dir / "jobs.json")
     gallery = Gallery(settings.output_dir, settings.data_dir, settings.gallery_scan)
     clients: set[asyncio.Queue] = set()
     loop: asyncio.AbstractEventLoop | None = None
@@ -211,6 +211,20 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     def submit_job(req: JobRequest):
         try:
             return jobs.submit(req.pipeline, req.params, req.origin).public()
+        except Held as exc:
+            raise HTTPException(503, str(exc))
+        except KeyError as exc:
+            raise HTTPException(404, str(exc.args[0]))
+        except ValueError as exc:
+            raise HTTPException(422, str(exc))
+
+    @app.post("/api/jobs/{job_id}/retry", status_code=201, dependencies=[Depends(same_origin)])
+    def retry_job(job_id: str):
+        """Launch again, on the user's click, a job a restart cut: same parameters and seed."""
+        if job_id not in jobs.jobs:
+            raise HTTPException(404, f"Unknown job: {job_id}")
+        try:
+            return jobs.retry(job_id).public()
         except Held as exc:
             raise HTTPException(503, str(exc))
         except KeyError as exc:
