@@ -12,6 +12,9 @@ from pathlib import Path
 class Pipeline:
     id: str = ""
     models: list[str] = []  # catalog ids, downloaded before run() if missing
+    # False for the CPU jobs (montage): they run on their own worker, beside the GPU one,
+    # instead of waiting behind a render they do not need.
+    gpu: bool = True
 
     def validate(self, params: dict, files) -> dict:
         """Reject bad parameters at submission time, before the job is queued, and

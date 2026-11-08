@@ -9,7 +9,7 @@ conception : [adr/](adr/).
 navigateur ──HTTP/WS──> studio (FastAPI, :8090)
                           ├─ /api/models   catalogue + téléchargement (huggingface_hub)
                           ├─ /api/inputs   envoi d'image, de vidéo ou de son → référence pour les jobs
-                          ├─ /api/jobs     file → un worker GPU → pipelines (diffusers, FastVideo)
+                          ├─ /api/jobs     file → un worker GPU → pipelines (diffusers, FastVideo) ; jobs CPU sur un second worker
                           ├─ /api/llm      llama-server (Gemma 4 26B-A4B, 127.0.0.1:8095)
                           ├─ /api/chat     assistant de création : rôles, conversations, cartes
                           ├─ /api/gallery  index des sorties : recherche, miniatures, tags, corbeille
@@ -33,25 +33,25 @@ requête LLM.
 | `studio/catalog.json` | Tous les modèles téléchargeables : dépôt, fichiers, licence, accès restreint, qualifié |
 | `studio/models.py` | `ModelStore` : état installé, téléchargement fichier par fichier avec reprise, contrôle du disque |
 | `studio/import14.py` | `python -m studio.import14` : reprend les modèles et les LoRA H3 d'une installation 1.4 (fichiers identiques, fragments reconstruits, contrôlés par SHA-256) |
-| `studio/jobs.py` | `JobQueue` : soumission, worker unique, progression, annulation, événements |
+| `studio/jobs.py` | `JobQueue` : soumission, un worker GPU et un worker CPU (jobs de montage, `Pipeline.gpu = False`), progression, annulation, événements, historique dans `jobs.json` |
 | `studio/files.py` | `FileStore` : images envoyées, références `inputs/…` et `outputs/…` |
 | `studio/pipelines/` | Contrat `Pipeline` et registre ; une sous-classe par moteur |
 | `studio/pipelines/krea2.py`, `qwen.py`, `moss.py` | Moteurs d'image (Krea 2, Qwen Image 2.1, MOSS-Image) : [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/h3.py` | Moteurs vidéo (MiniMax H3 : texte, image, première/dernière image et références vers vidéo), géométrie et plan d'affinage : [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | Adaptateur FastVideo : recettes Spark, profil NVFP4, sortie latente et réglages de la passe d'affinage, annulation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | Upscaler latent H3 (convolutions 3D, checkpoint LBH v1) et pile de LoRA (fusion exacte en une seule branche parallèle) |
-| `studio/pipelines/montage.py` | Jobs CPU sur des fichiers rendus, avec ffmpeg et Pillow : `video-concat` (clips bout à bout), `image-grid` (planche contact), `video-frames` (images proches de la fin d'un clip, pour les transitions du Relay) |
+| `studio/pipelines/montage.py` | Jobs CPU sur des fichiers rendus, avec ffmpeg et Pillow : `video-concat` (clips bout à bout), `image-grid` (planche contact), `video-frames` (images proches de la fin d'un clip, pour les transitions du Relay) ; ils tournent sur le worker CPU, jamais derrière un rendu |
 | `studio/pipelines/upscale.py` | `upscale-2x` : une image ou une vidéo deux fois plus grande par le réseau SPAN, sur un clic de la galerie : [IMAGE-ENGINES.md](IMAGE-ENGINES.md#résolution-2) |
 | `studio/pipelines/common.py` | Contrôle des paramètres, pipelines gardés en mémoire (le moins récemment utilisé libéré quand le suivant ne tient pas), progression par étape, sortie PNG |
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |
-| `studio/llm.py` | `LlamaServer` : démarrage à la demande (contexte de 32k, un emplacement), appel chat OpenAI, appel en flux avec outils, vision par images base64 ; arrêté quand un moteur H3 a besoin de la mémoire |
+| `studio/llm.py` | `LlamaServer` : démarrage à la demande (contexte de 32k, un emplacement), appel chat OpenAI, appel en flux avec outils, vision par images base64 ; arrêté quand un moteur H3 a besoin de la mémoire, et avant chaque rendu r2v |
 | `studio/gallery.py` | `Gallery` : index SQLite/FTS5 des sorties, miniatures, tags, favoris, renommage, corbeille : [GALLERY.md](GALLERY.md) |
 | `studio/update.py`, `loras.py` | Mise à jour depuis l'interface (avance rapide git et redémarrage sur place, ou transmise au service updater sous Docker) et téléversement de LoRA : [GALLERY.md](GALLERY.md) |
 | `docker/updater/server.py` | Le service `updater` de `compose.yaml` : pull, reconstruction de l'image, conteneur du studio recréé une fois la file vide : [GALLERY.md](GALLERY.md#docker-docker-compose) |
 | `studio/assistant/` | Assistant de création : registre des rôles (`roles.py`, rôles livrés dans `roles/*.md`), outils et leurs vérifications (`tools.py`), routage, tours et conversations (`chat.py`, `/api/chat`, `/api/roles`, `/api/chats`) : [ASSISTANT.md](ASSISTANT.md) |
 | `studio/instructions.py` | Consignes Gemma remplacées depuis l'interface, gardées dans `STUDIO_DATA_DIR/instructions.json` (`/api/instructions`) ; celles par défaut vivent dans `web/js/prompts.js` |
 | `studio/guard.py` | Contrôle de même origine des routes qui déplacent ou écrivent des fichiers |
-| `studio/main.py` | API HTTP/WebSocket et fichiers statiques ; `/api/health` donne l'application, le GPU, la mémoire, l'état du LLM et le nombre de jobs en file |
+| `studio/main.py` | API HTTP/WebSocket et fichiers statiques ; `/api/health` donne l'application, le GPU, la mémoire, l'état du LLM, le nombre de jobs en file et de téléchargements de modèles hors job, et si la file est en attente d'une mise à jour |
 | `web/index.html`, `web/canvas.html` | Front end : le Studio et le Canvas, portés de la 1.4, sans étape de build : [FRONTEND.md](FRONTEND.md) |
 | `web/js/prompts.js` | Compilateurs de prompts et consignes Gemma de la 1.4, une seule copie pour les deux pages (les prompts sont compilés côté front, ADR 0001) |
 | `tools/parity-prompts.js`, `tools/prompt-systems.js` | Tests de non-régression du front contre la 1.4 : parité des prompts et consigne Gemma par moteur : [FRONTEND.md](FRONTEND.md#tests) |
@@ -73,10 +73,16 @@ requête LLM.
    FastVideo (H3.md).
 4. Statut : `queued → running → done | error | cancelled`. Chaque changement est poussé sur
    `/api/ws` ; les sorties d'un job terminé sont dans la galerie avant l'envoi de son événement
-   `done`. Les jobs vivent dans la mémoire du serveur : un redémarrage (`docker compose up -d
-   --build`, une mise à jour) perd celui qui tourne. À la reconnexion du socket, une page qui
-   attend encore un job que le serveur ne connaît plus (404) le marque en échec (« the server
-   restarted during this job ») au lieu de garder sa dernière progression indéfiniment. Une carte
+   `done`. Un redémarrage (`docker compose up -d --build`, une mise à jour) coupe le job en cours
+   et ceux en file. Les 200 derniers jobs sont gardés dans `STUDIO_DATA_DIR/jobs.json`, écrit à
+   chaque changement de statut : après un redémarrage, un job qui était en file ou en cours est
+   relu en échec avec `interrupted: true` (« the server restarted during this job »), et la file
+   de jobs du Studio l'affiche avec un bouton « Relancer » (`POST /api/jobs/{id}/retry` : mêmes
+   paramètres que ceux envoyés au départ, même seed). Il ne repart jamais tout seul. Les
+   identifiants de job portent un préfixe propre à chaque démarrage (`job-<6 hex>-<n>`) : une page
+   ne confond jamais un nouveau job avec celui qu'elle attendait. À la reconnexion du socket, une
+   page qui attend encore un job lit son état, en échec si un redémarrage l'a coupé, au lieu de
+   garder sa dernière progression indéfiniment. Une carte
    de l'assistant enregistrée comme en cours avant le démarrage du serveur est relue en échec pour
    la même raison, et son bouton fonctionne de nouveau.
 

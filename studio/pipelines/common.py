@@ -164,6 +164,13 @@ def load(key, build, size: int = 0, alone: bool = False):
     return _resident[key]
 
 
+def free_llm(reason: str) -> None:
+    """Stop the LLM before a render that needs its memory (the LOW_MEMORY hooks); the next
+    LLM request starts it again."""
+    if any([hook() for hook in LOW_MEMORY]):
+        print(f"engine: LLM stopped to leave its memory to {reason}", flush=True)
+
+
 def _name(key) -> str:
     return " ".join(map(str, key)) if isinstance(key, tuple) else str(key)
 

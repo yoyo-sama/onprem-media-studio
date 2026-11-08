@@ -22,6 +22,11 @@ node tools/qualify/export_1_4_video_prompts.js ../dellaicontent > tools/qualify/
 python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.json   # image + video renders
 ```
 
+GitHub Actions (`.github/workflows/tests.yml`) runs pytest, the front-end syntax check,
+`prompt-systems.js` and `assistant-ui.js` on every pull request; `parity-prompts.js` runs too
+when the repository secret `DELLAICONTENT_TOKEN` (read access to the private 1.4 repository)
+is set. Renders are qualified on the GB10 only.
+
 Image engines, their parameters and what they guarantee: `docs/IMAGE-ENGINES.md`; MiniMax H3
 video engines (FastVideo, two-pass Ref2VA, NVFP4, LoRA stack): `docs/H3.md`; Studio and
 Canvas front end, its rules and tests: `docs/FRONTEND.md`; creative assistant (chat, roles in
@@ -57,7 +62,10 @@ final prompts; prompt compilers belong to the front end (ADR 0001).
 ## Adding a model or an engine
 
 1. Add the catalog entry (`studio/catalog.json`): exact repository, `allow` patterns, licence as
-   read from the model card (or `"unverified"`), `gated`, `"qualified": false`.
+   read from the model card (or `"unverified"`), `gated`, `"qualified": false`. When it is
+   qualified, pin `revision` to the commit the qualified render used (its `.complete` marker):
+   a test refuses a qualified entry without one. A new Python dependency goes in
+   `docker/constraints.txt` at the version qualified.
 2. Write a `Pipeline` subclass in `studio/pipelines/`, `register()` it, list its catalog ids in
    `models`, validate parameters in `validate()` (and return them normalised), import its module
    at the bottom of `studio/pipelines/__init__.py`. Import torch and diffusers inside functions.

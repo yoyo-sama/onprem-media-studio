@@ -422,6 +422,21 @@ export const DICT = {
     es: "Control creativo",
     de: "Kreative Steuerung",
   },
+  "Cut by a server restart": {
+    fr: "Coupé par un redémarrage du serveur",
+    es: "Interrumpido por un reinicio del servidor",
+    de: "Durch einen Serverneustart abgebrochen",
+  },
+  "Launch again": {
+    fr: "Relancer",
+    es: "Volver a lanzar",
+    de: "Erneut starten",
+  },
+  "Launched again: {pipeline}": {
+    fr: "Relancé : {pipeline}",
+    es: "Relanzado: {pipeline}",
+    de: "Erneut gestartet: {pipeline}",
+  },
   "Cut enrichment unavailable ({error}): edited prompt kept.": {
     fr: "Enrichissement du cut indisponible ({error}) : prompt modifié conservé.",
     es: "Enriquecimiento del corte no disponible ({error}): prompt editado conservado.",

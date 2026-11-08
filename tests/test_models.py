@@ -15,11 +15,20 @@ def test_catalog_entries_are_complete(store):
         assert isinstance(entry["qualified"], bool)
 
 
+def test_qualified_models_are_pinned_to_the_commit_qualified(store):
+    """A new upstream commit must change nothing until it is qualified again (LESSONS #49)."""
+    for entry in store.catalog.values():
+        if entry["qualified"]:
+            assert len(entry.get("revision", "")) == 40, entry["id"]
+
+
 def test_download_fetches_only_allowed_files_and_marks_complete(store, fetch):
     path = store.download("gemma4-26b-a4b")
     assert sorted(fetch.calls) == ["gemma-4-26B-A4B-it-Q4_0.gguf", "mmproj-gemma-4-26B-A4B-it-Q8_0.gguf"]
     assert store.installed("gemma4-26b-a4b")
-    assert json.loads((path / MARKER).read_text()) == {"repo": "ggml-org/gemma-4-26B-A4B-it-GGUF", "revision": "abc123"}
+    # The commit the catalog pins, recorded with the files.
+    assert json.loads((path / MARKER).read_text()) == {"repo": "ggml-org/gemma-4-26B-A4B-it-GGUF",
+                                                       "revision": store.catalog["gemma4-26b-a4b"]["revision"]}
 
 
 def test_installed_model_is_not_downloaded_again(store, fetch):

@@ -135,11 +135,18 @@ aucun port ; le studio le joint à `STUDIO_UPDATER_URL` (`http://updater:8091`) 
   `{updated, from, to, rebuilding}`, puis en arrière-plan :
   1. `docker compose build studio` : le studio reste utilisable pendant ce temps, et garde la
      version précédente si le build échoue ;
-  2. attend que la file du studio soit vide (`/api/health`, toutes les 10 s) : un job lancé pendant
-     le build n'est pas coupé ;
+  2. met en attente la file du studio (`POST /api/update/hold` : les nouveaux jobs sont refusés
+     en 503 avec un message ; l'attente est renouvelée toutes les 10 s et tombe d'elle-même après
+     60 s si l'updater s'arrête) et attend qu'aucun job ne soit en file ou en cours et qu'aucun
+     modèle ne se télécharge (`/api/health`, toutes les 10 s) : un job lancé pendant le build n'est
+     pas coupé, et aucun ne peut démarrer entre le dernier contrôle et le redémarrage (LESSONS
+     n° 48) ;
   3. `docker compose up -d --no-deps --no-build studio` : le conteneur est recréé sur la nouvelle
      image, avec le même volume de données ;
   4. supprime l'image précédente dès que plus rien ne l'utilise.
+
+  L'updater ne se reconstruit jamais lui-même : après une mise à jour qui modifie
+  `docker/updater/`, lance une fois `docker compose up -d --build updater` dans le dossier du dépôt.
 
   La page suit `state`, affiche la dernière ligne du build et se recharge quand le nouveau studio
   répond.

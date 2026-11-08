@@ -51,21 +51,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -r
 COPY --from=llama /opt/llama /opt/llama
 COPY --from=fastvideo /wheels /wheels
 WORKDIR /app
-COPY docker/fastvideo-requirements.txt ./docker/
+COPY docker/fastvideo-requirements.txt docker/constraints.txt ./docker/
 # torch comes from the base image: never let pip replace it with a generic wheel.
 # The pip installs below are constrained to the torch, torchvision and triton
-# builds the base image ships (on top of any constraint the base image sets).
+# builds the base image ships (on top of any constraint the base image sets), and to
+# the exact versions the engines were qualified with (docker/constraints.txt).
 RUN pip list --format=freeze | grep -iE '^(torch|torchvision|torchaudio|triton|pytorch-triton)==' \
         > /etc/studio-base-constraints.txt \
  && cat /etc/studio-base-constraints.txt
-RUN export PIP_CONSTRAINT="${PIP_CONSTRAINT:+$PIP_CONSTRAINT }/etc/studio-base-constraints.txt" \
+RUN export PIP_CONSTRAINT="${PIP_CONSTRAINT:+$PIP_CONSTRAINT }/etc/studio-base-constraints.txt /app/docker/constraints.txt" \
  && pip install --no-cache-dir --no-deps /wheels/*.whl \
  && pip install --no-cache-dir -r docker/fastvideo-requirements.txt \
  && rm -rf /wheels
 COPY pyproject.toml ./
 COPY studio ./studio
 COPY web ./web
-RUN export PIP_CONSTRAINT="${PIP_CONSTRAINT:+$PIP_CONSTRAINT }/etc/studio-base-constraints.txt" \
+RUN export PIP_CONSTRAINT="${PIP_CONSTRAINT:+$PIP_CONSTRAINT }/etc/studio-base-constraints.txt /app/docker/constraints.txt" \
  && pip install --no-cache-dir ".[inference]"
 # The commit the image is built from: the updater service passes it (docker/updater) and
 # compares it with the repository; a build by hand leaves it empty. Last, so a new value

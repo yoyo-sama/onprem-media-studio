@@ -87,13 +87,15 @@ class LlamaServer:
             self.models.ensure([self.model_id])
             began = time.time()
             try:
-                self.proc = subprocess.Popen(self.command())
+                self.proc = proc = subprocess.Popen(self.command())
             except FileNotFoundError as exc:
                 raise LlmError(f"llama-server not found ({self.settings.llama_server})") from exc
             deadline = time.time() + self.startup_timeout
             while time.time() < deadline:
-                if self.proc.poll() is not None:
-                    raise LlmError(f"llama-server exited with code {self.proc.returncode}")
+                # `proc`, not self.proc: stop() may run meanwhile from the job worker (a video
+                # engine needing the memory) and clear self.proc.
+                if proc.poll() is not None:
+                    raise LlmError(f"llama-server exited with code {proc.returncode}")
                 try:
                     if httpx.get(f"{self.url}/health", timeout=2).status_code == 200:
                         print(f"llm: {self.model_id} loaded in {time.time() - began:.1f} s", flush=True)
@@ -104,14 +106,17 @@ class LlamaServer:
             self.stop()
             raise LlmError(f"llama-server not ready after {self.startup_timeout:.0f} s")
 
-    def stop(self) -> None:
-        if self.proc and self.proc.poll() is None:
-            self.proc.terminate()
-            try:
-                self.proc.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                self.proc.kill()
-        self.proc = None
+    def stop(self) -> bool:
+        """Stop llama-server; True when it was running."""
+        proc, self.proc = self.proc, None
+        if proc is None or proc.poll() is not None:
+            return False
+        proc.terminate()
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        return True
 
     def chat(self, system: str, prompt: str, images: list[str] | None = None,
              json_mode: bool = True, temperature: float = 0.7) -> str:
@@ -132,7 +137,10 @@ class LlamaServer:
         # prompt compiled (44 to 81 s measured on the GB10). The compilers want the answer.
         body["chat_template_kwargs"] = {"enable_thinking": False}
         began = time.time()
-        resp = httpx.post(f"{self.url}/v1/chat/completions", json=body, timeout=300)
+        try:
+            resp = httpx.post(f"{self.url}/v1/chat/completions", json=body, timeout=300)
+        except httpx.HTTPError as exc:
+            raise LlmError(f"llama-server did not answer: {exc}") from exc
         if resp.status_code != 200:
             raise LlmError(f"llama-server answered {resp.status_code}: {resp.text[:300]}")
         data = resp.json()
@@ -158,7 +166,14 @@ class LlamaServer:
 
     def _stream(self, body: dict, budget: int | None = None) -> Iterator[tuple[str, object]]:
         """One streamed request; returns True when it was stopped for thinking past `budget`
-        before writing anything."""
+        before writing anything. A connection lost on the way (llama-server stopped for a
+        video engine, or crashed) raises LlmError, which the assistant reports in the turn."""
+        try:
+            return (yield from self._stream_once(body, budget))
+        except httpx.HTTPError as exc:
+            raise LlmError(f"llama-server stopped answering: {exc}") from exc
+
+    def _stream_once(self, body: dict, budget: int | None) -> Iterator[tuple[str, object]]:
         calls: dict[int, dict] = {}
         began, timings, finish, thought, wrote = time.time(), None, None, 0, False
         with httpx.stream("POST", f"{self.url}/v1/chat/completions", json=body, timeout=300) as resp:

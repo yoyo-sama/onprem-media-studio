@@ -1,0 +1,57 @@
+# Checks that need no GPU, on every pull request and on main: the unit tests, the
+# front-end scripts, the Gemma instruction routing and the assistant's "no job without a
+# click" bench (headless Chromium), and, when the DELLAICONTENT_TOKEN secret can read the
+# private 1.4 repository, the prompt compilers' parity with 1.4. Renders are qualified on
+# the GB10 only (AGENTS.md).
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: pip install -e ".[dev]"
+      - run: python -m pytest -q
+
+  front-end:
+    runs-on: ubuntu-24.04
+    env:
+      HAS_1_4: ${{ secrets.DELLAICONTENT_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Syntax of the front-end scripts
+        run: for f in web/js/*.js tools/*.js; do node --check "$f"; done
+      - name: Playwright and its Chromium
+        run: |
+          npm install -g playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Gemma instruction per engine
+        run: NODE_PATH=$(npm root -g) node tools/prompt-systems.js
+      - name: Assistant mode, no job without a click
+        run: NODE_PATH=$(npm root -g) node tools/assistant-ui.js
+      - name: 1.4 checkout for the parity test
+        if: env.HAS_1_4 == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: yoyo-sama/dellaicontent
+          token: ${{ secrets.DELLAICONTENT_TOKEN }}
+          path: dellaicontent
+          fetch-depth: 0
+      - name: Prompt compilers equal to 1.4
+        if: env.HAS_1_4 == 'true'
+        run: node tools/parity-prompts.js dellaicontent

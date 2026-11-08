@@ -86,13 +86,40 @@ class Conversations:
         return conv
 
     def save(self, conv: dict) -> None:
-        conv["updated"] = _now()
+        """Write a conversation a turn kept in memory. A turn lasts as long as Gemma's
+        answer, and the browser may report a card's render meanwhile (`update`): a card
+        whose state on disk is newer than the turn's copy keeps the disk's state and
+        arguments, merged into `conv` too, so the next save of the same turn keeps them."""
         with self._lock:
-            self.folder.mkdir(parents=True, exist_ok=True)
-            fd, tmp = tempfile.mkstemp(dir=self.folder, prefix=".chat-")
-            with os.fdopen(fd, "w") as f:
-                json.dump(conv, f, ensure_ascii=False)
-            os.replace(tmp, self.path(conv["id"]))
+            try:
+                stored = json.loads(self.path(conv["id"]).read_text())
+            except (OSError, ValueError):
+                stored = None
+            if stored:
+                newer = {c["id"]: c for m in stored.get("messages", []) for c in m.get("cards") or []}
+                for m in conv["messages"]:
+                    for card in m.get("cards") or []:
+                        disk = newer.get(card["id"])
+                        if disk and disk.get("changed", 0) > card.get("changed", 0):
+                            card.update({k: disk[k] for k in ("state", "args", "changed") if k in disk})
+            self._write(conv)
+
+    def update(self, cid: str, change) -> dict:
+        """Load, change and write a conversation as one step, so that a turn's save cannot
+        fall between the load and the write. `change(conv)` returns what update returns."""
+        with self._lock:
+            conv = self.load(cid)
+            out = change(conv)
+            self._write(conv)
+            return out
+
+    def _write(self, conv: dict) -> None:
+        conv["updated"] = _now()
+        self.folder.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=self.folder, prefix=".chat-")
+        with os.fdopen(fd, "w") as f:
+            json.dump(conv, f, ensure_ascii=False)
+        os.replace(tmp, self.path(conv["id"]))
 
     def listing(self) -> list[dict]:
         out = []
@@ -338,7 +365,7 @@ class Assistant:
             card = find_card(conv, answer_to)
             if card["tool"] != "ask_choices":
                 raise ChatError(f"{answer_to} is not a question")
-            card["state"] = {"status": "answered", "answer": text}
+            card["state"], card["changed"] = {"status": "answered", "answer": text}, time.time()
         atts = []
         for ref in attachments:
             atts.append({"id": f"A{conv['next_attachment']}", "ref": ref})
@@ -428,7 +455,7 @@ class Assistant:
 
     def _card(self, conv: dict, call: dict) -> dict | None:
         card = {"id": f"C{conv['next_card']}", "tool": call["name"], "call_id": call["id"],
-                "args": {}, "warnings": [], "state": {"status": "proposed"}}
+                "args": {}, "warnings": [], "state": {"status": "proposed"}, "changed": time.time()}
         try:
             if call["name"] == "handoff":
                 raise T.ToolError("one handoff per answer, to another known role")
@@ -499,7 +526,10 @@ def update_card(conversations: Conversations, files: FileStore, cid: str, card_i
     """The browser reports what became of a card: running, done with its outputs, error…"""
     if not CARD_ID.fullmatch(card_id):
         raise ChatError(f"Unknown card: {card_id}")
-    conv = conversations.load(cid)
+    return conversations.update(cid, lambda conv: _set_card(conv, files, card_id, body))
+
+
+def _set_card(conv: dict, files: FileStore, card_id: str, body: dict) -> dict:
     card = find_card(conv, card_id)
     status = body.get("status")
     if status not in CARD_STATUSES:
@@ -519,8 +549,7 @@ def update_card(conversations: Conversations, files: FileStore, cid: str, card_i
     if isinstance(body.get("args"), dict) and card["tool"] in T.GENERATION_TOOLS:
         # The user edited the card before running it: what ran is what the model must know.
         card["args"], _ = T.normalize(card["tool"], body["args"], lambda r: known_id(conv, r))
-    card["state"] = state
-    conversations.save(conv)
+    card["state"], card["changed"] = state, time.time()
     return card
 
 

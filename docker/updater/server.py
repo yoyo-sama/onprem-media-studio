@@ -12,7 +12,9 @@ and checks the job queue first.
 - `POST /apply` refuses another branch and local changes, fast-forwards, then in
   the background: builds the image (the studio keeps working meanwhile), waits
   until no job is queued or running, recreates the studio container, and removes
-  the previous image once nothing uses it.
+  the previous image once nothing uses it. From the wait to the restart, the studio
+  refuses new jobs (`POST /api/update/hold`): a click in that window would be
+  accepted, then killed by the restart.
 
 git runs as the owner of the repository, never as root (a root-owned object in
 .git breaks the user's own git). Python standard library only.
@@ -36,6 +38,9 @@ STUDIO_URL = os.environ.get("UPDATER_STUDIO_URL", "http://studio:8090")
 PORT = int(os.environ.get("UPDATER_PORT", "8091"))
 STATUS_TTL = 60
 JOB_POLL = 10  # seconds between two looks at the studio's queue before the restart
+# The studio refuses new jobs while held; renewed on every look, so it lapses on its own
+# if this service stops (studio/jobs.py JobQueue.hold).
+HOLD_SECONDS = 60
 LABEL = "studio.commit"
 TOKEN_HINT = ("If the repository is private, put a GitHub token that can read it in .env "
               "(STUDIO_GIT_TOKEN=...), then run docker compose up -d once.")
@@ -201,12 +206,26 @@ class Updater:
         return proc.wait()
 
     def busy(self) -> int | None:
-        """Jobs queued or running in the studio, None when it does not answer."""
+        """Jobs queued or running in the studio, plus models it downloads outside a job;
+        None when it does not answer."""
         try:
             with urllib.request.urlopen(self.studio_url + "/api/health", timeout=10) as r:
-                return int(json.load(r).get("queue", 0))
-        except (OSError, ValueError):
+                health = json.load(r)
+            return int(health.get("queue", 0)) + int(health.get("downloads", 0))
+        except (OSError, ValueError, AttributeError):
             return None
+
+    def hold(self, seconds: float) -> None:
+        """Ask the studio to refuse new jobs for `seconds` (0 lifts it). Best effort: a
+        studio that does not answer has no job to protect. Origin names the studio itself,
+        as its same-origin check of write routes expects."""
+        request = urllib.request.Request(
+            self.studio_url + "/api/update/hold", data=json.dumps({"seconds": seconds}).encode(), method="POST",
+            headers={"Content-Type": "application/json", "Origin": self.studio_url})
+        try:
+            urllib.request.urlopen(request, timeout=10).close()
+        except OSError as exc:
+            self._say(f"Could not hold the studio's queue: {exc}")
 
     def _rebuild(self, args: list[str], commit: str, old: dict | None) -> None:
         try:
@@ -216,13 +235,16 @@ class Updater:
                 raise UpdateError(500, f"The image build failed (exit {code}); the studio keeps running "
                                        "the previous version. Details: docker compose logs updater")
             self.state = "waiting"
+            self.hold(HOLD_SECONDS)
             while (n := self.busy()):
                 self._say(f"Waiting for {n} job(s) to finish before restarting the studio")
                 time.sleep(JOB_POLL)
+                self.hold(HOLD_SECONDS)
             self.state = "restarting"
             self._say("Restarting the studio")
             code = self._compose(args, "up", "-d", "--no-deps", "--no-build", self.service, commit=commit)
             if code != 0:
+                self.hold(0)
                 raise UpdateError(500, f"Restarting the studio failed (exit {code}). Details: docker compose logs updater")
             if old and old["image"]:
                 # The previous image is left untagged by the build: drop it once its container is
