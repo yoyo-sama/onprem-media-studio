@@ -300,6 +300,12 @@ comparer la qualité, pas les pixels.
   style » ; gouache MOSS : « moss_vgouache_style », que MOSS peut aussi écrire dans l'image). Les
   LoRA Krea 2 de la 1.4 ne sont pas importées par `studio.import14` : les envoyer depuis le panneau
   Modèles.
+  Trois autres fichiers dans des dispositions que diffusers manque (krea_2_Unlocked_V3 en noms
+  kohya, Qwen_2.1_Unlocked_V1 avec alphas, Qwen_2.1-Unchained-V1 avec un `gate_up` fusionné) se
+  rendent depuis `normalized`. Unchained à la force 1 assombrit l'image et laisse une fine trame de
+  points ; à 0,5, ou sans ses clés `gate_up`, l'image est propre. La séparation suit le modèle
+  Qwen Image 2.1 de ComfyUI (`[gate; up]`, `comfy/ldm/qwen_image21/model.py`) et diffusers ;
+  l'outil qui a entraîné le fichier est inconnu, donc l'ordre qu'il attend n'est pas tranché.
 - **Qwen Image 2.1 avec Lightning (2026-11-07) :** banc sur promaxgb10-95c7, 5 cas × 3 seeds :
   identité des deux sujets des planches gardée dans chaque image de plan ; plus de contraste et de
   saturation que la base à 25 étapes, et des structures parasites en texte vers image (2 seeds sur 3).

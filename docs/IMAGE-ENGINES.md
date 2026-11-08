@@ -279,6 +279,12 @@ Only then set `"qualified": true` for the model in `studio/catalog.json`. Seeds 
   trigger words in the prompt (retroanime: "Purple retro anime style"; MOSS gouache:
   "moss_vgouache_style", which MOSS may also write into the image). The 1.4 Krea 2 LoRAs are not
   imported by `studio.import14`: upload them from the Models panel.
+  Three more files in layouts diffusers misses (krea_2_Unlocked_V3 in kohya names,
+  Qwen_2.1_Unlocked_V1 with alphas, Qwen_2.1-Unchained-V1 with a fused `gate_up`) render since
+  `normalized`. Unchained at strength 1 darkens the image and leaves a fine dot grid; at 0.5, or
+  without its `gate_up` keys, it is clean. The split follows ComfyUI's Qwen Image 2.1 model
+  (`[gate; up]`, `comfy/ldm/qwen_image21/model.py`) and diffusers; the tool the file was trained
+  with is unknown, so whether it expects the other order is not settled.
 - **Qwen Image 2.1 with Lightning (2026-11-07):** benched on promaxgb10-95c7, 5 cases × 3 seeds:
   identity of both sheet subjects kept in every shot image; more contrast and saturation than
   the 25-step base, and stray structures in text to image (2 seeds out of 3). Renders through
