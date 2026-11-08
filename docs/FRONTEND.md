@@ -48,6 +48,13 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
   one 1.4 sent.
 - **The brief belongs to the user.** Examples are placeholders, never values; an empty brief
   starts nothing.
+- **"→ Use as input" follows the pipeline on screen** (images and clips, gallery card or
+  lightbox). Sequence: the image joins the sequence. A pipeline with an input image (Image2Image,
+  Image2Video): it becomes the input. Reference to video: the image or clip joins the reference
+  list; Qwen 2.1 storyboard: the image does. Text2Video opens Image2Video with the image, any
+  other pipeline Image2Image. A clip that the pipeline cannot take is refused with a message.
+  The form is never left for another pipeline when the one shown can take the item, and no job
+  starts.
 - **The user's prompt goes verbatim**; anchoring blocks and sheet skeletons are re-appended by
   code, never sent through Gemma.
 - **One Gemma instruction per model.** `Prompts.briefEnrichSystem(workflow)` routes the ✨

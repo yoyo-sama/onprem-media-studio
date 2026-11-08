@@ -402,6 +402,16 @@ export const DICT = {
     es: "Primer plano",
     de: "Nahaufnahme",
   },
+  "A clip cannot be attached to a message: attach an image.": {
+    fr: "Une vidéo ne peut pas être jointe à un message : joins une image.",
+    es: "Un vídeo no se puede adjuntar a un mensaje: adjunta una imagen.",
+    de: "Ein Video kann nicht an eine Nachricht angehängt werden: Häng ein Bild an.",
+  },
+  "This pipeline takes no clip: a clip is a reference of “Consistent character + setting”.": {
+    fr: "Ce pipeline ne prend pas de vidéo : une vidéo sert de référence dans « Personnage + décor cohérents ».",
+    es: "Este pipeline no admite vídeos: un vídeo sirve de referencia en «Personaje + decorado coherentes».",
+    de: "Diese Pipeline nimmt kein Video: Ein Video dient als Referenz in „Konsistente Figur + Schauplatz“.",
+  },
   "Consistent character + setting (MiniMax H3)": {
     fr: "Personnage + décor cohérents (MiniMax H3)",
     es: "Personaje + decorado coherentes (MiniMax H3)",

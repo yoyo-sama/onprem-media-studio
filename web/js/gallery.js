@@ -221,10 +221,8 @@ function cardFor(a) {
   if (trashed) actions.append(button("Restore", null, () => restore([card._asset])));
   else {
     actions.append(button(video ? "▶ Play" : "⤢ Enlarge", null, () => openLightbox(card._asset)));
-    if (!video) {
-      actions.append(button("→ Use as input", null, () => hooks.useAsInput?.(card._asset)));
-      actions.append(button("➕ Sequence", "Add to the multi-image sequence", () => hooks.addToSequence?.(card._asset)));
-    }
+    actions.append(button("→ Use as input", null, () => hooks.useAsInput?.(card._asset)));
+    if (!video) actions.append(button("➕ Sequence", "Add to the multi-image sequence", () => hooks.addToSequence?.(card._asset)));
     actions.append(button("★", "Favourite", () => setFavs([card._asset], !card._asset.fav), "fav-btn"));
     actions.append(button("🗑", "Delete from the gallery", () => remove([card._asset])));
   }
@@ -470,7 +468,6 @@ function renderMeta() {
   set("lbWeight", a.size != null ? t("{n} MB", { n: new Intl.NumberFormat(LANG, { maximumFractionDigits: a.size < 1048576 ? 3 : 1 }).format(a.size / 1048576) }) : null);
   set("lbDate", a.ts ? new Intl.DateTimeFormat(LANG, { dateStyle: "long", timeStyle: "medium" }).format(a.ts) : null);
   set("lbPath", a.key);
-  $("lbUse").hidden = video;
   $("lbReuse").disabled = !prompt || !full;
   $("lbTags").replaceChildren(...(a.tags || []).map(name => {
     const chip = document.createElement("span"), nameBtn = document.createElement("button"), x = document.createElement("button");

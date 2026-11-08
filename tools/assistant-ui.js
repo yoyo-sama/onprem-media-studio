@@ -9,7 +9,8 @@
 // it; "Open in the Studio" switches to the Studio and fills the form, starting nothing (Undo
 // puts the brief back); a choice button answers the question; "Launch the director" switches
 // to the Studio, fills the form and starts the director; a reference-to-video clip plays in
-// the director, whose button then regenerates it. With a folder, screenshots of the
+// the director, whose button then regenerates it; the gallery's "→ Use as input" goes to the
+// pipeline on screen (r2v references, sequence, input image) and starts nothing. With a folder, screenshots of the
 // assistant in light and dark at 390, 768, 1250 and 1440 px.
 // Exit 0 = all green, 1 = a check failed.
 "use strict";
@@ -43,6 +44,11 @@ const CARDS = [
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
+const GALLERY_IMAGE = { key: "krea2-t2i/g1.png", filename: "g1.png", folder: "krea2-t2i", type: "image", url: "/outputs/krea2-t2i/g1.png",
+  ref: "outputs/krea2-t2i/g1.png", thumb: "/outputs/krea2-t2i/g1.png", ts: 1, prompt: "a lighthouse", pipeline: "krea2-t2i",
+  origin: "studio", loras: [], seed: 1, w: 1, h: 1, duration: null, size: 1, fav: false, tags: [], app: true, trash: null };
+const GALLERY_VIDEO = { ...GALLERY_IMAGE, key: "h3-t2v/v1.mp4", filename: "v1.mp4", folder: "h3-t2v", type: "video",
+  url: "/outputs/h3-t2v/v1.mp4", ref: "outputs/h3-t2v/v1.mp4", pipeline: "h3-t2v", duration: 5 };
 (async () => {
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${server.address().port}/`;
@@ -113,7 +119,10 @@ const CARDS = [
       return json(c);
     }
     if ((m = /^\/api\/chats\/([^/]+)$/.exec(p))) return conv ? json(conv) : json({ detail: "Unknown" }, 404);
-    if (p === "/api/gallery/assets") return json({ items: [], next: null, counts: { image: 0, video: 0 } });
+    if (p === "/api/gallery/assets") {
+      const video = new URL(req.url()).searchParams.get("type") === "video";
+      return json({ items: [video ? GALLERY_VIDEO : GALLERY_IMAGE], next: null, counts: { image: 1, video: 1 } });
+    }
     return json({ detail: "x" }, 404);
   });
   // Images the director reads back (sheets handed over by a card).
@@ -383,6 +392,48 @@ const CARDS = [
     "Studio r2v: not one job with the four references in order: " + JSON.stringify(jS));
   check(pS.includes("\n<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n")
     && pS.includes("summary:\n[reference generation + audio reference] "), "Studio r2v: prompt: " + pS);
+  // "→ Use as input" from the gallery goes to the pipeline on screen: in reference to
+  // video an image or a clip joins the references and reaches the job; in the sequence,
+  // the sequence; with an input image field, the input; Text2Video opens Image2Video,
+  // Text2Image opens Image2Image; a clip elsewhere is refused. No job but Generate.
+  const useBtn = '.output-panel #galleryBlock .asset-actions button:has-text("→ Utiliser en entrée")';
+  const galleryTab = type => page.$eval(type === "video" ? "#tabVideos" : "#tabImages", b => b.click());
+  const use = () => page.$eval(useBtn, b => b.click());
+  const beforeU = jobs.length;
+  await use();
+  await galleryTab("video");
+  await page.waitForTimeout(400);
+  await use();
+  await page.waitForTimeout(300);
+  check(await page.inputValue("#pipelineSelect") === "reference2video" && await page.isHidden("#assetChip")
+    && JSON.stringify(await tags()) === JSON.stringify(["Sujet 1", "Sujet 2", "Vidéo 1", "Son 1", "Sujet 3", "Vidéo 2"]),
+    "Use as input in r2v did not add the image and the clip: " + await page.inputValue("#pipelineSelect") + " " + JSON.stringify(await tags()));
+  check(jobs.length === beforeU, "Use as input submitted a job");
+  await page.click("#generateBtn");
+  for (let i = 0; i < 50 && jobs.length === beforeU; i++) await page.waitForTimeout(200);
+  check(jobs.length === beforeU + 1 && JSON.stringify(jobs[beforeU].params.references) === JSON.stringify(
+    ["inputs/att.png", "inputs/att.png", "inputs/clip.mp4", "inputs/voice.wav", "outputs/krea2-t2i/g1.png", "outputs/h3-t2v/v1.mp4"]),
+    "r2v job without the gallery image and clip: " + JSON.stringify(jobs[beforeU]?.params.references));
+  const afterU = jobs.length;
+  await page.selectOption("#pipelineSelect", "text2image");
+  await use();
+  check(await page.inputValue("#pipelineSelect") === "text2image" && await page.isHidden("#assetChip"), "a clip changed Text2Image");
+  await galleryTab("image");
+  await page.waitForTimeout(400);
+  await page.selectOption("#pipelineSelect", "sequence");
+  const seqN = async () => (await page.$$("#seqList > *")).length, seq0 = await seqN();
+  await use();
+  check(await page.inputValue("#pipelineSelect") === "sequence" && await seqN() === seq0 + 1, "Use as input in the sequence");
+  await page.selectOption("#pipelineSelect", "text2video");
+  await use();
+  check(await page.inputValue("#pipelineSelect") === "image2video" && await page.isVisible("#assetChip"), "Use as input in t2v did not open i2v");
+  await page.click("#assetChipClear");
+  await page.selectOption("#pipelineSelect", "text2image");
+  await use();
+  check(await page.inputValue("#pipelineSelect") === "image2image" && await page.isVisible("#assetChip"), "Use as input in t2i did not open i2i");
+  check(jobs.length === afterU, "Use as input submitted a job");
+  await page.click("#assetChipClear");
+  await page.selectOption("#pipelineSelect", "reference2video");
   await page.$eval("#skipSheetsToggle", el => { el.checked = false; el.dispatchEvent(new Event("change", { bubbles: true })); });
   // MOSS-Image: the Mode field shows for that engine only (Standard on a card that has
   // none), and the chosen mode reaches the job.

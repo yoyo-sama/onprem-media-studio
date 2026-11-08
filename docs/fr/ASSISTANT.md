@@ -17,7 +17,7 @@ prompt et réglages remplis. Rien ne part en rendu avant le clic de l'utilisateu
   restent dans la liste, et « ＋ Nouvelle conversation » ramène à l'accueil à tout moment.
 - **Bibliothèque** : le bouton « Bibliothèque » ouvre la file de jobs et la galerie à côté du chat
   (par-dessus sur un téléphone). Une image de la galerie utilisée depuis l'assistant (« → Utiliser
-  en entrée », ou glissée sur le chat) devient une pièce jointe du prochain message ; « Réutiliser
+  en entrée », ou glissée sur le chat) devient une pièce jointe du prochain message (une vidéo est refusée : les pièces jointes sont des images) ; « Réutiliser
   le prompt » le copie dans la zone de message, avec Annuler.
 - **Personnage** : un petit personnage animé (`web/js/mascot.js`) accueille l'utilisateur et
   montre ce que fait l'assistant : il écoute pendant la saisie, réfléchit jusqu'au début de la

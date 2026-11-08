@@ -166,6 +166,26 @@ function setSelectedAsset(a) {
   log("req", "{name} chosen as the input image.", { name: a.filename });
 }
 function clearSelectedAsset() { selectedAsset = null; $("assetChip").hidden = true; }
+// "→ Use as input" from the gallery goes to the pipeline on screen: the sequence, the
+// input image, or the reference list (reference to video also takes clips). A pipeline
+// with none of them opens its image counterpart (Image2Video from Text2Video, else
+// Image2Image) with the image; a clip it cannot take is refused. No job either way.
+function useAsInput(a) {
+  const video = a.type === "video", ctx = F.refCtx();
+  if (!video && F.hasControl("seq")) {
+    if (addSeqImage({ name: a.filename, ref: a.ref })) notice(true, "{name} added to the sequence ({n}/{max}).", { name: a.filename, n: seqImages.length, max: SEQ_MAX });
+  } else if (!video && F.hasControl("image")) setSelectedAsset(a);
+  else if (ctx && (!video || ctx === "r2v")) {
+    const before = F.refList().length;
+    addRefs([{ name: a.filename, ref: a.ref }]);
+    if (F.refList().length > before) notice(true, "{name} added ({n}/{max}).", { name: a.filename, n: F.refList().length, max: refMax() });
+  } else if (video) notice(false, "This pipeline takes no clip: a clip is a reference of “Consistent character + setting”.");
+  else {
+    $("pipelineSelect").value = F.currentPipeline() === "text2video" ? "image2video" : "image2image";
+    updateModelOptions();
+    setSelectedAsset(a);
+  }
+}
 
 async function inputImageRef() {
   if (selectedAsset) return selectedAsset.ref;
@@ -441,6 +461,7 @@ function dropZone(el, { max = () => 1, count = () => 0, put, putAsset, media = (
     chain = chain.then(() => handle(files, asset)).catch(warn);
   });
 }
+const refMax = () => F.refCtx() === "r2v" ? Object.values(F.R2V_MEDIA_CAPS).reduce((a, b) => a + b, 0) : F.REF_CAPS[F.refCtx()] || 0;
 function initDrops() {
   dropZone($("imageInputWrap"), { put: f => setInputFile($("imageInput"), f), putAsset: setSelectedAsset });
   dropZone($("lastImageWrap"), { put: f => setInputFile($("lastImageInput"), f) });
@@ -452,7 +473,7 @@ function initDrops() {
   dropZone($("refDropZone"), {
     // Reference to video: clips and sounds too, capped per media by addRefs.
     media: () => F.refCtx() === "r2v",
-    max: () => F.refCtx() === "r2v" ? Object.values(F.R2V_MEDIA_CAPS).reduce((a, b) => a + b, 0) : F.REF_CAPS[F.refCtx()] || 0,
+    max: refMax,
     count: () => F.refList().length,
     put: f => addRefs([{ name: f.name, blob: f }]),
     putAsset: a => addRefs([{ name: a.filename, ref: a.ref }]),
@@ -1028,7 +1049,8 @@ function boot() {
   setMode(initialMode());
   initGallery({
     // From the assistant, a gallery image goes to the chat; from the Studio, to the form.
-    useAsInput: a => (inAssistant() ? attachAsset(a) : setSelectedAsset(a)),
+    useAsInput: a => (!inAssistant() ? useAsInput(a)
+      : a.type === "video" ? notice(false, "A clip cannot be attached to a message: attach an image.") : attachAsset(a)),
     addToSequence: a => { if (addSeqImage({ name: a.filename, ref: a.ref })) notice(true, "{name} added to the sequence ({n}/{max}).", { name: a.filename, n: seqImages.length, max: SEQ_MAX }); },
     reusePrompt: a => {
       if (inAssistant()) { chatReusePrompt(a.prompt); return; }
