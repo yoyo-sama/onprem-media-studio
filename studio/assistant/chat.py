@@ -45,6 +45,9 @@ class ChatError(ValueError):
     pass
 
 
+LOST_JOB = "the server restarted during this job, which was lost: launch it again"
+
+
 def _now() -> float:
     return round(time.time(), 3)
 
@@ -55,6 +58,8 @@ class Conversations:
     def __init__(self, folder: Path):
         self.folder = folder
         self._lock = threading.Lock()
+        # Jobs live in the server's memory: a card left running before this start lost its job.
+        self.started = time.time()
 
     def path(self, cid: str) -> Path:
         if not CONV_ID.fullmatch(cid or ""):
@@ -68,9 +73,17 @@ class Conversations:
 
     def load(self, cid: str) -> dict:
         try:
-            return json.loads(self.path(cid).read_text())
+            conv = json.loads(self.path(cid).read_text())
         except (OSError, ValueError) as exc:
             raise ChatError(f"Unknown conversation: {cid}") from exc
+        # Without this, a card whose render was lost to a restart stayed running, its
+        # button disabled for good.
+        for m in conv["messages"]:
+            for card in m.get("cards") or []:
+                st = card.get("state") or {}
+                if st.get("status") == "running" and st.get("since", 0) < self.started:
+                    card["state"] = {"status": "error", "error": LOST_JOB}
+        return conv
 
     def save(self, conv: dict) -> None:
         conv["updated"] = _now()
@@ -497,6 +510,8 @@ def update_card(conversations: Conversations, files: FileStore, cid: str, card_i
     for ref in outputs:
         files.resolve(ref)
     state = {"status": status}
+    if status == "running":
+        state["since"] = time.time()
     if outputs:
         state["outputs"] = outputs
     if body.get("error"):

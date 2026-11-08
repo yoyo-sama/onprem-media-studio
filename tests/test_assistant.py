@@ -302,6 +302,18 @@ def test_card_results_feed_the_reference_table(tmp_path, files):
         C.update_card(a.conversations, files, conv["id"], "C1", {"status": "won"})
 
 
+def test_card_left_running_by_a_restart_fails(tmp_path, files):
+    llm = ScriptedLlm(streams=[[tool("create_image", {"prompt": "a fox"})]])
+    a = make(tmp_path, files, llm)
+    conv, _ = run(a, {"text": "go", "role": "assistant"})
+    C.update_card(a.conversations, files, conv["id"], "C1", {"status": "running"})
+    assert C.find_card(a.conversations.load(conv["id"]), "C1")["state"]["status"] == "running"
+    # A new server: the render was lost with the old one's memory.
+    later = C.Conversations(tmp_path / "chats")
+    later.started += 1
+    assert C.find_card(later.load(conv["id"]), "C1")["state"] == {"status": "error", "error": C.LOST_JOB}
+
+
 def test_history_alternates_and_merges(tmp_path, files):
     conv = C.Conversations(tmp_path).new("assistant")
     conv["messages"] = [
@@ -340,7 +352,7 @@ def test_chat_api(settings, store):
         assert [e["type"] for e in events] == ["conversation", "role", "text", "card", "done"]
         assert c.get("/api/chats").json()[0]["id"] == cid
         assert c.get(f"/api/chats/{cid}").json()["title"] == "a fox"
-        assert c.post(f"/api/chats/{cid}/cards/C1", json={"status": "running"}, headers=SAME_ORIGIN).json()["state"] == {"status": "running"}
+        assert c.post(f"/api/chats/{cid}/cards/C1", json={"status": "running"}, headers=SAME_ORIGIN).json()["state"]["status"] == "running"
         assert c.post(f"/api/chats/{cid}/cards/C7", json={"status": "running"}, headers=SAME_ORIGIN).status_code == 404
         assert c.post(f"/api/chats/{cid}/cards/C1", json={"status": "launched"}, headers=SAME_ORIGIN).json()["state"] == {"status": "launched"}
         assert c.post(f"/api/chats/{cid}/cards/C1", json={"status": "flying"}, headers=SAME_ORIGIN).status_code == 422

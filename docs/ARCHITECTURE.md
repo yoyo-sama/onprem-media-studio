@@ -70,7 +70,12 @@ request.
    engines call it at every denoising step, so a cancel stops a render within one step. The video
    engines interrupt FastVideo directly (H3.md).
 4. Status: `queued → running → done | error | cancelled`. Every change is pushed on `/api/ws`;
-   a finished job's outputs are in the gallery before its `done` event is sent.
+   a finished job's outputs are in the gallery before its `done` event is sent. Jobs live in the
+   server's memory: a restart (`docker compose up -d --build`, an update) loses the running one.
+   When the socket reconnects, a page still waiting for a job the server no longer knows (404)
+   marks it as failed with "the server restarted during this job", instead of keeping its last
+   progress forever. An assistant card stored as running before the server started is read
+   back as failed for the same reason, so its button works again.
 
 No code path creates a job by itself.
 

@@ -73,7 +73,12 @@ requête LLM.
    FastVideo (H3.md).
 4. Statut : `queued → running → done | error | cancelled`. Chaque changement est poussé sur
    `/api/ws` ; les sorties d'un job terminé sont dans la galerie avant l'envoi de son événement
-   `done`.
+   `done`. Les jobs vivent dans la mémoire du serveur : un redémarrage (`docker compose up -d
+   --build`, une mise à jour) perd celui qui tourne. À la reconnexion du socket, une page qui
+   attend encore un job que le serveur ne connaît plus (404) le marque en échec (« the server
+   restarted during this job ») au lieu de garder sa dernière progression indéfiniment. Une carte
+   de l'assistant enregistrée comme en cours avant le démarrage du serveur est relue en échec pour
+   la même raison, et son bouton fonctionne de nouveau.
 
 Aucun chemin de code ne crée un job de lui-même.
 
