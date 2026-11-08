@@ -50,8 +50,7 @@ def _edit_images(params: dict, files) -> dict:
     out = {"subjects": common.image_refs(params, "subjects", files, 1, MAX_SUBJECTS)}
     if "setting" not in params:
         raise ValueError("setting is required with subjects: a shot needs its setting sheet")
-    files.resolve(params["setting"])
-    out["setting"] = params["setting"]
+    out["setting"] = common.image_ref(params["setting"], "setting", files)
     out["references"] = common.image_refs(params, "references", files, 0, QWEN21_MAX_REFS)
     return out
 

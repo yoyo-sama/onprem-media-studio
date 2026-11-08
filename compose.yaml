@@ -16,7 +16,8 @@ services:
     environment:
       # Optional, needed for gated models (Krea 2). Put it in .env, never here.
       HF_TOKEN: ${HF_TOKEN:-}
-      STUDIO_APP_NAME: ${STUDIO_APP_NAME:-OnPrem Media Studio}
+      # Empty: the name set in studio/config.py (APP_NAME).
+      STUDIO_APP_NAME: ${STUDIO_APP_NAME:-}
       # LLM of the assistant and the enrichments (catalog id; gemma4-26b-a4b is the only one).
       STUDIO_LLM_MODEL: ${STUDIO_LLM_MODEL:-gemma4-26b-a4b}
       # In-app update: the updater service below.

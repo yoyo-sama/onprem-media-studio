@@ -67,6 +67,24 @@ def image_refs(params: dict, key: str, files, low: int, high: int) -> list[str]:
     return refs
 
 
+def image_ref(ref, key: str, files) -> str:
+    """One image reference: an existing file with an image extension, else ValueError."""
+    files.resolve(ref)
+    if media_kind(ref) != "image":
+        raise ValueError(f"{key}: {ref} is not an image")
+    return ref
+
+
+def image_size(path: Path) -> tuple[int, int]:
+    """Width and height of an image file; ValueError when it is not a readable image."""
+    from PIL import Image, UnidentifiedImageError
+    try:
+        with Image.open(path) as img:
+            return img.size
+    except (UnidentifiedImageError, OSError) as exc:
+        raise ValueError(f"{path.name} is not a readable image") from exc
+
+
 def fit_area(width: int, height: int, area: int = 1024 * 1024, multiple: int = 32) -> tuple[int, int]:
     """About `area` pixels at the ratio of width×height, rounded to `multiple` (1.4 formula)."""
     ratio = width / height
@@ -83,10 +101,6 @@ def fit_area(width: int, height: int, area: int = 1024 * 1024, multiple: int = 3
 # not fit. An H3 video engine is loaded alone: its peak (text encoder, references,
 # upscaler, VAE decode) goes far past its weights, and with Qwen kept next to it a
 # two-pass r2v left 11 GB free on the GB10.
-_resident: dict[object, object] = {}
-# Called when a pipeline loaded alone still does not fit once every other pipeline
-# is freed: the app registers the LLM server's stop here.
-LOW_MEMORY: list = []
 RESERVE = 16 * 1024**3  # left free next to the weights for the render's activations
 
 
@@ -137,53 +151,69 @@ def from_pretrained(cls, path: Path, **given):
     return cls.from_pretrained(path, torch_dtype=torch.bfloat16, disable_mmap=True, **parts).to(device())
 
 
+class EnginePool:
+    """The engines kept in memory, least recently used first, and the memory policy:
+    before building one, the least recently used are freed until its weights plus
+    RESERVE fit in free memory, or all of them when it must run alone; when nothing is
+    left to free, it is built anyway. `low_memory` holds the hooks that stop the LLM
+    (each returns whether it stopped something)."""
+
+    def __init__(self):
+        self.resident: dict = {}
+        self.low_memory: list = []
+
+    def load(self, key, build, size: int = 0, alone: bool = False):
+        """The resident engine for `key`, built on first use."""
+        if key in self.resident:
+            self.resident[key] = self.resident.pop(key)  # now the most recently used
+            return self.resident[key]
+        began, freed = time.time(), []
+        # Blocks the last render left in torch's cache count as used: given back first, so an
+        # engine is not freed for room that was only cached (Qwen was freed for Krea 2 on the
+        # GB10 with 55 GB available once the cache was empty).
+        _empty_cache()
+        while self.resident and (alone or free_memory() < size + RESERVE):
+            freed.append(next(iter(self.resident)))
+            self.free(freed[-1])
+        if alone and self.low_memory and free_memory() < size + RESERVE:
+            for hook in self.low_memory:
+                hook()
+        self.resident[key] = build()
+        # One line per load in the container log (`docker logs studio | grep engine:`):
+        # a slow job is often a model loaded again.
+        print(f"engine: {_name(key)} loaded in {time.time() - began:.1f} s"
+              + (f", after freeing {', '.join(map(_name, freed))}" if freed else ""), flush=True)
+        return self.resident[key]
+
+    def free_llm(self, reason: str) -> None:
+        """Stop the LLM before a render that needs its memory; the next LLM request starts it again."""
+        if any([hook() for hook in self.low_memory]):
+            print(f"engine: LLM stopped to leave its memory to {reason}", flush=True)
+
+    def free(self, key) -> None:
+        # close() when there is one: a FastVideo generator owns resources that dropping
+        # a reference does not free.
+        old = self.resident.pop(key)
+        if hasattr(old, "close"):
+            old.close()
+        del old
+        gc.collect()
+        _empty_cache()
+
+
+POOL = EnginePool()
+
+
 def load(key, build, size: int = 0, alone: bool = False):
-    """The resident pipeline for `key`, built on first use. Before building one,
-    the least recently used pipelines are freed until `size` bytes (its weights)
-    plus RESERVE fit in free memory, or all of them when it must run `alone`;
-    when nothing is left to free, it is built anyway."""
-    if key in _resident:
-        _resident[key] = _resident.pop(key)  # now the most recently used
-        return _resident[key]
-    began, freed = time.time(), []
-    # Blocks the last render left in torch's cache count as used: given back first, so a
-    # pipeline is not freed for room that was only cached (Qwen was freed for Krea 2 on
-    # the GB10 with 55 GB available once the cache was empty).
-    _empty_cache()
-    while _resident and (alone or free_memory() < size + RESERVE):
-        freed.append(next(iter(_resident)))
-        _free(freed[-1])
-    if alone and LOW_MEMORY and free_memory() < size + RESERVE:
-        for hook in LOW_MEMORY:
-            hook()
-    _resident[key] = build()
-    # One line per load in the container log (`docker logs studio | grep engine:`):
-    # a slow job is often a model loaded again.
-    print(f"engine: {_name(key)} loaded in {time.time() - began:.1f} s"
-          + (f", after freeing {', '.join(map(_name, freed))}" if freed else ""), flush=True)
-    return _resident[key]
+    return POOL.load(key, build, size, alone)
 
 
 def free_llm(reason: str) -> None:
-    """Stop the LLM before a render that needs its memory (the LOW_MEMORY hooks); the next
-    LLM request starts it again."""
-    if any([hook() for hook in LOW_MEMORY]):
-        print(f"engine: LLM stopped to leave its memory to {reason}", flush=True)
+    POOL.free_llm(reason)
 
 
 def _name(key) -> str:
     return " ".join(map(str, key)) if isinstance(key, tuple) else str(key)
-
-
-def _free(key) -> None:
-    # close() when there is one: a FastVideo generator owns resources that dropping
-    # a reference does not free.
-    old = _resident.pop(key)
-    if hasattr(old, "close"):
-        old.close()
-    del old
-    gc.collect()
-    _empty_cache()
 
 
 def _empty_cache() -> None:
@@ -222,8 +252,7 @@ def step_progress(ctx, steps: int, label: str):
 
 def log_render(key: str, detail: str, began: float, marks: list[float]) -> None:
     """One line per image render in the container log (`grep render:`). The first step
-    is counted with the text encoding: it also holds torch.compile's compilation when
-    the transformer meets a new size (about 20 to 40 s on the GB10)."""
+    is counted with the text encoding (no engine compiles its transformer any more)."""
     total = time.time() - began
     if len(marks) < 2:
         print(f"render: {key} {detail} in {total:.1f} s", flush=True)

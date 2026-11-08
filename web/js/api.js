@@ -66,6 +66,7 @@ export const api = {
   gallery: {
     health: () => get("/api/gallery/health"),
     assets: filters => get(`/api/gallery/assets${query(filters)}`),
+    inputs: filters => get(`/api/gallery/inputs${query(filters)}`),
     asset: key => get(`/api/gallery/asset${query({ key })}`),
     dates: filters => get(`/api/gallery/dates${query(filters)}`),
     facets: scope => get(`/api/gallery/facets${query({ scope })}`),

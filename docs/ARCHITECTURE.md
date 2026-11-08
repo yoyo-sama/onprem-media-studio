@@ -72,7 +72,8 @@ request.
 4. Status: `queued → running → done | error | cancelled`. Every change is pushed on `/api/ws`;
    a finished job's outputs are in the gallery before its `done` event is sent. A restart
    (`docker compose up -d --build`, an update) cuts the running job and the queued ones. The last
-   200 jobs are kept in `STUDIO_DATA_DIR/jobs.json`, written at each change of status: after a
+   200 jobs are kept in `STUDIO_DATA_DIR/jobs.json` (and in memory, with any job still queued or
+   running), written at each change of status: after a
    restart, a job that was queued or running is read back as failed with `interrupted: true`
    ("the server restarted during this job"), and the Studio's job queue lists it with a "Launch
    again" button (`POST /api/jobs/{id}/retry`: same parameters as first sent, same seed). It

@@ -100,6 +100,7 @@ def test_revision_is_pinned(store):
     # MOSS's pipeline code is imported from its model folder: the commit the bench ran.
     for model_id in REGISTRY["moss-image"].models:
         assert len(store.catalog[model_id]["revision"]) == 40
+    store.catalog["gemma4-26b-a4b"].pop("revision", None)
     store.remote_files("gemma4-26b-a4b")
     assert store.api.revisions[-1] is None  # no pin: the latest commit
     store.catalog["gemma4-26b-a4b"]["revision"] = "f972bd4"

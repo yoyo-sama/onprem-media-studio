@@ -18,7 +18,7 @@ def _path(var: str, default: Path) -> Path:
 
 @dataclass(frozen=True)
 class Settings:
-    app_name: str = field(default_factory=lambda: os.environ.get("STUDIO_APP_NAME", APP_NAME))
+    app_name: str = field(default_factory=lambda: os.environ.get("STUDIO_APP_NAME") or APP_NAME)
     data_dir: Path = field(default_factory=lambda: _path("STUDIO_DATA_DIR", Path.home() / ".local/share/studio"))
     host: str = field(default_factory=lambda: os.environ.get("STUDIO_HOST", "0.0.0.0"))
     port: int = field(default_factory=lambda: int(os.environ.get("STUDIO_PORT", "8090")))

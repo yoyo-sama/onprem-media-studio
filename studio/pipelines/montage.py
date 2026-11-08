@@ -29,13 +29,30 @@ MAX_FRAME_OFFSET = 48  # two seconds at 24 fps
 FPS = 24  # every H3 clip
 
 
-def ffmpeg(*args: str, timeout: float = 900) -> str:
+def ffmpeg(*args: str, timeout: float = 900, check=None) -> str:
+    """Run ffmpeg or ffprobe and return its output. `check` (a job's ctx.check) is called
+    twice a second: a cancelled job stops the process instead of waiting up to `timeout`."""
     if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
         raise RuntimeError("ffmpeg is not installed: montage jobs need ffmpeg and ffprobe")
-    done = subprocess.run(args, capture_output=True, timeout=timeout)
-    if done.returncode:
-        raise RuntimeError(f"{args[0]} failed: {done.stderr.decode(errors='replace')[-400:]}")
-    return done.stdout.decode()
+    deadline = time.monotonic() + timeout
+    with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+        while True:
+            try:
+                out, err = proc.communicate(timeout=0.5)
+                break
+            except subprocess.TimeoutExpired:
+                try:
+                    if time.monotonic() > deadline:
+                        raise RuntimeError(f"{args[0]} took more than {timeout:.0f} s")
+                    if check:
+                        check()
+                except BaseException:
+                    proc.kill()
+                    proc.communicate()
+                    raise
+    if proc.returncode:
+        raise RuntimeError(f"{args[0]} failed: {err.decode(errors='replace')[-400:]}")
+    return out.decode()
 
 
 def probe(path: Path) -> dict:
@@ -101,7 +118,7 @@ class VideoConcat(Pipeline):
         args += ["-c:v", "libx264", "-crf", "18", "-preset", "medium", "-pix_fmt", "yuv420p",
                  "-movflags", "+faststart", str(out)]
         ctx.progress(0.2, f"Joining {len(paths)} clips")
-        ffmpeg(*args)
+        ffmpeg(*args, check=ctx.check)
         ctx.check()
         common.tag_video(out, ctx, params)
         return [out]
@@ -164,7 +181,7 @@ class VideoFrames(Pipeline):
         tmp = folder / f"{ctx.job.id}-%02d.png"
         select = "+".join(f"eq(n\\,{i})" for i in sorted(set(wanted)))
         ffmpeg("ffmpeg", "-v", "error", "-y", "-i", str(path), "-vf", f"select='{select}'",
-               "-vsync", "0", str(tmp))
+               "-vsync", "0", str(tmp), check=ctx.check)
         try:
             got = sorted(folder.glob(f"{ctx.job.id}-*.png"))
             by_index = dict(zip(sorted(set(wanted)), got))

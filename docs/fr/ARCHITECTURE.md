@@ -74,7 +74,8 @@ requête LLM.
 4. Statut : `queued → running → done | error | cancelled`. Chaque changement est poussé sur
    `/api/ws` ; les sorties d'un job terminé sont dans la galerie avant l'envoi de son événement
    `done`. Un redémarrage (`docker compose up -d --build`, une mise à jour) coupe le job en cours
-   et ceux en file. Les 200 derniers jobs sont gardés dans `STUDIO_DATA_DIR/jobs.json`, écrit à
+   et ceux en file. Les 200 derniers jobs sont gardés dans `STUDIO_DATA_DIR/jobs.json` (et en
+   mémoire, avec tout job encore en file ou en cours), écrit à
    chaque changement de statut : après un redémarrage, un job qui était en file ou en cours est
    relu en échec avec `interrupted: true` (« the server restarted during this job »), et la file
    de jobs du Studio l'affiche avec un bouton « Relancer » (`POST /api/jobs/{id}/retry` : mêmes

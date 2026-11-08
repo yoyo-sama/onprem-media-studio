@@ -49,6 +49,8 @@ const GALLERY_IMAGE = { key: "krea2-t2i/g1.png", filename: "g1.png", folder: "kr
   origin: "studio", loras: [], seed: 1, w: 1, h: 1, duration: null, size: 1, fav: false, tags: [], app: true, trash: null };
 const GALLERY_VIDEO = { ...GALLERY_IMAGE, key: "h3-t2v/v1.mp4", filename: "v1.mp4", folder: "h3-t2v", type: "video",
   url: "/outputs/h3-t2v/v1.mp4", ref: "outputs/h3-t2v/v1.mp4", pipeline: "h3-t2v", duration: 5 };
+const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.png", folder: "", url: "/inputs/ab12.png",
+  ref: "inputs/ab12.png", thumb: "/inputs/ab12.png", prompt: null, pipeline: null, origin: null, input: true };
 (async () => {
   await new Promise(r => server.listen(0, "127.0.0.1", r));
   const base = `http://127.0.0.1:${server.address().port}/`;
@@ -119,6 +121,7 @@ const GALLERY_VIDEO = { ...GALLERY_IMAGE, key: "h3-t2v/v1.mp4", filename: "v1.mp
       return json(c);
     }
     if ((m = /^\/api\/chats\/([^/]+)$/.exec(p))) return conv ? json(conv) : json({ detail: "Unknown" }, 404);
+    if (p === "/api/gallery/inputs") return json({ items: [INPUT_IMAGE], next: null, counts: { image: 1, video: 0 } });
     if (p === "/api/gallery/assets") {
       const video = new URL(req.url()).searchParams.get("type") === "video";
       return json({ items: [video ? GALLERY_VIDEO : GALLERY_IMAGE], next: null, counts: { image: 1, video: 1 } });
@@ -432,6 +435,21 @@ const GALLERY_VIDEO = { ...GALLERY_IMAGE, key: "h3-t2v/v1.mp4", filename: "v1.mp
   await use();
   check(await page.inputValue("#pipelineSelect") === "image2image" && await page.isVisible("#assetChip"), "Use as input in t2i did not open i2i");
   check(jobs.length === afterU, "Use as input submitted a job");
+  await page.click("#assetChipClear");
+  // "Inputs" lists the files sent to renders, read-only, and goes back to the outputs.
+  await page.click("#galleryInputsBtn");
+  await page.waitForTimeout(400);
+  const gridKeys = () => page.$$eval(".output-panel #galleryGrid .asset", els => els.map(e => e.dataset.key));
+  check(JSON.stringify(await gridKeys()) === '["inputs/ab12.png"]' && await page.isHidden("#gallerySearch")
+    && await page.isHidden("#galleryTrashBtn") && !(await page.$(".output-panel #galleryGrid .asset .fav-btn")),
+    "Inputs view: " + JSON.stringify(await gridKeys()));
+  await use();
+  check(await page.inputValue("#pipelineSelect") === "image2image" && await page.textContent("#assetChipName") === "Galerie : ab12.png",
+    "Use as input from the inputs: " + await page.textContent("#assetChipName"));
+  await page.click("#galleryInputsBtn");
+  await page.waitForTimeout(400);
+  check(JSON.stringify(await gridKeys()) === '["krea2-t2i/g1.png"]' && await page.isVisible("#gallerySearch"), "back from the inputs");
+  check(jobs.length === afterU, "the inputs view submitted a job");
   await page.click("#assetChipClear");
   await page.selectOption("#pipelineSelect", "reference2video");
   await page.$eval("#skipSheetsToggle", el => { el.checked = false; el.dispatchEvent(new Event("change", { bubbles: true })); });
