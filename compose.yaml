@@ -17,7 +17,7 @@ services:
       # Optional, needed for gated models (Krea 2). Put it in .env, never here.
       HF_TOKEN: ${HF_TOKEN:-}
       STUDIO_APP_NAME: ${STUDIO_APP_NAME:-OnPrem Media Studio}
-      # LLM of the assistant and the enrichments: gemma4-26b-a4b (default) or gemma4-e4b (smaller).
+      # LLM of the assistant and the enrichments (catalog id; gemma4-26b-a4b is the only one).
       STUDIO_LLM_MODEL: ${STUDIO_LLM_MODEL:-gemma4-26b-a4b}
       # In-app update: the updater service below.
       STUDIO_UPDATER_URL: http://updater:8091

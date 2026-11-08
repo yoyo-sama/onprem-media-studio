@@ -18,11 +18,15 @@ def test_command_uses_local_model_files(settings, store):
     assert cmd[cmd.index("--parallel") + 1] == "1"
 
 
-def test_smaller_model_by_setting(store, monkeypatch, settings):
-    monkeypatch.setenv("STUDIO_LLM_MODEL", "gemma4-e4b")
+def test_model_by_setting(store, monkeypatch, settings):
+    monkeypatch.setenv("STUDIO_LLM_MODEL", "gemma4-26b-a4b")
     from studio.config import Settings
     cmd = LlamaServer(Settings(), store).command()
-    assert str(store.path("gemma4-e4b") / "gemma-4-E4B-it-Q8_0.gguf") in cmd
+    assert str(store.path("gemma4-26b-a4b") / "gemma-4-26B-A4B-it-Q4_0.gguf") in cmd
+    # Gemma 4 E4B was dropped on 2026-11-07.
+    monkeypatch.setenv("STUDIO_LLM_MODEL", "gemma4-e4b")
+    with pytest.raises(LlmError, match="STUDIO_LLM_MODEL"):
+        LlamaServer(Settings(), store)
     monkeypatch.setenv("STUDIO_LLM_MODEL", "gpt-x")
     with pytest.raises(LlmError, match="STUDIO_LLM_MODEL"):
         LlamaServer(Settings(), store)

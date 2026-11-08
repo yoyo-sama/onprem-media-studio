@@ -11,7 +11,7 @@ class Echo(Pipeline):
     """Test pipeline: writes its prompt to a file; needs the gemma model."""
 
     id = "echo"
-    models = ["gemma4-e4b"]
+    models = ["gemma4-26b-a4b"]
 
     def validate(self, params, files):
         if not params.get("prompt"):
@@ -19,7 +19,7 @@ class Echo(Pipeline):
         return params
 
     def run(self, params, models, ctx):
-        assert models["gemma4-e4b"].is_dir()
+        assert models["gemma4-26b-a4b"].is_dir()
         out = ctx.output_dir / f"{ctx.job.id}.txt"
         for i in range(3):
             if params.get("wait"):
@@ -90,7 +90,7 @@ def test_job_downloads_missing_models_then_renders(client, fetch, settings):
     job = client.post("/api/jobs", json={"pipeline": "echo", "params": {"prompt": "hello"}}).json()
     done = wait_for(client, job["id"])
     assert done["status"] == "done", done
-    assert "gemma-4-E4B-it-Q8_0.gguf" in fetch.calls
+    assert "gemma-4-26B-A4B-it-Q4_0.gguf" in fetch.calls
     assert done["outputs"][0] == f"outputs/{job['id']}.txt"
     assert client.get("/" + done["outputs"][0]).text == "hello"
 
@@ -130,7 +130,7 @@ def test_nothing_runs_without_a_submission(client):
 
 def test_models_endpoint_lists_catalog(client):
     ids = {m["id"] for m in client.get("/api/models").json()}
-    assert {"gemma4-e4b", "krea2-turbo", "qwen-image-2.1", "fasth3-omniref-nvfp4"} <= ids
+    assert {"gemma4-26b-a4b", "krea2-turbo", "qwen-image-2.1", "fasth3-omniref-nvfp4"} <= ids
 
 
 def test_llm_chat(client):

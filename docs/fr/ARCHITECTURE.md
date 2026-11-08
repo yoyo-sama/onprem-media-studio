@@ -104,7 +104,7 @@ output/.trash/...           corbeille de la galerie (purge manuelle)
 | `HF_TOKEN` | — | Dépôts à accès restreint (Krea 2) ; jamais journalisé |
 | `STUDIO_LLAMA_SERVER` | `llama-server` | Chemin du binaire serveur de llama.cpp |
 | `STUDIO_LLM_PORT` | `8095` | Port local de llama-server |
-| `STUDIO_LLM_MODEL` | `gemma4-26b-a4b` | LLM de l'assistant et des enrichissements : `gemma4-26b-a4b` ou `gemma4-e4b` (machines plus petites) |
+| `STUDIO_LLM_MODEL` | `gemma4-26b-a4b` | Id de catalogue du LLM de l'assistant et des enrichissements ; `gemma4-26b-a4b` est le seul |
 | `STUDIO_DISK_RESERVE_GB` | `20` | Espace libre conservé après tout téléchargement |
 | `STUDIO_GALLERY_SCAN` | `60` | Secondes entre deux scans du dossier de sorties par la galerie |
 | `STUDIO_UPDATE_BRANCH` | `main` | Branche suivie par la mise à jour depuis l'interface (bare metal, et le service updater via `.env`) |

@@ -16,47 +16,47 @@ def test_catalog_entries_are_complete(store):
 
 
 def test_download_fetches_only_allowed_files_and_marks_complete(store, fetch):
-    path = store.download("gemma4-e4b")
-    assert sorted(fetch.calls) == ["gemma-4-E4B-it-Q8_0.gguf", "mmproj-gemma-4-E4B-it-Q8_0.gguf"]
-    assert store.installed("gemma4-e4b")
-    assert json.loads((path / MARKER).read_text()) == {"repo": "ggml-org/gemma-4-E4B-it-GGUF", "revision": "abc123"}
+    path = store.download("gemma4-26b-a4b")
+    assert sorted(fetch.calls) == ["gemma-4-26B-A4B-it-Q4_0.gguf", "mmproj-gemma-4-26B-A4B-it-Q8_0.gguf"]
+    assert store.installed("gemma4-26b-a4b")
+    assert json.loads((path / MARKER).read_text()) == {"repo": "ggml-org/gemma-4-26B-A4B-it-GGUF", "revision": "abc123"}
 
 
 def test_installed_model_is_not_downloaded_again(store, fetch):
-    store.download("gemma4-e4b")
+    store.download("gemma4-26b-a4b")
     fetch.calls.clear()
-    store.ensure(["gemma4-e4b"])
+    store.ensure(["gemma4-26b-a4b"])
     assert fetch.calls == []
 
 
 def test_interrupted_download_resumes_missing_files_only(store, fetch):
-    folder = store.path("gemma4-e4b")
+    folder = store.path("gemma4-26b-a4b")
     folder.mkdir(parents=True)
-    (folder / "gemma-4-E4B-it-Q8_0.gguf").write_bytes(b"x" * 100)
-    assert not store.installed("gemma4-e4b")
-    store.download("gemma4-e4b")
-    assert fetch.calls == ["mmproj-gemma-4-E4B-it-Q8_0.gguf"]
+    (folder / "gemma-4-26B-A4B-it-Q4_0.gguf").write_bytes(b"x" * 100)
+    assert not store.installed("gemma4-26b-a4b")
+    store.download("gemma4-26b-a4b")
+    assert fetch.calls == ["mmproj-gemma-4-26B-A4B-it-Q8_0.gguf"]
 
 
 def test_progress_is_reported(store):
     seen = []
-    store.download("gemma4-e4b", lambda frac, msg: seen.append(frac))
+    store.download("gemma4-26b-a4b", lambda frac, msg: seen.append(frac))
     assert seen[-1] == 1.0
     assert seen == sorted(seen)
 
 
 def test_cancel_stops_before_next_file(store, fetch):
     with pytest.raises(ModelError, match="cancelled"):
-        store.download("gemma4-e4b", cancelled=lambda: True)
+        store.download("gemma4-26b-a4b", cancelled=lambda: True)
     assert fetch.calls == []
-    assert not store.installed("gemma4-e4b")
+    assert not store.installed("gemma4-26b-a4b")
 
 
 def test_disk_space_is_checked_before_download(store, fetch, monkeypatch):
     Usage = namedtuple("Usage", "total used free")
     monkeypatch.setattr(models_mod.shutil, "disk_usage", lambda p: Usage(1000, 950, 50))
     with pytest.raises(ModelError, match="Not enough disk space"):
-        store.download("gemma4-e4b")
+        store.download("gemma4-26b-a4b")
     assert fetch.calls == []
 
 
@@ -69,10 +69,10 @@ def test_gated_repository_error_tells_how_to_fix(settings, fetch):
 def test_gated_file_error_is_a_model_error(settings):
     # A gated repository answers model_info without a token, then refuses the files.
     store = ModelStore(settings, api=FakeApi(), fetch=FakeFetch(fail=RuntimeError("401 gated")))
-    store.catalog["gemma4-e4b"]["gated"] = True
+    store.catalog["gemma4-26b-a4b"]["gated"] = True
     with pytest.raises(ModelError, match="HF_TOKEN"):
-        store.download("gemma4-e4b")
-    assert not store.installed("gemma4-e4b")
+        store.download("gemma4-26b-a4b")
+    assert not store.installed("gemma4-26b-a4b")
     assert store.downloading == {}
 
 
@@ -82,11 +82,11 @@ def test_unknown_model(store):
 
 
 def test_pending_bytes_counts_missing_files_only(store, fetch):
-    assert store.pending_bytes("gemma4-e4b") == 110
-    folder = store.path("gemma4-e4b")
+    assert store.pending_bytes("gemma4-26b-a4b") == 110
+    folder = store.path("gemma4-26b-a4b")
     folder.mkdir(parents=True)
-    (folder / "gemma-4-E4B-it-Q8_0.gguf").write_bytes(b"x" * 100)
-    assert store.pending_bytes("gemma4-e4b") == 10
-    store.download("gemma4-e4b")
-    assert store.pending_bytes("gemma4-e4b") == 0
-    assert fetch.calls == ["mmproj-gemma-4-E4B-it-Q8_0.gguf"]
+    (folder / "gemma-4-26B-A4B-it-Q4_0.gguf").write_bytes(b"x" * 100)
+    assert store.pending_bytes("gemma4-26b-a4b") == 10
+    store.download("gemma4-26b-a4b")
+    assert store.pending_bytes("gemma4-26b-a4b") == 0
+    assert fetch.calls == ["mmproj-gemma-4-26B-A4B-it-Q8_0.gguf"]

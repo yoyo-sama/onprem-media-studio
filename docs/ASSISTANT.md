@@ -33,9 +33,9 @@ renders before the user clicks Generate on a card.
 One LLM for everything: **Gemma 4 26B-A4B** (mixture of experts, about 4B parameters active per
 token), GGUF `ggml-org/gemma-4-26B-A4B-it-GGUF`, `Q4_0` (14.6 GB) plus its vision projector
 (`mmproj` Q8_0, 0.8 GB), Apache-2.0. It serves the chat and the ✨ enrichments through the same
-`llama-server` (one process, 32k context, one slot). `STUDIO_LLM_MODEL=gemma4-e4b` goes back to
-Gemma 4 E4B (8 GB) on a smaller machine. Native tool calls go through `llama-server --jinja`
-(Gemma 4's chat template).
+`llama-server` (one process, 32k context, one slot). Qualified on the GB10 on 2026-11-07; Gemma 4
+E4B, the smaller model offered before, was dropped the same day. Native tool calls go through
+`llama-server --jinja` (Gemma 4's chat template).
 
 When an H3 video engine has to load alone and memory is short, the server stops `llama-server`
 first (`common.LOW_MEMORY`); it starts again on the next LLM request.
@@ -158,5 +158,4 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 ## Not yet
 
 - The Canvas has no assistant yet ([ROADMAP.md](ROADMAP.md)).
-- Tool calling, speed and memory next to H3 are to be checked on the GB10 with the 26B model;
-  the optional MTP draft file of the GGUF repository (faster decoding) is not used.
+- The optional MTP draft file of the GGUF repository (faster decoding) is not used.
