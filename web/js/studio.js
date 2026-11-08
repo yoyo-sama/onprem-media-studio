@@ -15,7 +15,7 @@ import {
 import { initModelNotice, showModelNotice } from "./model-notice.js";
 import { initGallery } from "./gallery.js";
 import * as F from "./form.js";
-import { LORA_FOLDERS, renderLoraStack, setLoraFiles } from "./lora-stack.js";
+import { LORA_FOLDERS, folderForName, renderLoraStack, setLoraFiles } from "./lora-stack.js";
 import * as D from "./director.js";
 import * as G from "./generate.js";
 import { CARD_IMAGE_WORKFLOWS, attachAsset, initChat, loadRolePanel, reusePrompt as chatReusePrompt, showAssistant } from "./chat.js";
@@ -813,8 +813,17 @@ async function loadLoras() {
   })));
   renderFormLoras();
 }
+// A file whose name starts with an engine prefix (H3_, Qwen_2.1, Krea_2, Moss_) goes to that
+// engine's folder: the folder select follows it and is locked while that file is chosen.
+function syncLoraFolder() {
+  const file = $("loraFile").files[0], named = file ? folderForName(file.name) : null;
+  if (named) $("loraFolderSelect").value = named;
+  $("loraFolderSelect").disabled = !!named;
+  $("loraUploadStatus").textContent = named ? t("Goes to the {engine} folder (from its name).", { engine: LORA_FOLDERS[named] || named }) : "";
+}
 async function uploadLoraFile() {
-  const file = $("loraFile").files[0], folder = $("loraFolderSelect").value, status = $("loraUploadStatus");
+  const file = $("loraFile").files[0], status = $("loraUploadStatus");
+  const folder = (file && folderForName(file.name)) || $("loraFolderSelect").value;
   if (!file) { log("warn", "No LoRA file selected."); return; }
   if (!file.name.toLowerCase().endsWith(".safetensors")) { log("warn", "{name} refused: a .safetensors file is required.", { name: file.name }); return; }
   $("loraUploadBtn").disabled = true;
@@ -823,6 +832,7 @@ async function uploadLoraFile() {
     log("ok", "LoRA {name} uploaded.", { name: file.name });
     $("loraFile").value = "";
     loadLoras();
+    syncLoraFolder();
   } catch (err) { log("warn", "LoRA upload failed: {error}", { error: err.message }); }
   finally { status.textContent = ""; $("loraUploadBtn").disabled = false; }
 }
@@ -1021,6 +1031,7 @@ function initForm() {
   $("cancelProjectBtn").addEventListener("click", () => cancelProject($("cancelProjectBtn")));
   $("studioCancelBtn").addEventListener("click", () => cancelProject($("studioCancelBtn")));
   $("loraUploadBtn").addEventListener("click", uploadLoraFile);
+  $("loraFile").addEventListener("change", syncLoraFolder);
   $("instrSelect").addEventListener("change", showInstruction);
   $("instrText").addEventListener("input", checkInstruction);
   $("instrSave").addEventListener("click", () => saveInstruction(false));

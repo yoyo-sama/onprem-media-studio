@@ -29,18 +29,20 @@ export const marketPrompt = (brief, id) =>
 export function runPlain(wf, { specs, origin, ratio, count = 1, duration = 5, loras = [], image = null, last = null, refs = [], seed,
                                mode = F.MOSS_DEFAULT_MODE }) {
   const [width, height] = (wf.engine === "qwen-image-2.1" ? F.QWEN21_RATIOS : F.RATIOS)[ratio] || [];
+  // Image engines get `loras` only with a stack: without one their jobs stay as they were.
+  const imageLoras = loras.length ? { loras } : {};
   return specs.map((spec, i) => {
     const s = F.seedPlus(seed, i);
     let params, info;
     if (wf.id === "krea2_t2i" || wf.id === "qwen21_t2i") {
-      params = { prompt: spec.prompt, width, height, count, seed: s };
+      params = { prompt: spec.prompt, width, height, count, seed: s, ...imageLoras };
       info = `${width}×${height}`;
     } else if (wf.id === "moss_t2i") {
-      params = { prompt: spec.prompt, mode, width, height, count, seed: s };
+      params = { prompt: spec.prompt, mode, width, height, count, seed: s, ...imageLoras };
       info = `${width}×${height} · ${t(F.mossModeLabel(mode))}`;
     } else if (wf.id === "qwen21_i2i") {
       // The size follows the input image (~1 MP): the ratio plays no part here.
-      params = { prompt: spec.prompt, images: [image, ...refs], seed: s };
+      params = { prompt: spec.prompt, images: [image, ...refs], seed: s, ...imageLoras };
       info = refs.length ? `Qwen Image 2.1 · +${refs.length} ref.` : "Qwen Image 2.1";
     } else if (wf.id === "h3_t2v") {
       params = { prompt: F.capH3(spec.prompt), duration, seed: s, loras, aspect: ratio };

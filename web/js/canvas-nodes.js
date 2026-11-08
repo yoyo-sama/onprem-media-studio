@@ -343,8 +343,9 @@ export const CARDS = {
     modelProp: "engine", modelValues: Object.entries(IMAGE_ENGINES).map(([id, e]) => [id, e.label]),
     subject: "prompt", preview: "prompt",
     outputs: ["image"], size: [320, 240],
-    // `mode` is read by MOSS-Image only; it stays in the properties across an engine switch.
-    props: { engine: "krea2", prompt: "", ratio: "1:1", mode: F.MOSS_DEFAULT_MODE },
+    // `mode` is read by MOSS-Image only; it stays in the properties across an engine switch,
+    // as each engine's LoRA stack (`loras`, keyed by the engine id, which is its LoRA folder).
+    props: { engine: "krea2", prompt: "", ratio: "1:1", mode: F.MOSS_DEFAULT_MODE, loras: {} },
     meta: n => {
       const [w, h] = imageSize(n), e = imageEngine(n.properties);
       return `${e.label}${e.engine === "moss-image" ? ` · ${t(F.mossModeLabel(n.properties.mode))}` : ""} · ${w}×${h}`;
@@ -355,14 +356,16 @@ export const CARDS = {
       { k: "prompt", label: L("Prompt"), type: "textarea", enrich: n => imageEngine(n.properties).workflow,
         placeholder: "a cinematic photo of a lighthouse at sunset" },
       { k: "ratio", label: L("Aspect ratio"), type: "select", values: RATIOS },
+      { k: "loras", label: L("LoRA"), type: "loras", folder: n => (IMAGE_ENGINES[n.properties.engine] ? n.properties.engine : "krea2") },
     ],
     async generate(node) {
       const p = node.properties, prompt = p.prompt.trim(), e = imageEngine(p);
+      const loras = lorasOf(node, IMAGE_ENGINES[p.engine] ? p.engine : "krea2");
       if (!prompt) return setStatus(node, "error", "Error: write the prompt first.");
       const [width, height] = imageSize(node);
       setStatus(node, "running", "{engine} running…", { engine: e.label });
       const job = await run(node, e.engine, { prompt, width, height, count: 1, seed: seedOf(node),
-        ...(e.engine === "moss-image" ? { mode: p.mode || F.MOSS_DEFAULT_MODE } : {}) });
+        ...(e.engine === "moss-image" ? { mode: p.mode || F.MOSS_DEFAULT_MODE } : {}), ...(loras.length ? { loras } : {}) });
       done(node, output(job, ".png"));
     },
   },
@@ -374,12 +377,13 @@ export const CARDS = {
     subject: "instruction", preview: "instruction",
     inputs: ["image", SLOT_IMG_REF], outputs: ["image"], size: [340, 240],
     autogrow: [[SLOT_IMG_REF, F.REF_CAPS.i2i]],
-    props: { instruction: "" },
+    props: { instruction: "", loras: {} },
     meta: n => t("Qwen Image 2.1 · {n} image(s) · size of image 1", { n: 1 + connectedSlots(n, SLOT_IMG_REF).length }),
     fields: [
       { k: "instruction", label: L("Editing instruction"), type: "textarea", enrich: () => "qwen21_i2i",
         placeholder: "add sunglasses on the character",
         hint: L("Top input: the image to edit, <image1>. The inputs below: extra references, <image2>, <image3>… in order, to cite in the instruction.") },
+      { k: "loras", label: L("LoRA"), type: "loras", folder: () => "qwen21" },
     ],
     async generate(node) {
       const p = node.properties, image = upstreamRef(node, 0);
@@ -387,7 +391,9 @@ export const CARDS = {
       const prompt = p.instruction.trim();
       if (!prompt) return setStatus(node, "error", "Error: write the editing instruction first.");
       setStatus(node, "running", "{engine} running…", { engine: "Qwen Image 2.1" });
-      const job = await run(node, "qwen-image-2.1", { prompt, images: [image, ...refsFor(node, SLOT_IMG_REF)], seed: seedOf(node) });
+      const loras = lorasOf(node, "qwen21");
+      const job = await run(node, "qwen-image-2.1", { prompt, images: [image, ...refsFor(node, SLOT_IMG_REF)], seed: seedOf(node),
+        ...(loras.length ? { loras } : {}) });
       done(node, output(job, ".png"));
     },
   },

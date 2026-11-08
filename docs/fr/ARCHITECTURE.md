@@ -40,6 +40,7 @@ requête LLM.
 | `studio/pipelines/h3.py` | Moteurs vidéo (MiniMax H3 : texte, image, première/dernière image et références vers vidéo), géométrie et plan d'affinage : [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | Adaptateur FastVideo : recettes Spark, profil NVFP4, sortie latente et réglages de la passe d'affinage, annulation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | Upscaler latent H3 (convolutions 3D, checkpoint LBH v1) et pile de LoRA (fusion exacte en une seule branche parallèle) |
+| `studio/pipelines/image_lora.py` | Piles de LoRA de style de Krea 2 et Qwen Image 2.1 en adaptateurs PEFT non fusionnés (MOSS-Image les accroche dans `moss.py`) : [IMAGE-ENGINES.md](IMAGE-ENGINES.md#lora-de-style) |
 | `studio/pipelines/montage.py` | Jobs CPU sur des fichiers rendus, avec ffmpeg et Pillow : `video-concat` (clips bout à bout), `image-grid` (planche contact), `video-frames` (images proches de la fin d'un clip, pour les transitions du Relay) ; ils tournent sur le worker CPU, jamais derrière un rendu |
 | `studio/pipelines/upscale.py` | `upscale-2x` : une image ou une vidéo deux fois plus grande par le réseau SPAN, sur un clic de la galerie : [IMAGE-ENGINES.md](IMAGE-ENGINES.md#résolution-2) |
 | `studio/pipelines/common.py` | Contrôle des paramètres, pipelines gardés en mémoire (le moins récemment utilisé libéré quand le suivant ne tient pas), progression par étape, sortie PNG |
@@ -98,6 +99,7 @@ models/<id catalogue>/...   poids, plus .complete une fois le téléchargement t
 input/<hash>.<ext>          images envoyées (référence inputs/<hash>.<ext>)
 output/<pipeline>/...       rendus (référence outputs/<pipeline>/...)
 loras/h3/<fichier>.safetensors   LoRA H3, désignées par leur nom de fichier
+loras/{krea2,qwen21,moss}/...   LoRA des moteurs d'image, un dossier par moteur
 cache/h3-loras/...          piles de LoRA fusionnées
 cache/thumbs/...            miniatures de la galerie
 gallery.db                  index de la galerie, tags et favoris

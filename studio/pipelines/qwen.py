@@ -19,11 +19,15 @@ The denoiser is not Qwen's own: since 2026-11-07 it is the step-distilled transf
 lightx2v (Qwen-Image-2.1-Lightning-v2-RL), 4 steps on its own sigma schedule instead of 25,
 about 3x faster at the same identity (bench tools/qualify/qwen_fast_bench.sh, LESSONS #46).
 The text encoder, VAE and processor still come from Qwen/Qwen-Image-2.1.
+
+Style LoRAs (loras/qwen21/, trained on Qwen Image 2.1) are applied to the Lightning
+transformer as unmerged PEFT adapters: image_lora.py.
 """
 
 import time
 
-from . import Pipeline, common, register
+from .. import loras as lora_files
+from . import Pipeline, common, image_lora, register
 
 MAX_SUBJECTS = 2
 # Lightning v2 RL schedule (its inference_config.json), already shifted: the scheduler must
@@ -35,6 +39,7 @@ QWEN21_MAX_REFS = 7        # shot: 2 sheets + 7 references, as in 1.4
 # diffusers floors 2.1 sizes to a multiple of 32 (16x VAE, 2x2 patches): 1280×720
 # rendered 1280×704 on the GB10. Refused instead of silently changed.
 QWEN21_SIZE_MULTIPLE = 32
+LORA_FOLDER = "qwen21"
 NO_NEGATIVE = "guidance is off for this engine, so a negative prompt is never used."
 
 
@@ -72,7 +77,7 @@ class QwenImage21(Pipeline):
 
     def validate(self, params, files):
         common.check_keys(params, {"prompt", "images", "subjects", "setting", "references",
-                                   "width", "height", "count", "seed"}, NO_NEGATIVE)
+                                   "width", "height", "count", "seed", "loras"}, NO_NEGATIVE)
         out = {"prompt": common.prompt(params),
                **_edit_images(params, files)}
         editing = bool(ordered_images(out))
@@ -87,6 +92,7 @@ class QwenImage21(Pipeline):
         # Batches with reference images were never qualified in 1.4.
         out["count"] = common.integer(params, "count", 1, 1, 1 if editing else 4)
         out["seed"] = common.seed(params)
+        out["loras"] = lora_files.check_stack(params.get("loras", []), files.loras_dir, LORA_FOLDER)
         return out
 
     def run(self, params, models, ctx):
@@ -98,6 +104,7 @@ class QwenImage21(Pipeline):
         ctx.progress(0, "Loading Qwen Image 2.1")
         base, lightning = models["qwen-image-2.1"], models["qwen-image-2.1-lightning"]
         pipe = common.load(self.id, lambda: _build_21(base, lightning), _memory_size(base, lightning))
+        image_lora.apply(pipe, params["loras"], ctx.files.loras_dir / LORA_FOLDER)
         steps = common.step_progress(ctx, len(LIGHTNING_SIGMAS), "Qwen Image 2.1")
         began = time.time()
         out = pipe(
@@ -113,7 +120,8 @@ class QwenImage21(Pipeline):
             generator=common.generator(params["seed"]),
             callback_on_step_end=steps,
         ).images
-        common.log_render(self.id, f"{width}×{height} ×{params['count']}, {len(images)} input image(s)",
+        common.log_render(self.id, f"{width}×{height} ×{params['count']}, {len(images)} input image(s)"
+                          + image_lora.label(params["loras"]),
                           began, steps.marks)
         return common.save_images(out, ctx, params)
 

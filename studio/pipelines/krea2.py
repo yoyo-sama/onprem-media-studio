@@ -6,14 +6,18 @@ no guidance. Krea 2 never encodes a negative prompt (LESSONS.md #18): in 1.4 it
 was routed through ConditioningZeroOut, here `guidance_scale=0` skips the
 unconditional pass entirely, and a `negative` parameter is refused rather than
 silently dropped.
+
+Style LoRAs (loras/krea2/) are applied as unmerged PEFT adapters: image_lora.py.
 """
 
 import time
 
-from . import Pipeline, common, register
+from .. import loras as lora_files
+from . import Pipeline, common, image_lora, register
 
 STEPS = 8
 GUIDANCE = 0.0  # Krea 2 convention: 0 disables guidance (ComfyUI cfg 1)
+LORA_FOLDER = "krea2"
 
 
 class Krea2TextToImage(Pipeline):
@@ -21,7 +25,7 @@ class Krea2TextToImage(Pipeline):
     models = ["krea2-turbo"]
 
     def validate(self, params, files):
-        common.check_keys(params, {"prompt", "width", "height", "count", "seed"},
+        common.check_keys(params, {"prompt", "width", "height", "count", "seed", "loras"},
                           "Krea 2 never encodes a negative prompt.")
         return {
             "prompt": common.prompt(params),
@@ -29,12 +33,14 @@ class Krea2TextToImage(Pipeline):
             "height": common.integer(params, "height", 1024, 256, 2048, 16),
             "count": common.integer(params, "count", 1, 1, 4),
             "seed": common.seed(params),
+            "loras": lora_files.check_stack(params.get("loras", []), files.loras_dir, LORA_FOLDER),
         }
 
     def run(self, params, models, ctx):
         ctx.progress(0, "Loading Krea 2")
         pipe = common.load(self.id, lambda: _build(models["krea2-turbo"]),
                            common.disk_size(models["krea2-turbo"]))
+        image_lora.apply(pipe, params["loras"], ctx.files.loras_dir / LORA_FOLDER)
         steps = common.step_progress(ctx, STEPS, "Krea 2")
         began = time.time()
         images = pipe(
@@ -47,7 +53,8 @@ class Krea2TextToImage(Pipeline):
             generator=common.generator(params["seed"]),
             callback_on_step_end=steps,
         ).images
-        common.log_render(self.id, f"{params['width']}×{params['height']} ×{params['count']}", began, steps.marks)
+        common.log_render(self.id, f"{params['width']}×{params['height']} ×{params['count']}"
+                          + image_lora.label(params["loras"]), began, steps.marks)
         return common.save_images(images, ctx, params)
 
 

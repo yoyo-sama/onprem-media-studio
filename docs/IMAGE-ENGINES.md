@@ -76,6 +76,7 @@ Every PNG carries the job's pipeline and parameters as JSON in a `studio` text c
 | `prompt` | required | Verbatim |
 | `width`, `height` | 1024 | 256–2048, multiple of 16 |
 | `count` | 1 | 1–4 images of one seed (1.4 "variants") |
+| `loras` | `[]` | Up to 4 files of `loras/krea2/` with their strengths: [Style LoRAs](#style-loras) |
 
 ### `qwen-image-2.1`
 
@@ -85,6 +86,7 @@ multiples of **32** (256–2048): diffusers floors 2.1 sizes to 32, so 1280×720
 (1–10) or the shot form `subjects` (1–2) + `setting` + `references` (0–7 extra images after the
 setting, as in 1.4: 2 sheets + 7), it edits: `count` is 1, size from image 1 unless `width` and
 `height` are both given. The prompt cites images as `<image1>`, `<image2>`… in slot order.
+`loras`: up to 4 files of `loras/qwen21/`, in both forms ([Style LoRAs](#style-loras)).
 
 ### `moss-image`
 
@@ -99,6 +101,7 @@ Text to image only. `mode` picks the steps and guidance, nothing else does:
 `width`, `height` 256–2048, multiples of 16 (default 1024); `count` 1–4. A `negative` is refused:
 the quality mode's negative branch is part of the model's settings. Text to draw goes in double
 quotes in the prompt; the model also reads the official JSON layout prompt (boxes per item).
+`loras`: up to 4 files of `loras/moss/`, in every mode ([Style LoRAs](#style-loras)).
 
 ## MOSS-Image
 
@@ -122,6 +125,41 @@ Chosen by the project owner on 2026-11-07 after `tools/qualify/moss_bench.py` on
   sheets.
 - **Not used:** `lora.safetensors` of the turbo repository (rewritten in place by its author),
   the destripe LoRA (SFT's banding is invisible by eye at these step counts).
+
+## Style LoRAs
+
+Every image engine takes a stack of up to 4 LoRAs, `loras: [{"name": <file>, "strength": -2…2}]`,
+as MiniMax H3 does ([H3.md](H3.md)); `[]` or no key renders without LoRA. Each engine reads
+its own folder, uploaded from the Models panel: `loras/krea2/` (Krea 2), `loras/qwen21/`
+(Qwen Image 2.1, text to image and edits), `loras/moss/` (MOSS-Image); a file of another folder
+is refused at submission. The storyboard and campaign flows send no image LoRA.
+
+- **Never merged.** A LoRA's deltas are mostly below bf16's rounding step (LESSONS #30):
+  each one runs as a side branch next to the weights, which stay as qualified. Krea 2 and
+  Qwen load the stack as PEFT adapters weighted with `set_adapters` (`image_lora.py`); they
+  stay loaded while the next render asks for the same files, and a render without LoRA
+  unloads them, so it runs the engine exactly as qualified. MOSS-Image, whose pipeline is the
+  model's own code, adds one fp32 forward hook per layer and LoRA for the render, on top of
+  its turbo LoRA in the turbo modes, as it already did for the turbo LoRA.
+- **Formats.** Krea 2 and Qwen files are read by the engine's diffusers loader (ComfyUI
+  `diffusion_model.`, kohya `lora_unet_`/`lora_down`, AI-Toolkit, diffusers/PEFT). MOSS reads
+  ComfyUI (`diffusion_model.`) and diffusers (`transformer.`) files, `lora_down`/`lora_up` or
+  `lora_A`/`lora_B`, with the `.alpha` keys or the alpha of the file's diffusers metadata.
+  Three layouts the diffusers loaders miss are rewritten first (`image_lora.normalized`): Krea 2
+  kohya names (`lora_unet_blocks_0_attn_wq`), `.alpha` keys next to diffusers `lora_A`/`lora_B`
+  pairs (diffusers would prefix those files with a second `transformer.`), and Qwen Image 2.1's
+  fused `img_mlp.gate_up`, split into `gate_layer` and `proj` (gate rows first, as diffusers
+  splits the fused weight). A file none of them applies to still loads from its path.
+- **Nothing silently dropped.** diffusers only warns about keys that land on no layer and
+  renders without them; here a file with any such key (text encoder keys included) fails the
+  job and names a few of them.
+- **On the distilled engines.** Community LoRAs are trained on Qwen Image 2.1 base, Krea 2 and
+  MOSS-Image SFT/Base at full step counts; here they run on Lightning (4 steps), Krea 2 Turbo
+  (8 steps) and the MOSS turbo modes. None of the three compiles its transformer, so a LoRA
+  costs no recompilation. How each LoRA holds at these step counts is judged on the render.
+- **Checked before loading.** Every file of a stack is checked against the plain layers before
+  any is loaded: once an adapter is in, its layers are PEFT wrappers, no longer `Linear`, and
+  checking the next file against them refused every stack of two on the GB10.
 
 ## The 1.4 features on these engines
 
@@ -231,7 +269,22 @@ Only then set `"qualified": true` for the model in `studio/catalog.json`. Seeds 
   `"qualified": true`. There was no side-by-side comparison with 1.4; a difference found later is
   fixed then.
 - **LoRA loading on NGC 25.11:** peft 0.19+ refuses its torchao 0.14, so peft is pinned below 0.19.
-- **Style LoRAs** (1.4 Krea 2 and sheet LoRAs) are not ported yet.
+- **Style LoRAs (promaxgb10-95c7, 2026-11-08):** six community LoRAs, two per engine (Krea 2:
+  krea/Krea-2-LoRA-retroanime in diffusers format, gokaygokay/Krea-2-Realism-LoRA in the Krea
+  trainer format; Qwen: two DiffSynth files; MOSS: one ComfyUI and one diffusers file) rendered
+  alone and stacked by two at seed 42; a render without LoRA after them was pixel-identical to the
+  one before on each engine; a strength change on the same files changed the image without
+  reloading. Cost per step: Krea 2 2.66 s, 3.17 s with one LoRA, 3.65 s with two; Qwen 1.25 s,
+  1.63 s, 1.83 s; MOSS standard 2.13 s, 2.92 s, 3.70 s. A style LoRA mostly shows only with its
+  trigger words in the prompt (retroanime: "Purple retro anime style"; MOSS gouache:
+  "moss_vgouache_style", which MOSS may also write into the image). The 1.4 Krea 2 LoRAs are not
+  imported by `studio.import14`: upload them from the Models panel.
+  Three more files in layouts diffusers misses (krea_2_Unlocked_V3 in kohya names,
+  Qwen_2.1_Unlocked_V1 with alphas, Qwen_2.1-Unchained-V1 with a fused `gate_up`) render since
+  `normalized`. Unchained at strength 1 darkens the image and leaves a fine dot grid; at 0.5, or
+  without its `gate_up` keys, it is clean. The split follows ComfyUI's Qwen Image 2.1 model
+  (`[gate; up]`, `comfy/ldm/qwen_image21/model.py`) and diffusers; the tool the file was trained
+  with is unknown, so whether it expects the other order is not settled.
 - **Qwen Image 2.1 with Lightning (2026-11-07):** benched on promaxgb10-95c7, 5 cases × 3 seeds:
   identity of both sheet subjects kept in every shot image; more contrast and saturation than
   the 25-step base, and stray structures in text to image (2 seeds out of 3). Renders through
