@@ -96,7 +96,7 @@ under `/outputs/` instead of `/comfy/view`.
 
 ## In-app update
 
-Two installations, two ways, behind the same routes and the same "Update" panel.
+Two installations, two ways, behind the same routes and the same "Update" row of the Monitor panel, between Version and GPU.
 
 ### Bare metal (git checkout)
 

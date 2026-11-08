@@ -350,6 +350,11 @@ details.right-card:not([open]) > summary.panel-title::after { transform: rotate(
 
 .metric-row strong { color: var(--text); }
 
+/* The update row of the monitor: its explanation and button sit under it, before the GPU row. */
+.update-detail { display: grid; gap: 8px; padding: 0 0 12px; justify-items: start; }
+.update-detail p { margin: 0; overflow-wrap: anywhere; }
+.update-detail:not(:has(> :not([hidden]):not(:empty))) { display: none; }
+
 .events {
   margin-top: 18px;
   border-top: 1px solid var(--border-light);
