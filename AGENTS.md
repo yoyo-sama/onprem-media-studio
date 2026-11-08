@@ -22,6 +22,11 @@ node tools/qualify/export_1_4_video_prompts.js ../dellaicontent > tools/qualify/
 python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.json   # image + video renders
 ```
 
+GitHub Actions (`.github/workflows/tests.yml`) runs pytest, the front-end syntax check,
+`prompt-systems.js` and `assistant-ui.js` on every pull request; `parity-prompts.js` runs too
+when the repository secret `DELLAICONTENT_TOKEN` (read access to the private 1.4 repository)
+is set. Renders are qualified on the GB10 only.
+
 Image engines, their parameters and what they guarantee: `docs/IMAGE-ENGINES.md`; MiniMax H3
 video engines (FastVideo, two-pass Ref2VA, NVFP4, LoRA stack): `docs/H3.md`; Studio and
 Canvas front end, its rules and tests: `docs/FRONTEND.md`; creative assistant (chat, roles in
