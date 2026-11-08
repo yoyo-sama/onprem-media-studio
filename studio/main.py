@@ -88,7 +88,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     models = models or ModelStore(settings)
     llm = llm or LlamaServer(settings, models)
     jobs = JobQueue(REGISTRY if pipelines is None else pipelines, models, files, settings.data_dir / "jobs.json")
-    gallery = Gallery(settings.output_dir, settings.data_dir, settings.gallery_scan)
+    gallery = Gallery(settings.output_dir, settings.data_dir, settings.gallery_scan, inputs=settings.input_dir)
     clients: set[asyncio.Queue] = set()
     loop: asyncio.AbstractEventLoop | None = None
 

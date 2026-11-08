@@ -11,6 +11,12 @@ In 2.0 they are modules of the same server (`studio/gallery.py`, `studio/update.
 An SQLite/FTS5 index (`STUDIO_DATA_DIR/gallery.db`) of the output folder, with WebP thumbnails
 cached in `STUDIO_DATA_DIR/cache/thumbs/`.
 
+The "Inputs" button shows instead the images and clips sent to renders (`STUDIO_DATA_DIR/inputs/`,
+uploads named by their content hash), newest first, in the same Images and Videos tabs. They are
+listed straight from the folder, not indexed, and read-only: no search, filter, tag, favourite,
+trash or renaming, and no details panel in the lightbox. "→ Use as input" and "➕ Sequence" work
+as on an output. Sounds are not shown.
+
 ### Rules kept from 1.4
 
 - **Files are never rewritten.** Tags and favourites live in SQLite only.
@@ -58,6 +64,8 @@ Reading:
 | `GET /api/gallery/assets` | `type=image\|video`, `q`, `pipeline` (or `none`), `origin`, `tag`, `fav=1`, `from`/`to` (ms), `scope=app\|all\|trash`, `sort=new\|old`, `limit` (1–200, default 60), `cursor` | `{items: [Asset], next, counts: {image, video}}`; `counts` apply every filter but the type |
 | `GET /api/gallery/asset?key=` | key (also a trash key) | Asset with the full prompt; a present file not indexed yet is indexed now |
 | `GET /api/gallery/thumb?key=&v=` | key, version | WebP, longest side 320 px, cached for a year (the URL changes with the file) |
+| `GET /api/gallery/inputs` | `type=image\|video`, `limit` (1–200, default 60), `cursor` | `{items: [Asset], next, counts: {image, video}}` for the input folder, newest first; each Asset has `input: true`, key and `ref` `inputs/<name>`, no prompt or tags |
+| `GET /api/gallery/input-thumb?name=&v=` | file name in `inputs/`, version | WebP thumbnail of an input image or clip, cached like the others |
 | `GET /api/gallery/dates` | filters + `unit=day\|week\|month`, `tz` (= `Date.getTimezoneOffset()`) | `{unit, periods: [{start, end, count}]}`, newest first; weeks run Monday to Monday |
 | `GET /api/gallery/facets?scope=` | scope | `{pipelines: [{id, count}], origins: [{id, count}], tags: [{name, count}]}` |
 

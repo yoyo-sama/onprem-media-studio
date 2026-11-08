@@ -293,6 +293,30 @@ def test_http_routes(client, settings):
     assert trashed["trashed"][0]["key"] == "krea2-t2i/a.png"
 
 
+def test_inputs_are_listed_read_only_newest_first(client, settings):
+    inputs = settings.input_dir
+    png(inputs / "old.png", mtime=OLD)
+    png(inputs / "new.png", mtime=OLD + 60)
+    (inputs / "voice.wav").write_bytes(b"RIFF")  # sounds are not shown
+    (inputs / ".hidden.png").write_bytes(b"x")
+    shutil.copy(inputs / "old.png", inputs / "clip.mp4")  # a clip, by its extension
+    page = client.get("/api/gallery/inputs").json()
+    assert [a["key"] for a in page["items"]] == ["inputs/new.png", "inputs/old.png"]
+    assert page["counts"] == {"image": 2, "video": 1} and page["next"] is None
+    a = page["items"][0]
+    assert a["ref"] == "inputs/new.png" and a["input"] and a["type"] == "image"
+    assert client.get(a["url"]).status_code == 200
+    assert client.get(a["thumb"]).headers["content-type"] == "image/webp"
+    first = client.get("/api/gallery/inputs", params={"limit": 1}).json()
+    assert [x["filename"] for x in first["items"]] == ["new.png"] and first["next"] == "1"
+    rest = client.get("/api/gallery/inputs", params={"limit": 1, "cursor": first["next"]}).json()
+    assert [x["filename"] for x in rest["items"]] == ["old.png"] and rest["next"] is None
+    assert client.get("/api/gallery/inputs", params={"type": "video"}).json()["items"][0]["filename"] == "clip.mp4"
+    for name in ("../outputs/x.png", "voice.wav", ".hidden.png", "missing.png"):
+        assert client.get("/api/gallery/input-thumb", params={"name": name}).status_code == 404
+    assert client.get("/api/gallery/inputs", params={"type": "audio"}).status_code == 400
+
+
 def test_a_finished_job_enters_the_gallery_at_once(settings, store):
     from .test_api import Echo
 

@@ -1,6 +1,7 @@
 // Gallery of the output folder, read from the server's index (/api/gallery, see
 // docs/GALLERY.md): tabs, filters, date groups, selection, favourites, tags, trash,
-// renaming, and the lightbox with the details of an asset.
+// renaming, and the lightbox with the details of an asset. "Inputs" shows instead the
+// images and clips sent to renders (inputs/), read-only: no filter, tag or trash.
 //
 // The gallery submits one job only, on its own click: "Upscale ×2" in the lightbox.
 // "Reuse the prompt" writes the brief only on that click, with Undo; "Use as input"
@@ -48,8 +49,11 @@ const excerpt = (text, max = 90) => {
 // ── Listing ───────────────────────────────────────────────────────────────────
 const query = (extra = {}) => ({ ...filter, from: filter.from ?? undefined, to: filter.to ?? undefined, limit: PAGE, ...extra });
 
+const inInputs = () => filter.scope === "inputs";
+const listing = extra => (inInputs() ? api.gallery.inputs({ type: filter.type, limit: PAGE, ...extra }) : api.gallery.assets(query(extra)));
+
 async function list(cursor) {
-  try { return await api.gallery.assets(query({ cursor })); }
+  try { return await listing({ cursor }); }
   catch (err) { warn(err); return { items: [], next: null, counts }; }
 }
 
@@ -85,7 +89,7 @@ const observer = new IntersectionObserver(es => { if (es.some(e => e.isIntersect
 function watch() { observer.unobserve($("gallerySentinel")); observer.observe($("gallerySentinel")); }
 
 async function refreshCounts() {
-  try { counts = (await api.gallery.assets(query({ limit: 1 }))).counts; renderTabs(); } catch { /* next reload */ }
+  try { counts = (await listing({ limit: 1 })).counts; renderTabs(); } catch { /* next reload */ }
 }
 async function refreshTrash() {
   try {
@@ -95,6 +99,7 @@ async function refreshTrash() {
   } catch { /* next time */ }
 }
 async function refreshFacets() {
+  if (inInputs()) return;
   try { facets = await api.gallery.facets(filter.scope); renderFacets(); } catch { /* keep the old lists */ }
 }
 
@@ -112,6 +117,7 @@ function renderEmpty() {
   const f = filter;
   tx(empty, f.q || f.pipeline || f.origin || f.fav || f.tag || f.from != null || f.to != null ? "No result for these filters."
     : f.scope === "trash" ? "The trash is empty."
+    : f.scope === "inputs" ? (f.type === "video" ? "No clip used as an input yet." : "No image used as an input yet.")
     : f.type === "video" ? "No video yet." : "No image yet. Start a render.");
 }
 
@@ -223,8 +229,10 @@ function cardFor(a) {
     actions.append(button(video ? "▶ Play" : "⤢ Enlarge", null, () => openLightbox(card._asset)));
     actions.append(button("→ Use as input", null, () => hooks.useAsInput?.(card._asset)));
     if (!video) actions.append(button("➕ Sequence", "Add to the multi-image sequence", () => hooks.addToSequence?.(card._asset)));
-    actions.append(button("★", "Favourite", () => setFavs([card._asset], !card._asset.fav), "fav-btn"));
-    actions.append(button("🗑", "Delete from the gallery", () => remove([card._asset])));
+    if (!a.input) {
+      actions.append(button("★", "Favourite", () => setFavs([card._asset], !card._asset.fav), "fav-btn"));
+      actions.append(button("🗑", "Delete from the gallery", () => remove([card._asset])));
+    }
   }
   card.appendChild(actions);
   card.addEventListener("click", e => {
@@ -249,7 +257,7 @@ async function onJobDone(job) {
   refreshCounts();
   refreshFacets();
   const f = filter;
-  if (f.q || f.pipeline || f.origin || f.fav || f.tag || f.from != null || f.to != null || f.scope === "trash") return;
+  if (f.q || f.pipeline || f.origin || f.fav || f.tag || f.from != null || f.to != null || f.scope === "trash" || f.scope === "inputs") return;
   for (const a of details) if (a.type === f.type && (a.app || f.scope === "all")) place(a, true);
   renderEmpty();
 }
@@ -361,8 +369,20 @@ function syncControls() {
   $("galleryDateUnit").value = unit;
   renderFacets();
   renderTrashBtn();
+  renderInputsBtn();
   renderSelBar();
   renderDates();
+}
+
+// Inputs: only the tabs, the size, the grouping and the way back stay.
+const OUTPUT_ONLY = ["gallerySearch", "galleryPipeline", "galleryFavBtn", "gallerySelectBtn", "galleryScopeBtn",
+  "galleryTrashBtn", "galleryOrigin", "galleryTag", "galleryGoto"];
+function renderInputsBtn() {
+  const on_ = inInputs();
+  $("galleryInputsBtn").classList.toggle("active", on_);
+  $("galleryInputsBtn").setAttribute("aria-pressed", String(on_));
+  for (const id of OUTPUT_ONLY) $(id).hidden = on_;
+  for (const id of ["galleryFrom", "galleryTo"]) $(id).closest("label").hidden = on_;
 }
 
 function renderTrashBtn() {
@@ -403,6 +423,7 @@ function renderDates() {
   sel.value = gotoEnd != null ? String(gotoEnd) : "";
 }
 async function refreshDates() {
+  if (inInputs()) { periods = []; renderDates(); return; }
   try {
     const r = await api.gallery.dates({ ...query(), from: undefined, to: undefined, limit: undefined, unit, tz: new Date().getTimezoneOffset() });
     periods = r.periods;
@@ -420,7 +441,7 @@ export function openLightbox(asset) {
   el.src = asset.url;
   if (video) Object.assign(el, { controls: true, autoplay: true, loop: true, playsInline: true }); else el.alt = "";
   $("lightboxContent").replaceChildren(el);
-  lbAsset = asset.key ? asset : null;
+  lbAsset = asset.key && !asset.input ? asset : null;
   lbOpener = document.activeElement;
   const seq = ++lbSeq;
   $("lightbox").classList.toggle("has-meta", !!lbAsset);
@@ -623,6 +644,14 @@ export function initGallery(h) {
     const scope = filter.scope === "all" ? "app" : "all";
     saveLocal("galleryScope", scope);
     setFilter({ scope });
+    refreshFacets();
+  });
+  $("galleryInputsBtn").addEventListener("click", () => {
+    if (selecting) setSelecting(false);
+    gotoEnd = null;
+    $("gallerySearch").value = $("galleryFrom").value = $("galleryTo").value = "";
+    setFilter(inInputs() ? { scope: loadLocal("galleryScope") === "all" ? "all" : "app" }
+      : { scope: "inputs", q: "", pipeline: "", origin: "", tag: "", fav: false, from: null, to: null });
     refreshFacets();
   });
   $("galleryTrashBtn").addEventListener("click", () => {

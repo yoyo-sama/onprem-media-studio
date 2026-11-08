@@ -11,6 +11,13 @@ En 2.0, ce sont des modules du même serveur (`studio/gallery.py`, `studio/updat
 Un index SQLite/FTS5 (`STUDIO_DATA_DIR/gallery.db`) du dossier de sorties, avec des miniatures WebP
 en cache dans `STUDIO_DATA_DIR/cache/thumbs/`.
 
+Le bouton « Entrées » affiche à la place les images et vidéos envoyées aux rendus
+(`STUDIO_DATA_DIR/inputs/`, fichiers téléversés nommés par l'empreinte de leur contenu), les plus
+récentes d'abord, dans les mêmes onglets Images et Vidéos. Elles sont lues directement dans le
+dossier, sans index, et en lecture seule : ni recherche, ni filtre, ni tag, ni favori, ni corbeille,
+ni renommage, et pas de panneau de détails dans la visionneuse. « → Utiliser en entrée » et
+« ➕ Séquence » marchent comme sur une sortie. Les sons ne sont pas affichés.
+
 ### Règles reprises de la 1.4
 
 - **Les fichiers ne sont jamais réécrits.** Tags et favoris vivent uniquement en SQLite.
@@ -64,6 +71,8 @@ Lecture :
 | `GET /api/gallery/assets` | `type=image\|video`, `q`, `pipeline` (ou `none`), `origin`, `tag`, `fav=1`, `from`/`to` (ms), `scope=app\|all\|trash`, `sort=new\|old`, `limit` (1–200, 60 par défaut), `cursor` | `{items: [Asset], next, counts: {image, video}}` ; `counts` applique tous les filtres sauf le type |
 | `GET /api/gallery/asset?key=` | clé (y compris de corbeille) | Asset avec le prompt complet ; un fichier présent pas encore indexé l'est aussitôt |
 | `GET /api/gallery/thumb?key=&v=` | clé, version | WebP, côté long 320 px, en cache un an (l'URL change avec le fichier) |
+| `GET /api/gallery/inputs` | `type=image\|video`, `limit` (1–200, 60 par défaut), `cursor` | `{items: [Asset], next, counts: {image, video}}` pour le dossier d'entrées, les plus récentes d'abord ; chaque Asset porte `input: true`, une clé et un `ref` `inputs/<nom>`, sans prompt ni tags |
+| `GET /api/gallery/input-thumb?name=&v=` | nom du fichier dans `inputs/`, version | Miniature WebP d'une image ou vidéo d'entrée, en cache comme les autres |
 | `GET /api/gallery/dates` | filtres + `unit=day\|week\|month`, `tz` (= `Date.getTimezoneOffset()`) | `{unit, periods: [{start, end, count}]}`, du plus récent au plus ancien ; semaine du lundi au lundi |
 | `GET /api/gallery/facets?scope=` | périmètre | `{pipelines: [{id, count}], origins: [{id, count}], tags: [{name, count}]}` |
 

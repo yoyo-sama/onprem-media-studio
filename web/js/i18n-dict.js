@@ -402,6 +402,26 @@ export const DICT = {
     es: "Primer plano",
     de: "Nahaufnahme",
   },
+  "Inputs": {
+    fr: "Entrées",
+    es: "Entradas",
+    de: "Eingaben",
+  },
+  "Show the images and clips sent to renders": {
+    fr: "Afficher les images et vidéos envoyées aux rendus",
+    es: "Mostrar las imágenes y los vídeos enviados a los renders",
+    de: "Die an Renderings gesendeten Bilder und Videos zeigen",
+  },
+  "No image used as an input yet.": {
+    fr: "Aucune image utilisée en entrée pour l'instant.",
+    es: "Todavía no se ha usado ninguna imagen como entrada.",
+    de: "Noch kein Bild als Eingabe verwendet.",
+  },
+  "No clip used as an input yet.": {
+    fr: "Aucune vidéo utilisée en entrée pour l'instant.",
+    es: "Todavía no se ha usado ningún vídeo como entrada.",
+    de: "Noch kein Video als Eingabe verwendet.",
+  },
   "A clip cannot be attached to a message: attach an image.": {
     fr: "Une vidéo ne peut pas être jointe à un message : joins une image.",
     es: "Un vídeo no se puede adjuntar a un mensaje: adjunta una imagen.",

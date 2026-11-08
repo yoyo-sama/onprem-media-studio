@@ -35,6 +35,8 @@ import unicodedata
 from pathlib import Path
 from urllib.parse import quote
 
+from .files import media_kind
+
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 VIDEO_EXT = {".mp4", ".webm", ".mov"}
 FRESH_SECONDS = 5      # a younger file may still be written: the next scan takes it
@@ -194,8 +196,9 @@ def make_thumb(path: Path, kind: str, duration: float | None) -> bytes:
 # ── The gallery ──────────────────────────────────────────────────────────────
 
 class Gallery:
-    def __init__(self, root: Path, data_dir: Path, scan_interval: float = 60):
+    def __init__(self, root: Path, data_dir: Path, scan_interval: float = 60, inputs: Path | None = None):
         self.root = Path(os.path.normpath(root))
+        self.inputs = inputs
         self.thumbs = data_dir / "cache" / "thumbs"
         self.thumbs.mkdir(parents=True, exist_ok=True)
         self.root.mkdir(parents=True, exist_ok=True)
@@ -531,6 +534,69 @@ class Gallery:
             os.replace(tmp, cache)
         return data
 
+    # ── Inputs ──
+    # The files sent to renders (uploads, content-addressed under inputs/): listed
+    # read-only, newest first, images and clips in two tabs like the outputs. They are
+    # not indexed: no prompt, tags, favourites, trash or renaming.
+
+    def _inputs(self) -> list[os.DirEntry]:
+        if self.inputs is None or not self.inputs.is_dir():
+            return []
+        with os.scandir(self.inputs) as it:
+            return [e for e in it if e.is_file(follow_symlinks=False) and not e.name.startswith(".")
+                    and media_kind(e.name) in ("image", "video")]
+
+    def input_asset(self, entry: os.DirEntry) -> dict:
+        st, name = entry.stat(follow_symlinks=False), entry.name
+        version = st.st_mtime_ns // 1_000_000
+        return {
+            "key": "inputs/" + name, "filename": name, "folder": "", "type": media_kind(name),
+            "url": "/inputs/" + quote(name) + f"?v={version}", "ref": "inputs/" + name,
+            "thumb": f"/api/gallery/input-thumb?name={quote(name, safe='')}&v={version}",
+            "ts": version, "prompt": None, "pipeline": None, "origin": None, "loras": [], "seed": None,
+            "w": None, "h": None, "duration": None, "size": st.st_size, "fav": False, "tags": [], "app": True,
+            "trash": None, "input": True,
+        }
+
+    def input_page(self, f: dict) -> dict:
+        kind = self._kind(f)
+        limit = self._int(f.get("limit", 60), "limit")
+        start = self._int(f.get("cursor") or 0, "cursor")
+        if not 1 <= limit <= 200 or start < 0:
+            raise bad("Invalid limit or cursor")
+        entries = self._inputs()
+        counts = {"image": 0, "video": 0}
+        for e in entries:
+            counts[media_kind(e.name)] += 1
+        entries = sorted((e for e in entries if media_kind(e.name) == kind),
+                         key=lambda e: (-e.stat(follow_symlinks=False).st_mtime_ns, e.name))
+        page = entries[start:start + limit]
+        more = start + limit < len(entries)
+        return {"items": [self.input_asset(e) for e in page], "next": str(start + limit) if more else None,
+                "counts": counts}
+
+    def input_thumb(self, name: str) -> bytes:
+        entry = next((e for e in self._inputs() if e.name == name), None) if isinstance(name, str) else None
+        if entry is None:
+            raise GalleryError(404, "Unknown file")
+        st = entry.stat(follow_symlinks=False)
+        cache = self.thumbs / (hashlib.sha1(f"inputs/{name}|{st.st_mtime_ns}|{st.st_size}".encode()).hexdigest() + ".webp")
+        with self.thumb_slots:
+            try:
+                return cache.read_bytes()
+            except OSError:
+                pass
+            try:
+                data = make_thumb(Path(entry.path), media_kind(name), None)
+            except Exception as exc:
+                print(f"gallery: no thumbnail for inputs/{name}: {exc}")
+                raise GalleryError(404, "No thumbnail for this file")
+            fd, tmp = tempfile.mkstemp(dir=self.thumbs, suffix=".tmp")
+            with os.fdopen(fd, "wb") as out:
+                out.write(data)
+            os.replace(tmp, cache)
+        return data
+
     def dates(self, f: dict) -> dict:
         """Periods holding assets, newest first, in the client's local time
         (`tz` = Date.getTimezoneOffset(), minutes). A week runs Monday to Monday."""
@@ -834,13 +900,24 @@ def router(gallery: Gallery):
     def facets(scope: str = "app"):
         return answer(gallery.facets, scope)
 
-    @api.get("/thumb")
-    def thumb(key: str = ""):
+    def webp(fn, arg):
         try:
-            return Response(gallery.thumb(key), media_type="image/webp",
+            return Response(fn(arg), media_type="image/webp",
                             headers={"Cache-Control": "public, max-age=31536000, immutable"})
         except GalleryError as exc:
             return JSONResponse({"detail": exc.detail}, status_code=exc.status, headers=no_store)
+
+    @api.get("/thumb")
+    def thumb(key: str = ""):
+        return webp(gallery.thumb, key)
+
+    @api.get("/inputs")
+    def inputs(request: Request):
+        return answer(gallery.input_page, filters(request))
+
+    @api.get("/input-thumb")
+    def input_thumb(name: str = ""):
+        return webp(gallery.input_thumb, name)
 
     @api.post("/fav", dependencies=write)
     def fav(body: Fav):
