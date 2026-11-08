@@ -62,7 +62,10 @@ final prompts; prompt compilers belong to the front end (ADR 0001).
 ## Adding a model or an engine
 
 1. Add the catalog entry (`studio/catalog.json`): exact repository, `allow` patterns, licence as
-   read from the model card (or `"unverified"`), `gated`, `"qualified": false`.
+   read from the model card (or `"unverified"`), `gated`, `"qualified": false`. When it is
+   qualified, pin `revision` to the commit the qualified render used (its `.complete` marker):
+   a test refuses a qualified entry without one. A new Python dependency goes in
+   `docker/constraints.txt` at the version qualified.
 2. Write a `Pipeline` subclass in `studio/pipelines/`, `register()` it, list its catalog ids in
    `models`, validate parameters in `validate()` (and return them normalised), import its module
    at the bottom of `studio/pipelines/__init__.py`. Import torch and diffusers inside functions.
