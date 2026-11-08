@@ -184,7 +184,7 @@ def test_r2v_preview_is_the_first_pass_only(client, engines):
     assert (job["params"]["width"], job["params"]["height"]) == (736, 416)
 
 
-def test_r2v_two_passes(client, engines):
+def test_r2v_two_passes(client, engines, capsys):
     sheets = [upload(client, 192, 108, c) for c in ("red", "green")]
     job = run(client, "h3-r2v", {"prompt": "<Subject 1> in <Picture 1> and <Picture 2>", "references": sheets})
     first, second = calls(engines)
@@ -198,6 +198,9 @@ def test_r2v_two_passes(client, engines):
     video, pass1 = engines["refine"][0], engines["refine"][5]
     assert video == "video-latents" and pass1 == (736, 416)
     assert len(job["outputs"]) == 2 and len(engines["engines"]) == 1  # one generator for both passes
+    log = capsys.readouterr().out
+    assert "render: h3-r2v 1280×736, 124 frames, 2 reference(s) in " in log
+    assert all(part in log for part in ("references ", "pass 1 ", "upscale ", "pass 2 and decoding "))
 
 
 @pytest.mark.parametrize("pipeline,params,message", [

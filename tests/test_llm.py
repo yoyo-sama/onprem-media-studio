@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from studio.llm import LlamaServer, LlmError
+from studio.llm import CHAT_MAX_TOKENS, CHAT_THINKING_BUDGET, LlamaServer, LlmError
 
 
 def test_command_uses_local_model_files(settings, store):
@@ -87,6 +87,9 @@ def test_stream_gives_text_then_complete_tool_calls(settings, store, monkeypatch
                    ("tool", {"id": "call_a", "name": "create_image", "arguments": '{"prompt": "a cat"}'}),
                    ("tool", {"id": "call_1", "name": "ask_choices", "arguments": "{}"})]
     assert fake.body["stream"] is True and fake.body["tools"] == [{"type": "function"}]
+    # A capped answer, thinking on: one once looped until the context was full.
+    assert fake.body["max_tokens"] == CHAT_MAX_TOKENS
+    assert "chat_template_kwargs" not in fake.body
     # One line per call in the container log, with llama-server's own timings.
     line = capsys.readouterr().out
     assert line.startswith("llm: chat ") and "(prompt 900 tokens in 1.5 s, 40 generated in 0.8 s)" in line
@@ -98,6 +101,45 @@ def test_stream_error_is_an_llm_error(settings, store, monkeypatch):
     monkeypatch.setattr(server, "start", lambda: None)
     with pytest.raises(LlmError, match="500"):
         list(server.stream([]))
+
+
+def test_thinking_past_the_budget_asks_again_without_it(settings, store, monkeypatch, capsys):
+    thinking = FakeStream([sse({"reasoning_content": "hm"})] * (CHAT_THINKING_BUDGET + 50))
+    direct = FakeStream([sse({"content": "Done."}), "data: [DONE]"])
+    streams, bodies = [thinking, direct], []
+
+    def stream(method, url, json, timeout):
+        bodies.append(json)
+        return streams.pop(0)
+
+    monkeypatch.setattr("studio.llm.httpx.stream", stream)
+    server = LlamaServer(settings, store)
+    monkeypatch.setattr(server, "start", lambda: None)
+    assert list(server.stream([{"role": "user", "content": "hi"}])) == [("text", "Done.")]
+    assert "chat_template_kwargs" not in bodies[0]
+    assert bodies[1]["chat_template_kwargs"] == {"enable_thinking": False}
+    assert f"llm: chat thought {CHAT_THINKING_BUDGET} tokens" in capsys.readouterr().out
+
+
+def test_thinking_within_the_budget_is_kept(settings, store, monkeypatch):
+    fake = FakeStream([sse({"reasoning_content": "hm"})] * 100 + [sse({"content": "Ok."}), "data: [DONE]"])
+    monkeypatch.setattr("studio.llm.httpx.stream", fake)
+    server = LlamaServer(settings, store)
+    monkeypatch.setattr(server, "start", lambda: None)
+    assert list(server.stream([])) == [("text", "Ok.")]
+
+
+def test_stream_cut_at_the_cap_is_an_llm_error(settings, store, monkeypatch):
+    cut = "data: " + json.dumps({"choices": [{"delta": {}, "finish_reason": "length"}]})
+    monkeypatch.setattr("studio.llm.httpx.stream", FakeStream([sse({"content": "Long"}), cut, "data: [DONE]"]))
+    server = LlamaServer(settings, store)
+    monkeypatch.setattr(server, "start", lambda: None)
+    out = []
+    with pytest.raises(LlmError, match="cut at"):
+        for event in server.stream([]):
+            out.append(event)
+    # The text written before the cut was given first.
+    assert out == [("text", "Long")]
 
 
 def test_compiler_calls_do_not_think(settings, store, monkeypatch, capsys):

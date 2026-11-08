@@ -241,7 +241,7 @@ def history(conv: dict, files: FileStore) -> list[dict]:
                 msgs[-1]["content"] += "\n\n" + content
             else:
                 msgs.append({"role": "user", "content": content})
-        elif m["type"] == "assistant":
+        elif m["type"] == "assistant" and (m.get("text") or m.get("cards")):
             calls = [c for c in m.get("cards", []) if c.get("call_id")]
             entry = {"role": "assistant", "content": m.get("text", "")}
             if calls:
@@ -388,10 +388,12 @@ class Assistant:
                         msg["cards"].append(card)
                         yield {"type": "card", "card": card}
             except (LlmError, ModelError) as exc:
+                # Kept in the conversation, so a failed answer does not vanish on reload.
+                msg["error"] = str(exc)
                 yield {"type": "error", "message": str(exc)}
                 next_role = None
             finally:
-                if msg["text"].strip() or msg["cards"]:
+                if msg["text"].strip() or msg["cards"] or msg.get("error"):
                     msg["text"] = msg["text"].strip()
                     conv["messages"].append(msg)
                 self.conversations.save(conv)

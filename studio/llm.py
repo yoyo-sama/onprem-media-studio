@@ -25,6 +25,13 @@ LLM_FILES = {
 # Room for the assistant's instructions, tools and conversation history; one slot,
 # so concurrent requests queue instead of splitting the context.
 CTX_SIZE = 32768
+# Gemma 4 thinks before a chat answer, within a budget: left free, a three-line answer
+# cost 8 000 hidden tokens (150 s on the GB10), and one turn looped until the context
+# was full (29 220 tokens, 528 s) and showed nothing. Past the budget, the studio stops
+# that generation and asks again without thinking (llama.cpp b11982 has no budget flag).
+CHAT_THINKING_BUDGET = 2048
+# Thinking and answer together; an answer cut there raises LlmError.
+CHAT_MAX_TOKENS = CHAT_THINKING_BUDGET + 4096
 
 
 class LlmError(RuntimeError):
@@ -136,13 +143,24 @@ class LlamaServer:
                temperature: float = 0.6) -> Iterator[tuple[str, object]]:
         """A chat completion, streamed: ("text", chunk) as the answer is written, then
         ("tool", {"id", "name", "arguments"}) for each tool call once complete.
-        Closing the iterator closes the connection, which stops the generation."""
+        Closing the iterator closes the connection, which stops the generation.
+        Thinking helps choosing the tools; past CHAT_THINKING_BUDGET tokens of it, the
+        answer is asked again without thinking. An answer cut at CHAT_MAX_TOKENS raises
+        LlmError once its text has been yielded."""
         self.start()
-        body = {"messages": messages, "temperature": temperature, "stream": True}
+        body = {"messages": messages, "temperature": temperature, "stream": True,
+                "max_tokens": CHAT_MAX_TOKENS}
         if tools:
             body["tools"] = tools
+        over = yield from self._stream(body, budget=CHAT_THINKING_BUDGET)
+        if over:
+            yield from self._stream({**body, "chat_template_kwargs": {"enable_thinking": False}})
+
+    def _stream(self, body: dict, budget: int | None = None) -> Iterator[tuple[str, object]]:
+        """One streamed request; returns True when it was stopped for thinking past `budget`
+        before writing anything."""
         calls: dict[int, dict] = {}
-        began, timings = time.time(), None
+        began, timings, finish, thought, wrote = time.time(), None, None, 0, False
         with httpx.stream("POST", f"{self.url}/v1/chat/completions", json=body, timeout=300) as resp:
             if resp.status_code != 200:
                 resp.read()
@@ -156,17 +174,31 @@ class LlamaServer:
                 try:
                     chunk = json.loads(data)
                     timings = chunk.get("timings") or timings
-                    delta = chunk["choices"][0].get("delta") or {}
+                    choice = chunk["choices"][0]
+                    finish = choice.get("finish_reason") or finish
+                    delta = choice.get("delta") or {}
                 except (ValueError, KeyError, IndexError, AttributeError):
                     continue
+                if delta.get("reasoning_content"):
+                    thought += 1  # one streamed chunk per token
+                    if budget is not None and thought >= budget and not wrote:
+                        # Leaving the block closes the connection, which stops the generation.
+                        print(f"llm: chat thought {thought} tokens in {time.time() - began:.1f} s,"
+                              " asked again without thinking", flush=True)
+                        return True
                 if delta.get("content"):
+                    wrote = True
                     yield "text", delta["content"]
                 for part in delta.get("tool_calls") or []:
+                    wrote = True
                     call = calls.setdefault(part.get("index", len(calls)), {"id": "", "name": "", "arguments": ""})
                     call["id"] = part.get("id") or call["id"]
                     fn = part.get("function") or {}
                     call["name"] += fn.get("name") or ""
                     call["arguments"] += fn.get("arguments") or ""
         log_call("chat", time.time() - began, timings)
+        if finish == "length":
+            raise LlmError(f"the answer was cut at {CHAT_MAX_TOKENS} tokens")
         for i, call in sorted(calls.items()):
             yield "tool", {**call, "id": call["id"] or f"call_{i}"}
+        return False

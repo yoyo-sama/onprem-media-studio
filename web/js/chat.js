@@ -636,6 +636,7 @@ function renderMessage(m) {
     el.appendChild(row);
   }
   for (const card of m.cards || []) el.appendChild(renderCard(card));
+  if (m.error) el.appendChild(tx(document.createElement("p"), "The assistant is unavailable: {error}", { error: m.error })).className = "cc-warn";
   return el;
 }
 

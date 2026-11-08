@@ -11,6 +11,7 @@ from studio.assistant import chat as C
 from studio.assistant import tools as T
 from studio.assistant.roles import BUILTIN_DIR, RoleError, Roles, parse
 from studio.files import FileStore
+from studio.llm import LlmError
 from studio.main import create_app
 
 SAME_ORIGIN = {"Origin": "http://testserver"}
@@ -146,7 +147,10 @@ class ScriptedLlm:
 
     def stream(self, messages, tools=None, temperature=0.6):
         self.calls.append(("stream", messages, tools))
-        yield from self.streams.pop(0) if self.streams else []
+        for event in self.streams.pop(0) if self.streams else []:
+            if isinstance(event, Exception):
+                raise event
+            yield event
 
     def stop(self):
         pass
@@ -168,6 +172,18 @@ def make(tmp_path, files, llm):
 def run(assistant, body):
     conv, opts = assistant.prepare(body)
     return conv, list(assistant.turn(conv, opts))
+
+
+def test_failed_answer_stays_in_the_conversation(tmp_path, files):
+    llm = ScriptedLlm(streams=[[LlmError("the answer was cut at 4096 tokens")], [("text", "Again.")]])
+    a = make(tmp_path, files, llm)
+    conv, events = run(a, {"text": "A bathroom sheet", "role": "assistant"})
+    assert {"type": "error", "message": "the answer was cut at 4096 tokens"} in events
+    saved = C.Conversations(tmp_path / "chats").load(conv["id"])
+    assert saved["messages"][-1]["error"] == "the answer was cut at 4096 tokens"
+    # An answer that holds only its error is not sent back to the model.
+    run(a, {"conversation": conv["id"], "text": "Try again", "role": "assistant"})
+    assert [m["role"] for m in llm.calls[-1][1]] == ["system", "user"]
 
 
 def test_turn_routes_streams_and_makes_cards(tmp_path, files):

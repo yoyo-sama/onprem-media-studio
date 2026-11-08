@@ -44,12 +44,20 @@ Each Gemma call writes one line to the container log, with llama-server's timing
 each model load: `docker logs studio --since 30m 2>&1 | grep "llm:"` tells a slow model from a
 slow render (`llm: call 12.4 s (prompt 850 tokens in 1.1 s, 410 generated in 11.3 s)`). Each
 engine load writes an `engine:` line too (duration, files read time, engines freed for it), and
-each image render a `render:` line (encoding, steps, decoding): `grep -E "llm:|engine:|render:"`.
+each image or video render a `render:` line (encoding, steps, decoding; passes for H3): `grep -E "llm:|engine:|render:"`.
 
 llama-server lets Gemma 4 think by default. For the prompt compilers (enrichment, sheets, shot
 list, role routing) that meant thousands of hidden tokens per call: 44 to 81 s measured on the
-GB10 for answers of a few hundred tokens. Those calls send `enable_thinking: false`; the chat
-turns keep thinking, which helps choosing the tools.
+GB10 for answers of a few hundred tokens. The chat turns did the same: 8 444 hidden tokens (150 s)
+for a three-line answer, and once a loop that filled the whole context (29 220 tokens, 528 s)
+without writing anything. The compile calls send `enable_thinking: false`. The chat keeps
+thinking, which helps choosing the tools, within a budget of `CHAT_THINKING_BUDGET` tokens
+(2 048, about 40 s, `studio/llm.py`). Past it, the studio stops that generation and asks for the
+answer again without thinking (`llm: chat thought … asked again without thinking` in the log).
+llama.cpp b11982 has no `--reasoning-budget` flag, so the budget is held by the studio. A whole chat answer,
+thinking included, is capped at `CHAT_MAX_TOKENS` (2 048 + 4 096). An answer cut at the cap, or any other
+failure of a turn, is kept in the conversation as an error under the role's name, so it shows
+after a reload; such a message is not sent back to the model.
 
 ## Roles
 

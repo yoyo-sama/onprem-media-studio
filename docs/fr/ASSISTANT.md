@@ -44,14 +44,22 @@ Chaque appel à Gemma écrit une ligne dans le journal du conteneur, avec les te
 llama-server, de même que chaque chargement du modèle : `docker logs studio --since 30m 2>&1 |
 grep "llm:"` distingue un modèle lent d'un rendu lent (`llm: call 12.4 s (prompt 850 tokens in
 1.1 s, 410 generated in 11.3 s)`). Chaque chargement de moteur écrit aussi une ligne `engine:`
-(durée, temps de lecture des fichiers, moteurs libérés pour lui), et chaque rendu d'image une ligne
-`render:` (encodage, étapes, décodage) : `grep -E "llm:|engine:|render:"`.
+(durée, temps de lecture des fichiers, moteurs libérés pour lui), et chaque rendu d'image ou de vidéo une
+ligne `render:` (encodage, étapes, décodage ; passes pour H3) : `grep -E "llm:|engine:|render:"`.
 
 llama-server fait réfléchir Gemma 4 par défaut. Pour les compilateurs de prompts (enrichissement,
 planches, liste de plans, choix du rôle), cela faisait des milliers de jetons cachés par appel :
-44 à 81 s mesurées sur le GB10 pour des réponses de quelques centaines de jetons. Ces appels
-envoient `enable_thinking: false` ; les tours du chat gardent la réflexion, utile au choix des
-outils.
+44 à 81 s mesurées sur le GB10 pour des réponses de quelques centaines de jetons. Les tours du
+chat faisaient pareil : 8 444 jetons cachés (150 s) pour une réponse de trois lignes, et une fois
+une boucle qui a rempli tout le contexte (29 220 jetons, 528 s) sans rien écrire. Les
+compilateurs envoient `enable_thinking: false`. Le chat garde la réflexion, utile au choix des
+outils, dans un budget de `CHAT_THINKING_BUDGET` jetons (2 048, environ 40 s, `studio/llm.py`).
+Au-delà, le studio arrête cette génération et redemande la réponse sans réflexion
+(`llm: chat thought … asked again without thinking` dans le journal). llama.cpp b11982 n'a pas
+d'option `--reasoning-budget`, c'est donc le studio qui tient le budget. Une réponse entière du chat, réflexion comprise, est plafonnée à
+`CHAT_MAX_TOKENS` (2 048 + 4 096). Une réponse coupée au plafond, ou tout autre échec d'un
+tour, reste dans la conversation comme une erreur sous le nom du rôle, visible après un
+rechargement ; ce message n'est pas renvoyé au modèle.
 
 ## Rôles
 
