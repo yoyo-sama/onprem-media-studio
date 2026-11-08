@@ -63,8 +63,10 @@ def probe_media(data: bytes) -> tuple[str, str]:
 
 
 class FileStore:
-    def __init__(self, input_dir: Path, output_dir: Path):
+    def __init__(self, input_dir: Path, output_dir: Path, loras_dir: Path | None = None):
         self.roots = {"inputs": input_dir, "outputs": output_dir}
+        # LoRA files are not references a client can send: the engines read them by name.
+        self.loras_dir = loras_dir or input_dir.parent / "loras"
         for root in self.roots.values():
             root.mkdir(parents=True, exist_ok=True)
 

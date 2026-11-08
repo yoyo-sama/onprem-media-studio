@@ -197,6 +197,11 @@ class JobQueue:
         with self._lock:
             self.jobs[job.id] = job
             self._pending[self.pipelines[pipeline].gpu].put(job.id)
+            # Memory keeps what jobs.json keeps: the last HISTORY jobs, plus any still waiting
+            # or running however old.
+            finished = [j for j in self.jobs.values() if j.status not in ("queued", "running")]
+            for old in finished[:max(0, len(self.jobs) - HISTORY)]:
+                del self.jobs[old.id]
         self.emit(job)
         return job
 
@@ -248,8 +253,11 @@ class JobQueue:
             except Cancelled:
                 job.status = "cancelled"
             except Exception as exc:
-                job.status, job.error = "error", f"{exc}"
-                traceback.print_exc()
+                if ctx.cancelled():  # e.g. a model download stopped by the cancel: not a failure
+                    job.status = "cancelled"
+                else:
+                    job.status, job.error = "error", f"{exc}"
+                    traceback.print_exc()
             finally:
                 self.cancel_requests.discard(job_id)
                 job.finished = time.time()

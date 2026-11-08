@@ -87,6 +87,26 @@ def test_app_name_is_configurable(settings, store, monkeypatch):
         assert c.get("/api/health").json()["app"] == "Renamed Studio"
 
 
+def test_an_empty_app_name_falls_back_on_the_default(settings, store, monkeypatch):
+    """compose.yaml passes STUDIO_APP_NAME empty when .env does not set it."""
+    monkeypatch.setenv("STUDIO_APP_NAME", "")
+    from studio.config import APP_NAME, Settings
+    assert Settings().app_name == APP_NAME
+
+
+def test_memory_keeps_the_history_length_and_unfinished_jobs(settings, store, monkeypatch):
+    import studio.jobs
+    monkeypatch.setattr(studio.jobs, "HISTORY", 3)
+    app = create_app(settings, models=store, pipelines={"echo": Echo()}, llm=FakeLlm())
+    with TestClient(app) as c:
+        ids = [c.post("/api/jobs", json={"pipeline": "echo", "params": {"prompt": str(n)}}).json()["id"]
+               for n in range(5)]
+        for job_id in ids[-3:]:
+            wait_for(c, job_id)
+        listed = [j["id"] for j in c.get("/api/jobs").json()]
+        assert len(listed) <= 4 and ids[-1] in listed and ids[0] not in listed
+
+
 def test_job_downloads_missing_models_then_renders(client, fetch, settings):
     job = client.post("/api/jobs", json={"pipeline": "echo", "params": {"prompt": "hello"}}).json()
     done = wait_for(client, job["id"])

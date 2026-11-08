@@ -33,7 +33,6 @@ import re
 import time
 from pathlib import Path
 
-from ..config import Settings
 from ..files import media_kind
 from . import Pipeline, common, h3_lora, register
 
@@ -161,7 +160,7 @@ def _common(params: dict, files, extra: set[str]) -> dict:
     common.check_keys(params, {"prompt", "duration", "seed", "loras", *extra}, NO_NEGATIVE)
     out = {"prompt": _prompt(params), "duration": _duration(params)}
     out["frames"] = frames_for(out["duration"])
-    out["loras"] = h3_lora.check(params.get("loras", []), Settings().loras_dir / "h3")
+    out["loras"] = h3_lora.check(params.get("loras", []), files.loras_dir / "h3")
     out["seed"] = common.seed(params)
     return out
 
@@ -277,15 +276,13 @@ class H3ImageToVideo(H3TextToVideo):
 
     def validate(self, params, files):
         out = _common(params, files, {"image", "last_image", "aspect", "width", "height"})
-        from PIL import Image
         if "image" not in params:
             raise ValueError("image is required (the first frame)")
-        with Image.open(files.resolve(params["image"])) as img:
-            first = img.size
-        out["image"] = params["image"]
+        out["image"] = common.image_ref(params["image"], "image", files)
+        first = common.image_size(files.resolve(out["image"]))
         if params.get("last_image") is not None:
-            files.resolve(params["last_image"])
-            out["last_image"] = params["last_image"]
+            out["last_image"] = common.image_ref(params["last_image"], "last_image", files)
+            common.image_size(files.resolve(out["last_image"]))
         # <Picture 1> is the first image, <Picture 2> the last one (h3Alignment of 1.4).
         pictures = 2 if "last_image" in out else 1
         if any(n > pictures for n in _cited_pictures(out["prompt"])):

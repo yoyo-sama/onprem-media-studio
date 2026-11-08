@@ -202,6 +202,21 @@ def test_thumbnails_are_small_webp_and_cached(gallery):
     assert err.value.status == 404
 
 
+def test_thumbnails_not_read_for_long_leave_the_cache(gallery):
+    png(gallery.root / "a.png", meta("p"))
+    gallery.scan()
+    gallery.thumb("a.png")
+    (gallery.thumbs / "left.tmp").write_bytes(b"")
+    cached = next(gallery.thumbs.glob("*.webp"))
+    assert gallery.prune_thumbs() == 0
+    later = time.time() + 61 * 86400
+    gallery.thumb("a.png")  # read now: its date is renewed
+    assert gallery.prune_thumbs(now=time.time() + 59 * 86400) == 1  # only the leftover .tmp
+    assert gallery.prune_thumbs(now=later) == 1 and not cached.exists()
+    assert gallery.thumb("a.png")[:4] == b"RIFF"  # made again on the next view
+    assert (gallery.root / "a.png").exists()
+
+
 # ── Writes ───────────────────────────────────────────────────────────────────
 
 def test_tags_and_favourites_survive_rename_trash_and_restore(gallery):

@@ -38,6 +38,7 @@ from urllib.parse import quote
 from .files import media_kind
 
 IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp"}
+THUMB_KEEP_DAYS = 60  # a cached thumbnail not read for that long is dropped (made again on demand)
 VIDEO_EXT = {".mp4", ".webm", ".mov"}
 FRESH_SECONDS = 5      # a younger file may still be written: the next scan takes it
 PAGE_MAX = 200
@@ -361,9 +362,13 @@ class Gallery:
 
     def start(self) -> None:
         def loop():
+            pruned = 0.0
             while not self._stop.is_set():
                 try:
                     self.scan()
+                    if time.time() - pruned > 86400:
+                        pruned = time.time()
+                        self.prune_thumbs()
                 except Exception:
                     traceback.print_exc()
                 self._stop.wait(self.scan_interval)
@@ -520,7 +525,7 @@ class Gallery:
         cache = self.thumbs / name
         with self.thumb_slots:
             try:
-                return cache.read_bytes()
+                return self._cached(cache)
             except OSError:
                 pass
             try:
@@ -583,7 +588,7 @@ class Gallery:
         cache = self.thumbs / (hashlib.sha1(f"inputs/{name}|{st.st_mtime_ns}|{st.st_size}".encode()).hexdigest() + ".webp")
         with self.thumb_slots:
             try:
-                return cache.read_bytes()
+                return self._cached(cache)
             except OSError:
                 pass
             try:
@@ -596,6 +601,28 @@ class Gallery:
                 out.write(data)
             os.replace(tmp, cache)
         return data
+
+    @staticmethod
+    def _cached(cache: Path) -> bytes:
+        """A cached thumbnail, its date renewed: prune_thumbs drops the ones not read for long."""
+        data = cache.read_bytes()
+        os.utime(cache)
+        return data
+
+    def prune_thumbs(self, now: float | None = None) -> int:
+        """Drop thumbnails not read for THUMB_KEEP_DAYS and leftovers of interrupted writes.
+        They are made again on the next view; no user file is touched."""
+        now = time.time() if now is None else now
+        dropped = 0
+        for path in self.thumbs.iterdir():
+            try:
+                age = now - path.stat().st_mtime
+                if (path.suffix == ".webp" and age > THUMB_KEEP_DAYS * 86400) or (path.suffix == ".tmp" and age > 3600):
+                    path.unlink()
+                    dropped += 1
+            except OSError:
+                pass
+        return dropped
 
     def dates(self, f: dict) -> dict:
         """Periods holding assets, newest first, in the client's local time

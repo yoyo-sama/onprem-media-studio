@@ -4,6 +4,7 @@ on small clips made by ffmpeg. Skipped without ffmpeg."""
 import json
 import shutil
 import subprocess
+import time
 
 import pytest
 from fastapi.testclient import TestClient
@@ -39,6 +40,22 @@ def run(client, pipeline, params):
     job = wait_for(client, res.json()["id"])
     assert job["status"] == "done", job["error"]
     return job
+
+
+def test_a_cancelled_montage_stops_ffmpeg():
+    """A cancel stops the running ffmpeg within a second, not after its 900 s timeout."""
+    from studio.jobs import Cancelled
+    from studio.pipelines.montage import ffmpeg
+    calls = []
+
+    def check():
+        calls.append(1)
+        if len(calls) > 1:
+            raise Cancelled()
+    began = time.monotonic()
+    with pytest.raises(Cancelled):
+        ffmpeg("ffmpeg", "-v", "error", "-re", "-f", "lavfi", "-i", "nullsrc=d=60", "-f", "null", "-", check=check)
+    assert time.monotonic() - began < 5
 
 
 def test_concat_joins_clips_with_sound(client, settings):

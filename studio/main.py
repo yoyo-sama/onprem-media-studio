@@ -84,7 +84,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
                pipelines: dict[str, Pipeline] | None = None, llm: LlamaServer | None = None,
                updater: update.Updater | update.RemoteUpdater | None = None) -> FastAPI:
     settings = settings or Settings()
-    files = FileStore(settings.input_dir, settings.output_dir)
+    files = FileStore(settings.input_dir, settings.output_dir, settings.loras_dir)
     models = models or ModelStore(settings)
     llm = llm or LlamaServer(settings, models)
     jobs = JobQueue(REGISTRY if pipelines is None else pipelines, models, files, settings.data_dir / "jobs.json")
@@ -149,7 +149,7 @@ def create_app(settings: Settings | None = None, models: ModelStore | None = Non
     app.include_router(assistant_chat.router(assistant))
     # A video engine that does not fit next to the LLM stops it; the next LLM request
     # starts it again (about 20 s).
-    common.LOW_MEMORY.append(llm.stop)
+    common.POOL.low_memory.append(llm.stop)
 
     @app.get("/api/health")
     def health():

@@ -9,7 +9,8 @@ En 2.0, ce sont des modules du même serveur (`studio/gallery.py`, `studio/updat
 ## Galerie
 
 Un index SQLite/FTS5 (`STUDIO_DATA_DIR/gallery.db`) du dossier de sorties, avec des miniatures WebP
-en cache dans `STUDIO_DATA_DIR/cache/thumbs/`.
+en cache dans `STUDIO_DATA_DIR/cache/thumbs/`. Une miniature non lue depuis 60 jours quitte le
+cache (elle est refaite au prochain affichage).
 
 Le bouton « Entrées » affiche à la place les images et vidéos envoyées aux rendus
 (`STUDIO_DATA_DIR/inputs/`, fichiers téléversés nommés par l'empreinte de leur contenu), les plus

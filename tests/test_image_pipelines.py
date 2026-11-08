@@ -259,16 +259,16 @@ def test_pipelines_stay_resident_while_memory_allows(monkeypatch, capsys):
     gb = 1024**3
     free = {"bytes": 80 * gb}
     closed = []
-    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "POOL", common.EnginePool())
     monkeypatch.setattr(common, "free_memory", lambda: free["bytes"])
     krea = common.load("krea2", lambda: Closable("krea2", closed), 34 * gb)
     free["bytes"] -= 34 * gb
     qwen = common.load("qwen", lambda: Closable("qwen", closed), 30 * gb)
     free["bytes"] -= 30 * gb
-    assert list(common._resident) == ["krea2", "qwen"] and closed == []
+    assert list(common.POOL.resident) == ["krea2", "qwen"] and closed == []
     # Back to Krea 2: still resident, not rebuilt, and now the most recently used.
     assert common.load("krea2", lambda: pytest.fail("rebuilt")) is krea
-    assert list(common._resident) == ["qwen", "krea2"]
+    assert list(common.POOL.resident) == ["qwen", "krea2"]
 
     def release(name, size):
         def close():
@@ -278,7 +278,7 @@ def test_pipelines_stay_resident_while_memory_allows(monkeypatch, capsys):
     qwen.close, krea.close = release("qwen", 30 * gb), release("krea2", 34 * gb)
     # A 64 GB video engine does not fit: the least recently used goes first, then the next.
     common.load("h3", lambda: Closable("h3", closed), 64 * gb)
-    assert closed == ["qwen", "krea2"] and list(common._resident) == ["h3"]
+    assert closed == ["qwen", "krea2"] and list(common.POOL.resident) == ["h3"]
     # Each load is one line of the container log, naming what it freed.
     lines = capsys.readouterr().out.splitlines()
     assert [l.split(" loaded")[0] for l in lines] == ["engine: krea2", "engine: qwen", "engine: h3"]
@@ -287,16 +287,16 @@ def test_pipelines_stay_resident_while_memory_allows(monkeypatch, capsys):
 
 def test_a_video_engine_is_loaded_alone(monkeypatch):
     closed = []
-    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "POOL", common.EnginePool())
     monkeypatch.setattr(common, "free_memory", lambda: 200 * 1024**3)
     common.load("krea2", lambda: Closable("krea2", closed), 34 * 1024**3)
     common.load("qwen", lambda: Closable("qwen", closed), 30 * 1024**3)
     common.load("h3", lambda: Closable("h3", closed), alone=True)
-    assert closed == ["krea2", "qwen"] and list(common._resident) == ["h3"]
+    assert closed == ["krea2", "qwen"] and list(common.POOL.resident) == ["h3"]
 
 
 def test_a_pipeline_is_built_even_when_nothing_is_left_to_free(monkeypatch):
-    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "POOL", common.EnginePool())
     monkeypatch.setattr(common, "free_memory", lambda: 0)
     assert common.load("krea2", lambda: "pipe", 34 * 1024**3) == "pipe"
 
@@ -306,11 +306,12 @@ def test_torch_cache_is_given_back_before_memory_is_measured(monkeypatch):
     gb = 1024**3
     free = {"bytes": 30 * gb}
     closed = []
-    monkeypatch.setattr(common, "_resident", {"qwen": Closable("qwen", closed)})
+    monkeypatch.setattr(common, "POOL", common.EnginePool())
+    common.POOL.resident["qwen"] = Closable("qwen", closed)
     monkeypatch.setattr(common, "free_memory", lambda: free["bytes"])
     monkeypatch.setattr(common, "_empty_cache", lambda: free.update(bytes=free["bytes"] + 25 * gb))
     common.load("krea2", lambda: Closable("krea2", closed), 34 * gb)
-    assert closed == [] and list(common._resident) == ["qwen", "krea2"]
+    assert closed == [] and list(common.POOL.resident) == ["qwen", "krea2"]
 
 
 def test_text_encoders_are_loaded_whole_by_transformers(tmp_path, monkeypatch):

@@ -9,7 +9,8 @@ In 2.0 they are modules of the same server (`studio/gallery.py`, `studio/update.
 ## Gallery
 
 An SQLite/FTS5 index (`STUDIO_DATA_DIR/gallery.db`) of the output folder, with WebP thumbnails
-cached in `STUDIO_DATA_DIR/cache/thumbs/`.
+cached in `STUDIO_DATA_DIR/cache/thumbs/`. A thumbnail not read for 60 days leaves the cache (it
+is made again on the next view).
 
 The "Inputs" button shows instead the images and clips sent to renders (`STUDIO_DATA_DIR/inputs/`,
 uploads named by their content hash), newest first, in the same Images and Videos tabs. They are

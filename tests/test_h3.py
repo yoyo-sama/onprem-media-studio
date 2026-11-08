@@ -174,6 +174,19 @@ def test_i2v_refuses_picture_2_without_a_last_image(client):
     assert "image is required" in rejected(client, "h3-i2v", {"prompt": "p"})
 
 
+def test_i2v_images_must_be_readable_images(client, settings):
+    """A file that is not an image is a 422 with its reason, never a 500."""
+    first = upload(client, 64, 64)
+    broken = settings.output_dir / "broken.png"
+    broken.write_bytes(b"not a png")
+    (settings.output_dir / "clip.mp4").write_bytes(b"x")
+    assert "not a readable image" in rejected(client, "h3-i2v", {"prompt": "p", "image": "outputs/broken.png"})
+    assert "is not an image" in rejected(client, "h3-i2v", {"prompt": "p", "image": "outputs/clip.mp4"})
+    assert "last_image" in rejected(client, "h3-i2v", {"prompt": "p", "image": first, "last_image": "outputs/clip.mp4"})
+    assert "not a readable image" in rejected(client, "h3-i2v", {"prompt": "p", "image": first,
+                                                                 "last_image": "outputs/broken.png"})
+
+
 def test_r2v_preview_is_the_first_pass_only(client, engines):
     sheet = upload(client, 192, 108)
     job = run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "preview": True})
@@ -207,7 +220,7 @@ def test_r2v_stops_the_llm_first_and_t2v_keeps_it(client, engines, monkeypatch, 
     """Gemma next to a two-pass r2v pushed the GB10 into swap: an r2v stops it before
     rendering, a t2v (19 GiB left with Gemma loaded) keeps it."""
     stops = []
-    monkeypatch.setattr(common, "LOW_MEMORY", [lambda: stops.append(len(engines["engines"])) or True])
+    monkeypatch.setattr(common.POOL, "low_memory", [lambda: stops.append(len(engines["engines"])) or True])
     run(client, "h3-t2v", {"prompt": "a kite"})
     assert stops == []
     sheets = [upload(client, 192, 108, "red")]
@@ -545,7 +558,7 @@ def test_fastvideo_weights_are_read_whole(tmp_path):
 
 def test_an_h3_engine_is_named_shortly_in_the_log(monkeypatch, capsys):
     from studio.pipelines.h3_runtime import EngineSpec
-    monkeypatch.setattr(common, "_resident", {})
+    monkeypatch.setattr(common, "POOL", common.EnginePool())
     monkeypatch.setattr(common, "free_memory", lambda: 200 * 1024**3)
     spec = EngineSpec(model_dir=Path("/data/models/fasth3-omniref-nvfp4"), ref2va=True)
     common.load(("h3", spec), lambda: object(), alone=True)
