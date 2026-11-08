@@ -145,6 +145,11 @@ is refused at submission. The storyboard and campaign flows send no image LoRA.
   `diffusion_model.`, kohya `lora_unet_`/`lora_down`, AI-Toolkit, diffusers/PEFT). MOSS reads
   ComfyUI (`diffusion_model.`) and diffusers (`transformer.`) files, `lora_down`/`lora_up` or
   `lora_A`/`lora_B`, with the `.alpha` keys or the alpha of the file's diffusers metadata.
+  Three layouts the diffusers loaders miss are rewritten first (`image_lora.normalized`): Krea 2
+  kohya names (`lora_unet_blocks_0_attn_wq`), `.alpha` keys next to diffusers `lora_A`/`lora_B`
+  pairs (diffusers would prefix those files with a second `transformer.`), and Qwen Image 2.1's
+  fused `img_mlp.gate_up`, split into `gate_layer` and `proj` (gate rows first, as diffusers
+  splits the fused weight). A file none of them applies to still loads from its path.
 - **Nothing silently dropped.** diffusers only warns about keys that land on no layer and
   renders without them; here a file with any such key (text encoder keys included) fails the
   job and names a few of them.

@@ -87,6 +87,33 @@ def test_a_qwen_lora_for_another_model_is_refused(tmp_path):
     assert not getattr(pipe.transformer, "peft_config", None)
 
 
+def test_qwen_fused_gate_up_and_prefixed_alpha_files_load_exactly(tmp_path):
+    """The two community layouts diffusers misses (Qwen_2.1-Unchained-V1: fused img_mlp.gate_up;
+    Qwen_2.1_Unlocked_V1: transformer.… pairs with alphas) give the delta of the fused weight."""
+    pipe = tiny_qwen()
+    mlp = pipe.transformer.transformer_blocks[0].img_mlp
+    q = pipe.transformer.transformer_blocks[0].attn.to_k
+    x = torch.randn(3, mlp.proj.in_features)
+    plain_gate, plain_proj, plain_k = mlp.gate_layer(x).detach(), mlp.proj(x).detach(), q(x).detach()
+    rank, width = 2, mlp.proj.out_features
+    d, u = torch.randn(rank, mlp.proj.in_features), torch.randn(2 * width, rank)
+    dk, uk = torch.randn(rank, q.in_features), torch.randn(q.out_features, rank)
+    save(tmp_path / "fused.safetensors", {
+        "diffusion_model.transformer_blocks.0.img_mlp.gate_up.lora_A.weight": d,
+        "diffusion_model.transformer_blocks.0.img_mlp.gate_up.lora_B.weight": u})
+    save(tmp_path / "alpha.safetensors", {
+        "transformer.transformer_blocks.0.attn.to_k.lora_A.weight": dk,
+        "transformer.transformer_blocks.0.attn.to_k.lora_B.weight": uk,
+        "transformer.transformer_blocks.0.attn.to_k.alpha": torch.tensor(1.0)})
+    stack = [{"name": "fused.safetensors", "strength": 1.0}, {"name": "alpha.safetensors", "strength": 1.0}]
+    image_lora.apply(pipe, stack, tmp_path)
+    delta = x @ d.T @ u.T  # gate rows first
+    assert torch.allclose(mlp.gate_layer(x), plain_gate + delta[:, :width], atol=1e-4)
+    assert torch.allclose(mlp.proj(x), plain_proj + delta[:, width:], atol=1e-4)
+    k = pipe.transformer.transformer_blocks[0].attn.to_k
+    assert torch.allclose(k(x), plain_k + (1.0 / rank) * (x @ dk.T @ uk.T), atol=1e-4)
+
+
 # MOSS: diffusers-format files and metadata alpha, read by its own hook loader.
 
 class TinyMoss(torch.nn.Module):

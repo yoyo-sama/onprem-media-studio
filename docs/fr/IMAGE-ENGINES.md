@@ -154,6 +154,12 @@ LoRA d'image.
   `diffusion_model.`, kohya `lora_unet_`/`lora_down`, AI-Toolkit, diffusers/PEFT). MOSS lit les
   fichiers ComfyUI (`diffusion_model.`) et diffusers (`transformer.`), `lora_down`/`lora_up` ou
   `lora_A`/`lora_B`, avec les clés `.alpha` ou l'alpha des métadonnées diffusers du fichier.
+  Trois dispositions que les chargeurs diffusers manquent sont d'abord réécrites
+  (`image_lora.normalized`) : les noms kohya de Krea 2 (`lora_unet_blocks_0_attn_wq`), des clés
+  `.alpha` à côté de paires diffusers `lora_A`/`lora_B` (diffusers préfixait ces fichiers d'un
+  second `transformer.`), et le `img_mlp.gate_up` fusionné de Qwen Image 2.1, séparé en
+  `gate_layer` et `proj` (lignes de la porte d'abord, comme diffusers sépare le poids fusionné).
+  Un fichier qu'aucune ne concerne se charge toujours depuis son chemin.
 - **Rien d'ignoré en silence.** diffusers se contente d'avertir pour les clés qui ne tombent sur
   aucune couche et rend sans elles ; ici un fichier qui en a une seule (clés d'encodeur de texte
   comprises) fait échouer le job et en cite quelques-unes.

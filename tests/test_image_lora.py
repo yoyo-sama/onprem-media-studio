@@ -96,9 +96,11 @@ class RecordingPipe:
         self.transformer = type("T", (), {"peft_config": None})()
         self.log = []
 
-    def load_lora_weights(self, path, weight_name, adapter_name, local_files_only):
+    def load_lora_weights(self, path, adapter_name, weight_name=None, local_files_only=False):
         self.transformer.peft_config = {**(self.transformer.peft_config or {}), adapter_name: path}
         self.log.append(("load", weight_name, adapter_name))
+        if isinstance(path, dict):
+            self.loaded = [*getattr(self, "loaded", []), path]
 
     def unload_lora_weights(self):
         self.transformer.peft_config = None
@@ -154,3 +156,71 @@ def test_every_file_is_checked_before_any_is_loaded(tmp_path, monkeypatch):
     pipe.log.clear()
     image_lora.apply(pipe, stack, tmp_path)  # the next render loads its stack from scratch
     assert [e[0] for e in pipe.log] == ["check", "check", "load", "load", "set"]
+
+
+# ── normalized(): layouts the diffusers loaders miss (community files, 2026-11-08) ──
+
+def test_a_file_the_engine_reads_is_left_alone():
+    np = pytest.importorskip("numpy")
+    sd = {"transformer.transformer_blocks.0.attn.to_q.lora_A.weight": np.ones((4, 8)),
+          "transformer.transformer_blocks.0.attn.to_q.lora_B.weight": np.ones((8, 4)),
+          "diffusion_model.blocks.0.attn.wq.lora_A.weight": np.ones((4, 8))}
+    assert image_lora.normalized(sd) is sd  # loads from its path, metadata included
+
+
+def test_kohya_krea_names_become_the_reference_names_with_alpha_folded():
+    """krea_2_Unlocked_V3: lora_unet_blocks_0_attn_wq.lora_down.weight + .alpha, rank 32."""
+    np = pytest.importorskip("numpy")
+    down, up = np.full((32, 8), 2.0), np.ones((8, 32))
+    sd = {"lora_unet_blocks_0_attn_wq.lora_down.weight": down,
+          "lora_unet_blocks_0_attn_wq.lora_up.weight": up,
+          "lora_unet_blocks_0_attn_wq.alpha": np.array(16.0),
+          "lora_unet_txtfusion_refiner_blocks_1_mlp_up.lora_down.weight": down,
+          "lora_unet_txtfusion_refiner_blocks_1_mlp_up.lora_up.weight": up}
+    out = image_lora.normalized(sd)
+    assert sorted(out) == ["diffusion_model.blocks.0.attn.wq.lora_A.weight",
+                           "diffusion_model.blocks.0.attn.wq.lora_B.weight",
+                           "diffusion_model.txtfusion.refiner_blocks.1.mlp.up.lora_A.weight",
+                           "diffusion_model.txtfusion.refiner_blocks.1.mlp.up.lora_B.weight"]
+    assert (out["diffusion_model.blocks.0.attn.wq.lora_A.weight"] == 1.0).all()  # 2 × 16/32
+    assert out["diffusion_model.txtfusion.refiner_blocks.1.mlp.up.lora_A.weight"] is down  # no alpha
+    assert out["diffusion_model.blocks.0.attn.wq.lora_B.weight"] is up
+
+
+def test_alpha_next_to_diffusers_pairs_is_folded_and_dropped():
+    """Qwen_2.1_Unlocked_V1: transformer.… lora_A/lora_B + .alpha; diffusers made it
+    transformer.transformer.…"""
+    np = pytest.importorskip("numpy")
+    base = "transformer.transformer_blocks.0.attn.to_k"
+    sd = {f"{base}.lora_A.weight": np.ones((16, 8)), f"{base}.lora_B.weight": np.ones((8, 16)),
+          f"{base}.alpha": np.array(8.0)}
+    out = image_lora.normalized(sd)
+    assert sorted(out) == [f"{base}.lora_A.weight", f"{base}.lora_B.weight"]
+    assert (out[f"{base}.lora_A.weight"] == 0.5).all()
+
+
+def test_fused_gate_up_is_split_gate_rows_first():
+    """Qwen_2.1-Unchained-V1: img_mlp.gate_up, lora_B 2 × 12288 rows; the engine has gate_layer
+    and proj. Each half's delta is exactly that half of the fused delta."""
+    np = pytest.importorskip("numpy")
+    rng = np.random.default_rng(0)
+    down, up = rng.standard_normal((4, 6)), rng.standard_normal((10, 4))
+    base = "diffusion_model.transformer_blocks.3.img_mlp."
+    sd = {base + "gate_up.lora_A.weight": down, base + "gate_up.lora_B.weight": up,
+          base + "out.lora_A.weight": down, base + "out.lora_B.weight": up}
+    out = image_lora.normalized(sd)
+    assert sorted(out) == [base + n for n in ("gate_layer.lora_A.weight", "gate_layer.lora_B.weight",
+                                              "out.lora_A.weight", "out.lora_B.weight",
+                                              "proj.lora_A.weight", "proj.lora_B.weight")]
+    fused = up @ down
+    split = lambda n: out[base + n + ".lora_B.weight"] @ out[base + n + ".lora_A.weight"]
+    assert np.array_equal(np.vstack([split("gate_layer"), split("proj")]), fused)
+
+
+def test_apply_loads_a_rewritten_file_from_its_tensors(tmp_path, monkeypatch):
+    (tmp_path / "a.safetensors").write_bytes(b"x")
+    rewritten = {"transformer.x.lora_A.weight": 1}
+    monkeypatch.setattr(image_lora, "_check", lambda pipe, path: rewritten)
+    pipe = RecordingPipe()
+    image_lora.apply(pipe, [{"name": "a.safetensors", "strength": 1.0}], tmp_path)
+    assert pipe.log[0] == ("load", None, "lora0") and pipe.loaded == [rewritten]
