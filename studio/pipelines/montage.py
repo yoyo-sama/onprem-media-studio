@@ -7,7 +7,9 @@
   candidate transition images of a Relay segment.
 
 They need no model and no GPU, but go through the job queue like the engines,
-so their files reach the gallery and their progress the page the same way.
+so their files reach the gallery and their progress the page the same way. They
+run on the queue's CPU worker (`gpu = False`): a Relay transition or an animatic
+does not wait behind a video render.
 """
 
 import json
@@ -70,6 +72,7 @@ class VideoConcat(Pipeline):
 
     id = "video-concat"
     models = []
+    gpu = False
 
     def validate(self, params, files):
         common.check_keys(params, {"clips"}, "a montage has no prompt.")
@@ -110,6 +113,7 @@ class ImageGrid(Pipeline):
 
     id = "image-grid"
     models = []
+    gpu = False
 
     def validate(self, params, files):
         common.check_keys(params, {"images"}, "a contact sheet has no prompt.")
@@ -136,6 +140,7 @@ class VideoFrames(Pipeline):
 
     id = "video-frames"
     models = []
+    gpu = False
 
     def validate(self, params, files):
         common.check_keys(params, {"video", "offsets"}, "extracting frames has no prompt.")

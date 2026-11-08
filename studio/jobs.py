@@ -1,4 +1,5 @@
-"""Job queue: one worker, one GPU, jobs run in submission order.
+"""Job queue: one GPU worker, jobs run in submission order; the CPU jobs (montage,
+`Pipeline.gpu = False`) run in order on a second worker, beside the GPU one.
 
 A job exists only because a client posted it: nothing in the backend creates
 one on its own (LESSONS.md, "nothing renders without a click").
@@ -103,7 +104,8 @@ class JobQueue:
         self.jobs: dict[str, Job] = {}
         self.cancel_requests: set[str] = set()
         self.listeners: list[Listener] = []
-        self._pending: queue.Queue[str | None] = queue.Queue()
+        # One queue per worker: the GPU engines, and the CPU jobs (montage).
+        self._pending = {True: queue.Queue(), False: queue.Queue()}
         # Ids are unique across restarts: jobs live in memory, and a page that waited for
         # job-3 before a restart must not read another job-3 after it (LESSONS.md #47).
         self._boot = secrets.token_hex(3)
@@ -116,13 +118,16 @@ class JobQueue:
         self.history = history
         self._saved: dict[str, str] = {}
         self._restore()
-        self._worker = threading.Thread(target=self._run, name="job-worker", daemon=True)
+        self._workers = [threading.Thread(target=self._run, args=(self._pending[gpu],), daemon=True,
+                                          name="job-worker" if gpu else "job-worker-cpu") for gpu in (True, False)]
 
     def start(self) -> None:
-        self._worker.start()
+        for worker in self._workers:
+            worker.start()
 
     def stop(self) -> None:
-        self._pending.put(None)
+        for pending in self._pending.values():
+            pending.put(None)
 
     def emit(self, job: Job) -> None:
         event = {"type": "job", "job": job.public()}
@@ -191,7 +196,7 @@ class JobQueue:
                   request=request)
         with self._lock:
             self.jobs[job.id] = job
-            self._pending.put(job.id)
+            self._pending[self.pipelines[pipeline].gpu].put(job.id)
         self.emit(job)
         return job
 
@@ -224,8 +229,8 @@ class JobQueue:
         self.emit(job)
         return job
 
-    def _run(self) -> None:
-        while (job_id := self._pending.get()) is not None:
+    def _run(self, pending: queue.Queue) -> None:
+        while (job_id := pending.get()) is not None:
             job = self.jobs[job_id]
             with self._lock:
                 if job.status != "queued":

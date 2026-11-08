@@ -217,3 +217,42 @@ def test_jobs_cut_by_a_restart_come_back_interrupted_and_run_again_on_a_click(se
         assert wait_for(c, again["id"])["status"] == "done"
         assert c.get("/api/jobs/job-old-9").json()["retried_as"] == again["id"]
         assert c.post("/api/jobs/job-old-9/retry", headers=origin).status_code == 422
+
+
+class Montage(Echo):
+    """A CPU job (no model, no GPU)."""
+
+    id = "montage"
+    models = []
+    gpu = False
+
+    def run(self, params, models, ctx):
+        out = ctx.output_dir / f"{ctx.job.id}.txt"
+        out.write_text(params["prompt"])
+        return [out]
+
+
+def test_a_cpu_job_does_not_wait_behind_a_render(settings, store):
+    import threading
+    release = threading.Event()
+
+    class Slow(Echo):
+        id = "slow"
+
+        def run(self, params, models, ctx):
+            release.wait(10)
+            return super().run(params, models, ctx)
+
+    app = create_app(settings, models=store, pipelines={"slow": Slow(), "montage": Montage()}, llm=FakeLlm())
+    with TestClient(app) as c:
+        render = c.post("/api/jobs", json={"pipeline": "slow", "params": {"prompt": "a"}}).json()
+        cut = c.post("/api/jobs", json={"pipeline": "montage", "params": {"prompt": "b"}}).json()
+        assert wait_for(c, cut["id"])["status"] == "done"
+        assert c.get(f"/api/jobs/{render['id']}").json()["status"] == "running"
+        release.set()
+        assert wait_for(c, render["id"])["status"] == "done"
+
+
+def test_montage_jobs_run_on_the_cpu_worker():
+    from studio.pipelines import REGISTRY
+    assert {p.id for p in REGISTRY.values() if not p.gpu} == {"video-concat", "image-grid", "video-frames"}

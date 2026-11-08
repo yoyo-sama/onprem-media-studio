@@ -9,7 +9,7 @@ conception : [adr/](adr/).
 navigateur ──HTTP/WS──> studio (FastAPI, :8090)
                           ├─ /api/models   catalogue + téléchargement (huggingface_hub)
                           ├─ /api/inputs   envoi d'image, de vidéo ou de son → référence pour les jobs
-                          ├─ /api/jobs     file → un worker GPU → pipelines (diffusers, FastVideo)
+                          ├─ /api/jobs     file → un worker GPU → pipelines (diffusers, FastVideo) ; jobs CPU sur un second worker
                           ├─ /api/llm      llama-server (Gemma 4 26B-A4B, 127.0.0.1:8095)
                           ├─ /api/chat     assistant de création : rôles, conversations, cartes
                           ├─ /api/gallery  index des sorties : recherche, miniatures, tags, corbeille
@@ -33,14 +33,14 @@ requête LLM.
 | `studio/catalog.json` | Tous les modèles téléchargeables : dépôt, fichiers, licence, accès restreint, qualifié |
 | `studio/models.py` | `ModelStore` : état installé, téléchargement fichier par fichier avec reprise, contrôle du disque |
 | `studio/import14.py` | `python -m studio.import14` : reprend les modèles et les LoRA H3 d'une installation 1.4 (fichiers identiques, fragments reconstruits, contrôlés par SHA-256) |
-| `studio/jobs.py` | `JobQueue` : soumission, worker unique, progression, annulation, événements |
+| `studio/jobs.py` | `JobQueue` : soumission, un worker GPU et un worker CPU (jobs de montage, `Pipeline.gpu = False`), progression, annulation, événements, historique dans `jobs.json` |
 | `studio/files.py` | `FileStore` : images envoyées, références `inputs/…` et `outputs/…` |
 | `studio/pipelines/` | Contrat `Pipeline` et registre ; une sous-classe par moteur |
 | `studio/pipelines/krea2.py`, `qwen.py`, `moss.py` | Moteurs d'image (Krea 2, Qwen Image 2.1, MOSS-Image) : [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/h3.py` | Moteurs vidéo (MiniMax H3 : texte, image, première/dernière image et références vers vidéo), géométrie et plan d'affinage : [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | Adaptateur FastVideo : recettes Spark, profil NVFP4, sortie latente et réglages de la passe d'affinage, annulation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | Upscaler latent H3 (convolutions 3D, checkpoint LBH v1) et pile de LoRA (fusion exacte en une seule branche parallèle) |
-| `studio/pipelines/montage.py` | Jobs CPU sur des fichiers rendus, avec ffmpeg et Pillow : `video-concat` (clips bout à bout), `image-grid` (planche contact), `video-frames` (images proches de la fin d'un clip, pour les transitions du Relay) |
+| `studio/pipelines/montage.py` | Jobs CPU sur des fichiers rendus, avec ffmpeg et Pillow : `video-concat` (clips bout à bout), `image-grid` (planche contact), `video-frames` (images proches de la fin d'un clip, pour les transitions du Relay) ; ils tournent sur le worker CPU, jamais derrière un rendu |
 | `studio/pipelines/upscale.py` | `upscale-2x` : une image ou une vidéo deux fois plus grande par le réseau SPAN, sur un clic de la galerie : [IMAGE-ENGINES.md](IMAGE-ENGINES.md#résolution-2) |
 | `studio/pipelines/common.py` | Contrôle des paramètres, pipelines gardés en mémoire (le moins récemment utilisé libéré quand le suivant ne tient pas), progression par étape, sortie PNG |
 | `tools/qualify/` | Cas de qualification tirés des compilateurs de prompt de la 1.4, et leur lanceur |

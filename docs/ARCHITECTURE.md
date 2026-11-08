@@ -8,7 +8,7 @@ French version: [fr/ARCHITECTURE.md](fr/ARCHITECTURE.md). Design decisions: [adr
 browser ──HTTP/WS──> studio (FastAPI, :8090)
                        ├─ /api/models   catalog + download (huggingface_hub)
                        ├─ /api/inputs   image, clip or sound upload → reference for jobs
-                       ├─ /api/jobs     queue → one GPU worker → pipelines (diffusers, FastVideo)
+                       ├─ /api/jobs     queue → one GPU worker → pipelines (diffusers, FastVideo); CPU jobs on a second worker
                        ├─ /api/llm      llama-server (Gemma 4 26B-A4B, 127.0.0.1:8095)
                        ├─ /api/chat     creative assistant: roles, conversations, cards
                        ├─ /api/gallery  index of the outputs: search, thumbnails, tags, trash
@@ -33,13 +33,13 @@ request.
 | `studio/models.py` | `ModelStore`: installed state, resumable per-file download, disk check |
 | `studio/import14.py` | `python -m studio.import14`: reuses the models and H3 LoRAs of a 1.4 install (identical files, shards rebuilt and checked by SHA-256) |
 | `studio/files.py` | `FileStore`: uploads, `inputs/…` and `outputs/…` references |
-| `studio/jobs.py` | `JobQueue`: submission, single worker, progress, cancellation, events |
+| `studio/jobs.py` | `JobQueue`: submission, one GPU worker and one CPU worker (montage jobs, `Pipeline.gpu = False`), progress, cancellation, events, history in `jobs.json` |
 | `studio/pipelines/` | `Pipeline` contract and registry; one subclass per engine |
 | `studio/pipelines/krea2.py`, `qwen.py`, `moss.py` | Image engines (Krea 2, Qwen Image 2.1, MOSS-Image): [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/h3.py` | Video engines (MiniMax H3: text, image, first/last image and references to video), geometry and refine schedule: [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | FastVideo adapter: Spark recipes, NVFP4 profile, latent output and refine-pass overrides, cancellation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | H3 latent upscaler (3D conv, LBH v1 checkpoint) and LoRA stack (exact merge into one side branch) |
-| `studio/pipelines/montage.py` | CPU jobs on rendered files with ffmpeg and Pillow: `video-concat` (clips end to end), `image-grid` (contact sheet), `video-frames` (frames near a clip's end, for Relay transitions) |
+| `studio/pipelines/montage.py` | CPU jobs on rendered files with ffmpeg and Pillow: `video-concat` (clips end to end), `image-grid` (contact sheet), `video-frames` (frames near a clip's end, for Relay transitions); they run on the CPU worker, never behind a render |
 | `studio/pipelines/upscale.py` | `upscale-2x`: an image or a video twice as large through the SPAN network, on a gallery click: [IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2) |
 | `studio/pipelines/common.py` | Parameter checks, the pipelines kept in memory (least recently used freed when the next does not fit), step progress, PNG output |
 | `tools/qualify/` | Qualification cases built from the 1.4 prompt compilers, and their runner |
