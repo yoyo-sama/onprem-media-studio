@@ -121,30 +121,20 @@ def disk_size(path: Path) -> int:
 # the disk (4.3 GB/s). diffusers does not pass disable_mmap to transformers models (the
 # text encoders: 9 GB for Krea 2, 17 GB for Qwen), so from_pretrained loads those itself.
 # device_map on the GPU gained nothing (258 s). tools/qualify/load_speed.sh, 2026-11-05.
-def from_pretrained(cls, path: Path):
+def from_pretrained(cls, path: Path, **given):
     """A diffusers pipeline of `cls` from `path`, every safetensors file read whole, in
-    bfloat16 on the GPU."""
+    bfloat16 on the GPU. `given` components are used as they are (loaded elsewhere)."""
     import torch
     import transformers
     index = json.loads((Path(path) / "model_index.json").read_text())
-    parts = {}
+    parts = dict(given)
     for name, spec in index.items():
+        if name in parts:
+            continue
         model = getattr(transformers, spec[1], None) if isinstance(spec, list) and spec[0] == "transformers" else None
         if isinstance(model, type) and issubclass(model, transformers.PreTrainedModel):
             parts[name] = model.from_pretrained(Path(path) / name, dtype=torch.bfloat16, disable_mmap=True)
     return cls.from_pretrained(path, torch_dtype=torch.bfloat16, disable_mmap=True, **parts).to(device())
-
-
-def compile_transformer(pipe):
-    """torch.compile of the denoiser, default mode: no CUDA graphs, whose state is per
-    thread (LESSONS #37). Used by Qwen Image 2.1 only (LESSONS #43): on the GB10 a step
-    took 2.3 s instead of 2.95 at 1920×1088, 16 s saved per image of 25 steps, for about
-    15 s of compilation on the first render at each size in a process. Compiled kernels
-    are kept on the data volume."""
-    from ..config import Settings
-    os.environ.setdefault("TORCHINDUCTOR_CACHE_DIR", str(Settings().data_dir / "cache" / "inductor"))
-    pipe.transformer.compile()
-    return pipe
 
 
 def load(key, build, size: int = 0, alone: bool = False):

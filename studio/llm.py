@@ -3,8 +3,8 @@ and the creative assistant use the same model.
 
 The server is started on the first request (model downloaded first if needed),
 listens on 127.0.0.1 only, and speaks the OpenAI chat API. Vision works through
-the mmproj file: images travel as base64 data URIs. STUDIO_LLM_MODEL chooses the
-model: Gemma 4 26B-A4B by default, Gemma 4 E4B on a machine with less memory.
+the mmproj file: images travel as base64 data URIs. STUDIO_LLM_MODEL names the
+model's catalog id; Gemma 4 26B-A4B is the only qualified one.
 """
 
 import json
@@ -21,7 +21,6 @@ from .models import ModelStore
 # Catalog id → (weights, vision projector).
 LLM_FILES = {
     "gemma4-26b-a4b": ("gemma-4-26B-A4B-it-Q4_0.gguf", "mmproj-gemma-4-26B-A4B-it-Q8_0.gguf"),
-    "gemma4-e4b": ("gemma-4-E4B-it-Q8_0.gguf", "mmproj-gemma-4-E4B-it-Q8_0.gguf"),
 }
 # Room for the assistant's instructions, tools and conversation history; one slot,
 # so concurrent requests queue instead of splitting the context.

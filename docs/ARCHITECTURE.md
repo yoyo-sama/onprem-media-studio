@@ -101,7 +101,7 @@ output/.trash/...         gallery trash (purged by hand)
 | `HF_TOKEN` | — | Gated repositories (Krea 2); never logged |
 | `STUDIO_LLAMA_SERVER` | `llama-server` | Path to the llama.cpp server binary |
 | `STUDIO_LLM_PORT` | `8095` | Loopback port of llama-server |
-| `STUDIO_LLM_MODEL` | `gemma4-26b-a4b` | LLM of the assistant and the enrichments: `gemma4-26b-a4b` or `gemma4-e4b` (smaller machines) |
+| `STUDIO_LLM_MODEL` | `gemma4-26b-a4b` | Catalog id of the LLM of the assistant and the enrichments; `gemma4-26b-a4b` is the only one |
 | `STUDIO_DISK_RESERVE_GB` | `20` | Free space kept after any download |
 | `STUDIO_GALLERY_SCAN` | `60` | Seconds between two gallery scans of the output folder |
 | `STUDIO_UPDATE_BRANCH` | `main` | Branch the in-app update follows (bare metal, and the updater service through `.env`) |

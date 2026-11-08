@@ -13,7 +13,7 @@ Omarchy and Windows 11.
 
 Models in scope: Krea 2, Qwen Image 2.1 (Qwen-Image-Edit 2509 dropped on 2026-10-29), MiniMax H3 through FastH3 (OmniRef for
 reference-to-video). LTX 2.5 is dropped; H3 takes over every video path. Gemma 4 E4B stays the
-only prompt LLM.
+only prompt LLM (replaced by Gemma 4 26B-A4B, see the amendments below).
 
 Maestro and WanGP do the same job but are released under the WanGP Non-Commercial Evaluation
 License 1.1. Decision of 2026-10-29: they are **references only**; no code is copied and neither
@@ -74,3 +74,10 @@ stays close to E4B's while its quality is that of a much larger model. Gemma 4 E
 available through `STUDIO_LLM_MODEL=gemma4-e4b`. Still the only LLM: one `llama-server`, stopped
 when an H3 engine needs the memory. To check on the GB10: tool calls through `--jinja`, speed,
 and the enrichments compared with E4B's.
+
+## Amendment of 2026-11-07: Gemma 4 26B-A4B qualified, E4B dropped
+
+The owner validated Gemma 4 26B-A4B on the GB10: it is marked qualified in the catalog. Gemma 4
+E4B is removed, at the owner's request, from the catalog (so from the Models panel) and from
+`STUDIO_LLM_MODEL`'s accepted values: one LLM is enough. `STUDIO_LLM_MODEL` stays, so that
+another Gemma can be added later through a catalog entry and one line of `studio/llm.py`.

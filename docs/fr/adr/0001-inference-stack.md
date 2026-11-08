@@ -13,7 +13,7 @@ la couverture fonctionnelle de la 1.4, et s'installer dans un seul conteneur Doc
 
 Modèles concernés : Krea 2, Qwen Image 2.1 (Qwen-Image-Edit 2509 retiré le 2026-10-29), MiniMax H3 via FastH3 (OmniRef pour la
 référence vers vidéo). LTX 2.5 est abandonné ; H3 reprend tous les chemins vidéo. Gemma 4 E4B
-reste le seul LLM de prompt.
+reste le seul LLM de prompt (remplacé par Gemma 4 26B-A4B, voir les amendements plus bas).
 
 Maestro et WanGP font le même travail mais sont publiés sous la WanGP Non-Commercial Evaluation
 License 1.1. Décision du 2026-10-29 : ce sont **des références seulement** ; aucun code n'est
@@ -77,3 +77,11 @@ paramètres actifs par jeton : sa vitesse reste proche de celle d'E4B, sa qualit
 bien plus grand. Gemma 4 E4B reste disponible par `STUDIO_LLM_MODEL=gemma4-e4b`. Toujours un seul
 LLM : un seul `llama-server`, arrêté quand un moteur H3 a besoin de la mémoire. À vérifier sur le
 GB10 : appels d'outils via `--jinja`, vitesse, et enrichissements comparés à ceux d'E4B.
+
+## Amendement du 2026-11-07 : Gemma 4 26B-A4B qualifié, E4B retiré
+
+Le propriétaire du projet a validé Gemma 4 26B-A4B sur le GB10 : il est marqué qualifié dans le
+catalogue. Gemma 4 E4B est retiré, à la demande du propriétaire, du catalogue (donc du panneau
+Modèles) et des valeurs acceptées par `STUDIO_LLM_MODEL` : un seul LLM suffit.
+`STUDIO_LLM_MODEL` reste, pour qu'un autre Gemma puisse être ajouté plus tard par une entrée du
+catalogue et une ligne de `studio/llm.py`.

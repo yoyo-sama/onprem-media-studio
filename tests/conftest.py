@@ -8,8 +8,6 @@ from studio.models import ModelStore
 FILES = {
     "gemma-4-26B-A4B-it-Q4_0.gguf": 100,
     "mmproj-gemma-4-26B-A4B-it-Q8_0.gguf": 10,
-    "gemma-4-E4B-it-Q8_0.gguf": 100,
-    "mmproj-gemma-4-E4B-it-Q8_0.gguf": 10,
     "README.md": 1,
 }
 

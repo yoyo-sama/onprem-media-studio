@@ -14,6 +14,11 @@ Rules carried over from 1.4 (LESSONS.md § 5):
   size it is computed here from image 1 and passed explicitly;
 - guidance stays off (cfg 1, as qualified), so a negative prompt would never be
   used: it is refused rather than silently dropped.
+
+The denoiser is not Qwen's own: since 2026-11-07 it is the step-distilled transformer of
+lightx2v (Qwen-Image-2.1-Lightning-v2-RL), 4 steps on its own sigma schedule instead of 25,
+about 3x faster at the same identity (bench tools/qualify/qwen_fast_bench.sh, LESSONS #46).
+The text encoder, VAE and processor still come from Qwen/Qwen-Image-2.1.
 """
 
 import time
@@ -21,7 +26,9 @@ import time
 from . import Pipeline, common, register
 
 MAX_SUBJECTS = 2
-QWEN21_STEPS = 25          # value qualified in 1.4 (ComfyUI, euler/simple, cfg 1)
+# Lightning v2 RL schedule (its inference_config.json), already shifted: the scheduler must
+# not shift it again, so it replaces the dynamic-shifting one of the base repository.
+LIGHTNING_SIGMAS = [1.0, 0.95418, 0.89508, 0.704534]
 QWEN21_RESOLUTION = 1024   # side length the condition images are resized to, as in 1.4
 QWEN21_MAX_IMAGES = 10     # model limit, proven in 1.4 (input image + 9 references)
 QWEN21_MAX_REFS = 7        # shot: 2 sheets + 7 references, as in 1.4
@@ -62,7 +69,7 @@ def _load_images(params, ctx):
 
 class QwenImage21(Pipeline):
     id = "qwen-image-2.1"
-    models = ["qwen-image-2.1"]
+    models = ["qwen-image-2.1", "qwen-image-2.1-lightning"]
 
     def validate(self, params, files):
         common.check_keys(params, {"prompt", "images", "subjects", "setting", "references",
@@ -90,16 +97,17 @@ class QwenImage21(Pipeline):
         else:
             width, height = common.fit_area(*images[0].size)
         ctx.progress(0, "Loading Qwen Image 2.1")
-        pipe = common.load(self.id, lambda: _build_21(models["qwen-image-2.1"]),
-                           common.disk_size(models["qwen-image-2.1"]))
-        steps = common.step_progress(ctx, QWEN21_STEPS, "Qwen Image 2.1")
+        base, lightning = models["qwen-image-2.1"], models["qwen-image-2.1-lightning"]
+        pipe = common.load(self.id, lambda: _build_21(base, lightning), _memory_size(base, lightning))
+        steps = common.step_progress(ctx, len(LIGHTNING_SIGMAS), "Qwen Image 2.1")
         began = time.time()
         out = pipe(
             prompt=params["prompt"],
             image=images or None,
             width=width,
             height=height,
-            num_inference_steps=QWEN21_STEPS,
+            num_inference_steps=len(LIGHTNING_SIGMAS),
+            sigmas=LIGHTNING_SIGMAS,
             true_cfg_scale=1.0,
             num_images_per_prompt=params["count"],
             output_resolution=QWEN21_RESOLUTION,
@@ -111,9 +119,25 @@ class QwenImage21(Pipeline):
         return common.save_images(out, ctx, params)
 
 
-def _build_21(path):
-    from diffusers import QwenImage21Pipeline
-    return common.compile_transformer(common.from_pretrained(QwenImage21Pipeline, path))
+def _memory_size(base, lightning) -> int:
+    """Bytes the pipeline takes once loaded: the base components (an install made before
+    2026-11-07 still holds Qwen's own transformer, never loaded) and the Lightning
+    transformer, stored in FP32 and loaded in BF16."""
+    unused = base / "transformer"
+    return (common.disk_size(base) - (common.disk_size(unused) if unused.is_dir() else 0)
+            + common.disk_size(lightning) // 2)
+
+
+def _build_21(base, lightning):
+    """No torch.compile: it saved 22 % per step at 25 steps, about 1 s per image at 4 for
+    15 s of compilation at each new size (LESSONS #43)."""
+    import torch
+    from diffusers import FlowMatchEulerDiscreteScheduler, QwenImage21Pipeline, QwenImage21Transformer2DModel
+    transformer = QwenImage21Transformer2DModel.from_pretrained(lightning, torch_dtype=torch.bfloat16,
+                                                                disable_mmap=True)
+    pipe = common.from_pretrained(QwenImage21Pipeline, base, transformer=transformer)
+    pipe.scheduler = FlowMatchEulerDiscreteScheduler(shift=1.0, use_dynamic_shifting=False)
+    return pipe
 
 
 register(QwenImage21())
