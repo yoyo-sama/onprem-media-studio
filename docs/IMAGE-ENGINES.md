@@ -152,6 +152,9 @@ is refused at submission. The storyboard and campaign flows send no image LoRA.
   MOSS-Image SFT/Base at full step counts; here they run on Lightning (4 steps), Krea 2 Turbo
   (8 steps) and the MOSS turbo modes. None of the three compiles its transformer, so a LoRA
   costs no recompilation. How each LoRA holds at these step counts is judged on the render.
+- **Checked before loading.** Every file of a stack is checked against the plain layers before
+  any is loaded: once an adapter is in, its layers are PEFT wrappers, no longer `Linear`, and
+  checking the next file against them refused every stack of two on the GB10.
 
 ## The 1.4 features on these engines
 
@@ -261,8 +264,16 @@ Only then set `"qualified": true` for the model in `studio/catalog.json`. Seeds 
   `"qualified": true`. There was no side-by-side comparison with 1.4; a difference found later is
   fixed then.
 - **LoRA loading on NGC 25.11:** peft 0.19+ refuses its torchao 0.14, so peft is pinned below 0.19.
-- **Style LoRAs (2026-11-08):** the 1.4 Krea 2 LoRAs are not imported by `studio.import14`
-  (upload them from the Models panel); no image LoRA is qualified yet on the GB10.
+- **Style LoRAs (promaxgb10-95c7, 2026-11-08):** six community LoRAs, two per engine (Krea 2:
+  krea/Krea-2-LoRA-retroanime in diffusers format, gokaygokay/Krea-2-Realism-LoRA in the Krea
+  trainer format; Qwen: two DiffSynth files; MOSS: one ComfyUI and one diffusers file) rendered
+  alone and stacked by two at seed 42; a render without LoRA after them was pixel-identical to the
+  one before on each engine; a strength change on the same files changed the image without
+  reloading. Cost per step: Krea 2 2.66 s, 3.17 s with one LoRA, 3.65 s with two; Qwen 1.25 s,
+  1.63 s, 1.83 s; MOSS standard 2.13 s, 2.92 s, 3.70 s. A style LoRA mostly shows only with its
+  trigger words in the prompt (retroanime: "Purple retro anime style"; MOSS gouache:
+  "moss_vgouache_style", which MOSS may also write into the image). The 1.4 Krea 2 LoRAs are not
+  imported by `studio.import14`: upload them from the Models panel.
 - **Qwen Image 2.1 with Lightning (2026-11-07):** benched on promaxgb10-95c7, 5 cases × 3 seeds:
   identity of both sheet subjects kept in every shot image; more contrast and saturation than
   the 25-step base, and stray structures in text to image (2 seeds out of 3). Renders through

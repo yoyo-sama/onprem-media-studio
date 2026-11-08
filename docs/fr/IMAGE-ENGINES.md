@@ -162,6 +162,10 @@ LoRA d'image.
   Lightning (4 étapes), Krea 2 Turbo (8 étapes) et les modes turbo de MOSS. Aucun des trois ne
   compile son transformer, une LoRA ne coûte donc aucune recompilation. La tenue de chaque LoRA à
   ces nombres d'étapes se juge sur le rendu.
+- **Vérifiées avant chargement.** Chaque fichier d'une pile est vérifié contre les couches nues
+  avant qu'aucun ne soit chargé : une fois un adaptateur en place, ses couches sont des enveloppes
+  PEFT, plus des `Linear`, et vérifier le fichier suivant contre elles refusait toute pile de deux
+  sur le GB10.
 
 ## Les fonctions de la 1.4 sur ces moteurs
 
@@ -279,9 +283,17 @@ comparer la qualité, pas les pixels.
   plus tard sera corrigé à ce moment-là.
 - **Chargement de LoRA sur NGC 25.11 :** peft 0.19 et plus refuse son torchao 0.14, peft est donc
   épinglé sous 0.19.
-- **LoRA de style (2026-11-08) :** les LoRA Krea 2 de la 1.4 ne sont pas importées par
-  `studio.import14` (les envoyer depuis le panneau Modèles) ; aucune LoRA d'image n'est encore
-  qualifiée sur le GB10.
+- **LoRA de style (promaxgb10-95c7, 2026-11-08) :** six LoRA de la communauté, deux par moteur
+  (Krea 2 : krea/Krea-2-LoRA-retroanime au format diffusers, gokaygokay/Krea-2-Realism-LoRA au
+  format de l'entraîneur Krea ; Qwen : deux fichiers DiffSynth ; MOSS : un fichier ComfyUI et un
+  diffusers) rendues seules et empilées par deux, graine 42 ; sur chaque moteur, un rendu sans LoRA
+  après elles est identique au pixel près à celui d'avant ; changer la force sur les mêmes fichiers
+  change l'image sans recharger. Coût par étape : Krea 2 2,66 s, 3,17 s avec une LoRA, 3,65 s avec
+  deux ; Qwen 1,25 s, 1,63 s, 1,83 s ; MOSS standard 2,13 s, 2,92 s, 3,70 s. Une LoRA de style ne
+  se voit vraiment qu'avec ses mots déclencheurs dans le prompt (retroanime : « Purple retro anime
+  style » ; gouache MOSS : « moss_vgouache_style », que MOSS peut aussi écrire dans l'image). Les
+  LoRA Krea 2 de la 1.4 ne sont pas importées par `studio.import14` : les envoyer depuis le panneau
+  Modèles.
 - **Qwen Image 2.1 avec Lightning (2026-11-07) :** banc sur promaxgb10-95c7, 5 cas × 3 seeds :
   identité des deux sujets des planches gardée dans chaque image de plan ; plus de contraste et de
   saturation que la base à 25 étapes, et des structures parasites en texte vers image (2 seeds sur 3).
