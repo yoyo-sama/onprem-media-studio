@@ -71,9 +71,13 @@
       </details>
       <details class="right-card" open>
         <summary class="panel-title"><span class="live-dot">LoRAs</span><span></span></summary>
-        <p>MiniMax H3 style LoRAs. Every file added here appears in the Style (LoRA) menus.</p>
+        <p>Style LoRAs, one folder per engine. Up to 4 of them, each with its strength, can be stacked on a render of that engine.</p>
         <div class="model-list" id="loraList"></div>
         <div class="form-stack">
+          <label>
+            Engine
+            <select id="loraFolderSelect"></select>
+          </label>
           <label>
             LoRA file (.safetensors)
             <input type="file" id="loraFile" accept=".safetensors">
@@ -255,10 +259,10 @@
                 <option data-raw>4:5</option>
               </select>
             </label>
-            <label class="gb-field" id="loraWrap" hidden>
-              Style (LoRA)
-              <select id="loraSelect"><option value="">None</option></select>
-            </label>
+            <div class="gb-field lora-field" id="loraWrap" role="group" aria-labelledby="loraCaption" hidden>
+              <span class="lora-caption" id="loraCaption">LoRA (up to 4, each with its strength)</span>
+              <div id="loraStack"></div>
+            </div>
             <div class="gb-field tpl-field" id="sheetTemplateWrap" hidden>
               <span class="tpl-caption">Sheet layout</span>
               <select id="sheetTemplateSelect" hidden></select>

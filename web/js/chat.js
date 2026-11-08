@@ -13,6 +13,7 @@ import { openLightbox } from "./gallery.js";
 import { drawMascots, setCostume, setMood } from "./mascot.js";
 import * as F from "./form.js";
 import * as G from "./generate.js";
+import { onLoraFiles, renderLoraChips, stackParams } from "./lora-stack.js";
 
 const P = F.P;
 const MAX_ATTACHMENTS = 6;
@@ -47,27 +48,41 @@ const roleName = id => { const r = roles.find(x => x.id === id); return r ? t(r.
 // The Studio workflow of each engine of the image card.
 export const CARD_IMAGE_WORKFLOWS = { krea2: "krea2_t2i", qwen: "qwen21_t2i", moss: "moss_t2i" };
 const imageWorkflow = a => CARD_IMAGE_WORKFLOWS[a.engine] || "krea2_t2i";
+// `wf`: the Studio workflow the card renders with, whose LoRA folder (F.loraFolder) gives
+// the card its LoRA chips.
 const CARD_UI = {
   create_image: { title: L("Image"), text: "prompt", fields: ["engine", "mode", "ratio", "count", "style"], form: true,
-                  enrich: imageWorkflow },
+                  enrich: imageWorkflow, wf: imageWorkflow },
   edit_image: { title: L("Image editing"), text: "instruction", images: ["image", "references"], form: true,
-                enrich: () => "qwen21_i2i" },
+                enrich: () => "qwen21_i2i", wf: () => "qwen21_i2i" },
   character_sheet: { title: L("Subject sheet"), text: "description", images: ["photo"], fields: ["kind", "style"] },
   location_sheet: { title: L("Setting sheet"), text: "description", fields: ["style"] },
   video_from_text: { title: L("Video from a text"), text: "prompt", fields: ["duration", "ratio"], form: true,
-                     enrich: () => "h3_t2v" },
+                     enrich: () => "h3_t2v", wf: () => "h3_t2v" },
   video_from_image: { title: L("Video from an image"), text: "prompt", images: ["image", "last_image"], fields: ["duration"],
-                      form: true, enrich: () => "h3_i2v" },
+                      form: true, enrich: () => "h3_i2v", wf: () => "h3_i2v" },
   image_sequence: { title: L("Multi-image sequence"), text: "prompt", images: ["images"], fields: ["duration"], form: true,
-                    enrich: () => "h3_sequence" },
+                    enrich: () => "h3_sequence", wf: () => "h3_sequence" },
   join_videos: { title: L("Joined clips"), images: ["clips"] },
   campaign: { title: L("Campaign"), text: "brief", fields: ["variants", "duration", "style"], form: true,
               enrich: () => "campaign" },
   storyboard: { title: L("Storyboard"), text: "brief", images: ["subject_sheets", "setting_sheet"], fields: ["shots", "duration", "ratio"],
                 form: true, director: true },
   reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio", "music"],
-                     form: true, director: true, video: true },
+                     form: true, director: true, video: true, wf: () => "h3_r2v" },
 };
+// LoRAs turned on on a card, per folder. They stay in the page (the card's arguments are
+// Gemma's tool call, which has no LoRA): a reload starts the card without them.
+const cardLoras = new Map();
+const cardLoraFolder = (card, a) => F.loraFolder(F.workflow(CARD_UI[card.tool]?.wf?.(a)));
+function cardStack(card, a) {
+  const folder = cardLoraFolder(card, a);
+  if (!folder) return null;
+  const stacks = cardLoras.get(card.id) || {};
+  cardLoras.set(card.id, stacks);
+  return (stacks[folder] ??= []);
+}
+const cardLorasParam = (card, a) => stackParams(cardStack(card, a));
 // Reference to video straight from the card. Images, clips and sounds, in one ordered
 // list: each gets its H3 label (the numbers are the app's, never typed), <Subject N>
 // for a subject, else its own <Video N> or <Audio N>, with the role the user or Gemma
@@ -271,6 +286,9 @@ function renderCard(card, live = false) {
     }
     el.appendChild(row);
   }
+  const loraStack = cardStack(card, a);
+  if (loraStack) el.appendChild(renderLoraChips(document.createElement("div"), {
+    folder: cardLoraFolder(card, a), stack: loraStack, disabled: busy || live }));
   if (a.markets?.length)
     el.appendChild(tx(document.createElement("p"), "Markets: {list}", { list: a.markets.map(m => t(G.MARKETS[m]?.label || m)).join(", ") })).className = "hint";
 
@@ -503,7 +521,7 @@ async function submitCard(card, a) {
 function startCard(card, a, aspect, prompt) {
   const seed = Math.floor(Math.random() * 2 ** 31);
   const label = what => ["{id} · {what}", { id: card.id, what: t(what) }];
-  const title = CARD_UI[card.tool].title, opts = { origin: ORIGIN, seed };
+  const title = CARD_UI[card.tool].title, loras = cardLorasParam(card, a), opts = { origin: ORIGIN, seed, loras };
   const sheet = prompt => [runJob("krea2-t2i", { prompt, ...P.SHEET_SIZE, count: 1, seed }, {
     origin: ORIGIN, label: label(title), sub: ["{info} · seed {seed}", { info: "Krea 2", seed }] })];
   switch (card.tool) {
@@ -540,7 +558,7 @@ function startCard(card, a, aspect, prompt) {
     case "campaign":
       return G.runCampaign({ ...opts, text: a.brief, styleId: a.style, count: a.variants, duration: a.duration });
     case "reference_video":
-      return [runJob("h3-r2v", { prompt, duration: a.duration, seed, aspect: a.ratio, references: a.references.map(need) }, {
+      return [runJob("h3-r2v", { prompt, duration: a.duration, seed, loras, aspect: a.ratio, references: a.references.map(need) }, {
         origin: ORIGIN, label: label(title), sub: ["{info} · seed {seed}", { info: `${a.duration} s · ${a.references.length} ref.`, seed }] })];
   }
   throw new Error(`unknown card ${card.tool}`);
@@ -607,6 +625,9 @@ async function openInStudio(card, launch = false) {
   const images = {}, cid = conv.id;
   // Every reference goes with its role (the Studio's list keeps those of clips and sounds).
   if (card.tool === "reference_video") a = { ...a, kinds: (a.references || []).map((_, i) => kindOf(a, i)) };
+  // The card's LoRAs become the form's stack for that engine.
+  const folder = cardLoraFolder(card, a);
+  if (folder) F.loraStack(folder).splice(0, Infinity, ...cardLorasParam(card, a));
   try {
     for (const id of imageIds(card, a)) images[id] = { name: fileName(need(id)), ref: need(id) };
     const image = id => images[id] || null;
@@ -912,6 +933,7 @@ async function saveRole(reset) {
 export function initChat(h) {
   hooks = h;
   drawMascots();
+  onLoraFiles(() => { if (conv) renderLog(); });  // the cards' LoRA chips follow the files
   setLibrary(readLocal(LIBRARY_KEY) === "1" && !MOBILE.matches);
   $("libraryBtn").addEventListener("click", () => setLibrary($("assistantLibrary").hidden));
   $("libraryCloseBtn").addEventListener("click", () => setLibrary(false));

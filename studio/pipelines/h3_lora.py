@@ -11,7 +11,8 @@ The adapter always runs as a side branch next to the quantized weights
 (FASTVIDEO_LORA_SIDE_BRANCH=1), never merged into them and re-quantized:
 merging a LoRA into a quantized checkpoint destroys most of it (LESSONS.md #30).
 
-Files come from STUDIO_DATA_DIR/loras/h3/ and are referenced by file name.
+Files come from STUDIO_DATA_DIR/loras/h3/ and are referenced by file name; the
+stack is validated by studio.loras.check_stack.
 """
 
 import hashlib
@@ -19,26 +20,6 @@ import json
 from pathlib import Path
 
 SUFFIX_A, SUFFIX_B, SUFFIX_ALPHA = ".lora_A.weight", ".lora_B.weight", ".alpha"
-MAX_LORAS = 4
-
-
-def check(loras, folder: Path) -> list[dict]:
-    """Validated stack: [{"name", "strength"}], every file inside `folder`."""
-    if not isinstance(loras, list) or len(loras) > MAX_LORAS:
-        raise ValueError(f"loras must be a list of at most {MAX_LORAS} entries")
-    out = []
-    for item in loras:
-        if not isinstance(item, dict) or set(item) - {"name", "strength"}:
-            raise ValueError('Each LoRA is {"name": <file name>, "strength": <number>}')
-        name, strength = item.get("name"), item.get("strength", 1.0)
-        if not isinstance(name, str) or not name.endswith(".safetensors") or Path(name).name != name:
-            raise ValueError(f"LoRA name must be a .safetensors file name in loras/h3/, got {name!r}")
-        if not (folder / name).is_file():
-            raise ValueError(f"No such LoRA: loras/h3/{name}")
-        if isinstance(strength, bool) or not isinstance(strength, (int, float)) or not -2 <= strength <= 2:
-            raise ValueError("LoRA strength must be a number between -2 and 2")
-        out.append({"name": name, "strength": float(strength)})
-    return out
 
 
 def fold(adapters: list[tuple[dict, float]]) -> dict:

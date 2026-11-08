@@ -20,7 +20,8 @@ in `web/js/vendor/`.
 | `web/js/api.js` | REST calls, the `/api/ws` event socket, `waitJob`, the LLM call (`llmJSON`) |
 | `web/js/i18n.js`, `i18n-dict.js` | Translation: English text is the key, French, Spanish and German in `DICT` |
 | `web/js/ui.js` | Studio shell: event log, job queue and `runJob`, undo banner, prompt editor, theme |
-| `web/js/form.js` | The 1.4 manifest as tables (workflows, pipelines, controls), form values, sizes, uploads, extra references |
+| `web/js/form.js` | The 1.4 manifest as tables (workflows, pipelines, controls), form values, sizes, uploads, extra references, the form's LoRA stacks (one per folder; a workflow's `loras` names the folder its engine reads, none = no LoRA control) |
+| `web/js/lora-stack.js` | LoRA stack picker shared by the Studio form and the Canvas panel: up to 4 rows of file and strength (-2 to 2) for one folder, each file once; edits the stack in place and submits nothing |
 | `web/js/studio.js` | Studio page: modes (`setMode`), goal cards, menus, inputs, enrichment, the form's generate handlers, assistant cards taken over by the form (`openCardInForm`, `launchDirector`), models, LoRA, update |
 | `web/js/generate.js` | The simple flows as functions of their settings (text/image to image or video, markets, sequence, campaign), called by the form and by the assistant's cards |
 | `web/js/chat.js` | Assistant mode: conversations, streamed replies, role choice, attachments, library pane, cards (Generate, ✨, Open in the Studio, Launch the director), role editor of the Models panel: [ASSISTANT.md](ASSISTANT.md) |
@@ -108,7 +109,9 @@ to it.
   image card), with a Mode select shown for that engine only: Preview (4 steps), Standard (8,
   default) or Quality (25). It uses the Krea 2 ratio table (multiples of 16).
 - No cloud generation (OpenAI, Gemini).
-- No Krea 2 LoRA, megapixel or turbo/steps controls; H3 LoRAs are uploaded files.
+- No Krea 2 LoRA, megapixel or turbo/steps controls; H3 LoRAs are uploaded files. A render takes
+  a stack of up to 4 LoRAs, each with its strength (1.4: one file at full strength); a Canvas
+  saved with the old single `lora` property comes back as a one-row stack.
 - Reference to video's extra references take up to 7 images, 3 clips and 3 sounds (as in 1.4),
   in one list (`F.r2vPlan`). Each image is the next `<Subject N>`; a clip has a role (camera
   movement and pacing, or a subject) and a sound one too (voice of a character, music, ambience
@@ -128,7 +131,8 @@ to it.
 | `python -m pytest` | Server, engines' parameters, gallery, and `tests/test_i18n.py`: every interface string of both pages has its French, Spanish and German translation with the same `{placeholders}`, and no entry is unused | Python, Node |
 | `node tools/parity-prompts.js` | Every prompt compiler and instruction gives, character for character, what 1.4 (`234f37c`, read from `../dellaicontent`) gives, with scripted Gemma answers | Node, the 1.4 checkout |
 | `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256 (or is the replaced one, for its engine only), the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
-| `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready; that step opens the studio without drawing a sheet, and a sheet's own click sends it with the first step's seed | Node, Playwright and its Chromium |
+| `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready; that step opens the studio without drawing a sheet, and a sheet's own click sends it with the first step's seed; a card's LoRA chips submit nothing and its Generate sends the ones turned on | Node, Playwright and its Chromium |
+| `node tools/lora-ui.js` | The LoRA stack headless with `/api` stubbed: in the Studio it shows for the workflows that take LoRAs only, takes up to 4 files (each once) with strengths clamped to -2…2, submits nothing while edited, Generate sends the rows on screen, another engine sends none and coming back finds the stack; the Models panel uploads into the chosen folder; a Canvas saved with the old `lora` property comes back as a one-row stack and its Generate sends the stack | Node, Playwright and its Chromium |
 
 Changing a prompt compiler or an instruction makes `parity-prompts.js` and `prompt-systems.js` fail; if the change is wanted,
 update the reference in the same commit and say why.

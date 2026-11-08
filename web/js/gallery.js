@@ -10,6 +10,7 @@
 import { api, on } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
 import { $, log, notice, runJob, undoToast, warn } from "./ui.js";
+import { stackLabel } from "./lora-stack.js";
 
 export const ENGINE_LABELS = {
   "krea2-t2i": "Krea 2", "qwen-edit-2509": "Qwen Edit 2509", "qwen-image-2.1": "Qwen Image 2.1", "moss-image": "MOSS-Image",
@@ -482,7 +483,7 @@ function renderMeta() {
   $("lightboxCopy").disabled = !full;
   set("lbSeed", a.seed);
   set("lbPipeline", a.pipeline ? (ENGINE_LABELS[a.pipeline] ? t(ENGINE_LABELS[a.pipeline]) : a.pipeline) : null);
-  set("lbLoras", a.loras?.length ? a.loras.join(", ") : null);
+  set("lbLoras", a.loras?.length ? stackLabel(a.loras) : null);
   set("lbDims", a.w && a.h ? `${a.w} × ${a.h} px` : null);
   $("lbDurT").hidden = $("lbDur").hidden = !video;
   set("lbDur", video && a.duration != null ? `${+a.duration.toFixed(2)} s` : null);

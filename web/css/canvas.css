@@ -159,6 +159,19 @@ a:hover { color: var(--brand); }
 .model-notice { font-size: 12px; color: var(--st-running); }
 .model-notice > span { display: block; margin-top: 4px; }
 .field-error { font-size: 12px; margin-top: 4px; color: var(--st-error); }
+
+/* LoRA stack (lora-stack.js): rows of file, strength and ✕, then "+ Add a LoRA". */
+.lora-stack { display: flex; flex-direction: column; gap: 6px; }
+.lora-row { display: grid; grid-template-columns: minmax(0, 1fr) 4.8em auto; gap: 6px; align-items: center; }
+.lora-row select, .lora-row input { min-width: 0; }
+.lora-x, .lora-add {
+  border: 1px solid var(--border-light, var(--border)); background: var(--card-2); color: var(--text-2);
+  border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; cursor: pointer;
+}
+.lora-add { align-self: flex-start; }
+.lora-x:hover, .lora-add:hover:not(:disabled) { color: var(--text); }
+.lora-add:disabled { opacity: .5; cursor: not-allowed; }
+.lora-hint { font-size: 12px; color: var(--text-2); }
 .actions { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 
 .panel button:focus-visible, .panel .rail-pill:focus-visible, #sheetBar button:focus-visible,
@@ -224,5 +237,5 @@ a:hover { color: var(--brand); }
   }
   body:not([data-sheet="palette"]) #palette, body:not([data-sheet="props"]) #props { display: none; }
   .icon-btn, .rail-pill, .disclosure, .btn-primary, .btn-outline, .usecase-opt,
-  .panel select, .panel input[type=number] { min-height: 44px; }
+  .panel select, .panel input[type=number], .lora-x, .lora-add { min-height: 44px; }
 }

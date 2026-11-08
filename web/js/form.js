@@ -1,10 +1,11 @@
 // What the Studio form decides: the workflow table (the 1.4 manifest), the controls
 // each pipeline shows, and the values the generate flows and the director read from
-// it: workflow, style, seed, durations, H3 LoRA, uploads and extra references.
+// it: workflow, style, seed, durations, LoRA stack, uploads and extra references.
 
 import { api, blobToBase64, llmJSON, refURL } from "./api.js";
 import { L } from "./i18n.js";
 import { $, LLM, clampInt, log } from "./ui.js";
+import { stackParams } from "./lora-stack.js";
 
 export const P = window.Prompts;
 
@@ -21,7 +22,8 @@ export const RATIOS = { "16:9": [1280, 720], "9:16": [720, 1280], "1:1": [1024, 
 // Qwen Image 2.1 refuses sizes that are not multiples of 32 (diffusers would floor them).
 export const QWEN21_RATIOS = { "16:9": [1344, 768], "9:16": [768, 1344], "1:1": [1024, 1024], "4:5": [896, 1120] };
 
-// One entry per engine choice of a pipeline. `enrich: "builtin"`: never enriched
+// One entry per engine choice of a pipeline. `loras`: the LoRA folder (studio/loras.py)
+// of the engine the form's LoRA stack goes to; none = no LoRA control. `enrich: "builtin"`: never enriched
 // automatically (the storyboard and Ref2VA flows write their own prompts; their ✨
 // button has its own instruction, see Prompts.briefEnrichSystem).
 export const WORKFLOWS = [
@@ -29,29 +31,30 @@ export const WORKFLOWS = [
   { id: "qwen21_t2i", pipeline: "text2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1" },
   { id: "moss_t2i", pipeline: "text2image", label: "MOSS-Image", engine: "moss-image" },
   { id: "qwen21_i2i", pipeline: "image2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1" },
-  { id: "h3_t2v", pipeline: "text2video", label: L("MiniMax H3 · native audio"), engine: "h3-t2v" },
-  { id: "h3_i2v", pipeline: "image2video", label: L("MiniMax H3 · native audio"), engine: "h3-i2v" },
-  { id: "h3_sequence", pipeline: "sequence", label: L("MiniMax H3 · first and last frames"), engine: "h3-i2v" },
+  { id: "h3_t2v", pipeline: "text2video", label: L("MiniMax H3 · native audio"), engine: "h3-t2v", loras: "h3" },
+  { id: "h3_i2v", pipeline: "image2video", label: L("MiniMax H3 · native audio"), engine: "h3-i2v", loras: "h3" },
+  { id: "h3_sequence", pipeline: "sequence", label: L("MiniMax H3 · first and last frames"), engine: "h3-i2v", loras: "h3" },
   { id: "storyboard_qwen21", pipeline: "storyboard", label: L("Shot images: Qwen Image 2.1"),
     keyframes: "qwen-image-2.1", enrich: "builtin", engines: ["krea2-t2i", "qwen-image-2.1", "h3-i2v"] },
-  { id: "h3_r2v", pipeline: "reference2video", label: L("MiniMax H3 · references"), engine: "h3-r2v", enrich: "builtin",
+  { id: "h3_r2v", pipeline: "reference2video", label: L("MiniMax H3 · references"), engine: "h3-r2v", loras: "h3", enrich: "builtin",
     engines: ["krea2-t2i", "h3-r2v"] },
   { id: "campaign", pipeline: "campaign", label: L("Krea 2 + MiniMax H3"), engines: ["krea2-t2i", "h3-t2v"] },
 ];
 
 // `scenario`: the goal cards a pipeline is offered under (none = all).
-// Controls: duration, shots, hold, variants, ratio, style, lora, image, markets, seq,
-// sheetTemplate, skipSheets. The extra references follow the engine (refCtx).
+// Controls: duration, shots, hold, variants, ratio, style, image, markets, seq,
+// sheetTemplate, skipSheets. The extra references and the LoRA stack follow the engine
+// (refCtx, WORKFLOWS[].loras).
 export const PIPELINES = [
   { id: "text2image", label: L("Image from a text (Text2Image)"), controls: ["variants", "ratio", "style"] },
   { id: "image2image", label: L("Image editing (Image2Image)"), controls: ["image", "markets"] },
-  { id: "text2video", label: L("Video from a text (Text2Video)"), controls: ["duration", "ratio", "lora"] },
-  { id: "image2video", label: L("Video from an image (Image2Video)"), controls: ["duration", "image", "lora"] },
-  { id: "sequence", label: L("Multi-image sequence (FL2VA)"), scenario: ["storyboard"], controls: ["seq", "lora"] },
+  { id: "text2video", label: L("Video from a text (Text2Video)"), controls: ["duration", "ratio"] },
+  { id: "image2video", label: L("Video from an image (Image2Video)"), controls: ["duration", "image"] },
+  { id: "sequence", label: L("Multi-image sequence (FL2VA)"), scenario: ["storyboard"], controls: ["seq"] },
   { id: "storyboard", label: L("Storyboard + animatic (sheets, shots, cuts)"), scenario: ["storyboard"],
     controls: ["shots", "duration", "hold", "ratio", "style", "sheetTemplate"] },
   { id: "reference2video", label: L("Consistent character + setting (MiniMax H3)"), scenario: ["storyboard"],
-    controls: ["duration", "ratio", "lora", "sheetTemplate", "skipSheets", "style"] },
+    controls: ["duration", "ratio", "sheetTemplate", "skipSheets", "style"] },
   { id: "campaign", label: L("Full campaign (posters + thumbnails + teaser)"), scenario: ["campaign"],
     controls: ["duration", "variants", "style"] },
 ];
@@ -90,8 +93,15 @@ export function formSeed() {
 export const clampDuration = (v, dflt = 5) => clampInt(v, 5, 15, dflt);
 export const formDuration = () => clampDuration($("videoDuration").value);
 
-// H3 LoRA of the form: the chosen file at full strength, or none.
-export const formLoras = () => ($("loraSelect").value ? [{ name: $("loraSelect").value, strength: 1 }] : []);
+// LoRA stack of the form: one per folder, so switching engines loses nothing; what is
+// sent is the stack of the current workflow's folder, none if it takes no LoRA.
+const loraStacks = {};
+export const loraFolder = wf => wf?.loras || null;
+export const loraStack = folder => (loraStacks[folder] ??= []);
+export function formLoras() {
+  const folder = loraFolder(currentWorkflow());
+  return folder ? stackParams(loraStack(folder)) : [];
+}
 
 // H3 prompts over 7,000 characters are trimmed, and the log says so.
 export const capH3 = text => P.capH3Prompt(text, (msg, params) => log("warn", msg, params));

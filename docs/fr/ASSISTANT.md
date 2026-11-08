@@ -157,8 +157,13 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 - Le prompt et les réglages d'une carte se modifient avant Générer ; ✨ Enrichir réécrit le prompt
   de la carte avec la consigne Gemma propre au moteur (`Prompts.briefEnrichSystem`), avec
   Annuler.
+- Une carte dont le moteur prend des LoRA (les cartes vidéo H3 aujourd'hui) affiche une pastille
+  par fichier LoRA de ce moteur : un clic l'active (force 1, modifiable à côté) ou la désactive, 4
+  au plus, et Générer les envoie (`renderLoraChips` de `web/js/lora-stack.js`). Le choix reste dans
+  la page, pas dans les arguments de la carte (l'appel d'outil de Gemma n'a pas de LoRA) : un
+  rechargement repart sans.
 - « Ouvrir dans le Studio » passe au Studio et remplit le formulaire (pipeline, moteur, réglages,
-  images, brief), sans rien lancer ; Annuler remet le brief et le pipeline.
+  images, brief, les LoRA activées), sans rien lancer ; Annuler remet le brief et le pipeline.
 - « Lancer le Réalisateur » (cartes storyboard et référence vers vidéo) remplit le formulaire de
   la même façon, puis son clic vaut le clic sur Générer : la première étape du réalisateur démarre
   et chaque étape suivante attend l'accord de l'utilisateur, comme toujours.

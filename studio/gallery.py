@@ -139,6 +139,17 @@ def probe_video(path: Path) -> tuple[dict | None, int | None, int | None, float 
     return meta, video.get("width"), video.get("height"), float(duration) if duration else None
 
 
+def lora_list(column: str) -> list[dict]:
+    """[{name, strength}]; a row indexed before strengths were kept holds bare names
+    (strength null)."""
+    return [x if isinstance(x, dict) else {"name": x, "strength": None} for x in json.loads(column)]
+
+
+def strength_of(lora: dict) -> float | None:
+    value = lora.get("strength", 1.0)
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
 def extract(path: Path, key: str) -> dict:
     out = {"w": None, "h": None, "duration": None, "prompt": None, "pipeline": None, "origin": None,
            "loras": [], "seed": None, "app": 1, "meta_ok": 1}
@@ -160,7 +171,8 @@ def extract(path: Path, key: str) -> dict:
                 out["seed"] = params["seed"]
             loras = params.get("loras")
             if isinstance(loras, list):
-                out["loras"] = [x["name"] for x in loras if isinstance(x, dict) and isinstance(x.get("name"), str)]
+                out["loras"] = [{"name": x["name"], "strength": strength_of(x)} for x in loras
+                                if isinstance(x, dict) and isinstance(x.get("name"), str)]
             for field in ("pipeline", "origin"):
                 if isinstance(meta.get(field), str):
                     out[field] = meta[field]
@@ -402,7 +414,7 @@ class Gallery:
             "ref": "outputs/" + key,
             "thumb": f"/api/gallery/thumb?key={quote(key, safe='')}&v={version}",
             "ts": version, "prompt": prompt if full or prompt is None else prompt[:PROMPT_EXCERPT],
-            "pipeline": row["pipeline"], "origin": row["origin"], "loras": json.loads(row["loras"]),
+            "pipeline": row["pipeline"], "origin": row["origin"], "loras": lora_list(row["loras"]),
             "seed": row["seed"], "w": row["w"], "h": row["h"], "duration": row["duration"], "size": row["size"],
             "fav": bool(row["fav"]), "tags": tags.get(row["id"], []), "app": bool(row["app"]),
             "trash": {"origKey": row["orig_key"], "at": row["trashed_at"]} if row["trashed_at"] is not None else None,

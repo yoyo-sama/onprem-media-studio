@@ -29,7 +29,7 @@ tests run without them.
 import contextlib
 import os
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 _SPARK_ENV = {
@@ -76,9 +76,12 @@ class EngineSpec:
     model_dir: Path
     ref2va: bool
     lora: Path | None = None
+    # The stack the merged adapter was built from, for the log line only (the file's
+    # hash already sets the generator apart).
+    lora_names: str = field(default="", compare=False)
 
     def __str__(self) -> str:  # the engine: log line
-        return self.model_dir.name + (f" + LoRA {self.lora.name}" if self.lora else "")
+        return self.model_dir.name + (f" + LoRA {self.lora_names or self.lora.name}" if self.lora else "")
 
 
 def environment(spec: EngineSpec) -> dict[str, str]:

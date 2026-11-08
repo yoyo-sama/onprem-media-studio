@@ -1,6 +1,6 @@
 # Checks that need no GPU, on every pull request and on main: the unit tests, the
-# front-end scripts, the Gemma instruction routing and the assistant's "no job without a
-# click" bench (headless Chromium), and, when the DELLAICONTENT_TOKEN secret can read the
+# front-end scripts, the Gemma instruction routing, the assistant's "no job without a
+# click" bench and the LoRA stacks (headless Chromium), and, when the DELLAICONTENT_TOKEN secret can read the
 # private 1.4 repository, the prompt compilers' parity with 1.4. Renders are qualified on
 # the GB10 only (AGENTS.md).
 name: tests
@@ -44,6 +44,8 @@ jobs:
         run: NODE_PATH=$(npm root -g) node tools/prompt-systems.js
       - name: Assistant mode, no job without a click
         run: NODE_PATH=$(npm root -g) node tools/assistant-ui.js
+      - name: LoRA stacks of the Studio and the Canvas
+        run: NODE_PATH=$(npm root -g) node tools/lora-ui.js
       - name: 1.4 checkout for the parity test
         if: env.HAS_1_4 == 'true'
         uses: actions/checkout@v4

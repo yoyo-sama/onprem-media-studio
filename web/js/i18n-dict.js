@@ -1472,11 +1472,6 @@ export const DICT = {
     es: "MiniMax H3 renderiza en una rejilla de 17n+5 fotogramas",
     de: "MiniMax H3 rendert auf einem 17n+5-Bilder-Raster",
   },
-  "MiniMax H3 style LoRAs. Every file added here appears in the Style (LoRA) menus.": {
-    fr: "LoRA de style MiniMax H3. Chaque fichier ajouté ici apparaît dans les menus Style (LoRA).",
-    es: "LoRA de estilo de MiniMax H3. Cada archivo añadido aquí aparece en los menús Estilo (LoRA).",
-    de: "Stil-LoRAs für MiniMax H3. Jede hier hinzugefügte Datei erscheint in den Menüs Stil (LoRA).",
-  },
   "MiniMax H3 {engine} · {d} s/shot · {n} cuts": {
     fr: "MiniMax H3 {engine} · {d} s/plan · {n} cuts",
     es: "MiniMax H3 {engine} · {d} s/plano · {n} cortes",
@@ -2416,11 +2411,6 @@ export const DICT = {
     fr: "Style",
     es: "Estilo",
     de: "Stil",
-  },
-  "Style (LoRA)": {
-    fr: "Style (LoRA)",
-    es: "Estilo (LoRA)",
-    de: "Stil (LoRA)",
   },
   "Subject": {
     fr: "Sujet",
@@ -3861,5 +3851,55 @@ export const DICT = {
     fr: "Depuis l'ordinateur…",
     es: "Desde el ordenador…",
     de: "Vom Computer…",
+  },
+  "LoRA (up to 4, each with its strength)": {
+    fr: "LoRA (jusqu'à 4, chacune avec sa force)",
+    es: "LoRA (hasta 4, cada una con su intensidad)",
+    de: "LoRA (bis zu 4, jede mit ihrer Stärke)",
+  },
+  "Style LoRAs, one folder per engine. Up to 4 of them, each with its strength, can be stacked on a render of that engine.": {
+    fr: "LoRA de style, un dossier par moteur. Jusqu'à 4, chacune avec sa force, peuvent s'empiler sur un rendu de ce moteur.",
+    es: "LoRA de estilo, una carpeta por motor. Se pueden apilar hasta 4, cada una con su intensidad, en un render de ese motor.",
+    de: "Stil-LoRAs, ein Ordner pro Engine. Bis zu 4, jede mit ihrer Stärke, lassen sich bei einem Rendering dieser Engine stapeln.",
+  },
+  "LoRA {n}": {
+    fr: "LoRA {n}",
+    es: "LoRA {n}",
+    de: "LoRA {n}",
+  },
+  "Strength of LoRA {n} (-2 to 2)": {
+    fr: "Force de la LoRA {n} (-2 à 2)",
+    es: "Intensidad de la LoRA {n} (-2 a 2)",
+    de: "Stärke der LoRA {n} (-2 bis 2)",
+  },
+  "Strength (-2 to 2)": {
+    fr: "Force (-2 à 2)",
+    es: "Intensidad (-2 a 2)",
+    de: "Stärke (-2 bis 2)",
+  },
+  "Remove this LoRA": {
+    fr: "Retirer cette LoRA",
+    es: "Quitar esta LoRA",
+    de: "Diese LoRA entfernen",
+  },
+  "{n} LoRAs at most": {
+    fr: "{n} LoRA au maximum",
+    es: "{n} LoRA como máximo",
+    de: "Höchstens {n} LoRAs",
+  },
+  "＋ Add a LoRA": {
+    fr: "＋ Ajouter une LoRA",
+    es: "＋ Añadir una LoRA",
+    de: "＋ LoRA hinzufügen",
+  },
+  "No LoRA for this engine yet: add one under Models › LoRAs.": {
+    fr: "Aucune LoRA pour ce moteur : ajoutes-en une dans Modèles › LoRAs.",
+    es: "Todavía no hay LoRA para este motor: añade una en Modelos › LoRAs.",
+    de: "Noch keine LoRA für diese Engine: füge eine unter Modelle › LoRAs hinzu.",
+  },
+  "Strength of {name} (-2 to 2)": {
+    fr: "Force de {name} (-2 à 2)",
+    es: "Intensidad de {name} (-2 a 2)",
+    de: "Stärke von {name} (-2 bis 2)",
   },
 };
