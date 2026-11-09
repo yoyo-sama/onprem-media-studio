@@ -93,6 +93,14 @@ class FakeEngine:
         self.calls.append({**kw, **self.state})
         if self.log.get("fail"):
             raise RuntimeError("CUDA error: no kernel image is available for execution on the device")
+        # What report_stages makes FastVideo say: each step, then the decoding.
+        seen = self.log.setdefault("progress", [])
+        for step in range(1, kw["steps"] + 1):
+            kw["progress"]("denoise", step, kw["steps"])
+            seen.append((round(ctx.job.progress, 3), ctx.job.message))
+        if not self.state.get("latent"):
+            kw["progress"]("decode", 0, 1)
+            seen.append((round(ctx.job.progress, 3), ctx.job.message))
         if kw.get("save", True):
             kw["output"].write_bytes(b"mp4")
         frame = np.zeros((kw["height"], kw["width"], 3), dtype=np.uint8)
@@ -215,6 +223,30 @@ def test_r2v_two_passes(client, engines, capsys):
     log = capsys.readouterr().out
     assert "render: h3-r2v 1280×736, 124 frames, 2 reference(s) in " in log
     assert all(part in log for part in ("references ", "pass 1 ", "upscale ", "pass 2 and decoding "))
+
+
+def test_t2v_progress_follows_the_denoising_steps_then_the_decoding(client, engines):
+    run(client, "h3-t2v", {"prompt": "p"})
+    seen = engines["progress"]
+    assert len(seen) == 9 + 1
+    assert seen[0] == (0.189, "Rendering 1280×736, 124 frames: step 1/9")
+    assert seen[8] == (0.9, "Rendering 1280×736, 124 frames: step 9/9")
+    assert seen[9] == (0.9, "Rendering 1280×736, 124 frames: decoding the video")
+    assert [p for p, _ in seen] == sorted(p for p, _ in seen)
+
+
+def test_r2v_progress_covers_both_passes(client, engines):
+    sheet = upload(client, 192, 108)
+    run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet]})
+    seen = engines["progress"]
+    # Pass 1: 8 steps from 0.1 to 0.5, no decoding (it ends on latents); pass 2: 3 steps
+    # from 0.6 to 0.9, then the decoding.
+    assert [p for p, _ in seen] == [0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.7, 0.8, 0.9, 0.9]
+    assert seen[7][1] == "Pass 1: 736×416, 124 frames: step 8/8"
+    assert seen[-1][1] == "Pass 2 at 1280×736: decoding the video"
+    engines["progress"].clear()
+    run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "preview": True})
+    assert [p for p, _ in engines["progress"]][-2:] == [0.9, 0.9]
 
 
 def test_r2v_stops_the_llm_first_and_t2v_keeps_it(client, engines, monkeypatch, capsys):
@@ -435,6 +467,70 @@ def test_cancel_interrupts_fastvideo(fake_fastvideo, tmp_path):
         make_engine(gen).generate(ctx, prompt="p", width=32, height=32, frames=124, steps=8, seed=1,
                                   output=tmp_path / "x.mp4")
     assert gen.interrupted.is_set()
+
+
+def fake_h3_stages(monkeypatch, steps):
+    """FastVideo's two H3 stages as far as report_stages sees them: a denoising loop
+    that steps its scheduler once per entry of the schedule, and a video decoder."""
+    class Scheduler:
+        timesteps = list(range(steps))
+
+        def __init__(self):
+            self.stepped = 0
+
+        def step(self, velocity, timestep, latents, return_dict=False):
+            self.stepped += 1
+            return (latents + velocity,)
+
+    class Denoising:
+        def __init__(self):
+            self.scheduler = Scheduler()
+
+        def forward(self, batch, fastvideo_args):
+            for t in self.scheduler.timesteps:
+                batch = self.scheduler.step(1, t, batch)[0]
+            return batch
+
+    class Decoding:
+        def forward(self, batch, fastvideo_args):
+            return f"decoded {batch}"
+
+    denoising = SimpleNamespace(MiniMaxH3DenoisingStage=Denoising)
+    decoding = SimpleNamespace(MiniMaxH3VideoDecodingStage=Decoding)
+    stages = SimpleNamespace(minimax_h3_denoising=denoising, minimax_h3_decoding=decoding)
+    for name in ("fastvideo.pipelines", "fastvideo.pipelines.basic", "fastvideo.pipelines.basic.minimax_h3"):
+        monkeypatch.setitem(sys.modules, name, ModuleType(name))
+    monkeypatch.setitem(sys.modules, "fastvideo.pipelines.basic.minimax_h3.stages", stages)
+    return Denoising, Decoding
+
+
+def test_fastvideo_stages_report_steps_and_decoding(fake_fastvideo, monkeypatch, tmp_path):
+    """FastVideo has no step callback: the wrapped stages report each scheduler step out of
+    the schedule's length, then the decoding, to the request that runs, and to no other."""
+    Denoising, Decoding = fake_h3_stages(monkeypatch, 8)
+    h3_runtime.report_stages()
+    h3_runtime.report_stages()  # a second engine does not wrap them twice
+    heard = []
+
+    class Generator(FakeGenerator):
+        def generate(self, request):
+            stage = Denoising()
+            latents = stage.forward(0, self.fastvideo_args)
+            assert "step" not in vars(stage.scheduler) and stage.scheduler.stepped == 8
+            return Decoding().forward(latents, self.fastvideo_args)
+
+    engine = make_engine(Generator())
+    out = engine.generate(FakeCtx(), prompt="p", width=32, height=32, frames=124, steps=9, seed=1,
+                          output=tmp_path / "x.mp4", progress=lambda *a: heard.append(a))
+    assert out == "decoded 8"  # same calls, same results
+    assert heard == [("denoise", n, 8) for n in range(1, 9)] + [("decode", 0, 1)]
+    heard.clear()
+    with engine.overrides(latent_output=True):
+        engine.generate(FakeCtx(), prompt="p", width=32, height=32, frames=124, steps=9, seed=1,
+                        output=tmp_path / "x.mp4", progress=lambda *a: heard.append(a))
+    assert heard[-1] == ("denoise", 8, 8)  # latent output: nothing is decoded
+    Denoising().forward(0, None)  # outside a request nobody listens
+    assert h3_runtime._progress is None
 
 
 # ── LoRA stack ───────────────────────────────────────────────────────────────

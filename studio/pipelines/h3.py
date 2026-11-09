@@ -238,6 +238,20 @@ def _reference(path: Path):
     return MiniMaxH3Reference(source=str(path), media_type=kind)
 
 
+def _steps(ctx, low: float, high: float, label: str):
+    """Progress of one FastVideo request, for Engine.generate: its denoising steps move the
+    job from `low` to `high`, and the video decoding, which follows, shows at `high`.
+    Cancelling is left to the engine's watcher, which interrupts FastVideo cleanly."""
+    def report(stage: str, done: int, total: int) -> None:
+        if ctx.cancelled():
+            return
+        if stage == "denoise":
+            ctx.progress(low + (high - low) * done / total, f"{label}: step {done}/{total}")
+        else:
+            ctx.progress(high, f"{label}: decoding the video")
+    return report
+
+
 def _open(ctx, ref: str):
     return common.open_image(ctx.files.resolve(ref))
 
@@ -259,12 +273,14 @@ class H3TextToVideo(Pipeline):
     def _render(self, models, params, ctx, pil_image=None, last_image=None):
         model_dir = models[V2]
         engine = _engine(ctx, model_dir, False, params["loras"])
-        ctx.progress(0.1, f"Rendering {params['width']}×{params['height']}, {params['frames']} frames")
+        what = f"Rendering {params['width']}×{params['height']}, {params['frames']} frames"
+        ctx.progress(0.1, what)
         path = _video_path(ctx)
         began = time.time()
         result = engine.generate(ctx, prompt=params["prompt"], width=params["width"], height=params["height"],
                                  frames=params["frames"], steps=contract(model_dir)["num_inference_steps"],
-                                 seed=params["seed"], output=path, pil_image=pil_image, last_image=last_image)
+                                 seed=params["seed"], output=path, pil_image=pil_image, last_image=last_image,
+                                 progress=_steps(ctx, 0.1, 0.9, what))
         print(f"render: {self.id} {params['width']}×{params['height']}, {params['frames']} frames "
               f"in {time.time() - began:.1f} s", flush=True)
         return _outputs(result, path, ctx, params)
@@ -341,11 +357,13 @@ class H3ReferenceToVideo(Pipeline):
         what = f"{params['width']}×{params['height']}, {params['frames']} frames, {len(refs)} reference(s)"
         marks = [time.time()]
         path = _video_path(ctx)
-        ctx.progress(0.1, f"Pass 1: {w1}×{h1}, {params['frames']} frames")
+        pass1 = f"Pass 1: {w1}×{h1}, {params['frames']} frames"
+        ctx.progress(0.1, pass1)
         with engine.overrides(latent_output=not preview):
             first = engine.generate(ctx, prompt=params["prompt"], width=w1, height=h1, frames=params["frames"],
                                     steps=terms["num_inference_steps"], seed=params["seed"], output=path,
-                                    save=preview, references=refs)
+                                    save=preview, references=refs,
+                                    progress=_steps(ctx, 0.1, 0.9 if preview else 0.5, pass1))
         marks.append(time.time())
         if preview:
             print(f"render: {self.id} {what}, preview in {marks[-1] - began:.1f} s: "
@@ -361,7 +379,8 @@ class H3ReferenceToVideo(Pipeline):
         with engine.overrides(pdd_step_indices=indices):
             second = engine.generate(ctx, prompt=params["prompt"], width=params["width"], height=params["height"],
                                      frames=params["frames"], steps=len(indices) - 1, seed=params["seed"],
-                                     output=path, references=refs, latents=latents, audio_latents=audio)
+                                     output=path, references=refs, latents=latents, audio_latents=audio,
+                                     progress=_steps(ctx, 0.6, 0.9, f"Pass 2 at {params['width']}×{params['height']}"))
         marks.append(time.time())
         # Each pass includes FastVideo's text and reference encoding; pass 2 also the VAE
         # decoding and the MP4 (the first pass ends on latents).

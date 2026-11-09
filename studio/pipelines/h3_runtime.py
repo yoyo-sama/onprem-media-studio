@@ -19,8 +19,12 @@ installed here (reference_size): with two 1920×1088 sheets, r2v went from 680 s
 to about 247 s on the GB10 with no visible loss (LESSONS.md #38).
 
 The generator runs in-process (one GPU: FastVideo's uniproc executor), so a
-cancelled job interrupts it directly. FastVideo reads its environment when the
-generator is built, which is why a LoRA change builds a new one.
+cancelled job interrupts it directly, and the job's progress is read from its
+stages: FastVideo has no step callback, so its H3 denoising stage is wrapped to
+count the scheduler steps and its video decoding stage to say when it starts
+(report_stages); the tensors and calls are unchanged. FastVideo reads its
+environment when the generator is built, which is why a LoRA change builds a
+new one.
 
 fastvideo and torch are imported inside functions: the server and the unit
 tests run without them.
@@ -215,6 +219,56 @@ def _read_weights_whole() -> None:
     nvfp4_config.load_minimax_h3_nvfp4_dit_export = load_export
 
 
+# The running request's progress callback, (stage, done, total) with stage "denoise" or
+# "decode"; set by Engine.generate only while its request runs. One H3 request runs at a
+# time (its engine loads alone, on the one GPU lane), and FastVideo runs it in a thread of
+# its own, hence a module-level slot rather than a thread-local one.
+_progress = None
+
+
+def _tell(stage: str, done: int, total: int) -> None:
+    if _progress is not None:
+        _progress(stage, done, total)
+
+
+def report_stages() -> None:
+    """Make FastVideo's H3 stages tell the running request where they are: one report
+    after each denoising step (the video scheduler's step, which ends a step) out of the
+    schedule's length, and one when the video decoding starts. FastVideo only logs the
+    start and the end of a request, so the job sat at its first value for the whole
+    render (710 s for a 10 s i2v clip on the GB10)."""
+    from fastvideo.pipelines.basic.minimax_h3.stages import minimax_h3_decoding, minimax_h3_denoising
+    denoising = minimax_h3_denoising.MiniMaxH3DenoisingStage
+    decoding = minimax_h3_decoding.MiniMaxH3VideoDecodingStage
+    if getattr(denoising.forward, "reports", False):
+        return
+    denoise, decode = denoising.forward, decoding.forward
+
+    def denoise_forward(stage, batch, fastvideo_args):
+        scheduler = stage.scheduler
+        step, done = scheduler.step, 0
+
+        def counted(*args, **kwargs):
+            nonlocal done
+            out = step(*args, **kwargs)
+            done += 1
+            _tell("denoise", done, len(scheduler.timesteps))
+            return out
+        scheduler.step = counted
+        try:
+            return denoise(stage, batch, fastvideo_args)
+        finally:
+            del scheduler.step
+
+    def decode_forward(stage, batch, fastvideo_args):
+        if fastvideo_args.output_type != "latent":
+            _tell("decode", 0, 1)
+        return decode(stage, batch, fastvideo_args)
+
+    denoise_forward.reports = decode_forward.reports = True
+    denoising.forward, decoding.forward = denoise_forward, decode_forward
+
+
 def _apply_env(env: dict[str, str]) -> None:
     for key in _ALL_KEYS - set(env):
         os.environ.pop(key, None)
@@ -231,6 +285,7 @@ class Engine:
         self.spec = spec
         _apply_env(environment(spec))
         _read_weights_whole()
+        report_stages()
         quant = QuantizationConfig(transformer_quant="NVFP4", layer_profile="h3_dit_vsa")
         components = ComponentConfig(lora_path=str(spec.lora) if spec.lora else None, lora_strength=1.0)
         if spec.ref2va:
@@ -279,8 +334,10 @@ class Engine:
 
     def generate(self, ctx, *, prompt: str, width: int, height: int, frames: int, steps: int, seed: int,
                  output: Path, save: bool = True, pil_image=None, last_image=None, references=None,
-                 latents=None, audio_latents=None):
-        """One FastVideo request; a cancelled job interrupts it and raises Cancelled."""
+                 latents=None, audio_latents=None, progress=None):
+        """One FastVideo request; a cancelled job interrupts it and raises Cancelled.
+        `progress(stage, done, total)` hears its denoising steps and decoding (report_stages)."""
+        global _progress
         from fastvideo.api import GenerationRequest, InputConfig, OutputConfig, SamplingConfig
         request = GenerationRequest(
             prompt=prompt,
@@ -301,10 +358,12 @@ class Engine:
 
         watcher = threading.Thread(target=watch, name="h3-cancel", daemon=True)
         watcher.start()
+        _progress = progress
         try:
             return self.generator.generate(request)
         except RuntimeError:
             ctx.check()  # an interrupted run raises RuntimeError: report it as cancelled
             raise
         finally:
+            _progress = None
             done.set()
