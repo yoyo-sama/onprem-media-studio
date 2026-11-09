@@ -25,22 +25,34 @@ Version française : [README.fr.md](README.fr.md).
 ## Run with Docker
 
 ```bash
-echo "HF_TOKEN=hf_..." > .env          # optional, needed for Krea 2
-docker compose up -d --build
-open http://localhost:8090
+git clone https://github.com/yoyo-sama/onprem-media-studio.git
+cd onprem-media-studio
+scripts/docker-install.sh --check    # Docker, GPU in a container, port, disk; changes nothing
+scripts/docker-install.sh            # creates .env and ./data, builds, starts, waits for the studio
 ```
 
-Models and renders go to `./data` (change with `STUDIO_DATA=/path` in `.env`). If port 8090 is
-already taken (AI Content Studio 1.4 uses it), set `STUDIO_HOST_PORT=8096` in `.env`.
+While the repository is private, `git clone` asks for a user name and a password: give your
+GitHub login and a token that can read the repository (fine-grained, *Contents: read-only*), the
+same one as `STUDIO_GIT_TOKEN` below.
+
+The script stops at the first problem with the command that fixes it: Docker not usable by your
+user, no GPU in a container (NVIDIA Container Toolkit), port already taken (AI Content Studio 1.4
+uses 8090: set `STUDIO_HOST_PORT=8096` in `.env`). Running it again later rebuilds and restarts
+the studio, but never while a job runs or a model downloads: it says so and stops.
+
+Settings live in `.env`, created once from [`.env.example`](.env.example) and readable by you
+only; the script never changes an existing one. Put in it `HF_TOKEN=hf_...` for Krea 2 (after
+accepting its licence on Hugging Face) and `STUDIO_GIT_TOKEN=github_pat_...` for in-app updates
+while the repository is private, then run `docker compose up -d`. Models and renders go to `./data`
+(`STUDIO_DATA=/path` in `.env` for another disk).
 
 ### Updates
 
 The "Update" panel of the interface pulls the repository, rebuilds the image (the studio keeps
 working meanwhile), then restarts the studio once no job runs; models and renders stay. The
 `updater` service of `compose.yaml` does it ([docs/GALLERY.md](docs/GALLERY.md#docker-docker-compose)).
-For a private repository, put a GitHub token that can read it in `.env`
-(`STUDIO_GIT_TOKEN=github_pat_...`, fine-grained, *Contents: read-only*), then `docker compose up -d`.
-By hand, in this folder: `git pull && docker compose up -d --build`.
+A private repository needs `STUDIO_GIT_TOKEN` in `.env` (above). By hand, in this folder:
+`git pull && scripts/docker-install.sh`, which waits for no job to run before the restart.
 
 ### Reuse files from AI Content Studio 1.4
 

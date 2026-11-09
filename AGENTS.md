@@ -16,6 +16,7 @@ NODE_PATH=$(npm root -g) node tools/assistant-ui.js     # assistant mode: no job
 NODE_PATH=$(npm root -g) node tools/lora-ui.js          # LoRA stacks of the Studio and the Canvas
 STUDIO_DATA_DIR=./data python -m studio            # dev server on :8090
 docker compose up -d --build                       # full image (GB10 / ARM64 + CUDA)
+scripts/docker-install.sh                          # same, with checks, .env from .env.example, no restart during a job
 curl -s localhost:8090/api/health                  # app, GPU, LLM state
 python tools/qualify/run_image_cases.py            # image qualification renders (GB10, server running)
 node tools/qualify/export_1_4_prompts.js ../dellaicontent > tools/qualify/image_cases.json  # rebuild cases from 1.4
