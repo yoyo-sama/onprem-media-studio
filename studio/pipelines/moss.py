@@ -151,20 +151,31 @@ PREFIXES = ("diffusion_model.", "transformer.")
 def read_lora(path: Path, transformer) -> dict:
     """Linear layer name → (down, up, alpha / rank) of a LoRA file (kohya, ComfyUI or diffusers
     keys). Without an .alpha key, the alpha of the file's diffusers metadata, else the rank.
+    A fused proj.qkv (block attention trained as one projection) is split onto proj.q/k/v.
     A key that matches no Linear layer, or a layer without both halves, refuses the whole file."""
     import torch
     from safetensors.torch import load_file
     linears = {n for n, m in transformer.named_modules() if isinstance(m, torch.nn.Linear)}
     default_alpha = _metadata_alpha(path)
-    parts, unknown = {}, []
+    parts, unknown, fused = {}, [], {}
     for key, tensor in load_file(str(path)).items():
         suffix = next((s for s in SUFFIXES if key.endswith(s)), None)
         prefix = next((p for p in PREFIXES if key.startswith(p)), None)
         name = key[len(prefix):-len(suffix)] if suffix and prefix else None
+        if name not in linears and name and name.endswith(".qkv") and \
+                all(name[:-3] + x in linears for x in "qkv"):
+            fused.setdefault(name, {})[SUFFIXES[suffix]] = tensor
+            continue
         if name not in linears:
             unknown.append(key)
             continue
         parts.setdefault(name, {})[SUFFIXES[suffix]] = tensor
+    for name, p in fused.items():
+        # A fused attention projection (ai-toolkit): one down for q, k and v, the up rows in
+        # q, k, v order, as the model's own fused qkv (text blocks) chunks them.
+        ups = p["up"].chunk(3, 0) if "up" in p else [None] * 3
+        for part, up in zip("qkv", ups):
+            parts[name[:-3] + part] = {k: v for k, v in {**p, "up": up}.items() if v is not None}
     incomplete = [n for n, p in parts.items() if "down" not in p or "up" not in p]
     if unknown or incomplete or not parts:
         raise ValueError(f"{path.name}: {len(unknown)} key(s) match no layer (e.g. {unknown[:3]}), "
