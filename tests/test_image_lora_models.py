@@ -149,3 +149,20 @@ def test_moss_stack_hooks_add_up_with_their_strengths():
     with moss.lora_hooks(model, one, 0.5), moss.lora_hooks(model, two, -1.0):
         assert torch.allclose(model(x) - plain, torch.full((1, 4), 0.5 * 4 - 8.0))
     assert torch.equal(model(x), plain)
+
+
+def test_moss_fused_qkv_is_split_onto_q_k_v(tmp_path):
+    """moss_lenovo (ai-toolkit): layers.N.proj.qkv, lora_B 3 × dim rows; the block has proj.q/k/v.
+    Each part's delta is its third of the fused delta, in q, k, v order."""
+    model = TinyMoss()
+    for part in "kv":
+        model.layers[0].proj[part] = torch.nn.Linear(4, 4, bias=False)
+    down, up = torch.randn(2, 4), torch.randn(12, 2)
+    lora = moss.read_lora(save(tmp_path / "qkv.safetensors", {
+        "diffusion_model.layers.0.proj.qkv.lora_A.weight": down,
+        "diffusion_model.layers.0.proj.qkv.lora_B.weight": up}), model)
+    assert sorted(lora) == ["layers.0.proj.k", "layers.0.proj.q", "layers.0.proj.v"]
+    fused = up @ down
+    assert torch.equal(torch.cat([lora[f"layers.0.proj.{p}"][1] @ lora[f"layers.0.proj.{p}"][0]
+                                  for p in "qkv"]), fused)
+    assert {lora[n][2] for n in lora} == {1.0}  # no alpha: alpha = rank

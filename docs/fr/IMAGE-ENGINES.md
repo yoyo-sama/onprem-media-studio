@@ -160,6 +160,9 @@ LoRA d'image.
   second `transformer.`), et le `img_mlp.gate_up` fusionné de Qwen Image 2.1, séparé en
   `gate_layer` et `proj` (lignes de la porte d'abord, comme diffusers sépare le poids fusionné).
   Un fichier qu'aucune ne concerne se charge toujours depuis son chemin.
+  Le lecteur de MOSS sépare un `proj.qkv` de bloc fusionné (ai-toolkit) sur `proj.q`/`k`/`v`, un
+  down partagé, les lignes de l'up dans l'ordre q, k, v (celui du `qkv` fusionné des blocs de texte
+  du modèle lui-même).
 - **Rien d'ignoré en silence.** diffusers se contente d'avertir pour les clés qui ne tombent sur
   aucune couche et rend sans elles ; ici un fichier qui en a une seule (clés d'encodeur de texte
   comprises) fait échouer le job et en cite quelques-unes.
