@@ -95,7 +95,7 @@ rm -rf ~/.local/share/studio              # modèles et rendus, si tu veux aussi
 
 ## Différences avec l'image Docker
 
-| | Docker (`docker compose`) | Bare metal (`scripts/install.sh`) |
+| | Docker (`scripts/docker-install.sh`, README) | Bare metal (`scripts/install.sh`) |
 |---|---|---|
 | torch | NGC PyTorch 25.11 (2.10, CUDA 13.0) | PyPI 2.12.0 (CUDA 13.0), la version de FastVideo |
 | Toolkit CUDA | dans l'image | celui du système (13.x) |

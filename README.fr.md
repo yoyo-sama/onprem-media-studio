@@ -28,23 +28,36 @@ English version: [README.md](README.md).
 ## Lancer avec Docker
 
 ```bash
-echo "HF_TOKEN=hf_..." > .env          # facultatif, nécessaire pour Krea 2
-docker compose up -d --build
-# puis http://localhost:8090
+git clone https://github.com/yoyo-sama/onprem-media-studio.git
+cd onprem-media-studio
+scripts/docker-install.sh --check    # Docker, GPU dans un conteneur, port, disque ; ne change rien
+scripts/docker-install.sh            # crée .env et ./data, construit, démarre, attend le studio
 ```
 
-Modèles et rendus vont dans `./data` (à changer avec `STUDIO_DATA=/chemin` dans `.env`). Si le
-port 8090 est déjà pris (AI Content Studio 1.4 l'utilise), mettre `STUDIO_HOST_PORT=8096` dans `.env`.
+Tant que le dépôt est privé, `git clone` demande un nom d'utilisateur et un mot de passe : donner
+son identifiant GitHub et un jeton qui peut lire le dépôt (*fine-grained*, *Contents :
+read-only*), le même que `STUDIO_GIT_TOKEN` plus bas.
+
+Le script s'arrête au premier problème avec la commande qui le corrige : Docker inutilisable par
+l'utilisateur, pas de GPU dans un conteneur (NVIDIA Container Toolkit), port déjà pris (AI Content
+Studio 1.4 utilise 8090 : mettre `STUDIO_HOST_PORT=8096` dans `.env`). Relancé plus tard, il
+reconstruit et redémarre le studio, mais jamais pendant un job ou un téléchargement de modèle : il
+le dit et s'arrête.
+
+Les réglages sont dans `.env`, créé une fois depuis [`.env.example`](.env.example) et lisible par
+son seul propriétaire ; le script ne modifie jamais un `.env` existant. Y mettre `HF_TOKEN=hf_...` pour Krea 2
+(après avoir accepté sa licence sur Hugging Face) et `STUDIO_GIT_TOKEN=github_pat_...` pour les
+mises à jour depuis l'interface tant que le dépôt est privé, puis lancer `docker compose up -d`.
+Modèles et rendus vont dans `./data` (`STUDIO_DATA=/chemin` dans `.env` pour un autre disque).
 
 ### Mises à jour
 
 Le panneau « Mise à jour » de l'interface tire le dépôt, reconstruit l'image (le studio reste
 utilisable pendant ce temps), puis redémarre le studio dès qu'aucun job ne tourne ; modèles et
 rendus restent en place. C'est le service `updater` de `compose.yaml` qui s'en charge
-([docs/fr/GALLERY.md](docs/fr/GALLERY.md#docker-docker-compose)). Pour un dépôt privé, mettre dans
-`.env` un jeton GitHub qui peut le lire (`STUDIO_GIT_TOKEN=github_pat_...`, *fine-grained*,
-*Contents : read-only*), puis `docker compose up -d`. À la main, dans ce dossier :
-`git pull && docker compose up -d --build`.
+([docs/fr/GALLERY.md](docs/fr/GALLERY.md#docker-docker-compose)). Un dépôt privé demande
+`STUDIO_GIT_TOKEN` dans `.env` (plus haut). À la main, dans ce dossier :
+`git pull && scripts/docker-install.sh`, qui ne redémarre le studio que si aucun job ne tourne.
 
 ### Réutiliser les fichiers d'AI Content Studio 1.4
 
