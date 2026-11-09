@@ -42,6 +42,12 @@ JOB_POLL = 10  # seconds between two looks at the studio's queue before the rest
 # if this service stops (studio/jobs.py JobQueue.hold).
 HOLD_SECONDS = 60
 LABEL = "studio.commit"
+# The files this container was built from (docker/updater/Dockerfile copies them next to this
+# one): an update that changes them in the repository leaves this service on the old ones, since
+# it never rebuilds itself (it would stop in the middle of its own `docker compose up`).
+SOURCE = Path(__file__).resolve().parent
+SOURCE_FILES = ("Dockerfile", "server.py")
+SELF_REBUILD = "docker compose up -d --build updater"
 TOKEN_HINT = ("If the repository is private, put a GitHub token that can read it in .env "
               "(STUDIO_GIT_TOKEN=...), then run docker compose up -d once.")
 
@@ -58,8 +64,9 @@ def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
 
 class Updater:
     def __init__(self, repo: Path = REPO, branch: str = BRANCH, service: str = SERVICE,
-                 studio_url: str = STUDIO_URL, token: str | None = None):
+                 studio_url: str = STUDIO_URL, token: str | None = None, source: Path = SOURCE):
         self.repo, self.branch, self.service, self.studio_url = repo, branch, service, studio_url
+        self.source = source
         self.token = token if token is not None else os.environ.get("UPDATER_GIT_TOKEN", "")
         self._cache: tuple[float, dict | None] = (0.0, None)
         self._lock = threading.Lock()
@@ -83,6 +90,14 @@ class Updater:
 
     def head(self) -> str:
         return self.git("rev-parse", "HEAD").stdout.strip()
+
+    def stale(self) -> bool:
+        """True when the repository holds another version of this service than the one running."""
+        for name in SOURCE_FILES:
+            mine, theirs = self.source / name, self.repo / "docker" / "updater" / name
+            if mine.is_file() and theirs.is_file() and mine.read_bytes() != theirs.read_bytes():
+                return True
+        return False
 
     # ── docker ───────────────────────────────────────────────────────────────
     def docker(self, *args: str, timeout: float = 120) -> subprocess.CompletedProcess:
@@ -134,7 +149,7 @@ class Updater:
     # ── status ───────────────────────────────────────────────────────────────
     def status(self) -> dict:
         out = {"mode": "docker", "state": self.state, "log": list(self.log)[-15:], "error": self.error,
-               "target": self.target}
+               "target": self.target, "updater_stale": self.stale()}
         if self.state != "idle":
             return out | {"available": False, "message": None}
         cached_at, cached = self._cache
@@ -252,6 +267,8 @@ class Updater:
                 if self.docker("image", "rm", old["image"]).returncode == 0:
                     self._say("Previous image removed")
             self._say("Update done")
+            if self.stale():
+                self._say(f"The update service itself changed: in the repository folder, run {SELF_REBUILD}")
             self.state = "idle"
         except Exception as exc:  # noqa: BLE001 - any failure ends in the status, never in silence
             self.error = exc.detail if isinstance(exc, UpdateError) else f"Update failed: {exc}"

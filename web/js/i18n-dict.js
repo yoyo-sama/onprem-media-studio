@@ -2557,6 +2557,11 @@ export const DICT = {
     es: "La papelera está vacía.",
     de: "Der Papierkorb ist leer.",
   },
+  "The update service itself changed: in the repository folder on the machine, run {command}.": {
+    fr: "Le service de mise à jour lui-même a changé : dans le dossier du dépôt sur la machine, lance {command}.",
+    es: "El propio servicio de actualización ha cambiado: en la carpeta del repositorio en la máquina, ejecuta {command}.",
+    de: "Der Aktualisierungsdienst selbst hat sich geändert: Führe im Ordner des Repositorys auf dem Rechner {command} aus.",
+  },
   "The whole screenplay of the sequence, written in one go.": {
     fr: "Le scénario complet de la séquence, écrit en une fois.",
     es: "El guion completo de la secuencia, escrito de una vez.",

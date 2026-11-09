@@ -27,8 +27,8 @@ spec.loader.exec_module(server)
 class FakeDocker(server.Updater):
     """The updater with docker replaced: the studio container, compose runs and the queue."""
 
-    def __init__(self, repo, running=None, queue=(), build_code=0):
-        super().__init__(repo, "main", "studio", "http://unused", token="")
+    def __init__(self, repo, running=None, queue=(), build_code=0, source=server.SOURCE):
+        super().__init__(repo, "main", "studio", "http://unused", token="", source=source)
         self.running, self.queue, self.build_code = running, list(queue), build_code
         self.calls: list[tuple] = []
         self.removed: list[str] = []
@@ -115,6 +115,33 @@ def test_nothing_to_do_when_up_to_date_or_built_by_hand(repos):
         assert not up.status()["available"]
         assert up.apply() == {"updated": False, "from": head, "to": head, "rebuilding": False}
         assert up.calls == []
+
+
+def test_an_update_that_changes_the_updater_says_to_rebuild_it(repos, tmp_path):
+    upstream, local = repos
+    source = tmp_path / "running"  # the files the running updater was built from
+    source.mkdir()
+    for name in server.SOURCE_FILES:
+        (source / name).write_text("v1")
+        commit(upstream, f"docker/updater/{name}", "v1")
+    git(upstream, "push", "-q", "origin", "main")
+    git(local, "pull", "-q", "--ff-only", "origin", "main")
+    up = FakeDocker(local, running=git(local, "rev-parse", "HEAD"), source=source)
+    assert up.status()["updater_stale"] is False
+    commit(upstream, "docker/updater/server.py", "v2")
+    git(upstream, "push", "-q", "origin", "main")
+    up.apply()
+    wait_idle(up)
+    status = up.status()
+    assert status["updater_stale"] is True
+    assert status["log"][-1] == ("The update service itself changed: in the repository folder, run "
+                                 "docker compose up -d --build updater")
+
+
+def test_the_image_holds_what_the_updater_compares():
+    dockerfile = (SERVER.parent / "Dockerfile").read_text()
+    assert f"COPY {' '.join(server.SOURCE_FILES)} /updater/" in dockerfile
+    assert not FakeDocker(Path(__file__).resolve().parent.parent).stale()  # this checkout against itself
 
 
 def test_a_failed_build_keeps_the_running_studio(repos):

@@ -132,7 +132,7 @@ aucun port ; le studio le joint à `STUDIO_UPDATER_URL` (`http://updater:8091`) 
 `/api/update/*` (`RemoteUpdater` dans `studio/update.py`).
 
 - `GET /api/update/status` → `{mode: "docker", state, log, error, branch, local, remote, running,
-  available, message}`. `running` est le commit dont est construite l'image du studio en marche
+  available, message, updater_stale}`. `running` est le commit dont est construite l'image du studio en marche
   (étiquette d'image `studio.commit`, posée par l'argument de build `STUDIO_COMMIT` que seul
   l'updater passe ; vide pour une image construite à la main). La mise à jour est proposée quand la
   branche distante a de nouveaux commits, ou quand l'image en marche est plus ancienne que le dépôt
@@ -156,8 +156,11 @@ aucun port ; le studio le joint à `STUDIO_UPDATER_URL` (`http://updater:8091`) 
      image, avec le même volume de données ;
   4. supprime l'image précédente dès que plus rien ne l'utilise.
 
-  L'updater ne se reconstruit jamais lui-même : après une mise à jour qui modifie
-  `docker/updater/`, lance une fois `docker compose up -d --build updater` dans le dossier du dépôt.
+  L'updater ne se reconstruit jamais lui-même (il s'arrêterait au milieu de son propre
+  `docker compose up`). Son image garde une copie de `docker/updater/Dockerfile` et de `server.py` ;
+  quand le dépôt en contient d'autres versions, `updater_stale` vaut vrai, et la dernière ligne du
+  journal d'une mise à jour comme la ligne « Mise à jour » du Moniteur demandent de lancer une fois
+  `docker compose up -d --build updater` dans le dossier du dépôt.
 
   La page suit `state`, affiche la dernière ligne du build et se recharge quand le nouveau studio
   répond.
@@ -173,8 +176,9 @@ aucun port ; le studio le joint à `STUDIO_UPDATER_URL` (`http://updater:8091`) 
   (`STUDIO_GIT_TOKEN=...`, un jeton *fine-grained* avec *Contents : read-only* sur ce dépôt), puis
   lance `docker compose up -d` une fois. Il est transmis à git par l'environnement, jamais sur une
   ligne de commande, et n'est jamais journalisé.
-- L'updater ne se met pas à jour lui-même : un changement de `docker/updater/` ou de son service
-  dans `compose.yaml` demande un `docker compose up -d --build` à la main.
+- L'updater ne se met pas à jour lui-même : un changement de `docker/updater/` (signalé, plus haut)
+  ou de son service dans `compose.yaml` (non signalé) demande un
+  `docker compose up -d --build updater` à la main.
 
 ## Téléversement de LoRA
 

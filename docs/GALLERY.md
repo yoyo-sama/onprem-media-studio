@@ -123,7 +123,7 @@ studio reaches it at `STUDIO_UPDATER_URL` (`http://updater:8091`) and forwards `
 there (`RemoteUpdater` in `studio/update.py`).
 
 - `GET /api/update/status` → `{mode: "docker", state, log, error, branch, local, remote, running,
-  available, message}`. `running` is the commit the running studio image was built from (image
+  available, message, updater_stale}`. `running` is the commit the running studio image was built from (image
   label `studio.commit`, set by the build argument `STUDIO_COMMIT` that only the updater passes;
   empty for an image built by hand). The update is offered when the remote branch has new commits,
   or when the running image is older than the checkout (a `git pull` without rebuild, a failed
@@ -145,8 +145,11 @@ there (`RemoteUpdater` in `studio/update.py`).
      image, with the same data volume;
   4. removes the previous image once nothing uses it.
 
-  The updater never rebuilds itself: after an update that changes `docker/updater/`, run
-  `docker compose up -d --build updater` once in the repository folder.
+  The updater never rebuilds itself (it would stop in the middle of its own `docker compose up`).
+  Its image keeps a copy of `docker/updater/Dockerfile` and `server.py`; when the repository
+  holds other versions, `updater_stale` is true, the last log line of an update and the "Update"
+  row of the Monitor say to run `docker compose up -d --build updater` once in the repository
+  folder.
 
   The page follows `state`, shows the last build line, and reloads when the new studio answers.
 - **Paths.** Compose resolves the relative paths of `compose.yaml` (the `./data` volume) against
@@ -160,8 +163,8 @@ there (`RemoteUpdater` in `studio/update.py`).
   (`STUDIO_GIT_TOKEN=...`, a fine-grained token with *Contents: read-only* on this repository),
   then `docker compose up -d` once. It is handed to git through the environment, never on a
   command line, and never logged.
-- The updater does not update itself: a change to `docker/updater/` or to its service in
-  `compose.yaml` takes a `docker compose up -d --build` by hand.
+- The updater does not update itself: a change to `docker/updater/` (reported, above) or to its
+  service in `compose.yaml` (not reported) takes a `docker compose up -d --build updater` by hand.
 
 ## LoRA upload
 

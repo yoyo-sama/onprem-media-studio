@@ -852,6 +852,13 @@ function showUpdate(s) {
   log.hidden = !(s.state && s.state !== "idle" && last);
   log.textContent = last || "";   // build output, in English
   $("updateBtn").hidden = !s.available || (s.state && s.state !== "idle");
+  // The updater never rebuilds itself: say so when the repository holds a newer one.
+  const stale = $("updaterStale");
+  stale.hidden = !s.updater_stale;
+  if (s.updater_stale) {
+    tx(stale, "The update service itself changed: in the repository folder on the machine, run {command}.",
+       { command: "docker compose up -d --build updater" });
+  }
   if (s.state && s.state !== "idle") {
     tx($("updateState"), "Running");
     tx($("updateText"), UPDATE_STEPS[s.state] || "Restarting…");
