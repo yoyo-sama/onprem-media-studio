@@ -118,7 +118,9 @@ def test_a_running_studio_with_jobs_is_never_recreated(env):
     assert busy.returncode == 1 and "1 job(s) or download(s) in progress" in busy.stderr
     idle = bash(env, 'check_port; echo "RUNNING=$RUNNING"', FAKE_RUNNING="abc123",
                 FAKE_HEALTH='{"queue":0,"downloads":0,"held":false}')
-    assert idle.returncode == 0 and "RUNNING=1" in idle.stdout
+    assert idle.returncode == 0 and "RUNNING=1" in idle.stdout and "rebuilt, then restarted" in idle.stdout
+    check = bash(env, "CHECK_ONLY=1; check_port", FAKE_RUNNING="abc123", FAKE_HEALTH='{"queue":0,"downloads":0}')
+    assert "a full run rebuilds it" in check.stdout
 
 
 def test_env_file_is_created_once_and_private(env):

@@ -155,7 +155,11 @@ check_port() {
       die "the studio has $busy job(s) or download(s) in progress: recreating its container now would kill them. Run this script again once they are done."
     fi
     RUNNING=1
-    info "already running on port $PORT, no job in progress: rebuilt, then restarted if still idle"
+    if [ "$CHECK_ONLY" = 1 ]; then
+      info "already running on port $PORT, no job in progress (a full run rebuilds it, then restarts it if still idle)"
+    else
+      info "already running on port $PORT, no job in progress: rebuilt, then restarted if still idle"
+    fi
     return
   fi
   if port_taken "$PORT"; then
