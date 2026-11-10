@@ -161,7 +161,9 @@ Ce dépôt ne contient aucun poids de modèle. Chaque modèle garde sa licence, 
 - **Krea 2** : accès restreint sur Hugging Face, licence acceptée par chaque utilisateur.
 - **Qwen Image 2.1** : Qwen Research License, **usage non commercial uniquement** ; un usage
   commercial demande une licence de Qwen. Toutes les retouches et images de plan l'utilisent.
-- **MOSS-Image** (OpenMOSS-Team/MOSS-Image-SFT) : Apache-2.0.
+- **MOSS-Image** (OpenMOSS-Team/MOSS-Image-SFT) et sa LoRA turbo
+  (akhaliq/MOSS-Image-SFT-4-steps, téléchargée avec lui pour les modes Aperçu et Standard) :
+  Apache-2.0.
 - **Gemma 4 26B-A4B** (GGUF de ggml-org) : Apache-2.0.
 
 Maestro et WanGP ont inspiré l'approche ; aucun code n'en a été repris (leur licence est non
