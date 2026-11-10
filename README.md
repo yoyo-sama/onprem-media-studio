@@ -7,11 +7,10 @@ Successor of AI Content Studio 1.4. Engines: Krea 2, Qwen Image 2.1, MOSS-Image,
 MiniMax H3 through FastH3, Gemma 4 26B-A4B for prompt enrichment and the creative assistant (a chat with
 roles that proposes ready-to-run cards: [docs/ASSISTANT.md](docs/ASSISTANT.md)).
 
-> Status: step 4 of the [roadmap](docs/ROADMAP.md). The server, model downloads, job queue and
-> LLM bridge are in place, and the image engines (Krea 2, Qwen Image 2.1), Gemma 4 and the
-> MiniMax H3 video engines in NVFP4 (text, image, first/last image and references to video) are
-> qualified on the GB10 (2026-10-30). The Studio and Canvas pages are ported from 1.4 ([front end](docs/FRONTEND.md)) and tested with simulated
-> renders; their first pass on the GB10 is pending.
+> Status: the assistant, the Studio and the Canvas run in Docker on the GB10. Krea 2, Qwen Image
+> 2.1, MOSS-Image, Gemma 4 26B-A4B and the MiniMax H3 video engines in NVFP4 (text, image,
+> first/last image and references to video) are qualified there by real renders. See the
+> [roadmap](docs/ROADMAP.md).
 
 Version française : [README.fr.md](README.fr.md).
 
@@ -24,34 +23,62 @@ Version française : [README.fr.md](README.fr.md).
 
 ## Run with Docker
 
-```bash
-git clone https://github.com/yoyo-sama/onprem-media-studio.git
-cd onprem-media-studio
-scripts/docker-install.sh --check    # Docker, GPU in a container, port, disk; changes nothing
-scripts/docker-install.sh            # creates .env and ./data, builds, starts, waits for the studio
-```
+1. Get the repository. While it is private, `git clone` asks for a user name and a password:
+   give your GitHub login and a token that can read the repository (fine-grained, *Contents:
+   read-only*).
 
-While the repository is private, `git clone` asks for a user name and a password: give your
-GitHub login and a token that can read the repository (fine-grained, *Contents: read-only*), the
-same one as `STUDIO_GIT_TOKEN` below.
+   ```bash
+   git clone https://github.com/yoyo-sama/onprem-media-studio.git
+   cd onprem-media-studio
+   ```
 
-The script stops at the first problem with the command that fixes it: Docker not usable by your
-user, no GPU in a container (NVIDIA Container Toolkit), port already taken (AI Content Studio 1.4
-uses 8090: set `STUDIO_HOST_PORT=8096` in `.env`). Running it again later rebuilds and restarts
-the studio, but never while a job runs or a model downloads: it says so and stops.
+2. Check the machine. This changes nothing; it tells what to fix, with the command, if Docker is
+   not usable by your user, no GPU is seen in a container (NVIDIA Container Toolkit), the port is
+   taken or the disk is short.
 
-Settings live in `.env`, created once from [`.env.example`](.env.example) and readable by you
-only; the script never changes an existing one. Put in it `HF_TOKEN=hf_...` for Krea 2 (after
-accepting its licence on Hugging Face) and `STUDIO_GIT_TOKEN=github_pat_...` for in-app updates
-while the repository is private, then run `docker compose up -d`. Models and renders go to `./data`
-(`STUDIO_DATA=/path` in `.env` for another disk).
+   ```bash
+   scripts/docker-install.sh --check
+   ```
+
+3. Install and start. The script creates `.env` and `./data`, builds the image (the first
+   build takes several minutes), starts the studio and waits until it answers.
+
+   ```bash
+   scripts/docker-install.sh
+   ```
+
+4. Add your tokens to `.env`, then apply them:
+
+   ```bash
+   nano .env                # HF_TOKEN=hf_...   STUDIO_GIT_TOKEN=github_pat_...
+   docker compose up -d
+   ```
+
+   `HF_TOKEN` is for Krea 2 (accept its licence on its Hugging Face page first);
+   `STUDIO_GIT_TOKEN` is the GitHub token of step 1, for in-app updates while the repository is
+   private.
+
+5. Open `http://localhost:8090` (or `http://<machine address>:8090` from another computer).
+   Each model downloads on its first use.
+
+Good to know:
+
+- AI Content Studio 1.4 uses port 8090. On a machine where it runs, steps 2 and 3 stop on the
+  port: create the settings file yourself with `cp .env.example .env && chmod 600 .env`, set
+  `STUDIO_HOST_PORT=8096` in it, then run steps 2 and 3 (the address of step 5 ends in `:8096`).
+- All settings are in `.env`, created once from [`.env.example`](.env.example) and readable by
+  you only; the script never changes an existing one. Models and renders go to `./data`
+  (`STUDIO_DATA=/path` in `.env` for another disk).
+- Running the script again rebuilds and restarts the studio, but never while a job runs or a
+  model downloads: it says so and stops.
+- State and logs: `curl -s localhost:8090/api/health` and `docker compose logs -f studio`.
 
 ### Updates
 
 The "Update" panel of the interface pulls the repository, rebuilds the image (the studio keeps
 working meanwhile), then restarts the studio once no job runs; models and renders stay. The
 `updater` service of `compose.yaml` does it ([docs/GALLERY.md](docs/GALLERY.md#docker-docker-compose)).
-A private repository needs `STUDIO_GIT_TOKEN` in `.env` (above). By hand, in this folder:
+A private repository needs `STUDIO_GIT_TOKEN` in `.env` (step 4). By hand, in this folder:
 `git pull && scripts/docker-install.sh`, which waits for no job to run before the restart.
 
 ### Reuse files from AI Content Studio 1.4
@@ -96,8 +123,8 @@ the `PATH` or in `STUDIO_LLAMA_SERVER`.
 
 - [Architecture](docs/ARCHITECTURE.md): components, API, job lifecycle, configuration, renaming
 - [Image engines](docs/IMAGE-ENGINES.md): Krea 2, Qwen Image 2.1 and MOSS-Image jobs, image references, qualification
-- [Video engines](docs/H3.md): MiniMax H3 jobs, the two-pass reference-to-video, precision
-  fallback, LoRA stack, qualification
+- [Video engines](docs/H3.md): MiniMax H3 jobs, the two-pass reference-to-video, precision,
+  LoRA stack, qualification
 - [Creative assistant](docs/ASSISTANT.md): the assistant mode, its roles, cards and model
 - [Front end](docs/FRONTEND.md): Studio and Canvas pages, Canvas cards, differences from 1.4,
   front-end tests
