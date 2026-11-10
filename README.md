@@ -150,6 +150,9 @@ This repository does not contain model weights. Each model keeps its own licence
 - **Krea 2**: gated on Hugging Face, licence accepted per user.
 - **Qwen Image 2.1**: Qwen Research License, **non-commercial use only**; commercial use needs a
   licence from Qwen. Every image edit and shot image uses it.
+- **MOSS-Image** (OpenMOSS-Team/MOSS-Image-SFT) and its turbo LoRA
+  (akhaliq/MOSS-Image-SFT-4-steps): Apache-2.0.
+- **Gemma 4 26B-A4B** (GGUF by ggml-org): Apache-2.0.
 
 Maestro and WanGP inspired the approach; no code was taken from them (their licence is
 non-commercial).
