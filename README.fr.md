@@ -8,11 +8,10 @@ Successeur d'AI Content Studio 1.4. Moteurs : Krea 2, Qwen Image 2.1, MOSS-Image
 MiniMax H3 via FastH3, Gemma 4 26B-A4B pour l'enrichissement des prompts et l'assistant de création (un chat à
 rôles qui propose des cartes prêtes à lancer : [docs/fr/ASSISTANT.md](docs/fr/ASSISTANT.md)).
 
-> État : étape 4 de la [feuille de route](docs/fr/ROADMAP.md). Le serveur, le téléchargement des
-> modèles, la file de jobs et le pont LLM sont en place, et les moteurs d'image (Krea 2, Qwen Image
-> 2.1), Gemma 4 et les moteurs vidéo MiniMax H3 en NVFP4 (texte, image, première/dernière image et
-> références vers vidéo) sont qualifiés sur le GB10 (2026-10-30). Les pages Studio et Canvas sont portées de la 1.4 ([interface](docs/fr/FRONTEND.md))
-> et testées avec des rendus simulés ; leur premier passage sur le GB10 reste à faire.
+> État : l'assistant, le Studio et le Canvas tournent en Docker sur le GB10. Krea 2, Qwen Image
+> 2.1, MOSS-Image, Gemma 4 26B-A4B et les moteurs vidéo MiniMax H3 en NVFP4 (texte, image,
+> première/dernière image et références vers vidéo) y sont qualifiés par de vrais rendus. Voir la
+> [feuille de route](docs/fr/ROADMAP.md).
 
 English version: [README.md](README.md).
 
@@ -27,28 +26,56 @@ English version: [README.md](README.md).
 
 ## Lancer avec Docker
 
-```bash
-git clone https://github.com/yoyo-sama/onprem-media-studio.git
-cd onprem-media-studio
-scripts/docker-install.sh --check    # Docker, GPU dans un conteneur, port, disque ; ne change rien
-scripts/docker-install.sh            # crée .env et ./data, construit, démarre, attend le studio
-```
+1. Récupérer le dépôt. Tant qu'il est privé, `git clone` demande un nom d'utilisateur et un mot
+   de passe : donner son identifiant GitHub et un jeton qui peut lire le dépôt (*fine-grained*,
+   *Contents : read-only*).
 
-Tant que le dépôt est privé, `git clone` demande un nom d'utilisateur et un mot de passe : donner
-son identifiant GitHub et un jeton qui peut lire le dépôt (*fine-grained*, *Contents :
-read-only*), le même que `STUDIO_GIT_TOKEN` plus bas.
+   ```bash
+   git clone https://github.com/yoyo-sama/onprem-media-studio.git
+   cd onprem-media-studio
+   ```
 
-Le script s'arrête au premier problème avec la commande qui le corrige : Docker inutilisable par
-l'utilisateur, pas de GPU dans un conteneur (NVIDIA Container Toolkit), port déjà pris (AI Content
-Studio 1.4 utilise 8090 : mettre `STUDIO_HOST_PORT=8096` dans `.env`). Relancé plus tard, il
-reconstruit et redémarre le studio, mais jamais pendant un job ou un téléchargement de modèle : il
-le dit et s'arrête.
+2. Vérifier la machine. Cette commande ne change rien ; elle dit quoi corriger, avec la
+   commande, si Docker n'est pas utilisable par l'utilisateur, si aucun GPU n'est vu dans un
+   conteneur (NVIDIA Container Toolkit), si le port est pris ou si le disque est trop juste.
 
-Les réglages sont dans `.env`, créé une fois depuis [`.env.example`](.env.example) et lisible par
-son seul propriétaire ; le script ne modifie jamais un `.env` existant. Y mettre `HF_TOKEN=hf_...` pour Krea 2
-(après avoir accepté sa licence sur Hugging Face) et `STUDIO_GIT_TOKEN=github_pat_...` pour les
-mises à jour depuis l'interface tant que le dépôt est privé, puis lancer `docker compose up -d`.
-Modèles et rendus vont dans `./data` (`STUDIO_DATA=/chemin` dans `.env` pour un autre disque).
+   ```bash
+   scripts/docker-install.sh --check
+   ```
+
+3. Installer et démarrer. Le script crée `.env` et `./data`, construit l'image (la première
+   construction prend plusieurs minutes), démarre le studio et attend qu'il réponde.
+
+   ```bash
+   scripts/docker-install.sh
+   ```
+
+4. Mettre ses jetons dans `.env`, puis les appliquer :
+
+   ```bash
+   nano .env                # HF_TOKEN=hf_...   STUDIO_GIT_TOKEN=github_pat_...
+   docker compose up -d
+   ```
+
+   `HF_TOKEN` sert à Krea 2 (accepter d'abord sa licence sur sa page Hugging Face) ;
+   `STUDIO_GIT_TOKEN` est le jeton GitHub de l'étape 1, pour les mises à jour depuis l'interface
+   tant que le dépôt est privé.
+
+5. Ouvrir `http://localhost:8090` (ou `http://<adresse de la machine>:8090` depuis un autre
+   ordinateur). Chaque modèle se télécharge à sa première utilisation.
+
+Bon à savoir :
+
+- AI Content Studio 1.4 utilise le port 8090. Sur une machine où il tourne, les étapes 2 et 3
+  s'arrêtent sur le port : créer soi-même le fichier de réglages avec
+  `cp .env.example .env && chmod 600 .env`, y mettre `STUDIO_HOST_PORT=8096`, puis lancer les
+  étapes 2 et 3 (l'adresse de l'étape 5 se termine alors par `:8096`).
+- Tous les réglages sont dans `.env`, créé une fois depuis [`.env.example`](.env.example) et
+  lisible par son seul propriétaire ; le script ne modifie jamais un `.env` existant. Modèles et
+  rendus vont dans `./data` (`STUDIO_DATA=/chemin` dans `.env` pour un autre disque).
+- Relancé plus tard, le script reconstruit et redémarre le studio, mais jamais pendant un job ou
+  un téléchargement de modèle : il le dit et s'arrête.
+- État et journaux : `curl -s localhost:8090/api/health` et `docker compose logs -f studio`.
 
 ### Mises à jour
 
@@ -56,7 +83,7 @@ Le panneau « Mise à jour » de l'interface tire le dépôt, reconstruit l'imag
 utilisable pendant ce temps), puis redémarre le studio dès qu'aucun job ne tourne ; modèles et
 rendus restent en place. C'est le service `updater` de `compose.yaml` qui s'en charge
 ([docs/fr/GALLERY.md](docs/fr/GALLERY.md#docker-docker-compose)). Un dépôt privé demande
-`STUDIO_GIT_TOKEN` dans `.env` (plus haut). À la main, dans ce dossier :
+`STUDIO_GIT_TOKEN` dans `.env` (étape 4). À la main, dans ce dossier :
 `git pull && scripts/docker-install.sh`, qui ne redémarre le studio que si aucun job ne tourne.
 
 ### Réutiliser les fichiers d'AI Content Studio 1.4
@@ -105,7 +132,7 @@ dans le `PATH` ou dans `STUDIO_LLAMA_SERVER`.
   changement de nom
 - [Moteurs d'image](docs/fr/IMAGE-ENGINES.md) : jobs Krea 2, Qwen Image 2.1 et MOSS-Image, références d'images,
   qualification
-- [Moteurs vidéo](docs/fr/H3.md) : jobs MiniMax H3, référence vers vidéo en deux passes, repli de
+- [Moteurs vidéo](docs/fr/H3.md) : jobs MiniMax H3, référence vers vidéo en deux passes,
   précision, pile de LoRA, qualification
 - [Assistant de création](docs/fr/ASSISTANT.md) : le mode Assistant, ses rôles, ses cartes et son
   modèle
