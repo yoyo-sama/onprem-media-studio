@@ -235,8 +235,6 @@ next_steps() {
   info "Models download on first use into $(data_dir)."
   [ -n "$(env_value HF_TOKEN '')" ] \
     || info "Krea 2 needs HF_TOKEN in .env (accept its licence on Hugging Face first), then: docker compose up -d"
-  [ -n "$(env_value STUDIO_GIT_TOKEN '')" ] \
-    || info "In-app updates of a private repository need STUDIO_GIT_TOKEN in .env, then: docker compose up -d"
 }
 
 main() {

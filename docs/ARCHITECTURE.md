@@ -119,7 +119,7 @@ output/.trash/...         gallery trash (purged by hand)
 | `STUDIO_GALLERY_SCAN` | `60` | Seconds between two gallery scans of the output folder |
 | `STUDIO_UPDATE_BRANCH` | `main` | Branch the in-app update follows (bare metal, and the updater service through `.env`) |
 | `STUDIO_UPDATER_URL` | — | Docker: the updater service (`compose.yaml` sets `http://updater:8091`) |
-| `STUDIO_GIT_TOKEN` | — | Docker, in `.env`: GitHub token the updater service reads a private repository with; never logged |
+| `STUDIO_GIT_TOKEN` | — | Docker, in `.env`: GitHub token the updater service reads a private fork with (the public repository needs none); never logged |
 
 ## Renaming the product
 

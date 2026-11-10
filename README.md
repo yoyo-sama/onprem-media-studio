@@ -23,9 +23,7 @@ Version française : [README.fr.md](README.fr.md).
 
 ## Run with Docker
 
-1. Get the repository. While it is private, `git clone` asks for a user name and a password:
-   give your GitHub login and a token that can read the repository (fine-grained, *Contents:
-   read-only*).
+1. Get the repository (public, no account or token needed).
 
    ```bash
    git clone https://github.com/yoyo-sama/onprem-media-studio.git
@@ -47,16 +45,13 @@ Version française : [README.fr.md](README.fr.md).
    scripts/docker-install.sh
    ```
 
-4. Add your tokens to `.env`, then apply them:
+4. Only if you use Krea 2 (gated on Hugging Face): accept its licence on its model page, put your
+   Hugging Face token in `.env`, then apply it. The other models need no token.
 
    ```bash
-   nano .env                # HF_TOKEN=hf_...   STUDIO_GIT_TOKEN=github_pat_...
+   nano .env                # HF_TOKEN=hf_...
    docker compose up -d
    ```
-
-   `HF_TOKEN` is for Krea 2 (accept its licence on its Hugging Face page first);
-   `STUDIO_GIT_TOKEN` is the GitHub token of step 1, for in-app updates while the repository is
-   private.
 
 5. Open `http://localhost:8090` (or `http://<machine address>:8090` from another computer).
    Each model downloads on its first use.
@@ -78,7 +73,8 @@ Good to know:
 The "Update" panel of the interface pulls the repository, rebuilds the image (the studio keeps
 working meanwhile), then restarts the studio once no job runs; models and renders stay. The
 `updater` service of `compose.yaml` does it ([docs/GALLERY.md](docs/GALLERY.md#docker-docker-compose)).
-A private repository needs `STUDIO_GIT_TOKEN` in `.env` (step 4). By hand, in this folder:
+The repository is public, so no token is needed (a private fork needs `STUDIO_GIT_TOKEN` in `.env`,
+[docs/GALLERY.md](docs/GALLERY.md#docker-docker-compose)). By hand, in this folder:
 `git pull && scripts/docker-install.sh`, which waits for no job to run before the restart.
 
 ### Reuse files from AI Content Studio 1.4

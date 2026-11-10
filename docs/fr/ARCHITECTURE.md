@@ -123,7 +123,7 @@ output/.trash/...           corbeille de la galerie (purge manuelle)
 | `STUDIO_GALLERY_SCAN` | `60` | Secondes entre deux scans du dossier de sorties par la galerie |
 | `STUDIO_UPDATE_BRANCH` | `main` | Branche suivie par la mise à jour depuis l'interface (bare metal, et le service updater via `.env`) |
 | `STUDIO_UPDATER_URL` | — | Docker : le service updater (`compose.yaml` met `http://updater:8091`) |
-| `STUDIO_GIT_TOKEN` | — | Docker, dans `.env` : jeton GitHub avec lequel le service updater lit un dépôt privé ; jamais journalisé |
+| `STUDIO_GIT_TOKEN` | — | Docker, dans `.env` : jeton GitHub avec lequel le service updater lit un fork privé (le dépôt public n'en demande aucun) ; jamais journalisé |
 
 ## Changer le nom du produit
 

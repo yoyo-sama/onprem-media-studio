@@ -26,9 +26,7 @@ English version: [README.md](README.md).
 
 ## Lancer avec Docker
 
-1. Récupérer le dépôt. Tant qu'il est privé, `git clone` demande un nom d'utilisateur et un mot
-   de passe : donner son identifiant GitHub et un jeton qui peut lire le dépôt (*fine-grained*,
-   *Contents : read-only*).
+1. Récupérer le dépôt (public, ni compte ni jeton nécessaires).
 
    ```bash
    git clone https://github.com/yoyo-sama/onprem-media-studio.git
@@ -50,16 +48,14 @@ English version: [README.md](README.md).
    scripts/docker-install.sh
    ```
 
-4. Mettre ses jetons dans `.env`, puis les appliquer :
+4. Seulement pour Krea 2 (accès restreint sur Hugging Face) : accepter sa licence sur sa page de
+   modèle, mettre son jeton Hugging Face dans `.env`, puis l'appliquer. Les autres modèles n'ont
+   besoin d'aucun jeton.
 
    ```bash
-   nano .env                # HF_TOKEN=hf_...   STUDIO_GIT_TOKEN=github_pat_...
+   nano .env                # HF_TOKEN=hf_...
    docker compose up -d
    ```
-
-   `HF_TOKEN` sert à Krea 2 (accepter d'abord sa licence sur sa page Hugging Face) ;
-   `STUDIO_GIT_TOKEN` est le jeton GitHub de l'étape 1, pour les mises à jour depuis l'interface
-   tant que le dépôt est privé.
 
 5. Ouvrir `http://localhost:8090` (ou `http://<adresse de la machine>:8090` depuis un autre
    ordinateur). Chaque modèle se télécharge à sa première utilisation.
@@ -82,8 +78,9 @@ Bon à savoir :
 Le panneau « Mise à jour » de l'interface tire le dépôt, reconstruit l'image (le studio reste
 utilisable pendant ce temps), puis redémarre le studio dès qu'aucun job ne tourne ; modèles et
 rendus restent en place. C'est le service `updater` de `compose.yaml` qui s'en charge
-([docs/fr/GALLERY.md](docs/fr/GALLERY.md#docker-docker-compose)). Un dépôt privé demande
-`STUDIO_GIT_TOKEN` dans `.env` (étape 4). À la main, dans ce dossier :
+([docs/fr/GALLERY.md](docs/fr/GALLERY.md#docker-docker-compose)). Le dépôt est public : aucun jeton
+n'est nécessaire (un fork privé demande `STUDIO_GIT_TOKEN` dans `.env`,
+[docs/fr/GALLERY.md](docs/fr/GALLERY.md#docker-docker-compose)). À la main, dans ce dossier :
 `git pull && scripts/docker-install.sh`, qui ne redémarre le studio que si aucun job ne tourne.
 
 ### Réutiliser les fichiers d'AI Content Studio 1.4
