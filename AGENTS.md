@@ -3,7 +3,8 @@
 OnPrem Media Studio 2.0: a self-contained local AI image and video studio (successor of AI Content
 Studio 1.4, repository `yoyo-sama/dellaicontent`). No ComfyUI, no Ollama: a FastAPI server runs
 the models (diffusers, FastVideo) and Gemma 4 through llama.cpp, and downloads weights from
-Hugging Face on first use. Start with `docs/ARCHITECTURE.md`, `docs/LESSONS.md`,
+Hugging Face on first use. New to the project: read `docs/HANDOVER.md` first (state, machines,
+open items). Then `docs/ARCHITECTURE.md`, `docs/LESSONS.md`,
 `docs/adr/0001-inference-stack.md` and `docs/ROADMAP.md`.
 
 ## Commands

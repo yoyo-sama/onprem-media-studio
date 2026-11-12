@@ -134,6 +134,8 @@ the `PATH` or in `STUDIO_LLAMA_SERVER`.
   or an engine
 - [ADR 0001](docs/adr/0001-inference-stack.md): why diffusers, FastVideo and llama.cpp
 - [Roadmap](docs/ROADMAP.md)
+- [Handover](docs/HANDOVER.md): state of the project, test machines and open items, to resume
+  development without earlier context
 
 ## Licences
 

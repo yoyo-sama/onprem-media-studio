@@ -145,6 +145,8 @@ dans le `PATH` ou dans `STUDIO_LLAMA_SERVER`.
   prompt ou un moteur
 - [ADR 0001](docs/fr/adr/0001-inference-stack.md) : pourquoi diffusers, FastVideo et llama.cpp
 - [Feuille de route](docs/fr/ROADMAP.md)
+- [Passation](docs/fr/HANDOVER.md) : état du projet, machines de test et points ouverts, pour
+  reprendre le développement sans contexte préalable
 
 ## Licences
 
