@@ -157,5 +157,8 @@ This repository does not contain model weights. Each model keeps its own licence
   Apache-2.0.
 - **Gemma 4 26B-A4B** (GGUF by ggml-org): Apache-2.0.
 
+The wording of the subject sheet drawn from a photo is adapted from H3 Character Sheet Designer
+(MIT), credited in [NOTICE](NOTICE).
+
 Maestro and WanGP inspired the approach; no code was taken from them (their licence is
 non-commercial).

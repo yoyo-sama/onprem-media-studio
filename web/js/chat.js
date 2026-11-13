@@ -540,7 +540,7 @@ function startCard(card, a, aspect, prompt) {
     case "character_sheet":
       if (!a.photo?.length) return sheet(P.charsheetPromptFrom(a.description, a.kind, "auto", a.style));
       // From a photo: Qwen Image 2.1 edits it into the sheet, at the sheets' size.
-      return [runJob("qwen-image-2.1", { prompt: P.charsheetFromPhotoPrompt(a.description, a.kind, "auto", a.style),
+      return [runJob("qwen-image-2.1", { prompt: P.charsheetFromPhotoPrompt(a.description, a.kind, a.style),
         images: [need(a.photo[0])], ...P.SHEET_SIZE, count: 1, seed }, {
         origin: ORIGIN, label: label(title), sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed }] })];
     case "location_sheet": return sheet(P.locsheetPromptFrom(a.description, a.style));

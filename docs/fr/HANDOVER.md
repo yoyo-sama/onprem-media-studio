@@ -241,7 +241,8 @@ Rien ci-dessous n'a été demandé pour maintenant ; chaque point attend le prop
   chargement du point 10 de la revue se lit sur la prochaine ligne `engine:` d'un chargement H3 ;
   153 s mesurées avant).
 - r2v avec des références clip et son (PR #11) : jamais rendu sur un GB10.
-- Planche personnage depuis une photo (Qwen Image 2.1, PR #9) : jamais qualifiée.
+- Planche personnage depuis une photo (Qwen Image 2.1, PR #9 ; prompt à cinq vues adapté de H3
+  Character Sheet Designer depuis le 2026-11-13) : jamais qualifiée.
 - Les poids de l'upscaler SPAN ne sont pas encore téléchargés sur promaxgb10-95c7
   (automatique à la première utilisation).
 

@@ -694,14 +694,50 @@
     return `${layout.build(desc, sheetWords(kind), kind === "other" ? SUBJECT_GUARD : "")}${SHEET_CLEAN}${styleText ? " " + styleText : ""}`;
   }
 
-  // A subject sheet drawn by Qwen Image 2.1 from a photo (<image1>): the photo holds the
-  // identity, the template the layout. Not part of 1.4.
-  const SHEET_FROM_PHOTO = {
-    human: "Using <image1> only as the identity reference: the person of <image1>, with exactly the same face, hair, build, skin tone and clothing, shown again from every angle for a studio reference sheet, in the same visual style as <image1>. ",
-    other: "Using <image1> only as the identity reference: the subject of <image1>, with exactly the same shape, proportions, surface, colors and markings, shown again from every angle for a studio reference sheet, in the same visual style as <image1>. ",
+  // A subject sheet drawn by Qwen Image 2.1 from a photo or a drawing (<image1>): the image
+  // holds the identity, the prompt names five views in their order, each drawn once, in the
+  // image's own rendering style. Method and view wording adapted from H3 Character Sheet
+  // Designer by ukr8b3g-cmyk (MIT, see NOTICE), for one edit at the sheets' fixed size.
+  // Not part of 1.4. The sheet templates apply to sheets drawn from a description only.
+  const PHOTO_SHEET = {
+    human: {
+      who: "character reference sheet of the person",
+      keep: "the same face, hair, build, skin tone, clothing and accessories",
+      views: [
+        "a front portrait, complete head and shoulders",
+        "a profile portrait facing image-right, complete head and shoulders",
+        "the full body facing forward, standing, complete figure visible from the top of the head to the soles",
+        "the full body in profile facing image-right, standing, complete figure visible",
+        "the full body from behind, standing, complete figure visible",
+      ],
+      stance: "Use the same neutral standing pose in the three full-body views.",
+    },
+    other: {
+      who: "reference sheet of the subject",
+      keep: "the same shape, proportions, body structure, surface, colors and markings",
+      views: [
+        "a close front view of its head or upper part",
+        "a close profile view of the same part, facing image-right",
+        "the complete subject seen from the front in its natural stance, entire silhouette visible",
+        "the complete subject in profile facing image-right in its natural stance, entire silhouette visible",
+        "the complete subject seen directly from behind in its natural stance, entire silhouette visible",
+      ],
+      stance: "Keep the body structure, number of limbs and natural stance of <image1> in the three complete views: it stands as the thing it is, never like a person, and wears nothing <image1> does not show.",
+    },
   };
-  const charsheetFromPhotoPrompt = (desc, kind, templateId, styleId) =>
-    SHEET_FROM_PHOTO[kind === "other" ? "other" : "human"] + charsheetPromptFrom(desc, kind, templateId, styleId);
+  function charsheetFromPhotoPrompt(desc, kind, styleId) {
+    const s = PHOTO_SHEET[kind === "other" ? "other" : "human"];
+    const d = String(desc || "").trim().replace(/[.\s]+$/, "");
+    const styleText = styleTextFor(styleId);
+    return `Using <image1> as the only identity reference, create one ${s.who} from <image1>${d ? `: ${d}` : ""}. `
+      + `Preserve the design and rendering style of <image1> across all views, with ${s.keep}. `
+      + `Five views side by side from left to right, each appearing exactly once: `
+      + s.views.map((v, i) => `(${i + 1}) ${v}`).join("; ") + ". "
+      + `${s.stance} `
+      + "Plain white background, evenly lit, the views separated by clear bands of white space. "
+      + "The sheet is completely free of text, labels, borders, panel lines and guide lines."
+      + (styleText ? " " + styleText : "");
+  }
 
   function locsheetPromptFrom(locDesc, styleId) {
     const styleText = styleTextFor(styleId);
