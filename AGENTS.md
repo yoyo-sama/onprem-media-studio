@@ -24,6 +24,8 @@ python tools/qualify/run_image_cases.py            # image qualification renders
 node tools/qualify/export_1_4_prompts.js ../dellaicontent > tools/qualify/image_cases.json  # rebuild cases from 1.4
 node tools/qualify/export_1_4_video_prompts.js ../dellaicontent > tools/qualify/video_cases.json
 python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.json   # image + video renders
+node tools/qualify/export_relay_cases.js > tools/qualify/relay_cases.json   # Relay long take, from web/js/prompts.js
+python tools/qualify/run_image_cases.py --cases relay_cases.json --report qualify-relay.json   # two chained 10 s segments
 ```
 
 GitHub Actions (`.github/workflows/tests.yml`) runs pytest, the front-end syntax check,
