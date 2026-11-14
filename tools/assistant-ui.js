@@ -305,7 +305,7 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   const j8 = jobs[before8];
   check(jobs.length === before8 + 1 && j8.pipeline === "qwen-image-2.1" && JSON.stringify(j8.params.images) === '["inputs/att.png"]'
     && j8.params.width === 1920 && j8.params.height === 1088 && j8.params.prompt.startsWith("Using <image1> as the only identity reference, create one character reference sheet of the person from <image1>: a woman in a red coat.")
-    && j8.params.prompt.includes("Five views side by side from left to right, each appearing exactly once"), "sheet from a photo: " + JSON.stringify(j8));
+    && j8.params.prompt.includes("Five views, each appearing exactly once. On the left, a column of two close views stacked"), "sheet from a photo: " + JSON.stringify(j8));
   // Reference to video: once rendered, the clip plays under the button, which becomes
   // "Regenerate the video" and starts one new job with the next seed.
   await page.click('.rail-mode[data-mode="studio"]');
