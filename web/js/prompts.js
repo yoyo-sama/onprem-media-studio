@@ -719,7 +719,7 @@
         "a close front view of its head or upper part, facing straight at the viewer",
         "a close strict side view of the same part, facing image-right",
         "the complete subject seen from the front in its natural stance, entire silhouette visible",
-        "the complete subject in strict side view facing image-right in its natural stance, its whole body seen from the side from its front end to its rear end, entire silhouette visible",
+        "the complete subject in strict side view in its natural stance, its body running horizontally across the view with its front end at the right and its rear end at the left, entire silhouette visible",
         "the complete subject seen directly from behind in its natural stance, entire silhouette visible",
       ],
       stance: "Keep the body structure, number of limbs and natural stance of <image1> in the three complete views: it stands as the thing it is, never like a person, and wears nothing <image1> does not show.",
@@ -731,11 +731,11 @@
     const styleText = styleTextFor(styleId);
     return `Using <image1> as the only identity reference, create one ${s.who} from <image1>${d ? `: ${d}` : ""}. `
       + `Preserve the design and rendering style of <image1> across all views, with ${s.keep}. `
-      + `Five views side by side from left to right, each appearing exactly once: `
-      + s.views.map((v, i) => `(${i + 1}) ${v}`).join("; ") + ". "
+      + "Five views, each appearing exactly once. "
+      + `On the left, a column of two close views stacked one above the other: (1) ${s.views[0]}, on top; (2) ${s.views[1]}, below. `
+      + `To their right, three complete views side by side from left to right: `
+      + s.views.slice(2).map((v, i) => `(${i + 3}) ${v}`).join("; ") + ". "
       + `${s.stance} `
-      + "The five views are equally tall and each one fills the full height of the sheet: the two close views are large, as tall as the three complete views. "
-      + "Every view stands whole inside its own space. "
       + "Plain white background, evenly lit, the views separated by clear bands of white space. "
       + "The sheet is completely free of text, labels, borders, panel lines and guide lines."
       + (styleText ? " " + styleText : "");
