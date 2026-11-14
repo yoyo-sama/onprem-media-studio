@@ -6,7 +6,10 @@
 // per segment give the segment plan; the screenplay split fills the segments and only the
 // shared fields left empty, and submits no job; editing a shared field submits nothing;
 // "Generate the chain" sends one shot image then one H3 clip per segment, each prompt
-// carrying the shared look once and no default light or camera.
+// carrying the shared look once and no default light or camera. The production board: one
+// tile per segment, its progress from the job events, a click goes to the segment and
+// submits nothing; after a regenerated segment the chain continues from the next one;
+// "Stop after this segment" ends the chain once the running segment is done.
 // With a folder, screenshots of the Relay at 1440 and 390 px, light and dark.
 // Exit 0 = all green, 1 = a check failed, 2 = the test could not run.
 "use strict";
@@ -49,8 +52,8 @@ const SPLIT = {
   catch (err) { console.error("ERROR (test could not run): " + err.message.split("\n")[0]); process.exit(2); }
   const fails = [];
   const check = (ok, msg) => { if (!ok) fails.push(msg); };
-  const jobs = [], chats = [], done = new Map();
-  let n = 0;
+  const jobs = [], chats = [], done = new Map(), held = [];
+  let n = 0, hold = false, sock = null;
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.addInitScript(p => { if (!sessionStorage.getItem("seeded")) { localStorage.setItem("studioProject", p); sessionStorage.setItem("seeded", "1"); } },
     JSON.stringify(PROJECT));
@@ -62,10 +65,11 @@ const SPLIT = {
       jobs.push(body);
       const outputs = body.pipeline === "h3-i2v" ? [`outputs/${id}.mp4`, `outputs/${id}.png`]
         : body.pipeline === "video-frames" ? body.params.offsets.map(o => `outputs/${id}-${o}.png`) : [`outputs/${id}.png`];
-      done.set(id, { id, status: "done", progress: 1, outputs });
+      if (hold) held.push({ id, status: "done", progress: 1, outputs });
+      else done.set(id, { id, status: "done", progress: 1, outputs });
       return json({ id, status: "queued", progress: 0, outputs: [] }, 201);
     }
-    if (p.startsWith("/api/jobs/")) return json(done.get(p.split("/").pop()) || { id: "x", status: "queued", progress: 0, outputs: [] });
+    if (p.startsWith("/api/jobs/")) { const id = p.split("/").pop(); return json(done.get(id) || { id, status: "running", progress: 0, outputs: [] }); }
     if (p === "/api/llm/chat") { chats.push(JSON.parse(req.postData())); return json({ content: JSON.stringify(SPLIT) }); }
     if (p === "/api/loras") return json({ h3: [], krea2: [], qwen21: [], moss: [] });
     if (p === "/api/instructions") return json({});
@@ -73,7 +77,9 @@ const SPLIT = {
     if (p.startsWith("/api/gallery/")) return json({ items: [], next: null, counts: { image: 0, video: 0 } });
     return json({ detail: "x" }, 404);
   });
-  await ctx.routeWebSocket("**/api/ws", () => {});
+  await ctx.routeWebSocket("**/api/ws", ws => { sock = ws; });
+  // A held job's progress or end, sent as the server's WebSocket does.
+  const push = job => sock.send(JSON.stringify({ type: "job", job }));
   await ctx.route(/\/(outputs|inputs)\//, r => r.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") }));
   const page = await ctx.newPage();
   const errs = [];
@@ -145,6 +151,75 @@ const SPLIT = {
     check(pr.split("Warm candle light.").length === 2, `segment ${i + 1} repeats the lighting`);
   }
   check(/Warm candle light/.test(jobs[0].params.prompt), "the first shot image does not take the shared lighting");
+
+  // ── Production board ──
+  const tiles = () => page.$$eval("#relayBoard .relay-tile", ts => ts.map(t => t.className.replace("relay-tile ", "")));
+  check(await page.isVisible("#relayBoard"), "the board is hidden");
+  check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-ready", "st-ready"]), `tiles after the chain: ${JSON.stringify(await tiles())}`);
+  check(/3\/3 segments ready · 30\.4 s of 30\.4 s/.test(await page.textContent("#relayBoard .relay-summary")),
+    `summary: "${await page.textContent("#relayBoard .relay-summary")}"`);
+  check((await page.textContent("#relayRunBtn")).trim() === "Generate the chain again", `run button: "${await page.textContent("#relayRunBtn")}"`);
+  check(await page.isHidden("#relayStopBtn"), "the stop button shows with no chain running");
+  // End image, transitions and removal sit under the advanced options.
+  check(await page.isHidden('#relayList .relay-seg[data-seg="0"] .seg-del'), "the remove button is not under the advanced options");
+  // A click on a tile goes to its segment and starts nothing.
+  let before = jobs.length;
+  await page.click("#relayBoard .relay-tile:nth-child(3)");
+  await page.waitForTimeout(200);
+  check(await page.evaluate(() => document.activeElement === document.querySelector('#relayList .relay-seg[data-seg="2"] textarea')),
+    "a tile click does not focus its segment");
+  check(jobs.length === before, "a tile click submitted a job");
+
+  // Regenerating segment 2 leaves segment 3 to regenerate; the chain continues from there.
+  await page.click('#relayList .relay-seg[data-seg="1"] .seg-regen');
+  await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="2"] .seg-status')?.textContent === "To regenerate");
+  check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-ready", "st-stale"]), `tiles after regenerating 2: ${JSON.stringify(await tiles())}`);
+  check((await page.textContent("#relayRunBtn")).trim() === "Continue the chain from segment 3", `run button: "${await page.textContent("#relayRunBtn")}"`);
+  before = jobs.length;
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"));
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-i2v"]),
+    `continuing from segment 3: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
+
+  // The whole chain again, held: progress on the tile, then "Stop after this segment".
+  hold = true;
+  before = jobs.length;
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => document.querySelectorAll("#relayBoard .relay-tile.st-pending").length === 1);
+  await page.waitForFunction(() => !document.getElementById("relayStopBtn").hidden);
+  await page.waitForTimeout(100);
+  const first = held.shift();
+  push({ id: first.id, status: "running", progress: 0.5, outputs: [] });
+  await page.waitForFunction(() => document.querySelector("#relayBoard .relay-tile .tile-bar i").style.width === "50%");
+  const st = await page.textContent('#relayList .relay-seg[data-seg="0"] .seg-status');
+  check(st === "Shot image 50%", `card status while running: "${st}"`);
+  check(JSON.stringify(await tiles()) === JSON.stringify(["st-pending", "st-stale", "st-stale"]), `tiles while running: ${JSON.stringify(await tiles())}`);
+  await page.click("#relayStopBtn");
+  check((await page.textContent("#relayStopBtn")).trim() === "Stopping after this segment…", "the stop button does not say it is stopping");
+  // Segment 1 ends (shot image, clip, frames): the chain stops there.
+  done.set(first.id, first); push(first);
+  for (let k = 0; k < 2; k++) {
+    for (let w = 0; w < 50 && !held.length; w++) await page.waitForTimeout(50);
+    const j = held.shift();
+    if (j) { done.set(j.id, j); push(j); }
+  }
+  await page.waitForFunction(() => document.getElementById("relayStopBtn").hidden);
+  await page.waitForTimeout(200);
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-i2v", "video-frames"]),
+    `jobs of the stopped chain: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
+  check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-stale", "st-stale"]), `tiles after the stop: ${JSON.stringify(await tiles())}`);
+  check((await page.textContent("#relayRunBtn")).trim() === "Continue the chain from segment 2", `run button after the stop: "${await page.textContent("#relayRunBtn")}"`);
+  hold = false;
+  if (SHOTS) {
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate(t => document.documentElement.setAttribute("data-theme", t), theme);
+      await page.evaluate(() => document.getElementById("relayBoard").scrollIntoView({ block: "start" }));
+      await page.screenshot({ path: path.join(SHOTS, `relay-board-1440-${theme}.png`) });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => document.getElementById("relayBoard").scrollIntoView({ block: "start" }));
+    await page.screenshot({ path: path.join(SHOTS, "relay-board-390-light.png") });
+  }
 
   check(!errs.length, `page errors: ${errs.join(" | ")}`);
   await browser.close();

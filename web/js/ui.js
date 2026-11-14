@@ -194,11 +194,13 @@ export function withJobTag(tag, fn) {
 }
 
 // `label` and `sub` are [English template, params] pairs, shown translated.
-// `submit` replaces the plain submission (a job launched again by its id).
-export async function runJob(pipeline, params, { origin, label, sub = ["", {}], submit } = {}) {
+// `submit` replaces the plain submission (a job launched again by its id);
+// `onSubmitted(job)` is called once the server has the job (its id).
+export async function runJob(pipeline, params, { origin, label, sub = ["", {}], submit, onSubmitted } = {}) {
   const token = cancelToken, tag = jobTag;
   const job = await (submit ? submit() : api.submit(pipeline, params, origin));
   for (const fn of submitHandlers) fn(job, tag);
+  onSubmitted?.(job);
   const el = document.createElement("div");
   el.className = "job fade-in";
   el.innerHTML = `<div><strong></strong><span class="sub"></span></div><span class="status running"></span>`;

@@ -140,6 +140,16 @@ ajoute une carte Import d'image reliée à elle.
   reprend cette ambiance une fois, et rien d'autre : la 1.4 ajoutait à chaque segment une lumière
   « golden hour » et un « steady framing », quoi qu'il dise (LESSONS n°50). La première image de
   plan reprend aussi la lumière commune.
+- Le Relay a un tableau de production : une tuile par segment, aussi large que sa durée, avec son
+  image de départ, sa place dans la séquence, son état et l'avancement du job en cours pour lui
+  (image de plan, vidéo, images de transition, d'après les événements des jobs) ; un clic mène au
+  segment et ne lance rien. Le résumé donne les segments prêts, les secondes rendues et, dès
+  qu'un segment a été chronométré, le temps restant estimé. « Générer la chaîne » part du premier
+  segment qui n'est pas prêt (« Continuer la chaîne au segment n ») et marque les suivants « à
+  régénérer » ; quand tous sont prêts, il les refait tous avec de nouvelles seeds, après
+  confirmation. « Arrêter après ce segment » arrête la chaîne une fois le segment en cours
+  terminé. L'image de fin d'un segment, le choix de la transition et la suppression sont dans
+  ses « Options avancées ». Un segment n'est prêt qu'une fois ses images de transition faites.
 - Canvas : ✨ suit le routage du Studio (la 1.4 avait sa propre copie de la consigne générique),
   la vidéo finale n'a pas d'interrupteur audio (les clips gardent leur son), les imports sont
   des images seulement.
@@ -153,7 +163,7 @@ ajoute une carte Import d'image reliée à elle.
 | `node tools/prompt-systems.js` | Lance les deux pages sans affichage avec `/api` bouchonné : pour chaque moteur et bouton ✨ (et l'enrichissement automatique), la consigne reçue par Gemma a le sha256 de la 1.4 (ou est la consigne remplacée, pour son seul moteur), le nombre d'appels et le contenu sont justes, le texte revient dans le champ | Node, Playwright et son Chromium (`NODE_PATH=$(npm root -g)`) |
 | `node tools/assistant-ui.js` | Le mode Assistant sans affichage, avec `/api` bouchonné et une réponse scriptée : la page s'ouvre sur l'assistant ; aucun job au changement de mode, à la Bibliothèque, à la saisie, à l'envoi ni à la modification d'une carte ; un job par clic sur Générer, avec les réglages de la carte, son avancement affiché sur la carte d'après les événements du job, signalé au serveur ; « Ouvrir dans le Studio » passe au Studio, remplit le formulaire et ne soumet rien ; « Lancer le Réalisateur » passe au Studio et lance le réalisateur, dont le bouton Générer nomme le travail de Gemma et son temps jusqu'à ce que la première étape soit prête ; cette étape ouvre le studio sans dessiner de planche, et le clic d'une planche l'envoie avec la seed de la première étape ; les pastilles LoRA d'une carte ne soumettent rien et son Générer envoie celles qui sont activées | Node, Playwright et son Chromium |
 | `node tools/lora-ui.js` | La pile de LoRA sans affichage, avec `/api` bouchonné : dans le Studio elle n'apparaît que pour les workflows qui prennent des LoRA, accepte jusqu'à 4 fichiers (chacun une fois) avec des forces ramenées à -2…2, ne soumet rien pendant qu'on la modifie, Générer envoie les lignes affichées, un autre moteur n'en envoie aucune et le retour retrouve la pile ; le panneau Modèles téléverse dans le dossier choisi ; un Canvas enregistré avec l'ancienne propriété `lora` revient avec une pile d'une ligne et son Générer envoie la pile | Node, Playwright et son Chromium |
-| `node tools/relay-ui.js` | Le Relay du réalisateur sans affichage, avec `/api` bouchonné, sur un projet restauré aux planches validées : la durée totale et le maximum par segment donnent le découpage (25 s à 10 s → 8 + 8 + 9), le découpage du scénario remplit les segments et seulement les champs communs restés vides sans rien soumettre, les en-têtes de segment montrent leur place dans la séquence, et la chaîne envoie une image de plan puis un clip H3 par segment dont le prompt porte l'ambiance commune une seule fois, sans lumière ni caméra par défaut | Node, Playwright et son Chromium |
+| `node tools/relay-ui.js` | Le Relay du réalisateur sans affichage, avec `/api` bouchonné, sur un projet restauré aux planches validées : la durée totale et le maximum par segment donnent le découpage (25 s à 10 s → 8 + 8 + 9), le découpage du scénario remplit les segments et seulement les champs communs restés vides sans rien soumettre, les en-têtes de segment montrent leur place dans la séquence, et la chaîne envoie une image de plan puis un clip H3 par segment dont le prompt porte l'ambiance commune une seule fois, sans lumière ni caméra par défaut ; le tableau de production montre l'état de chaque segment et l'avancement envoyé par les événements des jobs, un clic sur une tuile mène à son segment sans job, la chaîne reprend au premier segment pas prêt, et « Arrêter après ce segment » l'arrête là | Node, Playwright et son Chromium |
 
 Modifier un compilateur de prompt ou une consigne fait échouer `parity-prompts.js` et `prompt-systems.js` ; si le
 changement est voulu, mettre à jour la référence dans le même commit et dire pourquoi.

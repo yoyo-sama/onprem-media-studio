@@ -3072,11 +3072,6 @@ export const DICT = {
     es: "✕ Cerrar",
     de: "✕ Schließen",
   },
-  "✕ Remove": {
-    fr: "✕ Retirer",
-    es: "✕ Quitar",
-    de: "✕ Entfernen",
-  },
   "✕ Remove the end image": {
     fr: "✕ Retirer l'image de fin",
     es: "✕ Quitar la imagen final",
@@ -3956,5 +3951,70 @@ export const DICT = {
     fr: "Écrit une seule fois et ajouté au prompt de chaque segment. Un champ vide est laissé de côté.",
     es: "Se escribe una sola vez y se añade al prompt de cada segmento. Un campo vacío se omite.",
     de: "Einmal geschrieben und dem Prompt jedes Segments hinzugefügt. Ein leeres Feld wird weggelassen.",
+  },
+  "Continue the chain from segment {n}": {
+    fr: "Continuer la chaîne au segment {n}",
+    es: "Continuar la cadena desde el segmento {n}",
+    de: "Kette ab Segment {n} fortsetzen",
+  },
+  "Every segment is ready. Render the whole chain again, with new seeds?": {
+    fr: "Tous les segments sont prêts. Refaire toute la chaîne, avec de nouvelles seeds ?",
+    es: "Todos los segmentos están listos. ¿Renderizar toda la cadena de nuevo, con semillas nuevas?",
+    de: "Alle Segmente sind fertig. Die ganze Kette mit neuen Seeds neu rendern?",
+  },
+  "Generate the chain again": {
+    fr: "Régénérer toute la chaîne",
+    es: "Generar la cadena de nuevo",
+    de: "Kette neu generieren",
+  },
+  "Relay: chain stopped after segment {n}. Continue it when you want.": {
+    fr: "Relay : chaîne arrêtée après le segment {n}. Reprends-la quand tu veux.",
+    es: "Relay: cadena detenida tras el segmento {n}. Continúala cuando quieras.",
+    de: "Relay: Kette nach Segment {n} angehalten. Setze sie fort, wann du willst.",
+  },
+  "Segment {n}: {status}": {
+    fr: "Segment {n} : {status}",
+    es: "Segmento {n}: {status}",
+    de: "Segment {n}: {status}",
+  },
+  "Shot image": {
+    fr: "Image du plan",
+    es: "Imagen del plano",
+    de: "Einstellungsbild",
+  },
+  "Stopping after this segment…": {
+    fr: "Arrêt après ce segment…",
+    es: "Parada tras este segmento…",
+    de: "Halt nach diesem Segment…",
+  },
+  "Transition frames": {
+    fr: "Images de transition",
+    es: "Fotogramas de transición",
+    de: "Übergangsbilder",
+  },
+  "about {n} min left": {
+    fr: "environ {n} min restantes",
+    es: "quedan unos {n} min",
+    de: "noch etwa {n} Min.",
+  },
+  "{n}/{total} segments ready · {done} s of {all} s": {
+    fr: "{n}/{total} segments prêts · {done} s sur {all} s",
+    es: "{n}/{total} segmentos listos · {done} s de {all} s",
+    de: "{n}/{total} Segmente fertig · {done} s von {all} s",
+  },
+  "✕ Remove the segment": {
+    fr: "✕ Supprimer le segment",
+    es: "✕ Quitar el segmento",
+    de: "✕ Segment entfernen",
+  },
+  "Segments overview": {
+    fr: "Vue d'ensemble des segments",
+    es: "Vista general de los segmentos",
+    de: "Segmentübersicht",
+  },
+  "⏹ Stop after this segment": {
+    fr: "⏹ Arrêter après ce segment",
+    es: "⏹ Detener tras este segmento",
+    de: "⏹ Nach diesem Segment anhalten",
   },
 };

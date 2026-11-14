@@ -529,10 +529,15 @@
           <label>Soundscape<textarea data-look="sound" rows="2" spellcheck="false" placeholder="The natural sounds heard throughout."></textarea></label>
           <label>Music<textarea data-look="music" rows="2" spellcheck="false" placeholder="Empty = no music. Each segment renders its own audio: a score starts again at every join."></textarea></label>
         </div>
+        <div class="relay-board" id="relayBoard" hidden>
+          <div class="relay-summary hint" aria-live="polite"></div>
+          <div class="relay-strip" role="group" aria-label="Segments overview"></div>
+        </div>
         <div class="relay-list" id="relayList"></div>
         <div class="relay-foot">
           <button type="button" class="secondary-btn" id="relayAddBtn">＋ Add a segment</button>
           <button type="button" class="primary-btn" id="relayRunBtn" disabled>Generate the chain</button>
+          <button type="button" class="secondary-btn" id="relayStopBtn" hidden>⏹ Stop after this segment</button>
           <button type="button" class="primary-btn" id="relayAssembleBtn" disabled>Assemble the sequence</button>
         </div>
         <div id="relayPlayer"></div>

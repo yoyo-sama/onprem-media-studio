@@ -1152,8 +1152,54 @@ body[data-studio="1"] #sessionBar { min-height: 54px; }
 .relay-look textarea { min-height: 48px; margin-top: 4px; }
 @media screen and (max-width: 767px) { .relay-look { grid-template-columns: 1fr; } }
 
+.relay-seg .seg-more { grid-column: 1 / -1; font-size: 12px; }
+.relay-seg .seg-more summary { cursor: pointer; color: var(--text-2); padding: 4px 0; }
+.relay-seg .seg-more[open] > * + * { margin-top: 8px; }
+.relay-seg.flash { animation: relay-flash 1.2s ease-out; }
+@keyframes relay-flash { from { box-shadow: 0 0 0 3px var(--highlight); } to { box-shadow: 0 0 0 3px transparent; } }
+.relay-board {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  background: var(--bg-light);
+  box-shadow: var(--shadow-sm);
+  padding: 10px 12px;
+  margin: 10px 0;
+}
+.relay-summary { margin: 0 0 8px; }
+.relay-strip { display: flex; gap: 4px; overflow-x: auto; }
+.relay-tile {
+  flex: 1 1 0;
+  min-width: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  border: 2px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--card-2);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.relay-tile .tile-thumb { display: block; height: 40px; border-radius: 4px; background: var(--border-light); overflow: hidden; }
+.relay-tile .tile-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.relay-tile .tile-cap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.relay-tile .tile-bar { display: block; height: 4px; border-radius: 2px; background: var(--border-light); overflow: hidden; }
+.relay-tile .tile-bar i { display: block; height: 100%; width: 0; background: var(--highlight); transition: width 0.4s; }
+.relay-tile.st-idle { border-style: dashed; }
+.relay-tile.st-pending { border-color: var(--highlight); color: var(--text); }
+.relay-tile.st-ready { border-color: var(--ok); }
+.relay-tile.st-ready .tile-bar i { background: var(--ok); }
+.relay-tile.st-stale { border-color: var(--warn); }
+.relay-tile.st-error, .relay-tile.st-missing { border-color: var(--hot); }
+@media screen and (max-width: 767px) {
+  .relay-tile { min-height: 44px; }
+  .relay-seg .seg-more summary { padding: 13px 0; }
+}
 .relay-endframe { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.relay-endframe img { width: 84px; height: 48px; object-fit: cover; border-radius: 4px; border: 2px solid var(--accent); display: block; }
+.relay-endframe img { width: 84px; height: 48px; object-fit: cover; border-radius: 4px; border: 2px solid var(--highlight); display: block; }
 .relay-transitions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .relay-transitions .transitions-lbl { font-size: 12px; color: var(--text-2); margin-right: 4px; }
 .relay-thumb {
@@ -1167,7 +1213,7 @@ body[data-studio="1"] #sessionBar { min-height: 54px; }
 }
 .relay-thumb img { width: 84px; height: 48px; object-fit: cover; border-radius: 4px; display: block; }
 .relay-thumb:hover:not(:disabled) { opacity: 1; }
-.relay-thumb.active { border-color: var(--accent); opacity: 1; }
+.relay-thumb.active { border-color: var(--highlight); opacity: 1; }
 .relay-thumb:disabled { cursor: default; }
 #relayPlayer video, #r2vPlayer video { width: 100%; margin-top: 12px; border-radius: var(--radius); }
 

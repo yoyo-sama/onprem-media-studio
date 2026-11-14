@@ -135,6 +135,16 @@ to it.
   left empty. Each segment's prompt takes that look once, and nothing else: 1.4 appended a
   golden-hour light and a "steady framing" to every segment whatever it said (LESSONS #50). The
   first shot image takes the shared lighting too.
+- The Relay has a production board: one tile per segment, as wide as its length, with its start
+  image, its place in the sequence, its state and the progress of the job running for it (shot
+  image, video, transition frames, from the job events); a click goes to the segment and starts
+  nothing. The summary gives the segments ready, the seconds rendered and, once a segment has
+  been timed, about how long is left. "Generate the chain" starts at the first segment that is
+  not ready ("Continue the chain from segment n"), and marks the following ones "to
+  regenerate"; when all are ready it renders them all again with new seeds, once confirmed.
+  "Stop after this segment" ends the chain once the running segment is done. A segment's end
+  image, transition choice and removal sit under its "Advanced options". A segment is ready only
+  once its transition frames are there.
 - Canvas: ✨ follows the Studio routing (1.4 had its own copy of the generic instruction), the
   final video has no audio switch (clips keep their sound), imports are images only.
 
@@ -147,7 +157,7 @@ to it.
 | `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256 (or is the replaced one, for its engine only), the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
 | `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready; that step opens the studio without drawing a sheet, and a sheet's own click sends it with the first step's seed; a card's LoRA chips submit nothing and its Generate sends the ones turned on | Node, Playwright and its Chromium |
 | `node tools/lora-ui.js` | The LoRA stack headless with `/api` stubbed: in the Studio it shows for the workflows that take LoRAs only, takes up to 4 files (each once) with strengths clamped to -2…2, submits nothing while edited, Generate sends the rows on screen, another engine sends none and coming back finds the stack; the Models panel uploads into the chosen folder; a Canvas saved with the old `lora` property comes back as a one-row stack and its Generate sends the stack | Node, Playwright and its Chromium |
-| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera | Node, Playwright and its Chromium |
+| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera; the production board shows each segment's state and the progress sent by the job events, a tile click focuses its segment without a job, the chain continues from the first segment not ready, and "Stop after this segment" ends it there | Node, Playwright and its Chromium |
 
 Changing a prompt compiler or an instruction makes `parity-prompts.js` and `prompt-systems.js` fail; if the change is wanted,
 update the reference in the same commit and say why.
