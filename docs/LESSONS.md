@@ -202,7 +202,11 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     every segment; an empty field adds nothing. A score still restarts at every join, since each
     segment renders its own audio. The shared field is the framing only: a shared camera
     movement ("tracking that follows the subject") next to the segment's own ("slow push-in")
-    made the second segment of the first GB10 render jump between framings. (2026-11-14)
+    made the second segment of the first GB10 render jump between framings. A segment's action
+    must also stay within what its start frame shows: "stops beside a low stone wall", with no
+    such wall in the frame, made H3 grow melting blobs and floating specks over the whole
+    background; re-rendered from the same frame and seed with "slows to a stop on the gravel
+    path", the garden held for 10 s. Gemma's split is told so. (2026-11-14)
 
 ## 8. Front end (for the port in step 4)
 

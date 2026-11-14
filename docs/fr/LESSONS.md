@@ -222,7 +222,11 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     vide n'ajoute rien. Une musique repart toujours à chaque raccord, puisque chaque segment rend
     son propre son. Le champ commun ne porte que le cadrage : un mouvement de caméra commun
     (« tracking qui suit le sujet ») à côté de celui du segment (« slow push-in ») faisait sauter
-    le cadrage du deuxième segment au premier rendu sur le GB10. (2026-11-14)
+    le cadrage du deuxième segment au premier rendu sur le GB10. L'action d'un segment doit aussi
+    rester dans ce que montre son image de départ : « s'arrête près d'un muret », sans muret dans
+    l'image, faisait pousser à H3 des formes fondues et des taches flottantes sur tout le fond ;
+    refait depuis la même image et le même seed avec « s'arrête sur l'allée de gravier », le
+    jardin tenait 10 s. Le découpage de Gemma le demande. (2026-11-14)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
