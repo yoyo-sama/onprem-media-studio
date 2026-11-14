@@ -704,10 +704,10 @@
       who: "character reference sheet of the person",
       keep: "the same face, hair, build, skin tone, clothing and accessories",
       views: [
-        "a front portrait, complete head and shoulders",
-        "a profile portrait facing image-right, complete head and shoulders",
-        "the full body facing forward, standing, complete figure visible from the top of the head to the soles",
-        "the full body in profile facing image-right, standing, complete figure visible",
+        "a front portrait looking straight at the viewer, showing only the head, neck and shoulders, ending cleanly just below the shoulders",
+        "a strict side-profile portrait facing image-right, showing only the head, neck and shoulders, ending cleanly just below the shoulders",
+        "the full body facing forward and looking at the viewer, standing, complete figure visible from the top of the head to the soles",
+        "the full body in strict side profile facing image-right, standing, complete figure visible",
         "the full body from behind, standing, complete figure visible",
       ],
       stance: "Use the same neutral standing pose in the three full-body views.",
@@ -716,10 +716,10 @@
       who: "reference sheet of the subject",
       keep: "the same shape, proportions, body structure, surface, colors and markings",
       views: [
-        "a close front view of its head or upper part",
-        "a close profile view of the same part, facing image-right",
+        "a close front view of its head or upper part, facing straight at the viewer",
+        "a close strict side view of the same part, facing image-right",
         "the complete subject seen from the front in its natural stance, entire silhouette visible",
-        "the complete subject in profile facing image-right in its natural stance, entire silhouette visible",
+        "the complete subject in strict side view facing image-right in its natural stance, its whole body seen from the side from its front end to its rear end, entire silhouette visible",
         "the complete subject seen directly from behind in its natural stance, entire silhouette visible",
       ],
       stance: "Keep the body structure, number of limbs and natural stance of <image1> in the three complete views: it stands as the thing it is, never like a person, and wears nothing <image1> does not show.",
@@ -734,6 +734,8 @@
       + `Five views side by side from left to right, each appearing exactly once: `
       + s.views.map((v, i) => `(${i + 1}) ${v}`).join("; ") + ". "
       + `${s.stance} `
+      + "The five views are equally tall and each one fills the full height of the sheet: the two close views are large, as tall as the three complete views. "
+      + "Every view stands whole inside its own space. "
       + "Plain white background, evenly lit, the views separated by clear bands of white space. "
       + "The sheet is completely free of text, labels, borders, panel lines and guide lines."
       + (styleText ? " " + styleText : "");
