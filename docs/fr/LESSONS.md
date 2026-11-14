@@ -213,6 +213,14 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     dont 80 % dans le réseau (NVENC est présent mais l'encodage n'est pas le goulot) ;
     llama-server b11982+ n'a plus `--no-mmap` (`-lm`), et un cache KV quantifié n'économisait
     rien au repos. (2026-11-08)
+50. **Le prompt d'un segment enchaîné ne porte aucune ambiance par défaut.** Le Relay de la 1.4
+    construisait chaque segment comme un pseudo-plan à caméra et lumière fixes : chaque segment
+    finissait par une phrase « golden hour » et « steady framing with subtle natural movement »
+    quoi que dise son texte, et chacun inventait ses propres sons. L'ambiance d'un plan-séquence
+    est désormais écrite une seule fois (caméra, lumière, ambiance sonore, musique : par
+    l'utilisateur, ou par Gemma là où le champ est vide) et ajoutée à chaque segment ; un champ
+    vide n'ajoute rien. Une musique repart toujours à chaque raccord, puisque chaque segment rend
+    son propre son. (2026-11-14)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

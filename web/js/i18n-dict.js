@@ -32,11 +32,6 @@ export const DICT = {
     es: "Película de 35 mm",
     de: "35-mm-Film",
   },
-  "A chain of short video segments instead of one long shot: each segment has its prompt and length, and consistency comes from the chaining. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.": {
-    fr: "Une chaîne de courts segments vidéo au lieu d'un seul long plan : chaque segment a son prompt et sa durée, et la cohérence vient de l'enchaînement. Liaison 🔗 : le segment reprend exactement la dernière frame du précédent. Liaison 🎞 : une coupe voulue, une nouvelle image de plan est composée sur les planches validées.",
-    es: "Una cadena de segmentos de vídeo cortos en lugar de un único plano largo: cada segmento tiene su prompt y su duración, y la coherencia viene del encadenamiento. Enlace 🔗: el segmento retoma exactamente el último fotograma del anterior. Enlace 🎞: un corte deliberado, se compone una nueva imagen de plano sobre las láminas aprobadas.",
-    de: "Eine Kette kurzer Videosegmente statt einer langen Einstellung: Jedes Segment hat seinen Prompt und seine Länge, die Kohärenz entsteht durch die Verkettung. Verbindung 🔗: Das Segment übernimmt exakt das letzte Bild des vorigen. Verbindung 🎞: ein bewusster Schnitt, ein neues Einstellungsbild wird auf den freigegebenen Bögen komponiert.",
-  },
   "A new version is available ({from} → {to}). The image is rebuilt, then the studio restarts.": {
     fr: "Une nouvelle version est disponible ({from} → {to}). L'image est reconstruite, puis le studio redémarre.",
     es: "Hay una nueva versión disponible ({from} → {to}). La imagen se reconstruye y luego el estudio se reinicia.",
@@ -1347,11 +1342,6 @@ export const DICT = {
     es: "Duración (s)",
     de: "Länge (s)",
   },
-  "Length per segment (s)": {
-    fr: "Durée par segment (s)",
-    es: "Duración por segmento (s)",
-    de: "Länge pro Segment (s)",
-  },
   "Light / dark theme": {
     fr: "Thème clair / sombre",
     es: "Tema claro / oscuro",
@@ -2157,16 +2147,6 @@ export const DICT = {
     es: "Duración del segmento (s)",
     de: "Segmentlänge (s)",
   },
-  "Segment {n}/{total}": {
-    fr: "Segment {n}/{total}",
-    es: "Segmento {n}/{total}",
-    de: "Segment {n}/{total}",
-  },
-  "Segments": {
-    fr: "Segments",
-    es: "Segmentos",
-    de: "Segmente",
-  },
   "Select": {
     fr: "Sélectionner",
     es: "Seleccionar",
@@ -2522,11 +2502,6 @@ export const DICT = {
     es: "El lienzo guardado no se ha podido leer: el lienzo empieza vacío.",
     de: "Die gespeicherte Leinwand war unlesbar: Die Leinwand startet leer.",
   },
-  "The screenplay is split into as many consecutive shots, each written for the MiniMax H3 grammar, the subjects named by the number the studio gives them. Nothing renders: read and fix each segment before starting the chain.": {
-    fr: "Le scénario est découpé en autant de plans consécutifs, chacun écrit dans la grammaire MiniMax H3, les sujets nommés par le numéro que leur donne le studio. Rien ne part en rendu : relis et corrige chaque segment avant de lancer la chaîne.",
-    es: "El guion se divide en otros tantos planos consecutivos, cada uno escrito con la gramática de MiniMax H3, con los sujetos nombrados por el número que les da el estudio. No se renderiza nada: lee y corrige cada segmento antes de lanzar la cadena.",
-    de: "Das Drehbuch wird in ebenso viele aufeinanderfolgende Einstellungen aufgeteilt, jede in der MiniMax-H3-Grammatik geschrieben, die Motive mit der Nummer benannt, die das Studio ihnen gibt. Nichts wird gerendert: Lies und korrigiere jedes Segment, bevor du die Kette startest.",
-  },
   "The sequence holds at most {max} images.": {
     fr: "La séquence contient {max} images au plus.",
     es: "La secuencia admite {max} imágenes como máximo.",
@@ -2806,11 +2781,6 @@ export const DICT = {
     fr: "Ce que Gemma reçoit quand ✨ enrichit un prompt, une consigne par moteur, pour que le prompt suive le vocabulaire et la structure de chaque modèle. Ton texte s'applique au Studio et au Canvas.",
     es: "Lo que recibe Gemma cuando ✨ enriquece un prompt, una instrucción por motor, para que el prompt siga el vocabulario y la estructura de cada modelo. Tu texto se aplica al Studio y al Canvas.",
     de: "Was Gemma erhält, wenn ✨ einen Prompt anreichert, eine Anweisung pro Engine, damit der Prompt dem Vokabular und der Struktur jedes Modells folgt. Dein Text gilt für Studio und Canvas.",
-  },
-  "What happens in this segment.": {
-    fr: "Ce qui se passe dans ce segment.",
-    es: "Lo que pasa en este segmento.",
-    de: "Was in diesem Segment passiert.",
   },
   "When set, the video ends on it; left empty, the clip starts from the first image only.": {
     fr: "Si elle est fournie, la vidéo finit dessus ; laissée vide, le clip part seulement de la première image.",
@@ -3911,5 +3881,80 @@ export const DICT = {
     fr: "Force de {name} (-2 à 2)",
     es: "Intensidad de {name} (-2 a 2)",
     de: "Stärke von {name} (-2 bis 2)",
+  },
+  "Relay: your shared fields were kept ({n}), Gemma filled the empty ones.": {
+    fr: "Relay : tes champs communs sont gardés ({n}), Gemma a rempli ceux qui étaient vides.",
+    es: "Relay: tus campos comunes se conservan ({n}), Gemma ha rellenado los vacíos.",
+    de: "Relay: Deine gemeinsamen Felder bleiben erhalten ({n}), Gemma hat die leeren ausgefüllt.",
+  },
+  "Segment {n}/{total} · {from}–{to}": {
+    fr: "Segment {n}/{total} · {from}–{to}",
+    es: "Segmento {n}/{total} · {from}–{to}",
+    de: "Segment {n}/{total} · {from}–{to}",
+  },
+  "What happens in this segment, and its own camera motion.": {
+    fr: "Ce qui se passe dans ce segment, et son propre mouvement de caméra.",
+    es: "Lo que pasa en este segmento, y su propio movimiento de cámara.",
+    de: "Was in diesem Segment passiert, und seine eigene Kamerabewegung.",
+  },
+  "→ {n} segment(s): {list} s, {real} s rendered": {
+    fr: "→ {n} segment(s) : {list} s, {real} s rendues",
+    es: "→ {n} segmento(s): {list} s, {real} s renderizados",
+    de: "→ {n} Segment(e): {list} s, {real} s gerendert",
+  },
+  "A long video made of short segments rendered one after the other: the subjects and the look are given once, each segment holds one action. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.": {
+    fr: "Une vidéo longue faite de courts segments rendus l'un après l'autre : les sujets et l'ambiance sont donnés une seule fois, chaque segment porte une action. Lien 🔗 : le segment reprend exactement la dernière image du précédent. Lien 🎞 : une coupe voulue, une nouvelle image de plan est composée sur les planches validées.",
+    es: "Un vídeo largo hecho de segmentos cortos renderizados uno tras otro: los sujetos y el estilo se dan una sola vez, cada segmento lleva una acción. Enlace 🔗: el segmento retoma exactamente el último fotograma del anterior. Enlace 🎞: un corte deliberado, se compone una nueva imagen de plano sobre las fichas aprobadas.",
+    de: "Ein langes Video aus kurzen Segmenten, die nacheinander gerendert werden: Motive und Look werden einmal angegeben, jedes Segment trägt eine Handlung. 🔗-Verbindung: Das Segment übernimmt exakt das letzte Bild des vorherigen. 🎞-Verbindung: ein bewusster Schnitt, ein neues Einstellungsbild wird auf den freigegebenen Sheets komponiert.",
+  },
+  "Empty = no music. Each segment renders its own audio: a score starts again at every join.": {
+    fr: "Vide = pas de musique. Chaque segment rend son propre son : une musique repart à chaque raccord.",
+    es: "Vacío = sin música. Cada segmento renderiza su propio audio: una música vuelve a empezar en cada empalme.",
+    de: "Leer = keine Musik. Jedes Segment rendert seinen eigenen Ton: Eine Musik beginnt an jedem Übergang neu.",
+  },
+  "Framing and camera movement of the whole sequence.": {
+    fr: "Cadrage et mouvement de caméra de toute la séquence.",
+    es: "Encuadre y movimiento de cámara de toda la secuencia.",
+    de: "Bildausschnitt und Kamerabewegung der ganzen Sequenz.",
+  },
+  "Max per segment (s)": {
+    fr: "Max par segment (s)",
+    es: "Máx. por segmento (s)",
+    de: "Max. pro Segment (s)",
+  },
+  "Shared by every segment": {
+    fr: "Commun à tous les segments",
+    es: "Común a todos los segmentos",
+    de: "Allen Segmenten gemeinsam",
+  },
+  "Soundscape": {
+    fr: "Ambiance sonore",
+    es: "Ambiente sonoro",
+    de: "Klangkulisse",
+  },
+  "The light, the same in every segment.": {
+    fr: "La lumière, la même dans chaque segment.",
+    es: "La luz, la misma en cada segmento.",
+    de: "Das Licht, in jedem Segment gleich.",
+  },
+  "The natural sounds heard throughout.": {
+    fr: "Les sons naturels entendus tout du long.",
+    es: "Los sonidos naturales que se oyen de principio a fin.",
+    de: "Die natürlichen Geräusche, die durchgehend zu hören sind.",
+  },
+  "The screenplay is split into consecutive segments of at most the length chosen (10 s is the longest render qualified on the GB10), with one action each, and the shared fields below are filled where they are empty. Nothing renders: read and fix each segment before starting the chain.": {
+    fr: "Le scénario est découpé en segments consécutifs d'au plus la longueur choisie (10 s est le plus long rendu qualifié sur le GB10), avec une action chacun, et les champs communs ci-dessous sont remplis là où ils sont vides. Rien ne part en rendu : relis et corrige chaque segment avant de lancer la chaîne.",
+    es: "El guion se divide en segmentos consecutivos de como máximo la duración elegida (10 s es el render más largo cualificado en el GB10), con una acción cada uno, y los campos comunes de abajo se rellenan donde están vacíos. Nada se renderiza: relee y corrige cada segmento antes de lanzar la cadena.",
+    de: "Das Drehbuch wird in aufeinanderfolgende Segmente von höchstens der gewählten Länge aufgeteilt (10 s ist der längste auf dem GB10 qualifizierte Render), mit je einer Handlung, und die gemeinsamen Felder unten werden ausgefüllt, wo sie leer sind. Nichts wird gerendert: Lies und korrigiere jedes Segment, bevor du die Kette startest.",
+  },
+  "Total length (s)": {
+    fr: "Durée totale (s)",
+    es: "Duración total (s)",
+    de: "Gesamtlänge (s)",
+  },
+  "Written once and added to the prompt of every segment. An empty field is left out.": {
+    fr: "Écrit une seule fois et ajouté au prompt de chaque segment. Un champ vide est laissé de côté.",
+    es: "Se escribe una sola vez y se añade al prompt de cada segmento. Un campo vacío se omite.",
+    de: "Einmal geschrieben und dem Prompt jedes Segments hinzugefügt. Ein leeres Feld wird weggelassen.",
   },
 };

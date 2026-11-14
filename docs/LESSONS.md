@@ -194,6 +194,13 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     H3 to load (71 s); Upscale ×2 of a 124-frame clip takes 22 s, 80 % in the network (NVENC is
     present but encoding is not the bottleneck); llama-server b11982+ has no `--no-mmap` any
     more (`-lm`), and a quantised KV cache saved nothing at rest. (2026-11-08)
+50. **A chained segment's prompt carries no default look.** 1.4's Relay built each segment as a
+    pseudo-shot with a fixed camera and light, so every segment ended with a golden-hour
+    sentence and "steady framing with subtle natural movement" whatever its text said, and each
+    segment invented its own sounds. The look of a long take is now written once (camera,
+    lighting, soundscape, music: by the user, or by Gemma where the field is empty) and added to
+    every segment; an empty field adds nothing. A score still restarts at every join, since each
+    segment renders its own audio. (2026-11-14)
 
 ## 8. Front end (for the port in step 4)
 

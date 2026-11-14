@@ -1145,6 +1145,12 @@ body[data-studio="1"] #sessionBar { min-height: 54px; }
 .relay-composer .composer-row label { display: flex; align-items: center; gap: 6px; font-size: 12px; }
 .relay-composer .composer-row input[type="number"] { width: 72px; }
 .relay-composer .hint { margin-top: 8px; }
+.relay-composer #relayPlan { margin-top: 0; }
+.relay-look { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.relay-look .composer-lbl, .relay-look .hint { grid-column: 1 / -1; margin: 0; }
+.relay-look label { display: flex; flex-direction: column; font-size: 12px; color: var(--text-2); }
+.relay-look textarea { min-height: 48px; margin-top: 4px; }
+@media screen and (max-width: 767px) { .relay-look { grid-template-columns: 1fr; } }
 
 .relay-endframe { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .relay-endframe img { width: 84px; height: 48px; object-fit: cover; border-radius: 4px; border: 2px solid var(--accent); display: block; }

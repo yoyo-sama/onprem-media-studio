@@ -17,6 +17,9 @@ import * as F from "./form.js";
 const P = F.P;
 const MAX_SHOT_SUBJECTS = 2;
 const RELAY_MAX_SEGMENTS = 10;
+// Default segment length: the longest H3 clip qualified on the GB10 (10 s → 10.125 s).
+const RELAY_SEG_DEFAULT = 10;
+const RELAY_TOTAL_MAX = RELAY_MAX_SEGMENTS * 15;
 // Transition candidates, in frames before the end of a segment (24 fps): the last
 // frame is not always the best start for the next segment (motion blur, drift).
 const RELAY_TRANSITION_OFFSETS = [3, 6, 9, 12];
@@ -250,9 +253,9 @@ export async function startStoryboard(seed) {
   // shot); the shot list's chips change that.
   if (s.chars.length > 1) s.shots.forEach(shot => { shot.subjects = [0, 1]; });
   s.keyframes = null; s.cutPlan = null; s.cuts = null; s.order = null; s.animatic = null;
-  s.relay = { segments: [newRelaySegment()], video: null, scenario: "" };
+  s.relay = newRelay();
   enterSession(s);
-  $("relayScenario").value = "";
+  showRelayComposer();
 }
 
 export async function startR2V(seed) {
@@ -1012,9 +1015,32 @@ function renderTimeline() {
 // the next segment starts on the previous one's transition frame, as it is (the only
 // frame-exact continuity). 🎞 cut: a new shot image is composed on that frame (or on
 // the sheets for the first segment) and the setting. The first segment is always a cut.
-const newRelaySegment = (prompt = "", duration = 5) => ({ prompt, duration, mode: "continue", status: "idle", ref: null,
+// `look` is written once and shared by every segment's prompt (camera, lighting,
+// soundscape, music); a segment holds only its action and its own camera motion.
+const newRelaySegment = (prompt = "", duration = RELAY_SEG_DEFAULT) => ({ prompt, duration, mode: "continue", status: "idle", ref: null,
   seed: 0, prompt_used: null, start: null, transitions: null, transitionIdx: 0, endImage: null });
-const relayShot = seg => P.relayShot(seg);
+const RELAY_LOOK_KEYS = ["camera", "lighting", "sound", "music"];
+const newRelay = (p = {}) => ({
+  scenario: p.scenario || "", video: p.video || null,
+  total: clampTotal(p.total ?? 30), segMax: F.clampDuration(p.segMax ?? RELAY_SEG_DEFAULT),
+  look: Object.fromEntries(RELAY_LOOK_KEYS.map(k => [k, String(p.look?.[k] || "")])),
+  segments: (p.segments || [newRelaySegment()]).map(seg => ({ ...newRelaySegment(), ...seg,
+    status: seg.ref ? (seg.status === "stale" ? "stale" : "ready") : "idle" })),
+});
+function clampTotal(v) {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? Math.min(RELAY_TOTAL_MAX, Math.max(5, n)) : 30;
+}
+// The total length cut into as few segments as the maximum length allows, as even as
+// possible (25 s at 10 s max → 8 + 8 + 9), each within H3's 5 to 15 s.
+function relayDurations(total, segMax) {
+  const n = Math.min(RELAY_MAX_SEGMENTS, Math.max(1, Math.ceil(total / segMax)));
+  const base = Math.floor(total / n), extra = total - base * n;
+  return Array.from({ length: n }, (_, i) => F.clampDuration(Math.min(segMax, base + (i >= n - extra ? 1 : 0))));
+}
+const realSeconds = durs => durs.reduce((sum, v) => sum + P.h3RealDuration(v), 0);
+// "00:10.1": a position in the sequence, from the durations H3 really renders.
+const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${(sec % 60).toFixed(1).padStart(4, "0")}`;
 // The chain follows subject 1, whatever tab the subject menu shows.
 const relaySubjects = () => [{ desc: charDesc(d.chars[0]), kind: P.charKindOf(d.chars[0].fields), ref: activeVariant(d.chars[0])?.ref }];
 const relayBusy = () => !!d?.relay?.segments.some(seg => seg.status === "pending");
@@ -1024,6 +1050,7 @@ const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min
 function updateRelayButtons() {
   const r = d?.relay, unlocked = anchorsReady() && !!d?.validated, busy = relayBusy();
   $("relayComposeBtn").disabled = !r || busy || !$("relayScenario").value.trim();
+  document.querySelectorAll("#relayLook textarea").forEach(el => { el.disabled = !r || busy; });
   $("relayRunBtn").disabled = !unlocked || !relayReady() || busy;
   $("relayAddBtn").disabled = !r || r.segments.length >= RELAY_MAX_SEGMENTS || busy;
   // A segment "to regenerate" still has its file: the sequence can be assembled.
@@ -1035,36 +1062,59 @@ function updateRelayButtons() {
 async function composeRelay() {
   const r = d?.relay, text = $("relayScenario").value.trim();
   if (!r || !text) return;
-  const n = Math.min(RELAY_MAX_SEGMENTS, Math.max(1, parseInt($("relaySegCount").value, 10) || 6));
-  const dur = F.clampDuration($("relaySegDur").value);
+  const durs = relayDurations(r.total, r.segMax), n = durs.length;
   if (r.segments.some(seg => seg.prompt.trim() || seg.ref) && !confirm(t("Replace the current segments with the split screenplay?"))) return;
   const btn = $("relayComposeBtn");
   btn.disabled = true;
   tx(btn, "Splitting…");
   try {
     log("req", "Relay: splitting the screenplay into {n} segments with {llm}…", { n, llm: LLM });
-    const list = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
-    r.segments = list.map(prompt => newRelaySegment(prompt, dur));
+    const { segments: list, look } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
+    r.segments = list.map((prompt, i) => newRelaySegment(prompt, durs[Math.min(i, n - 1)]));
     r.scenario = text;
+    // The shared look fills only the fields left empty: what the user wrote stays.
+    const kept = RELAY_LOOK_KEYS.filter(k => r.look[k].trim());
+    for (const k of RELAY_LOOK_KEYS) if (!r.look[k].trim()) r.look[k] = look[k] || "";
+    if (kept.length) log("ok", "Relay: your shared fields were kept ({n}), Gemma filled the empty ones.", { n: kept.length });
     // Gemma may write one segment more or less: kept, and said.
     if (list.length === n) log("ok", "Relay: {n} segments written: read them before starting the chain.", { n });
     else log("warn", "Relay: {got} segments written ({n} asked): read them before starting the chain.", { got: list.length, n });
   } catch (err) {
     log("warn", "Screenplay split unavailable ({error}): segments unchanged.", { error: err.message });
   } finally { tx(btn, "✨ Split the screenplay"); }
+  showRelayComposer();
   renderRelay();
   save();
+}
+
+// Composer and shared fields from the session (on open, restore and after a split).
+function showRelayComposer() {
+  const r = d?.relay;
+  $("relayScenario").value = r?.scenario || "";
+  $("relayTotal").value = r?.total ?? 30;
+  $("relaySegDur").value = r?.segMax ?? RELAY_SEG_DEFAULT;
+  document.querySelectorAll("#relayLook textarea").forEach(el => { el.value = r?.look[el.dataset.look] || ""; });
+  renderRelayPlan();
+}
+function renderRelayPlan() {
+  const r = d?.relay;
+  if (!r) { $("relayPlan").textContent = ""; return; }
+  const durs = relayDurations(r.total, r.segMax);
+  tx($("relayPlan"), "→ {n} segment(s): {list} s, {real} s rendered", { n: durs.length, list: durs.join(" + "), real: realSeconds(durs).toFixed(1) });
 }
 
 function renderRelay() {
   const list = $("relayList"), r = d?.relay;
   if (!r) { list.replaceChildren(); updateRelayButtons(); return; }
   const busy = relayBusy();
+  let at = 0;
   list.replaceChildren(...r.segments.map((seg, i) => {
+    const from = at;
+    at += P.h3RealDuration(seg.duration);
     const el = document.createElement("div");
     el.className = "relay-seg";
     el.innerHTML = `<div class="seg-head"><strong></strong><span class="seg-status"></span></div>
-      <textarea spellcheck="false" placeholder="What happens in this segment."></textarea>
+      <textarea spellcheck="false" placeholder="What happens in this segment, and its own camera motion."></textarea>
       <div class="seg-row">
         <label>Length (s)<input type="number" min="5" max="15"></label>
         <button type="button" class="secondary-btn seg-link"></button>
@@ -1077,7 +1127,7 @@ function renderRelay() {
       <div class="relay-endframe" hidden></div>
       <video muted preload="metadata" hidden></video>
       <div class="relay-transitions" hidden></div>`;
-    tx(el.querySelector("strong"), "Segment {n}/{total}", { n: i + 1, total: r.segments.length });
+    tx(el.querySelector("strong"), "Segment {n}/{total} · {from}–{to}", { n: i + 1, total: r.segments.length, from: clock(from), to: clock(at) });
     tx(el.querySelector(".seg-status"), statusWord(seg.status));
     const area = el.querySelector("textarea");
     area.value = seg.prompt;
@@ -1085,7 +1135,7 @@ function renderRelay() {
     area.addEventListener("input", () => { seg.prompt = area.value; updateRelayButtons(); });
     const dur = el.querySelector('input[type="number"]');
     dur.value = seg.duration;
-    dur.addEventListener("change", () => { seg.duration = F.clampDuration(dur.value, seg.duration); dur.value = seg.duration; save(); });
+    dur.addEventListener("change", () => { seg.duration = F.clampDuration(dur.value, seg.duration); renderRelay(); save(); });
     const link = el.querySelector(".seg-link");
     if (i === 0) { tx(link, "🎞 First segment"); link.disabled = true; }
     else {
@@ -1197,14 +1247,16 @@ async function renderSegment(i) {
   // 🔗 without a transition frame: refused rather than a silent cut.
   if (i > 0 && seg.mode === "continue" && !prev)
     throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
-  const subs = relaySubjects(), shot = relayShot(seg);
+  const subs = relaySubjects(), look = r.look;
   let start;
   if (i > 0 && prev && seg.mode === "continue") {
     log("req", "Relay, segment {n}/{total}: video (continuous link)…", { n: i + 1, total });
     start = prev.ref;
   } else {
     log("req", "Relay, segment {n}/{total}: shot image (cut)…", { n: i + 1, total });
-    const prompt = P.compileRelayKeyframePrompt(seg.prompt.trim(), subs[0].desc, locDesc(), i === 0, s.style);
+    // The shot image takes the shared light too, so the clip does not start in another one.
+    const text = [seg.prompt, look.lighting].map(x => x.trim().replace(/[\s.!?…]+$/, "")).filter(Boolean).join(". ");
+    const prompt = P.compileRelayKeyframePrompt(text, subs[0].desc, locDesc(), i === 0, s.style);
     const job = await keyframeJob([prev ? prev.ref : subs[0].ref], prompt, F.seedPlus(s.seed, 401 + i),
       ["Relay · shot image {n}/{total}", { n: i + 1, total }]);
     start = out(job, ".png");
@@ -1212,7 +1264,7 @@ async function renderSegment(i) {
   if (!sameSession(s)) return;
   seg.start = { ref: start };
   const last = seg.endImage?.ref || null;
-  seg.prompt_used = P.buildH3CutPrompt(shot, subs, locDesc(), null, seg.duration, null, !!last, s.style, h3Warn);
+  seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
   const job = await cutJob(start, seg.prompt_used, seg.duration, seg.seed, ["Relay · segment {n}/{total}", { n: i + 1, total }], last);
   if (!sameSession(s)) return;
   seg.ref = out(job, ".mp4");
@@ -1396,9 +1448,7 @@ export async function restoreProject() {
     locVariants: p.locVariants.map(revive),
     keyframes: p.keyframes ? p.keyframes.map(revive) : null,
     cuts: p.cuts ? p.cuts.map(revive) : null, cutPlan: null,
-    relay: { scenario: p.relay?.scenario || "", video: p.relay?.video || null,
-             segments: (p.relay?.segments || [newRelaySegment()]).map(seg => ({ ...newRelaySegment(), ...seg,
-               status: seg.ref ? (seg.status === "stale" ? "stale" : "ready") : "idle" })) },
+    relay: newRelay(p.relay || {}),
   };
   d.charIdx = Math.min(Math.max(0, p.charIdx ?? 0), d.chars.length - 1);
   if (d.cuts) d.cutPlan = buildCutPlan();
@@ -1408,7 +1458,7 @@ export async function restoreProject() {
   selectSection("character");
   renderSheetMenu("char"); renderSheetMenu("loc");
   renderShotList();
-  $("relayScenario").value = d.relay.scenario;
+  showRelayComposer();
   renderRelay(); player($("relayPlayer"), d.relay.video?.ref);
   renderMontage(); renderTimeline(); renderMontagePlayer();
   renderCutHint();
@@ -1474,7 +1524,7 @@ export function initDirector(h) {
   $("relayAddBtn").addEventListener("click", () => {
     const r = d?.relay;
     if (!r || r.segments.length >= RELAY_MAX_SEGMENTS) return;
-    r.segments.push(newRelaySegment("", F.clampDuration($("relaySegDur").value)));
+    r.segments.push(newRelaySegment("", r.segMax));
     renderRelay();
     save();
   });
@@ -1483,6 +1533,24 @@ export function initDirector(h) {
   $("relayComposeBtn").addEventListener("click", composeRelay);
   $("relayScenario").addEventListener("input", updateRelayButtons);
   $("relayScenario").addEventListener("change", () => { if (d?.relay) { d.relay.scenario = $("relayScenario").value; save(); } });
+  $("relayTotal").addEventListener("change", () => {
+    if (!d?.relay) return;
+    d.relay.total = clampTotal($("relayTotal").value);
+    $("relayTotal").value = d.relay.total;
+    renderRelayPlan(); save();
+  });
+  $("relaySegDur").addEventListener("change", () => {
+    if (!d?.relay) return;
+    d.relay.segMax = F.clampDuration($("relaySegDur").value, d.relay.segMax);
+    $("relaySegDur").value = d.relay.segMax;
+    renderRelayPlan(); save();
+  });
+  // A shared field changes every segment's next prompt; it starts nothing.
+  document.querySelectorAll("#relayLook textarea").forEach(el => el.addEventListener("change", () => {
+    if (!d?.relay) return;
+    d.relay.look[el.dataset.look] = el.value;
+    save();
+  }));
   $("videoDuration").addEventListener("change", renderCutHint);
   document.querySelectorAll("#studioNav .studio-nav-btn").forEach(b => b.addEventListener("click", () => {
     selectSection(b.dataset.section);

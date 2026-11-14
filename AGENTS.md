@@ -15,6 +15,7 @@ node tools/parity-prompts.js                       # prompt compilers equal to 1
 NODE_PATH=$(npm root -g) node tools/prompt-systems.js   # Gemma instruction per engine, both pages headless
 NODE_PATH=$(npm root -g) node tools/assistant-ui.js     # assistant mode: no job without a click, one job per card
 NODE_PATH=$(npm root -g) node tools/lora-ui.js          # LoRA stacks of the Studio and the Canvas
+NODE_PATH=$(npm root -g) node tools/relay-ui.js         # Relay (long take): segment plan, shared look, chain prompts
 STUDIO_DATA_DIR=./data python -m studio            # dev server on :8090
 docker compose up -d --build                       # full image (GB10 / ARM64 + CUDA)
 scripts/docker-install.sh                          # same, with checks, .env from .env.example, no restart during a job
@@ -26,7 +27,7 @@ python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.jso
 ```
 
 GitHub Actions (`.github/workflows/tests.yml`) runs pytest, the front-end syntax check,
-`prompt-systems.js`, `assistant-ui.js` and `lora-ui.js` on every pull request; `parity-prompts.js` runs too
+`prompt-systems.js`, `assistant-ui.js`, `lora-ui.js` and `relay-ui.js` on every pull request; `parity-prompts.js` runs too
 when the repository secret `DELLAICONTENT_TOKEN` (read access to the private 1.4 repository)
 is set. Renders are qualified on the GB10 only.
 

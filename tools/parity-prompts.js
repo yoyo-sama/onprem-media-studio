@@ -197,10 +197,8 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
   same("instructions", S.QWEN_EDIT_ENRICH_SYSTEM(1), P.QWEN_EDIT_ENRICH_SYSTEM(1, P.keyframeModelName("qwen-edit-2509")));
   for (const w of ["human", "other", "location", undefined]) same("instructions", S.SHEET_DESC_ENRICH_SYSTEM(w), P.SHEET_DESC_ENRICH_SYSTEM(w), w);
   for (const d of [[], [HUMAN], [HUMAN, LION], [HUMAN, LION, LOC]]) same("instructions", S.SHOT_ACTION_ENRICH_SYSTEM(d), P.SHOT_ACTION_ENRICH_SYSTEM(d), d);
-  relayDirector(HUMAN);
-  for (const [n, loc] of product([1, 4, 8], [LOC, ""]))
-    same("instructions", S.H3_SCENARIO_SYSTEM(n, S.relaySubjectLegend(loc)), P.H3_SCENARIO_SYSTEM(n, P.relaySubjectLegend(loc, relaySubs(HUMAN))), [n, loc]);
-  S.setDirector(null);
+  // H3_SCENARIO_SYSTEM is 2.0's own since the Relay asks Gemma for the shared look too
+  // (camera, lighting, soundscape, music written once): not compared.
 
   // Keyframes.
   for (const [shot, subjects, loc, style] of product(SHOTS, SUBJECT_SETS, [LOC, "", null], ["none", "cinematic", "noir", undefined]))
@@ -354,6 +352,8 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
     await flow("shotListFromBrief", [answer], () => O.shotListFromBrief(scene, n, dur, (c, t, k) => S.events.push(k)),
       () => P.shotListFromBrief(B.llm, scene, n, dur, B.log), [scene, answer, n, dur]);
   // Scenario: 1.4 did this inside a DOM handler; the same steps are applied to its functions.
+  // The segments are cleaned as in 1.4; the instruction and the shared look are 2.0's own,
+  // so only the user content of the Gemma call is compared.
   for (const [answer, n] of product([{ segments: ["SUBJECTREF1 walks to SUBJECTREF2 , 8k .", { a: "second" }, "", "third"] }, { segments: "x" }], [2, 3, 6])) {
     A.queue = [answer]; A.calls = [];
     relayDirector(HUMAN);
@@ -365,10 +365,10 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
     } catch (e) { a = { error: true }; }
     B.queue = [answer]; B.calls = [];
     let b;
-    try { b = await P.composeScenario(B.llm, "the scenario", n, LOC, 8, relaySubs(HUMAN)); } catch (e) { b = { error: true }; }
+    try { b = (await P.composeScenario(B.llm, "the scenario", n, LOC, 8, relaySubs(HUMAN))).segments; } catch (e) { b = { error: true }; }
     S.setDirector(null);
-    same("composeScenario · result", a, b, [answer, n]);
-    same("composeScenario · Gemma calls", A.calls, B.calls, [answer, n]);
+    same("composeScenario · segments", a, b, [answer, n]);
+    same("composeScenario · Gemma user content", A.calls.map(c => c.slice(1)), B.calls.map(c => c.slice(1)), [answer, n]);
   }
 
   // ── Report ─────────────────────────────────────────────────────────────────

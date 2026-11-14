@@ -508,17 +508,26 @@
 
       <section id="studioRelay" class="studio-section" hidden>
         <h3 class="section-title">Long take (Relay)</h3>
-        <p class="hint">A chain of short video segments instead of one long shot: each segment has its prompt and length, and consistency comes from the chaining. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.</p>
+        <p class="hint">A long video made of short segments rendered one after the other: the subjects and the look are given once, each segment holds one action. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.</p>
         <div class="relay-composer" id="relayComposer">
           <label class="composer-lbl">Screenplay
             <textarea id="relayScenario" rows="4" spellcheck="false" placeholder="The whole screenplay of the sequence, written in one go."></textarea>
           </label>
           <div class="composer-row">
-            <label>Segments <input type="number" id="relaySegCount" min="1" max="10" value="6"></label>
-            <label>Length per segment (s) <input type="number" id="relaySegDur" min="5" max="15" value="5"></label>
+            <label>Total length (s) <input type="number" id="relayTotal" min="5" max="150" value="30"></label>
+            <label>Max per segment (s) <input type="number" id="relaySegDur" min="5" max="15" value="10"></label>
+            <span class="hint" id="relayPlan"></span>
             <button type="button" class="secondary-btn" id="relayComposeBtn" disabled>✨ Split the screenplay</button>
           </div>
-          <p class="hint">The screenplay is split into as many consecutive shots, each written for the MiniMax H3 grammar, the subjects named by the number the studio gives them. Nothing renders: read and fix each segment before starting the chain.</p>
+          <p class="hint">The screenplay is split into consecutive segments of at most the length chosen (10 s is the longest render qualified on the GB10), with one action each, and the shared fields below are filled where they are empty. Nothing renders: read and fix each segment before starting the chain.</p>
+        </div>
+        <div class="relay-composer relay-look" id="relayLook">
+          <span class="composer-lbl">Shared by every segment</span>
+          <p class="hint">Written once and added to the prompt of every segment. An empty field is left out.</p>
+          <label>Camera<textarea data-look="camera" rows="2" spellcheck="false" placeholder="Framing and camera movement of the whole sequence."></textarea></label>
+          <label>Lighting<textarea data-look="lighting" rows="2" spellcheck="false" placeholder="The light, the same in every segment."></textarea></label>
+          <label>Soundscape<textarea data-look="sound" rows="2" spellcheck="false" placeholder="The natural sounds heard throughout."></textarea></label>
+          <label>Music<textarea data-look="music" rows="2" spellcheck="false" placeholder="Empty = no music. Each segment renders its own audio: a score starts again at every join."></textarea></label>
         </div>
         <div class="relay-list" id="relayList"></div>
         <div class="relay-foot">
