@@ -294,7 +294,7 @@ function addRefs(items) {
 }
 
 // Subjects of the next Ref2VA job, in their order. Skipping the sheets makes the first
-// two reference images the character and the setting; a clip can be a subject too.
+// reference image the character, the others free references; a clip can be a subject too.
 const SUBJECT_KINDS = { character: L("character"), environment: L("setting"), reference: L("reference") };
 const r2vPlan = () => F.r2vPlan($("skipSheetsToggle").checked);
 const plannedSubjects = () => r2vPlan().entries.filter(e => SUBJECT_KINDS[e.kind]).map(e => e.kind);
@@ -509,13 +509,23 @@ function renderAutoEnrich() {
 }
 
 // ── Generate ──────────────────────────────────────────────────────────────────
+// A refusal of Generate shows under the button too, not only in the log; the next
+// click clears it.
+function generateError(message) {
+  const el = $("generateError");
+  el.textContent = message || "";
+  el.hidden = !message;
+}
+
 async function generate() {
+  generateError("");
   const wf = F.currentWorkflow();
-  if (!wf) { log("warn", "No engine selected."); return; }
+  if (!wf) { log("warn", "No engine selected."); generateError(t("No engine selected.")); return; }
   // An empty brief starts nothing (the example is a placeholder), except local
   // versions, whose prompts come from the chosen markets.
   if (!F.brief() && !(wf.pipeline === "image2image" && selectedMarkets.size)) {
     log("warn", "Empty brief: describe what you want before generating.");
+    generateError(t("Empty brief: describe what you want before generating."));
     brief.focus();
     return;
   }
@@ -546,7 +556,7 @@ async function generate() {
     } else if (wf.pipeline === "sequence") await D.startLongTake(seed, seqImages.slice());
     else if (wf.pipeline === "campaign") generateCampaign(seed);
     else await generatePlain(wf, seed);
-  } catch (err) { warn(err); }
+  } catch (err) { warn(err); generateError(err?.message ?? String(err)); }
   finally {
     clearInterval(timer);
     if (busy) refreshGenerateLabel();

@@ -124,7 +124,11 @@ to it.
   in one list (`F.r2vPlan`). Each image is the next `<Subject N>`; a clip has a role (camera
   movement and pacing, or a subject) and a sound one too (voice of a character, music, ambience
   and sounds), shown with its label. The director and "skip the sheets" send them in the list
-  order, with the prompt of `buildH3RefPrompt` ([H3.md](H3.md)); a clip goes silent.
+  order, with the prompt of `buildH3RefPrompt` ([H3.md](H3.md)); a clip goes silent. "Skip the
+  sheets" needs one image: the first is the character, the others stay free references, and the
+  brief gives the place.
+- A refusal of Generate (empty brief, missing image…) shows under the button, not only in the
+  log; the next click clears it.
 - In the director, a reference-to-video clip plays under its button once rendered, and the
   button becomes "Regenerate the video": a new job on the same sheets, with the next seed.
 - The multi-image sequence of 1.4 became the long take from images (pipeline `sequence`,

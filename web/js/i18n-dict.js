@@ -2277,15 +2277,15 @@ export const DICT = {
     es: "Tamaño",
     de: "Größe",
   },
-  "Skip the sheets, use my references only: the first two images of “Extra references” become the character and the setting": {
-    fr: "Ignorer les planches, utiliser seulement mes références : les deux premières images de « Références supplémentaires » deviennent le personnage et le décor",
-    es: "Omitir las láminas, usar solo mis referencias: las dos primeras imágenes de «Referencias adicionales» pasan a ser el personaje y el decorado",
-    de: "Bögen überspringen, nur meine Referenzen verwenden: Die ersten beiden Bilder unter „Zusätzliche Referenzen“ werden Figur und Schauplatz",
+  "Skip the sheets, use my references only: the first image of “Extra references” becomes the character, the others stay free references": {
+    fr: "Ignorer les planches, utiliser seulement mes références : la première image de « Références supplémentaires » devient le personnage, les autres restent des références libres",
+    es: "Omitir las láminas, usar solo mis referencias: la primera imagen de «Referencias adicionales» pasa a ser el personaje, las demás siguen siendo referencias libres",
+    de: "Bögen überspringen, nur meine Referenzen verwenden: Das erste Bild unter „Zusätzliche Referenzen“ wird die Figur, die anderen bleiben freie Referenzen",
   },
-  "Skipping the sheets needs at least 2 images in “Extra references”.": {
-    fr: "Pour ignorer les planches, il faut au moins 2 images dans « Références supplémentaires ».",
-    es: "Para omitir las láminas hacen falta al menos 2 imágenes en «Referencias adicionales».",
-    de: "Zum Überspringen der Bögen braucht es mindestens 2 Bilder unter „Zusätzliche Referenzen“.",
+  "Skipping the sheets needs at least one image in “Extra references”: the character.": {
+    fr: "Pour ignorer les planches, il faut au moins une image dans « Références supplémentaires » : le personnage.",
+    es: "Para omitir las láminas hace falta al menos una imagen en «Referencias adicionales»: el personaje.",
+    de: "Zum Überspringen der Bögen braucht es mindestens ein Bild unter „Zusätzliche Referenzen“: die Figur.",
   },
   "social image": {
     fr: "image réseaux sociaux",

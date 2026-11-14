@@ -1557,18 +1557,18 @@ async function launchR2V() {
   updateGate();
 }
 
-// "Skip the sheets": nothing generated, nothing to review; the first two reference
-// images are the character and the setting, and their description by Gemma's vision
-// is all that tells the model what they are.
+// "Skip the sheets": nothing generated, nothing to review; the first reference image
+// is the character, the next ones are free references, and the brief gives the place.
+// Gemma's vision description is all that tells the model what each image is.
 export async function r2vWithoutSheets(seed) {
   const text = F.brief();
   if (!text) throw new Error(t("Describe the character and the setting in the brief before generating."));
   const { anchors, extras } = F.r2vPlan(true);
-  if (anchors.length < 2) throw new Error(t("Skipping the sheets needs at least 2 images in “Extra references”."));
-  const [charD, locD] = await F.describeRefs(anchors);
+  if (!anchors.length) throw new Error(t("Skipping the sheets needs at least one image in “Extra references”: the character."));
+  const [charD] = await F.describeRefs(anchors);
   const refs = await Promise.all(anchors.map(F.imageRef));
   runJobDetached(r2vJob({
-    subjects: [{ kind: "character", desc: charD }, { kind: "environment", desc: locD }], refs, extras,
+    subjects: [{ kind: "character", desc: charD }], refs, extras,
     seed: F.seedPlus(seed, 201), duration: F.formDuration(), loras: F.formLoras(), aspect: $("ratioSelect").value, text }));
 }
 const runJobDetached = p => { p.catch(warn); };

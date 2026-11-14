@@ -163,17 +163,17 @@ export const itemMedia = it => it.media
 export const itemRole = it => MEDIA_KINDS[itemMedia(it)].includes(it.kind) ? it.kind : MEDIA_KINDS[itemMedia(it)][0];
 
 // The reference-to-video plan of the form, in the order sent: the two anchors (the
-// sheets, or with "skip the sheets" the first two images of the list), then the
-// other items of the list, capped per media. `anchors` holds list items only when
+// sheets; with "skip the sheets", only the character: the first image of the list),
+// then the other items of the list, free references, capped per media. `anchors` holds list items only when
 // the sheets are skipped. Each entry: {item, media, kind} (kind as P.h3AssignRefs).
 export function r2vPlan(skip, list = refList("r2v")) {
   const room = { ...R2V_MEDIA_CAPS }, kept = list.filter(it => room[itemMedia(it)]-- > 0);
   const images = kept.filter(it => itemMedia(it) === "image");
-  const anchors = skip ? images.slice(0, 2) : [];
+  const anchors = skip ? images.slice(0, 1) : [];
   const extras = kept.filter(it => !anchors.includes(it)).map(item => ({
     item, media: itemMedia(item), kind: itemMedia(item) === "image" ? "reference" : REF_KINDS[itemRole(item)][0] }));
   const lead = [{ media: "image", kind: "character", item: anchors[0] || null },
-                { media: "image", kind: "environment", item: anchors[1] || null }];
+                { media: "image", kind: "environment", item: null }].slice(0, skip ? 1 : 2);
   return { anchors, extras, dropped: list.length - kept.length, entries: P.h3AssignRefs([...lead, ...extras]) };
 }
 

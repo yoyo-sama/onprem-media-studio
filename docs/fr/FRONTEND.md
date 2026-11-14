@@ -127,7 +127,11 @@ ajoute une carte Import d'image reliée à elle.
   une vidéo a un rôle (mouvement de caméra et rythme, ou un sujet), un son aussi (voix d'un
   personnage, musique, ambiance et bruitages), affiché avec son repère. Le réalisateur et
   « Ignorer les planches » les envoient dans l'ordre de la liste, avec le prompt de
-  `buildH3RefPrompt` ([H3.md](H3.md)) ; une vidéo part muette.
+  `buildH3RefPrompt` ([H3.md](H3.md)) ; une vidéo part muette. « Ignorer les planches » demande
+  une seule image : la première est le personnage, les autres restent des références libres, et
+  le brief donne le lieu.
+- Un refus de Générer (brief vide, image manquante…) s'affiche sous le bouton, pas seulement
+  dans le journal ; le clic suivant l'efface.
 - Dans le réalisateur, un clip de référence vers vidéo se lit sous son bouton une fois rendu, et
   le bouton devient « Régénérer la vidéo » : un nouveau job sur les mêmes planches, avec le seed
   suivant.
