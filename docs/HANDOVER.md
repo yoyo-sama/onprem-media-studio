@@ -189,7 +189,7 @@ The owner's standing rules are in [AGENTS.md](../AGENTS.md); the 49 technical le
   merge; a branch whose PR merged restarts from `main` for new work.
 - Before asking for a merge: `python -m pytest`, and for any front-end, prompt or instruction
   change `node tools/parity-prompts.js` (needs `../dellaicontent`), `tools/prompt-systems.js`,
-  `tools/assistant-ui.js`, `tools/lora-ui.js` (commands in AGENTS.md). GitHub Actions runs them
+  `tools/assistant-ui.js`, `tools/lora-ui.js`, `tools/relay-ui.js` (commands in AGENTS.md). GitHub Actions runs them
   on every PR; the parity test only when the `DELLAICONTENT_TOKEN` secret is set.
 - Changing a prompt compiler or a Gemma instruction makes the parity and fingerprint tests fail
   on purpose: update the reference in the same commit and say why.

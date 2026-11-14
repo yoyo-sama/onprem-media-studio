@@ -401,11 +401,15 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   const beforeS = jobs.length;
   check(beforeS === jobs.length, "Studio r2v: opening the card submitted a job");
   await page.click("#generateBtn");
-  await page.waitForTimeout(2500);
+  // Two vision calls now (the character, then the free reference): wait for the job.
+  for (let i = 0; i < 50 && jobs.length === beforeS; i++) await page.waitForTimeout(200);
+  await page.waitForTimeout(300);
   const jS = jobs[beforeS], pS = jS?.params.prompt || "";
   check(jobs.length === beforeS + 1 && jS.pipeline === "h3-r2v"
     && JSON.stringify(jS.params.references) === JSON.stringify(["inputs/att.png", "inputs/att.png", "inputs/clip.mp4", "inputs/voice.wav"]),
     "Studio r2v: not one job with the four references in order: " + JSON.stringify(jS));
+  check(pS.includes("<Subject 1> is the main character in <Picture 1>") && pS.includes("<Subject 2> is an additional reference in <Picture 2>")
+    && !pS.includes("is the location"), "Studio r2v without the sheets: the second image is not a free reference: " + pS.slice(0, 300));
   check(pS.includes("\n<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n")
     && pS.includes("summary:\n[reference generation + audio reference] "), "Studio r2v: prompt: " + pS);
   // "→ Use as input" from the gallery goes to the pipeline on screen: in reference to
@@ -465,6 +469,24 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(jobs.length === afterU, "the inputs view submitted a job");
   await page.click("#assetChipClear");
   await page.selectOption("#pipelineSelect", "reference2video");
+  // "Skip the sheets" with no image is refused on screen, without a job; one image is
+  // enough: it is the character, and the brief alone gives the place.
+  while (await page.$("#refSubjects .rs-x")) await page.click("#refSubjects .rs-x >> nth=0");
+  const beforeK = jobs.length;
+  await page.click("#generateBtn");
+  await page.waitForTimeout(500);
+  check(jobs.length === beforeK && await page.isVisible("#generateError")
+    && /au moins une image/.test(await page.textContent("#generateError")),
+    "skip the sheets without an image: " + JSON.stringify({ jobs: jobs.length - beforeK, error: await page.textContent("#generateError") }));
+  await page.setInputFiles("#refImagesInput", { name: "her.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  check(JSON.stringify(await tags()) === '["Sujet 1"]', "one reference without the sheets: " + JSON.stringify(await tags()));
+  await page.click("#generateBtn");
+  for (let i = 0; i < 50 && jobs.length === beforeK; i++) await page.waitForTimeout(200);
+  const jK = jobs[beforeK], pK = jK?.params.prompt || "";
+  check(jobs.length === beforeK + 1 && jK.pipeline === "h3-r2v" && jK.params.references.length === 1
+    && pK.includes("<Subject 1> is the main character in <Picture 1>") && !pK.includes("<Subject 2>")
+    && await page.isHidden("#generateError"),
+    "skip the sheets with one image: " + JSON.stringify(jK && { refs: jK.params.references, prompt: pK.slice(0, 400) }));
   await page.$eval("#skipSheetsToggle", el => { el.checked = false; el.dispatchEvent(new Event("change", { bubbles: true })); });
   // MOSS-Image: the Mode field shows for that engine only (Standard on a card that has
   // none), and the chosen mode reaches the job.

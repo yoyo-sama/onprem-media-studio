@@ -200,7 +200,7 @@ techniques dans [LESSONS.md](LESSONS.md). Les plus souvent en jeu :
   fusionner ; une branche dont la PR est fusionnée repart de `main` pour un nouveau chantier.
 - Avant de demander une fusion : `python -m pytest`, et pour tout changement d'interface, de
   prompt ou de consigne : `node tools/parity-prompts.js` (demande `../dellaicontent`),
-  `tools/prompt-systems.js`, `tools/assistant-ui.js`, `tools/lora-ui.js` (commandes dans
+  `tools/prompt-systems.js`, `tools/assistant-ui.js`, `tools/lora-ui.js`, `tools/relay-ui.js` (commandes dans
   AGENTS.md). GitHub Actions les lance sur chaque PR ; le test de parité seulement si le secret
   `DELLAICONTENT_TOKEN` est défini.
 - Modifier un compilateur de prompt ou une consigne Gemma fait échouer exprès les tests de

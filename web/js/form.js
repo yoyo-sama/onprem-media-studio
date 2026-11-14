@@ -33,7 +33,7 @@ export const WORKFLOWS = [
   { id: "qwen21_i2i", pipeline: "image2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1", loras: "qwen21" },
   { id: "h3_t2v", pipeline: "text2video", label: L("MiniMax H3 · native audio"), engine: "h3-t2v", loras: "h3" },
   { id: "h3_i2v", pipeline: "image2video", label: L("MiniMax H3 · native audio"), engine: "h3-i2v", loras: "h3" },
-  { id: "h3_sequence", pipeline: "sequence", label: L("MiniMax H3 · first and last frames"), engine: "h3-i2v", loras: "h3" },
+  { id: "h3_sequence", pipeline: "sequence", label: L("MiniMax H3 · chained segments"), engine: "h3-i2v", loras: "h3" },
   { id: "storyboard_qwen21", pipeline: "storyboard", label: L("Shot images: Qwen Image 2.1"),
     keyframes: "qwen-image-2.1", enrich: "builtin", engines: ["krea2-t2i", "qwen-image-2.1", "h3-i2v"] },
   { id: "h3_r2v", pipeline: "reference2video", label: L("MiniMax H3 · references"), engine: "h3-r2v", loras: "h3", enrich: "builtin",
@@ -50,7 +50,7 @@ export const PIPELINES = [
   { id: "image2image", label: L("Image editing (Image2Image)"), controls: ["image", "markets"] },
   { id: "text2video", label: L("Video from a text (Text2Video)"), controls: ["duration", "ratio"] },
   { id: "image2video", label: L("Video from an image (Image2Video)"), controls: ["duration", "image"] },
-  { id: "sequence", label: L("Multi-image sequence (FL2VA)"), scenario: ["storyboard"], controls: ["seq"] },
+  { id: "sequence", label: L("Long take from images (Relay)"), scenario: ["storyboard"], controls: ["seq"] },
   { id: "storyboard", label: L("Storyboard + animatic (sheets, shots, cuts)"), scenario: ["storyboard"],
     controls: ["shots", "duration", "hold", "ratio", "style", "sheetTemplate"] },
   { id: "reference2video", label: L("Consistent character + setting (MiniMax H3)"), scenario: ["storyboard"],
@@ -163,17 +163,17 @@ export const itemMedia = it => it.media
 export const itemRole = it => MEDIA_KINDS[itemMedia(it)].includes(it.kind) ? it.kind : MEDIA_KINDS[itemMedia(it)][0];
 
 // The reference-to-video plan of the form, in the order sent: the two anchors (the
-// sheets, or with "skip the sheets" the first two images of the list), then the
-// other items of the list, capped per media. `anchors` holds list items only when
+// sheets; with "skip the sheets", only the character: the first image of the list),
+// then the other items of the list, free references, capped per media. `anchors` holds list items only when
 // the sheets are skipped. Each entry: {item, media, kind} (kind as P.h3AssignRefs).
 export function r2vPlan(skip, list = refList("r2v")) {
   const room = { ...R2V_MEDIA_CAPS }, kept = list.filter(it => room[itemMedia(it)]-- > 0);
   const images = kept.filter(it => itemMedia(it) === "image");
-  const anchors = skip ? images.slice(0, 2) : [];
+  const anchors = skip ? images.slice(0, 1) : [];
   const extras = kept.filter(it => !anchors.includes(it)).map(item => ({
     item, media: itemMedia(item), kind: itemMedia(item) === "image" ? "reference" : REF_KINDS[itemRole(item)][0] }));
   const lead = [{ media: "image", kind: "character", item: anchors[0] || null },
-                { media: "image", kind: "environment", item: anchors[1] || null }];
+                { media: "image", kind: "environment", item: null }].slice(0, skip ? 1 : 2);
   return { anchors, extras, dropped: list.length - kept.length, entries: P.h3AssignRefs([...lead, ...extras]) };
 }
 

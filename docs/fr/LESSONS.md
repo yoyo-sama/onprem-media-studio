@@ -213,6 +213,23 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     dont 80 % dans le réseau (NVENC est présent mais l'encodage n'est pas le goulot) ;
     llama-server b11982+ n'a plus `--no-mmap` (`-lm`), et un cache KV quantifié n'économisait
     rien au repos. (2026-11-08)
+50. **Le prompt d'un segment enchaîné ne porte aucune ambiance par défaut.** Le Relay de la 1.4
+    construisait chaque segment comme un pseudo-plan à caméra et lumière fixes : chaque segment
+    finissait par une phrase « golden hour » et « steady framing with subtle natural movement »
+    quoi que dise son texte, et chacun inventait ses propres sons. L'ambiance d'un plan-séquence
+    est désormais écrite une seule fois (cadrage, lumière, ambiance sonore, musique : par
+    l'utilisateur, ou par Gemma là où le champ est vide) et ajoutée à chaque segment ; un champ
+    vide n'ajoute rien. Une musique repart toujours à chaque raccord, puisque chaque segment rend
+    son propre son, et l'ambiance de deux segments rendus séparément sortait à 7 dB d'écart :
+    l'assemblage d'un Relay ou d'une séquence ramène désormais chaque segment au niveau médian
+    (`smooth_audio`). Un vrai fondu enchaîné est impossible sans décaler le son par rapport à
+    l'image, puisqu'un clip n'a pas de son au-delà de sa fin. Le champ commun ne porte que le cadrage : un mouvement de caméra commun
+    (« tracking qui suit le sujet ») à côté de celui du segment (« slow push-in ») faisait sauter
+    le cadrage du deuxième segment au premier rendu sur le GB10. L'action d'un segment doit aussi
+    rester dans ce que montre son image de départ : « s'arrête près d'un muret », sans muret dans
+    l'image, faisait pousser à H3 des formes fondues et des taches flottantes sur tout le fond ;
+    refait depuis la même image et le même seed avec « s'arrête sur l'allée de gravier », le
+    jardin tenait 10 s. Le découpage de Gemma le demande. (2026-11-14)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

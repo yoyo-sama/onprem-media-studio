@@ -26,11 +26,11 @@ def client(settings, store):
         yield c
 
 
-def make_clip(path, color, seconds=1, size="320x192", audio=True):
+def make_clip(path, color, seconds=1, size="320x192", audio=True, gain_db=0):
     path.parent.mkdir(parents=True, exist_ok=True)
     args = ["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", f"color=c={color}:s={size}:r=24:d={seconds}"]
     if audio:
-        args += ["-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}", "-c:a", "aac"]
+        args += ["-f", "lavfi", "-i", f"sine=frequency=440:duration={seconds}", "-af", f"volume={gain_db}dB", "-c:a", "aac"]
     subprocess.run(args + ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-shortest", str(path)], check=True)
 
 
@@ -70,6 +70,27 @@ def test_concat_joins_clips_with_sound(client, settings):
     assert info["audio"] and abs(info["frames"] - 48) <= 1  # AAC priming may add a frame
 
 
+def level(path, start, length):
+    from studio.pipelines.montage import ffmpeg
+    import re as _re
+    out = ffmpeg("ffmpeg", "-v", "info", "-nostats", "-ss", str(start), "-t", str(length), "-i", str(path),
+                 "-af", "volumedetect", "-f", "null", "-", capture_stderr=True)
+    return float(_re.search(r"mean_volume:\s*(-?[\d.]+) dB", out).group(1))
+
+
+@pytest.mark.parametrize("smooth", [False, True])
+def test_smooth_audio_matches_the_levels_of_a_continuous_take(client, settings, smooth):
+    """Two clips 8 dB apart: a hard join keeps the jump, smooth_audio brings both to one level
+    without moving the sound against the image."""
+    make_clip(settings.output_dir / "h3-i2v" / "q.mp4", "red", gain_db=-8)
+    make_clip(settings.output_dir / "h3-i2v" / "l.mp4", "blue")
+    job = run(client, "video-concat", {"clips": ["outputs/h3-i2v/q.mp4", "outputs/h3-i2v/l.mp4"], "smooth_audio": smooth})
+    path = settings.output_dir / job["outputs"][0].removeprefix("outputs/")
+    jump = level(path, 1.2, 0.6) - level(path, 0.2, 0.6)
+    assert (abs(jump) < 1) if smooth else (abs(jump - 8) < 1), jump
+    assert abs(probe(path)["frames"] - 48) <= 1
+
+
 def test_concat_without_sound_when_a_clip_has_none(client, settings):
     make_clip(settings.output_dir / "x" / "a.mp4", "red")
     make_clip(settings.output_dir / "x" / "b.mp4", "blue", audio=False)
@@ -81,6 +102,7 @@ def test_concat_without_sound_when_a_clip_has_none(client, settings):
     {"clips": ["outputs/x/a.mp4"]},                        # one clip
     {"clips": ["outputs/x/a.mp4", "outputs/x/a.png"]},     # not a video
     {"clips": ["outputs/x/a.mp4", "outputs/x/a.mp4"], "prompt": "p"},
+    {"clips": ["outputs/x/a.mp4", "outputs/x/a.mp4"], "smooth_audio": "yes"},
 ])
 def test_concat_refuses(client, settings, params):
     make_clip(settings.output_dir / "x" / "a.mp4", "red")

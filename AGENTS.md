@@ -15,6 +15,7 @@ node tools/parity-prompts.js                       # prompt compilers equal to 1
 NODE_PATH=$(npm root -g) node tools/prompt-systems.js   # Gemma instruction per engine, both pages headless
 NODE_PATH=$(npm root -g) node tools/assistant-ui.js     # assistant mode: no job without a click, one job per card
 NODE_PATH=$(npm root -g) node tools/lora-ui.js          # LoRA stacks of the Studio and the Canvas
+NODE_PATH=$(npm root -g) node tools/relay-ui.js         # Relay (long take): segment plan, shared look, chain prompts
 STUDIO_DATA_DIR=./data python -m studio            # dev server on :8090
 docker compose up -d --build                       # full image (GB10 / ARM64 + CUDA)
 scripts/docker-install.sh                          # same, with checks, .env from .env.example, no restart during a job
@@ -23,10 +24,12 @@ python tools/qualify/run_image_cases.py            # image qualification renders
 node tools/qualify/export_1_4_prompts.js ../dellaicontent > tools/qualify/image_cases.json  # rebuild cases from 1.4
 node tools/qualify/export_1_4_video_prompts.js ../dellaicontent > tools/qualify/video_cases.json
 python tools/qualify/run_image_cases.py --cases image_cases.json video_cases.json   # image + video renders
+node tools/qualify/export_relay_cases.js > tools/qualify/relay_cases.json   # Relay long take, from web/js/prompts.js
+python tools/qualify/run_image_cases.py --cases relay_cases.json --report qualify-relay.json   # two chained 10 s segments
 ```
 
 GitHub Actions (`.github/workflows/tests.yml`) runs pytest, the front-end syntax check,
-`prompt-systems.js`, `assistant-ui.js` and `lora-ui.js` on every pull request; `parity-prompts.js` runs too
+`prompt-systems.js`, `assistant-ui.js`, `lora-ui.js` and `relay-ui.js` on every pull request; `parity-prompts.js` runs too
 when the repository secret `DELLAICONTENT_TOKEN` (read access to the private 1.4 repository)
 is set. Renders are qualified on the GB10 only.
 

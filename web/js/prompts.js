@@ -381,8 +381,9 @@
 
   // The six-field Ref2VA block. `subjects` comes from h3AssignSubjects, or from
   // h3AssignRefs when clips or sounds are among the references. `music` (optional):
-  // the score asked for in words, for non_diegetic_music.
-  function buildH3RefPrompt({ subjects, summary, body, music }) {
+  // the score asked for in words, for non_diegetic_music; `sound` (optional): the
+  // ambience asked for in words, for overall_soundscape.
+  function buildH3RefPrompt({ subjects, summary, body, music, sound }) {
     const chars = subjects.filter(sub => sub.kind === "character");
     const multiChar = chars.length > 1;
     let voices = 0;
@@ -413,7 +414,7 @@
       `retention_analysis:\n${ret || "—"}`,
       `detailed_description:\n${body}`,
       // The last two fields belong to the grammar: H3 expects them.
-      `overall_soundscape:\n${layer("sound") || "Natural diegetic ambience consistent with the scene."}`,
+      `overall_soundscape:\n${[layer("sound"), String(sound || "").trim()].filter(Boolean).join(" ") || "Natural diegetic ambience consistent with the scene."}`,
       `non_diegetic_music:\n${[layer("music"), String(music || "").trim()].filter(Boolean).join(" ") || "None."}`
     ].join("\n\n");
   }
@@ -459,6 +460,15 @@
     return list.map((sub, i) => ({ ...sub, picture: 1, label: h3Subject(i + 1) }));
   }
 
+  // "<Subject 1> is in <Subject 2>. ": every character placed in the setting, or nothing.
+  function h3SceneLead(subjects) {
+    const env = subjects.find(sub => sub.kind === "environment");
+    const chars = subjects.filter(sub => sub.kind === "character");
+    return chars.length && env
+      ? `${chars.map(sub => sub.label).join(" and ")} ${chars.length > 1 ? "are" : "is"} in ${env.label}. `
+      : "";
+  }
+
   // Narrative body of a cut: the shot without repeating the descriptions (already in
   // subject_definitions), every character placed in the setting.
   function h3CutBodyText(shot, subjects, holdMotion, styleId) {
@@ -467,12 +477,7 @@
     const emotion = (shot.emotion || "").trim();
     const extra = (shot.extra || "").trim();
     const styleText = styleTextFor(styleId);
-    const env = subjects.find(sub => sub.kind === "environment");
-    const chars = subjects.filter(sub => sub.kind === "character");
-    const lead = chars.length && env
-      ? `${chars.map(sub => sub.label).join(" and ")} ${chars.length > 1 ? "are" : "is"} in ${env.label}. `
-      : "";
-    let s = lead + shot.action + (emotion ? ", conveying " + emotion : "") + ". " + light.text
+    let s = h3SceneLead(subjects) + shot.action + (emotion ? ", conveying " + emotion : "") + ". " + light.text
       + " Camera motion: " + (holdMotion || cam.motion) + ".";
     if (extra) s += " " + extra;
     if (styleText) s += " " + styleText;
@@ -878,20 +883,27 @@ Answer ONLY with JSON: {"prompt": "..."}`;
   // A cut prompt (H3 is the only cut engine in 2.0; the text is 1.4's H3 variant).
   const CUT_ENRICH_SYSTEM = "You are a motion-picture prompt writer for the MiniMax H3 video model. Enrich the following shot into one dense cinematic English paragraph of 30 to 60 words: what happens, then lighting, materials, atmosphere and natural motion. STRICT RULES: keep the exact same subject, action, environment and camera motion; add no new character or object; use ONLY positive phrasing (never \"no\", \"without\", \"avoid\"); the text may contain subject markers written as a single bare word such as SUBJECTREF1 — copy every one of them character for character, keep them where they belong in the sentence, and write no other marker, no angle bracket and no square bracket; never write \"masterpiece\", \"best quality\", \"8k\" or \"ultra detailed\". Answer ONLY with JSON: {\"prompt\": \"...\"}";
 
-  // Scenario split into Relay segments: Gemma writes only the prose of each segment,
-  // the H3 structure is assembled at render time, subjects arrive as bare stand-ins.
+  // Scenario split into Relay segments: Gemma writes the look shared by the whole sequence
+  // once (camera, lighting, sounds, music) and one action per segment; the H3 structure
+  // is assembled at render time, subjects arrive as bare stand-ins.
   const H3_SCENARIO_SYSTEM = (n, legend) => `You are a shot-list writer for the MiniMax H3 video model.
-Split the user's scenario into exactly ${n} consecutive video segments of one single continuous sequence, in chronological order.
+Split the user's scenario into exactly ${n} consecutive video segments of one single continuous sequence, in chronological order. Each segment is rendered on its own, a few seconds long, so it holds one simple action.
+Also write, once, the look that every segment shares, so that no segment repeats it.
 Rules:
-- Each segment is ONE English paragraph of 25 to 50 words: what happens first, then lighting, materials, atmosphere and the natural camera motion of that segment.
+- "framing": one English sentence of 5 to 20 words, the framing of the whole sequence: shot size, camera height and lens. Never a camera movement: each segment gives its own.
+- "lighting": one English sentence of 8 to 25 words, the light of the whole sequence, the same in every segment.
+- "soundscape": one English sentence of 8 to 25 words, the natural sounds heard throughout the sequence.
+- "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.
+- Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
+- A segment acts within the place already shown: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
 - The segments follow on from one another: segment k+1 starts exactly where segment k ended. Never restart the scene, never retell the whole scenario inside one segment, never jump elsewhere unless the scenario says so.
 - The recurring subjects are named by a marker, one bare word each. Copy each marker character for character wherever that subject acts:
 ${legend}
 - Write the marker instead of a proper name, and instead of a bare pronoun whenever the sentence would otherwise be ambiguous.
 - Use ONLY positive phrasing (never "no", "without", "avoid").
-- Plain prose only: no field name, no heading, no numbering, no angle bracket, no square bracket.
+- Plain prose only: no field name, no heading, no numbering, no timestamp, no angle bracket, no square bracket.
 - Never write "masterpiece", "best quality", "8k" or "ultra detailed".
-Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, in order.`;
+Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": ["...", "..."]} with exactly ${n} segments, in order.`;
 
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
   const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
@@ -1148,14 +1160,25 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
 
   // ── Relay scenario ──────────────────────────────────────────────────────────
 
-  // Pseudo-shot of a Relay segment: its text is the action, so the cut prompt functions
-  // alone decide the prompt's shape.
-  const relayShot = seg => ({ camera: "medium", lighting: "golden_hour", action: String(seg.prompt || "").trim(),
-                              emotion: "", extra: "", duration: seg.duration, subjects: [0] });
+  // Prompt of a Relay segment: the subjects defined once (subject_definitions), the
+  // segment's own action, then the look the whole sequence shares (`look`: {camera,
+  // lighting, sound, music}, each optional; `camera` is the framing only, the movement
+  // belongs to each segment). Nothing is added that the user did not write or approve:
+  // an empty field leaves its part out (no default light or camera).
+  function buildRelaySegmentPrompt(action, look, subjects, locDesc, duration, hasLast, styleId, onWarn) {
+    const subs = h3CutSubjects(subjects, locDesc), lk = look || {};
+    const sentence = v => { const x = String(v || "").trim(); return x && !/[.!?…]$/.test(x) ? x + "." : x; };
+    const camera = String(lk.camera || "").trim();
+    const body = [h3SceneLead(subs) + sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "",
+      styleTextFor(styleId)].filter(Boolean).join(" ");
+    return capH3Prompt(`${h3Alignment(!!hasLast, duration)}\n\n` + buildH3RefPrompt({
+      subjects: subs, summary: h3Summary(action), body, sound: lk.sound, music: lk.music
+    }), onWarn);
+  }
 
   // Legend of the stand-ins, built from h3CutSubjects, the function that numbers the
   // subjects in the rendered prompt, so the two never disagree. `subjects`: those of
-  // relayShot (the main character), as for the segment's cut prompt.
+  // the segment's prompt (the main character).
   function relaySubjectLegend(locDesc, subjects) {
     return h3CutSubjects(subjects || [], locDesc)
       .map((sub, i) => `  ${H3_TOKEN_STUB(i + 1)} = ${sub.kind === "environment" ? "the location" : "the main character"}${sub.desc ? `, ${sub.desc}` : ""}`)
@@ -1163,15 +1186,17 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
   }
 
   // Splits a scenario into at most `max` segment texts (Gemma may return one more or one
-  // less than `n`: what it wrote is kept). Throws when nothing usable came back.
+  // less than `n`: what it wrote is kept) and the shared look. Returns {segments, look};
+  // throws when no segment came back.
+  const NO_MUSIC_RE = /^(none|n\/a|no music|silence)\.?$/i;
   async function composeScenario(llm, text, n, locDesc, max, subjects) {
     const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects)), text);
-    const list = (Array.isArray(out.segments) ? out.segments : [])
-      .map(seg => h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(seg)))))
-      .filter(Boolean)
-      .slice(0, max);
-    if (!list.length) throw new Error("no segment returned");
-    return list;
+    const clean = v => h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(v))));
+    const segments = (Array.isArray(out.segments) ? out.segments : []).map(clean).filter(Boolean).slice(0, max);
+    if (!segments.length) throw new Error("no segment returned");
+    const music = clean(out.music);
+    return { segments, look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
+                               music: NO_MUSIC_RE.test(music) ? "" : music } };
   }
 
   const Prompts = {
@@ -1194,7 +1219,7 @@ Answer ONLY with JSON: {"segments": ["...", "..."]} with exactly ${n} entries, i
     isKrea2Workflow, briefEnrichSystem, enrichBrief, ENRICH_INSTRUCTIONS, setInstructionOverrides,
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage,
-    relayShot, relaySubjectLegend, composeScenario,
+    buildRelaySegmentPrompt, relaySubjectLegend, composeScenario,
   };
   if (typeof module === "object" && module.exports) module.exports = Prompts;
   else global.Prompts = Prompts;

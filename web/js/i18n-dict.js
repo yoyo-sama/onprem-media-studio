@@ -22,20 +22,10 @@ export const DICT = {
     es: "+ Nueva tarjeta",
     de: "+ Neue Karte",
   },
-  "2 to 6 key images: the video starts on the first and ends on the last; each pair of images becomes a MiniMax H3 segment from the first to the last frame, 5 to 15 seconds long. The brief is the motion prompt.": {
-    fr: "2 à 6 images clés : la vidéo part de la première et finit sur la dernière ; chaque paire d'images devient un segment MiniMax H3 de la première à la dernière frame, de 5 à 15 secondes. Le brief sert de prompt de mouvement.",
-    es: "De 2 a 6 imágenes clave: el vídeo empieza en la primera y termina en la última; cada par de imágenes se convierte en un segmento MiniMax H3 del primer al último fotograma, de 5 a 15 segundos. El brief es el prompt de movimiento.",
-    de: "2 bis 6 Schlüsselbilder: Das Video beginnt beim ersten und endet beim letzten; jedes Bildpaar wird zu einem MiniMax-H3-Segment vom ersten bis zum letzten Bild, 5 bis 15 Sekunden lang. Das Briefing ist der Bewegungs-Prompt.",
-  },
   "35 mm film": {
     fr: "Pellicule 35 mm",
     es: "Película de 35 mm",
     de: "35-mm-Film",
-  },
-  "A chain of short video segments instead of one long shot: each segment has its prompt and length, and consistency comes from the chaining. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.": {
-    fr: "Une chaîne de courts segments vidéo au lieu d'un seul long plan : chaque segment a son prompt et sa durée, et la cohérence vient de l'enchaînement. Liaison 🔗 : le segment reprend exactement la dernière frame du précédent. Liaison 🎞 : une coupe voulue, une nouvelle image de plan est composée sur les planches validées.",
-    es: "Una cadena de segmentos de vídeo cortos en lugar de un único plano largo: cada segmento tiene su prompt y su duración, y la coherencia viene del encadenamiento. Enlace 🔗: el segmento retoma exactamente el último fotograma del anterior. Enlace 🎞: un corte deliberado, se compone una nueva imagen de plano sobre las láminas aprobadas.",
-    de: "Eine Kette kurzer Videosegmente statt einer langen Einstellung: Jedes Segment hat seinen Prompt und seine Länge, die Kohärenz entsteht durch die Verkettung. Verbindung 🔗: Das Segment übernimmt exakt das letzte Bild des vorigen. Verbindung 🎞: ein bewusster Schnitt, ein neues Einstellungsbild wird auf den freigegebenen Bögen komponiert.",
   },
   "A new version is available ({from} → {to}). The image is rebuilt, then the studio restarts.": {
     fr: "Une nouvelle version est disponible ({from} → {to}). L'image est reconstruite, puis le studio redémarre.",
@@ -101,11 +91,6 @@ export const DICT = {
     fr: "Ajouter un tag (Entrée)",
     es: "Añadir una etiqueta (Intro)",
     de: "Tag hinzufügen (Enter)",
-  },
-  "Add at least 2 images to the sequence (files or gallery).": {
-    fr: "Ajoute au moins 2 images à la séquence (fichiers ou galerie).",
-    es: "Añade al menos 2 imágenes a la secuencia (archivos o galería).",
-    de: "Füge der Sequenz mindestens 2 Bilder hinzu (Dateien oder Galerie).",
   },
   "Add to the multi-image sequence": {
     fr: "Ajouter à la séquence multi-images",
@@ -1022,11 +1007,6 @@ export const DICT = {
     es: "Generar las imágenes",
     de: "Bilder generieren",
   },
-  "Generate the sequence": {
-    fr: "Générer la séquence",
-    es: "Generar la secuencia",
-    de: "Sequenz generieren",
-  },
   "Generate the sheet": {
     fr: "Générer la planche",
     es: "Generar la lámina",
@@ -1347,11 +1327,6 @@ export const DICT = {
     es: "Duración (s)",
     de: "Länge (s)",
   },
-  "Length per segment (s)": {
-    fr: "Durée par segment (s)",
-    es: "Duración por segmento (s)",
-    de: "Länge pro Segment (s)",
-  },
   "Light / dark theme": {
     fr: "Thème clair / sombre",
     es: "Tema claro / oscuro",
@@ -1477,11 +1452,6 @@ export const DICT = {
     es: "MiniMax H3 {engine} · {d} s/plano · {n} cortes",
     de: "MiniMax H3 {engine} · {d} s/Einst. · {n} Schnitte",
   },
-  "MiniMax H3 · first and last frames": {
-    fr: "MiniMax H3 · première et dernière images",
-    es: "MiniMax H3 · primera y última imagen",
-    de: "MiniMax H3 · erstes und letztes Bild",
-  },
   "MiniMax H3 · image to video": {
     fr: "MiniMax H3 · image vers vidéo",
     es: "MiniMax H3 · imagen a vídeo",
@@ -1571,11 +1541,6 @@ export const DICT = {
     fr: "Séquence multi-images",
     es: "Secuencia de varias imágenes",
     de: "Mehrbild-Sequenz",
-  },
-  "Multi-image sequence (FL2VA)": {
-    fr: "Séquence multi-images (FL2VA)",
-    es: "Secuencia de varias imágenes (FL2VA)",
-    de: "Mehrbild-Sequenz (FL2VA)",
   },
   "Narrative trailer (several shots)": {
     fr: "Bande-annonce narrative (plusieurs plans)",
@@ -2157,16 +2122,6 @@ export const DICT = {
     es: "Duración del segmento (s)",
     de: "Segmentlänge (s)",
   },
-  "Segment {n}/{total}": {
-    fr: "Segment {n}/{total}",
-    es: "Segmento {n}/{total}",
-    de: "Segment {n}/{total}",
-  },
-  "Segments": {
-    fr: "Segments",
-    es: "Segmentos",
-    de: "Segmente",
-  },
   "Select": {
     fr: "Sélectionner",
     es: "Seleccionar",
@@ -2322,15 +2277,15 @@ export const DICT = {
     es: "Tamaño",
     de: "Größe",
   },
-  "Skip the sheets, use my references only: the first two images of “Extra references” become the character and the setting": {
-    fr: "Ignorer les planches, utiliser seulement mes références : les deux premières images de « Références supplémentaires » deviennent le personnage et le décor",
-    es: "Omitir las láminas, usar solo mis referencias: las dos primeras imágenes de «Referencias adicionales» pasan a ser el personaje y el decorado",
-    de: "Bögen überspringen, nur meine Referenzen verwenden: Die ersten beiden Bilder unter „Zusätzliche Referenzen“ werden Figur und Schauplatz",
+  "Skip the sheets, use my references only: the first image of “Extra references” becomes the character, the others stay free references": {
+    fr: "Ignorer les planches, utiliser seulement mes références : la première image de « Références supplémentaires » devient le personnage, les autres restent des références libres",
+    es: "Omitir las láminas, usar solo mis referencias: la primera imagen de «Referencias adicionales» pasa a ser el personaje, las demás siguen siendo referencias libres",
+    de: "Bögen überspringen, nur meine Referenzen verwenden: Das erste Bild unter „Zusätzliche Referenzen“ wird die Figur, die anderen bleiben freie Referenzen",
   },
-  "Skipping the sheets needs at least 2 images in “Extra references”.": {
-    fr: "Pour ignorer les planches, il faut au moins 2 images dans « Références supplémentaires ».",
-    es: "Para omitir las láminas hacen falta al menos 2 imágenes en «Referencias adicionales».",
-    de: "Zum Überspringen der Bögen braucht es mindestens 2 Bilder unter „Zusätzliche Referenzen“.",
+  "Skipping the sheets needs at least one image in “Extra references”: the character.": {
+    fr: "Pour ignorer les planches, il faut au moins une image dans « Références supplémentaires » : le personnage.",
+    es: "Para omitir las láminas hace falta al menos una imagen en «Referencias adicionales»: el personaje.",
+    de: "Zum Überspringen der Bögen braucht es mindestens ein Bild unter „Zusätzliche Referenzen“: die Figur.",
   },
   "social image": {
     fr: "image réseaux sociaux",
@@ -2521,11 +2476,6 @@ export const DICT = {
     fr: "L'état sauvegardé du canvas était illisible : le canvas repart vide.",
     es: "El lienzo guardado no se ha podido leer: el lienzo empieza vacío.",
     de: "Die gespeicherte Leinwand war unlesbar: Die Leinwand startet leer.",
-  },
-  "The screenplay is split into as many consecutive shots, each written for the MiniMax H3 grammar, the subjects named by the number the studio gives them. Nothing renders: read and fix each segment before starting the chain.": {
-    fr: "Le scénario est découpé en autant de plans consécutifs, chacun écrit dans la grammaire MiniMax H3, les sujets nommés par le numéro que leur donne le studio. Rien ne part en rendu : relis et corrige chaque segment avant de lancer la chaîne.",
-    es: "El guion se divide en otros tantos planos consecutivos, cada uno escrito con la gramática de MiniMax H3, con los sujetos nombrados por el número que les da el estudio. No se renderiza nada: lee y corrige cada segmento antes de lanzar la cadena.",
-    de: "Das Drehbuch wird in ebenso viele aufeinanderfolgende Einstellungen aufgeteilt, jede in der MiniMax-H3-Grammatik geschrieben, die Motive mit der Nummer benannt, die das Studio ihnen gibt. Nichts wird gerendert: Lies und korrigiere jedes Segment, bevor du die Kette startest.",
   },
   "The sequence holds at most {max} images.": {
     fr: "La séquence contient {max} images au plus.",
@@ -2806,11 +2756,6 @@ export const DICT = {
     fr: "Ce que Gemma reçoit quand ✨ enrichit un prompt, une consigne par moteur, pour que le prompt suive le vocabulaire et la structure de chaque modèle. Ton texte s'applique au Studio et au Canvas.",
     es: "Lo que recibe Gemma cuando ✨ enriquece un prompt, una instrucción por motor, para que el prompt siga el vocabulario y la estructura de cada modelo. Tu texto se aplica al Studio y al Canvas.",
     de: "Was Gemma erhält, wenn ✨ einen Prompt anreichert, eine Anweisung pro Engine, damit der Prompt dem Vokabular und der Struktur jedes Modells folgt. Dein Text gilt für Studio und Canvas.",
-  },
-  "What happens in this segment.": {
-    fr: "Ce qui se passe dans ce segment.",
-    es: "Lo que pasa en este segmento.",
-    de: "Was in diesem Segment passiert.",
   },
   "When set, the video ends on it; left empty, the clip starts from the first image only.": {
     fr: "Si elle est fournie, la vidéo finit dessus ; laissée vide, le clip part seulement de la première image.",
@@ -3101,11 +3046,6 @@ export const DICT = {
     fr: "✕ Fermer",
     es: "✕ Cerrar",
     de: "✕ Schließen",
-  },
-  "✕ Remove": {
-    fr: "✕ Retirer",
-    es: "✕ Quitar",
-    de: "✕ Entfernen",
   },
   "✕ Remove the end image": {
     fr: "✕ Retirer l'image de fin",
@@ -3911,5 +3851,190 @@ export const DICT = {
     fr: "Force de {name} (-2 à 2)",
     es: "Intensidad de {name} (-2 a 2)",
     de: "Stärke von {name} (-2 bis 2)",
+  },
+  "Relay: your shared fields were kept ({n}), Gemma filled the empty ones.": {
+    fr: "Relay : tes champs communs sont gardés ({n}), Gemma a rempli ceux qui étaient vides.",
+    es: "Relay: tus campos comunes se conservan ({n}), Gemma ha rellenado los vacíos.",
+    de: "Relay: Deine gemeinsamen Felder bleiben erhalten ({n}), Gemma hat die leeren ausgefüllt.",
+  },
+  "Segment {n}/{total} · {from}–{to}": {
+    fr: "Segment {n}/{total} · {from}–{to}",
+    es: "Segmento {n}/{total} · {from}–{to}",
+    de: "Segment {n}/{total} · {from}–{to}",
+  },
+  "What happens in this segment, and its own camera motion.": {
+    fr: "Ce qui se passe dans ce segment, et son propre mouvement de caméra.",
+    es: "Lo que pasa en este segmento, y su propio movimiento de cámara.",
+    de: "Was in diesem Segment passiert, und seine eigene Kamerabewegung.",
+  },
+  "→ {n} segment(s): {list} s, {real} s rendered": {
+    fr: "→ {n} segment(s) : {list} s, {real} s rendues",
+    es: "→ {n} segmento(s): {list} s, {real} s renderizados",
+    de: "→ {n} Segment(e): {list} s, {real} s gerendert",
+  },
+  "A long video made of short segments rendered one after the other: the subjects and the look are given once, each segment holds one action. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.": {
+    fr: "Une vidéo longue faite de courts segments rendus l'un après l'autre : les sujets et l'ambiance sont donnés une seule fois, chaque segment porte une action. Lien 🔗 : le segment reprend exactement la dernière image du précédent. Lien 🎞 : une coupe voulue, une nouvelle image de plan est composée sur les planches validées.",
+    es: "Un vídeo largo hecho de segmentos cortos renderizados uno tras otro: los sujetos y el estilo se dan una sola vez, cada segmento lleva una acción. Enlace 🔗: el segmento retoma exactamente el último fotograma del anterior. Enlace 🎞: un corte deliberado, se compone una nueva imagen de plano sobre las fichas aprobadas.",
+    de: "Ein langes Video aus kurzen Segmenten, die nacheinander gerendert werden: Motive und Look werden einmal angegeben, jedes Segment trägt eine Handlung. 🔗-Verbindung: Das Segment übernimmt exakt das letzte Bild des vorherigen. 🎞-Verbindung: ein bewusster Schnitt, ein neues Einstellungsbild wird auf den freigegebenen Sheets komponiert.",
+  },
+  "Empty = no music. Each segment renders its own audio: a score starts again at every join.": {
+    fr: "Vide = pas de musique. Chaque segment rend son propre son : une musique repart à chaque raccord.",
+    es: "Vacío = sin música. Cada segmento renderiza su propio audio: una música vuelve a empezar en cada empalme.",
+    de: "Leer = keine Musik. Jedes Segment rendert seinen eigenen Ton: Eine Musik beginnt an jedem Übergang neu.",
+  },
+  "Framing": {
+    fr: "Cadrage",
+    es: "Encuadre",
+    de: "Bildausschnitt",
+  },
+  "Shot size and camera height of the whole sequence. Each segment gives its own camera movement.": {
+    fr: "Valeur de plan et hauteur de caméra de toute la séquence. Chaque segment donne son propre mouvement de caméra.",
+    es: "Tamaño de plano y altura de cámara de toda la secuencia. Cada segmento da su propio movimiento de cámara.",
+    de: "Einstellungsgröße und Kamerahöhe der ganzen Sequenz. Jedes Segment gibt seine eigene Kamerabewegung an.",
+  },
+  "Max per segment (s)": {
+    fr: "Max par segment (s)",
+    es: "Máx. por segmento (s)",
+    de: "Max. pro Segment (s)",
+  },
+  "Shared by every segment": {
+    fr: "Commun à tous les segments",
+    es: "Común a todos los segmentos",
+    de: "Allen Segmenten gemeinsam",
+  },
+  "Soundscape": {
+    fr: "Ambiance sonore",
+    es: "Ambiente sonoro",
+    de: "Klangkulisse",
+  },
+  "The light, the same in every segment.": {
+    fr: "La lumière, la même dans chaque segment.",
+    es: "La luz, la misma en cada segmento.",
+    de: "Das Licht, in jedem Segment gleich.",
+  },
+  "The natural sounds heard throughout.": {
+    fr: "Les sons naturels entendus tout du long.",
+    es: "Los sonidos naturales que se oyen de principio a fin.",
+    de: "Die natürlichen Geräusche, die durchgehend zu hören sind.",
+  },
+  "The screenplay is split into consecutive segments of at most the length chosen (10 s is the longest render qualified on the GB10), with one action each, and the shared fields below are filled where they are empty. Nothing renders: read and fix each segment before starting the chain.": {
+    fr: "Le scénario est découpé en segments consécutifs d'au plus la longueur choisie (10 s est le plus long rendu qualifié sur le GB10), avec une action chacun, et les champs communs ci-dessous sont remplis là où ils sont vides. Rien ne part en rendu : relis et corrige chaque segment avant de lancer la chaîne.",
+    es: "El guion se divide en segmentos consecutivos de como máximo la duración elegida (10 s es el render más largo cualificado en el GB10), con una acción cada uno, y los campos comunes de abajo se rellenan donde están vacíos. Nada se renderiza: relee y corrige cada segmento antes de lanzar la cadena.",
+    de: "Das Drehbuch wird in aufeinanderfolgende Segmente von höchstens der gewählten Länge aufgeteilt (10 s ist der längste auf dem GB10 qualifizierte Render), mit je einer Handlung, und die gemeinsamen Felder unten werden ausgefüllt, wo sie leer sind. Nichts wird gerendert: Lies und korrigiere jedes Segment, bevor du die Kette startest.",
+  },
+  "Total length (s)": {
+    fr: "Durée totale (s)",
+    es: "Duración total (s)",
+    de: "Gesamtlänge (s)",
+  },
+  "Written once and added to the prompt of every segment. An empty field is left out.": {
+    fr: "Écrit une seule fois et ajouté au prompt de chaque segment. Un champ vide est laissé de côté.",
+    es: "Se escribe una sola vez y se añade al prompt de cada segmento. Un campo vacío se omite.",
+    de: "Einmal geschrieben und dem Prompt jedes Segments hinzugefügt. Ein leeres Feld wird weggelassen.",
+  },
+  "Continue the chain from segment {n}": {
+    fr: "Continuer la chaîne au segment {n}",
+    es: "Continuar la cadena desde el segmento {n}",
+    de: "Kette ab Segment {n} fortsetzen",
+  },
+  "Every segment is ready. Render the whole chain again, with new seeds?": {
+    fr: "Tous les segments sont prêts. Refaire toute la chaîne, avec de nouvelles seeds ?",
+    es: "Todos los segmentos están listos. ¿Renderizar toda la cadena de nuevo, con semillas nuevas?",
+    de: "Alle Segmente sind fertig. Die ganze Kette mit neuen Seeds neu rendern?",
+  },
+  "Generate the chain again": {
+    fr: "Régénérer toute la chaîne",
+    es: "Generar la cadena de nuevo",
+    de: "Kette neu generieren",
+  },
+  "Relay: chain stopped after segment {n}. Continue it when you want.": {
+    fr: "Relay : chaîne arrêtée après le segment {n}. Reprends-la quand tu veux.",
+    es: "Relay: cadena detenida tras el segmento {n}. Continúala cuando quieras.",
+    de: "Relay: Kette nach Segment {n} angehalten. Setze sie fort, wann du willst.",
+  },
+  "Segment {n}: {status}": {
+    fr: "Segment {n} : {status}",
+    es: "Segmento {n}: {status}",
+    de: "Segment {n}: {status}",
+  },
+  "Shot image": {
+    fr: "Image du plan",
+    es: "Imagen del plano",
+    de: "Einstellungsbild",
+  },
+  "Stopping after this segment…": {
+    fr: "Arrêt après ce segment…",
+    es: "Parada tras este segmento…",
+    de: "Halt nach diesem Segment…",
+  },
+  "Transition frames": {
+    fr: "Images de transition",
+    es: "Fotogramas de transición",
+    de: "Übergangsbilder",
+  },
+  "about {n} min left": {
+    fr: "environ {n} min restantes",
+    es: "quedan unos {n} min",
+    de: "noch etwa {n} Min.",
+  },
+  "{n}/{total} segments ready · {done} s of {all} s": {
+    fr: "{n}/{total} segments prêts · {done} s sur {all} s",
+    es: "{n}/{total} segmentos listos · {done} s de {all} s",
+    de: "{n}/{total} Segmente fertig · {done} s von {all} s",
+  },
+  "✕ Remove the segment": {
+    fr: "✕ Supprimer le segment",
+    es: "✕ Quitar el segmento",
+    de: "✕ Segment entfernen",
+  },
+  "Segments overview": {
+    fr: "Vue d'ensemble des segments",
+    es: "Vista general de los segmentos",
+    de: "Segmentübersicht",
+  },
+  "⏹ Stop after this segment": {
+    fr: "⏹ Arrêter après ce segment",
+    es: "⏹ Detener tras este segmento",
+    de: "⏹ Nach diesem Segment anhalten",
+  },
+  "Add a start image to the long take (file or gallery).": {
+    fr: "Ajoute une image de départ au plan-séquence (fichier ou galerie).",
+    es: "Añade una imagen inicial al plano secuencia (archivo o galería).",
+    de: "Füge der Plansequenz ein Startbild hinzu (Datei oder Galerie).",
+  },
+  "Long take open: read the segments, then generate the chain.": {
+    fr: "Plan-séquence ouvert : relis les segments, puis génère la chaîne.",
+    es: "Plano secuencia abierto: relee los segmentos y luego genera la cadena.",
+    de: "Plansequenz geöffnet: Lies die Segmente, dann generiere die Kette.",
+  },
+  "Long take from images (Relay)": {
+    fr: "Plan-séquence à partir d'images (Relay)",
+    es: "Plano secuencia a partir de imágenes (Relay)",
+    de: "Plansequenz aus Bildern (Relay)",
+  },
+  "MiniMax H3 · chained segments": {
+    fr: "MiniMax H3 · segments enchaînés",
+    es: "MiniMax H3 · segmentos encadenados",
+    de: "MiniMax H3 · verkettete Segmente",
+  },
+  "1 to 6 images. The long take starts on the first; each next image is where a segment ends (first and last frame), and each segment picks up the previous one's last frame. With one image, one segment starts on it: add more in the long take. The brief is the screenplay and the first text of every segment. Nothing renders yet: the long take opens on its segments.": {
+    fr: "1 à 6 images. Le plan-séquence part de la première ; chaque image suivante est la fin d'un segment (première et dernière image), et chaque segment reprend la dernière image du précédent. Avec une seule image, un segment part d'elle : ajoutes-en d'autres dans le plan-séquence. Le brief est le scénario et le premier texte de chaque segment. Rien ne part encore en rendu : le plan-séquence s'ouvre sur ses segments.",
+    es: "De 1 a 6 imágenes. El plano secuencia empieza en la primera; cada imagen siguiente es donde termina un segmento (primer y último fotograma), y cada segmento retoma el último fotograma del anterior. Con una sola imagen, un segmento empieza en ella: añade más en el plano secuencia. El brief es el guion y el primer texto de cada segmento. Nada se renderiza todavía: el plano secuencia se abre en sus segmentos.",
+    de: "1 bis 6 Bilder. Die Plansequenz beginnt beim ersten; jedes weitere Bild ist das Ende eines Segments (erstes und letztes Bild), und jedes Segment übernimmt das letzte Bild des vorherigen. Mit nur einem Bild beginnt ein Segment darauf: Füge in der Plansequenz weitere hinzu. Das Briefing ist das Drehbuch und der erste Text jedes Segments. Noch wird nichts gerendert: Die Plansequenz öffnet sich mit ihren Segmenten.",
+  },
+  "Long take from images": {
+    fr: "Plan-séquence à partir d'images",
+    es: "Plano secuencia a partir de imágenes",
+    de: "Plansequenz aus Bildern",
+  },
+  "Open the long take": {
+    fr: "Ouvrir le plan-séquence",
+    es: "Abrir el plano secuencia",
+    de: "Plansequenz öffnen",
+  },
+  "{llm} is describing the start image… {time}": {
+    fr: "{llm} décrit l'image de départ… {time}",
+    es: "{llm} está describiendo la imagen inicial… {time}",
+    de: "{llm} beschreibt das Startbild… {time}",
   },
 };

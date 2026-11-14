@@ -308,9 +308,10 @@
             </div>
             <label id="skipSheetsWrap" class="check-row" hidden>
               <input type="checkbox" id="skipSheetsToggle">
-              <span>Skip the sheets, use my references only: the first two images of “Extra references” become the character and the setting</span>
+              <span>Skip the sheets, use my references only: the first image of “Extra references” becomes the character, the others stay free references</span>
             </label>
             <p class="model-notice" id="modelNotice" role="status" hidden></p>
+            <p class="model-notice" id="generateError" role="alert" hidden></p>
             <button class="primary-btn gb-go" id="generateBtn">Generate</button>
           </div>
 
@@ -333,8 +334,8 @@
           </details>
 
           <div class="form-stack" id="seqWrap" hidden>
-            <h3 class="section-title">Multi-image sequence (FL2VA)</h3>
-            <p class="hint">2 to 6 key images: the video starts on the first and ends on the last; each pair of images becomes a MiniMax H3 segment from the first to the last frame, 5 to 15 seconds long. The brief is the motion prompt.</p>
+            <h3 class="section-title">Long take from images</h3>
+            <p class="hint">1 to 6 images. The long take starts on the first; each next image is where a segment ends (first and last frame), and each segment picks up the previous one's last frame. With one image, one segment starts on it: add more in the long take. The brief is the screenplay and the first text of every segment. Nothing renders yet: the long take opens on its segments.</p>
             <input type="file" id="seqFiles" accept="image/*" multiple>
             <div class="seq-list" id="seqList"></div>
             <div class="hint" id="seqSummary"></div>
@@ -508,22 +509,36 @@
 
       <section id="studioRelay" class="studio-section" hidden>
         <h3 class="section-title">Long take (Relay)</h3>
-        <p class="hint">A chain of short video segments instead of one long shot: each segment has its prompt and length, and consistency comes from the chaining. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.</p>
+        <p class="hint">A long video made of short segments rendered one after the other: the subjects and the look are given once, each segment holds one action. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.</p>
         <div class="relay-composer" id="relayComposer">
           <label class="composer-lbl">Screenplay
             <textarea id="relayScenario" rows="4" spellcheck="false" placeholder="The whole screenplay of the sequence, written in one go."></textarea>
           </label>
           <div class="composer-row">
-            <label>Segments <input type="number" id="relaySegCount" min="1" max="10" value="6"></label>
-            <label>Length per segment (s) <input type="number" id="relaySegDur" min="5" max="15" value="5"></label>
+            <label>Total length (s) <input type="number" id="relayTotal" min="5" max="150" value="30"></label>
+            <label>Max per segment (s) <input type="number" id="relaySegDur" min="5" max="15" value="10"></label>
+            <span class="hint" id="relayPlan"></span>
             <button type="button" class="secondary-btn" id="relayComposeBtn" disabled>✨ Split the screenplay</button>
           </div>
-          <p class="hint">The screenplay is split into as many consecutive shots, each written for the MiniMax H3 grammar, the subjects named by the number the studio gives them. Nothing renders: read and fix each segment before starting the chain.</p>
+          <p class="hint">The screenplay is split into consecutive segments of at most the length chosen (10 s is the longest render qualified on the GB10), with one action each, and the shared fields below are filled where they are empty. Nothing renders: read and fix each segment before starting the chain.</p>
+        </div>
+        <div class="relay-composer relay-look" id="relayLook">
+          <span class="composer-lbl">Shared by every segment</span>
+          <p class="hint">Written once and added to the prompt of every segment. An empty field is left out.</p>
+          <label>Framing<textarea data-look="camera" rows="2" spellcheck="false" placeholder="Shot size and camera height of the whole sequence. Each segment gives its own camera movement."></textarea></label>
+          <label>Lighting<textarea data-look="lighting" rows="2" spellcheck="false" placeholder="The light, the same in every segment."></textarea></label>
+          <label>Soundscape<textarea data-look="sound" rows="2" spellcheck="false" placeholder="The natural sounds heard throughout."></textarea></label>
+          <label>Music<textarea data-look="music" rows="2" spellcheck="false" placeholder="Empty = no music. Each segment renders its own audio: a score starts again at every join."></textarea></label>
+        </div>
+        <div class="relay-board" id="relayBoard" hidden>
+          <div class="relay-summary hint" aria-live="polite"></div>
+          <div class="relay-strip" role="group" aria-label="Segments overview"></div>
         </div>
         <div class="relay-list" id="relayList"></div>
         <div class="relay-foot">
           <button type="button" class="secondary-btn" id="relayAddBtn">＋ Add a segment</button>
           <button type="button" class="primary-btn" id="relayRunBtn" disabled>Generate the chain</button>
+          <button type="button" class="secondary-btn" id="relayStopBtn" hidden>⏹ Stop after this segment</button>
           <button type="button" class="primary-btn" id="relayAssembleBtn" disabled>Assemble the sequence</button>
         </div>
         <div id="relayPlayer"></div>
