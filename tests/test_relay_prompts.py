@@ -29,10 +29,10 @@ def field(prompt: str, name: str) -> str:
 
 
 def test_shared_look_goes_into_every_field():
-    p = segment_prompt({"camera": "slow smooth tracking", "lighting": "Soft morning sunlight",
+    p = segment_prompt({"camera": "medium shots at eye level", "lighting": "Soft morning sunlight",
                         "sound": "Birdsong and footsteps", "music": "a gentle piano"})
     assert field(p, "detailed_description") == ("<Subject 1> is in <Subject 2>. <Subject 1> walks along the path; the camera "
-                                                "tracks backward. Soft morning sunlight. Camera: slow smooth tracking.")
+                                                "tracks backward. Soft morning sunlight. Framing: medium shots at eye level.")
     assert field(p, "overall_soundscape") == "Birdsong and footsteps"
     assert field(p, "non_diegetic_music") == "a gentle piano"
     assert field(p, "summary").endswith("<Subject 1> walks along the path; the camera tracks backward")
@@ -47,12 +47,12 @@ def test_empty_look_adds_no_light_or_camera():
 
 
 def test_compose_scenario_returns_segments_and_look():
-    out = run("""const answer = {camera: "slow tracking", lighting: "soft light, 8k", soundscape: "birdsong", music: "N/A",
+    out = run("""const answer = {framing: "medium shots", lighting: "soft light, 8k", soundscape: "birdsong", music: "N/A",
                    segments: ["SUBJECTREF1 walks.", "", "SUBJECTREF1 stops."]};
       const calls = [];
       const llm = async (system, user) => { calls.push(system); return answer; };
       const res = await P.composeScenario(llm, "a walk", 2, "a garden", 10, [{desc: "a woman"}]);
       console.log(JSON.stringify({res, system: calls[0]}));""")
     assert out["res"]["segments"] == ["<Subject 1> walks.", "<Subject 1> stops."]
-    assert out["res"]["look"] == {"camera": "slow tracking", "lighting": "soft light", "sound": "birdsong", "music": ""}
+    assert out["res"]["look"] == {"camera": "medium shots", "lighting": "soft light", "sound": "birdsong", "music": ""}
     assert "exactly 2 segments" in out["system"] and '"soundscape"' in out["system"]

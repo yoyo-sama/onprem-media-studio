@@ -14,14 +14,14 @@ const P = require(path.join(__dirname, "..", "..", "web", "js", "prompts.js"));
 // The long take's subject is its start image, described once (Gemma's vision in the Studio).
 const desc = "a woman in her thirties with short auburn hair, a green wool coat over a cream sweater, dark trousers and brown boots";
 const look = {
-  camera: "Medium shots at eye level, slow smooth tracking that follows the subject.",
+  camera: "Medium shots at eye level.",
   lighting: "Soft cool overcast daylight with gentle diffuse shadows, the same throughout.",
   sound: "A light breeze, distant birdsong and soft footsteps on gravel.",
   music: "",
 };
 const segments = [
   "<Subject 1> walks slowly along a gravel garden path, looking around calmly; the camera tracks backward in front of <Subject 1>.",
-  "<Subject 1> stops beside a low stone wall, turns toward the camera and smiles softly; slow push-in.",
+  "<Subject 1> slows to a stop on the gravel path, turns toward the camera and smiles softly; slow push-in.",
 ];
 const DURATION = 10;
 const compare = "the light, the subject and the ambience hold across the join at 10.1 s; no golden-hour light, no music";

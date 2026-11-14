@@ -3882,10 +3882,15 @@ export const DICT = {
     es: "Vacío = sin música. Cada segmento renderiza su propio audio: una música vuelve a empezar en cada empalme.",
     de: "Leer = keine Musik. Jedes Segment rendert seinen eigenen Ton: Eine Musik beginnt an jedem Übergang neu.",
   },
-  "Framing and camera movement of the whole sequence.": {
-    fr: "Cadrage et mouvement de caméra de toute la séquence.",
-    es: "Encuadre y movimiento de cámara de toda la secuencia.",
-    de: "Bildausschnitt und Kamerabewegung der ganzen Sequenz.",
+  "Framing": {
+    fr: "Cadrage",
+    es: "Encuadre",
+    de: "Bildausschnitt",
+  },
+  "Shot size and camera height of the whole sequence. Each segment gives its own camera movement.": {
+    fr: "Valeur de plan et hauteur de caméra de toute la séquence. Chaque segment donne son propre mouvement de caméra.",
+    es: "Tamaño de plano y altura de cámara de toda la secuencia. Cada segmento da su propio movimiento de cámara.",
+    de: "Einstellungsgröße und Kamerahöhe der ganzen Sequenz. Jedes Segment gibt seine eigene Kamerabewegung an.",
   },
   "Max per segment (s)": {
     fr: "Max par segment (s)",

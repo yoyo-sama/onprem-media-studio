@@ -197,10 +197,12 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
 50. **A chained segment's prompt carries no default look.** 1.4's Relay built each segment as a
     pseudo-shot with a fixed camera and light, so every segment ended with a golden-hour
     sentence and "steady framing with subtle natural movement" whatever its text said, and each
-    segment invented its own sounds. The look of a long take is now written once (camera,
+    segment invented its own sounds. The look of a long take is now written once (framing,
     lighting, soundscape, music: by the user, or by Gemma where the field is empty) and added to
     every segment; an empty field adds nothing. A score still restarts at every join, since each
-    segment renders its own audio. (2026-11-14)
+    segment renders its own audio. The shared field is the framing only: a shared camera
+    movement ("tracking that follows the subject") next to the segment's own ("slow push-in")
+    made the second segment of the first GB10 render jump between framings. (2026-11-14)
 
 ## 8. Front end (for the port in step 4)
 

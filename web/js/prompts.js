@@ -888,11 +888,12 @@ Answer ONLY with JSON: {"prompt": "..."}`;
 Split the user's scenario into exactly ${n} consecutive video segments of one single continuous sequence, in chronological order. Each segment is rendered on its own, a few seconds long, so it holds one simple action.
 Also write, once, the look that every segment shares, so that no segment repeats it.
 Rules:
-- "camera": one English sentence of 8 to 25 words, the camera direction of the whole sequence: framing and the way the camera moves.
+- "framing": one English sentence of 5 to 20 words, the framing of the whole sequence: shot size, camera height and lens. Never a camera movement: each segment gives its own.
 - "lighting": one English sentence of 8 to 25 words, the light of the whole sequence, the same in every segment.
 - "soundscape": one English sentence of 8 to 25 words, the natural sounds heard throughout the sequence.
 - "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.
-- Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
+- Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
+- A segment acts within the place already shown: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
 - The segments follow on from one another: segment k+1 starts exactly where segment k ended. Never restart the scene, never retell the whole scenario inside one segment, never jump elsewhere unless the scenario says so.
 - The recurring subjects are named by a marker, one bare word each. Copy each marker character for character wherever that subject acts:
 ${legend}
@@ -900,7 +901,7 @@ ${legend}
 - Use ONLY positive phrasing (never "no", "without", "avoid").
 - Plain prose only: no field name, no heading, no numbering, no timestamp, no angle bracket, no square bracket.
 - Never write "masterpiece", "best quality", "8k" or "ultra detailed".
-Answer ONLY with JSON: {"camera": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": ["...", "..."]} with exactly ${n} segments, in order.`;
+Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": ["...", "..."]} with exactly ${n} segments, in order.`;
 
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
   const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
@@ -1159,13 +1160,14 @@ Answer ONLY with JSON: {"camera": "...", "lighting": "...", "soundscape": "...",
 
   // Prompt of a Relay segment: the subjects defined once (subject_definitions), the
   // segment's own action, then the look the whole sequence shares (`look`: {camera,
-  // lighting, sound, music}, each optional). Nothing is added that the user did not write
-  // or approve: an empty field leaves its part out (no default light or camera).
+  // lighting, sound, music}, each optional; `camera` is the framing only, the movement
+  // belongs to each segment). Nothing is added that the user did not write or approve:
+  // an empty field leaves its part out (no default light or camera).
   function buildRelaySegmentPrompt(action, look, subjects, locDesc, duration, hasLast, styleId, onWarn) {
     const subs = h3CutSubjects(subjects, locDesc), lk = look || {};
     const sentence = v => { const x = String(v || "").trim(); return x && !/[.!?…]$/.test(x) ? x + "." : x; };
     const camera = String(lk.camera || "").trim();
-    const body = [h3SceneLead(subs) + sentence(action), sentence(lk.lighting), camera ? sentence(`Camera: ${camera}`) : "",
+    const body = [h3SceneLead(subs) + sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "",
       styleTextFor(styleId)].filter(Boolean).join(" ");
     return capH3Prompt(`${h3Alignment(!!hasLast, duration)}\n\n` + buildH3RefPrompt({
       subjects: subs, summary: h3Summary(action), body, sound: lk.sound, music: lk.music
@@ -1191,7 +1193,7 @@ Answer ONLY with JSON: {"camera": "...", "lighting": "...", "soundscape": "...",
     const segments = (Array.isArray(out.segments) ? out.segments : []).map(clean).filter(Boolean).slice(0, max);
     if (!segments.length) throw new Error("no segment returned");
     const music = clean(out.music);
-    return { segments, look: { camera: clean(out.camera), lighting: clean(out.lighting), sound: clean(out.soundscape),
+    return { segments, look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
                                music: NO_MUSIC_RE.test(music) ? "" : music } };
   }
 

@@ -151,8 +151,10 @@ ajoute une carte Import d'image reliée à elle.
   rendu H3 qualifié sur le GB10) : le studio découpe le total en aussi peu de segments que
   possible, aussi égaux que possible, et montre la place de chaque segment dans la séquence
   (`00:10.1–00:20.3`, d'après les durées que H3 rend vraiment). Gemma écrit, en plus d'une action
-  par segment, l'ambiance commune à toute la séquence (caméra, lumière, ambiance sonore,
-  musique) ; il ne remplit que les champs communs laissés vides. Le prompt de chaque segment
+  par segment, l'ambiance commune à toute la séquence (cadrage, lumière, ambiance sonore,
+  musique) ; il ne remplit que les champs communs laissés vides. Le cadrage commun ne porte que
+  la valeur de plan et la hauteur de caméra : chaque segment donne son propre mouvement de
+  caméra, un seul par segment. Le prompt de chaque segment
   reprend cette ambiance une fois, et rien d'autre : la 1.4 ajoutait à chaque segment une lumière
   « golden hour » et un « steady framing », quoi qu'il dise (LESSONS n°50). La première image de
   plan reprend aussi la lumière commune.

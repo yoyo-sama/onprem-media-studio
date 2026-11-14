@@ -41,7 +41,7 @@ const PROJECT = {
   relay: { scenario: "", segments: [{ prompt: "", duration: 5 }] },
 };
 const SPLIT = {
-  camera: "Slow smooth tracking at eye level, medium shots.", lighting: "Soft cool morning light with long shadows.",
+  framing: "Medium shots at eye level.", lighting: "Soft cool morning light with long shadows.",
   soundscape: "Birdsong, a light breeze and footsteps on gravel.", music: "none",
   segments: ["SUBJECTREF1 walks along the gravel path; the camera tracks backward.", "SUBJECTREF1 stops by a flowering tree and turns.",
              "SUBJECTREF1 looks toward the sun and smiles; slow push-in."],
@@ -125,7 +125,7 @@ const SPLIT = {
   check(chats.length === 1 && /exactly 3 segments/.test(chats[0].system), "the split did not ask Gemma for 3 segments");
   const look = await page.$$eval("#relayLook textarea", els => Object.fromEntries(els.map(e => [e.dataset.look, e.value])));
   check(look.lighting === "Warm candle light.", `the user's lighting was overwritten: "${look.lighting}"`);
-  check(look.camera === SPLIT.camera && look.sound === SPLIT.soundscape && look.music === "",
+  check(look.camera === SPLIT.framing && look.sound === SPLIT.soundscape && look.music === "",
     `empty shared fields not filled as expected: ${JSON.stringify(look)}`);
   const heads = await page.$$eval("#relayList .seg-head strong", els => els.map(e => e.textContent));
   check(JSON.stringify(heads) === JSON.stringify(["Segment 1/3 · 00:00.0–00:10.1", "Segment 2/3 · 00:10.1–00:20.3", "Segment 3/3 · 00:20.3–00:30.4"]),
@@ -157,7 +157,7 @@ const SPLIT = {
     const pr = j.params.prompt;
     check(j.params.duration === 10, `segment ${i + 1} duration ${j.params.duration}`);
     check(!/golden|steady framing/i.test(pr), `segment ${i + 1} prompt carries a default look`);
-    check(pr.includes("Warm candle light.") && pr.includes(`Camera: ${SPLIT.camera}`), `segment ${i + 1} prompt lacks the shared look`);
+    check(pr.includes("Warm candle light.") && pr.includes(`Framing: ${SPLIT.framing}`), `segment ${i + 1} prompt lacks the shared look`);
     check(pr.includes(`overall_soundscape:\n${SPLIT.soundscape}`) && pr.includes("non_diegetic_music:\nNone."), `segment ${i + 1} sound fields`);
     check(pr.split("Warm candle light.").length === 2, `segment ${i + 1} repeats the lighting`);
   }

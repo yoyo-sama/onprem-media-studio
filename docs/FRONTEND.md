@@ -146,8 +146,9 @@ to it.
   render qualified on the GB10): the studio cuts the total into as few segments as possible, as
   even as possible, and shows each segment's place in the sequence (`00:10.1–00:20.3`, from the
   durations H3 really renders). Gemma writes, besides one action per segment, the look the
-  whole sequence shares (camera, lighting, soundscape, music); it fills only the shared fields
-  left empty. Each segment's prompt takes that look once, and nothing else: 1.4 appended a
+  whole sequence shares (framing, lighting, soundscape, music); it fills only the shared fields
+  left empty. The shared framing is shot size and camera height only: each segment gives its
+  own camera movement, one per segment. Each segment's prompt takes that look once, and nothing else: 1.4 appended a
   golden-hour light and a "steady framing" to every segment whatever it said (LESSONS #50). The
   first shot image takes the shared lighting too.
 - The Relay has a production board: one tile per segment, as wide as its length, with its start
