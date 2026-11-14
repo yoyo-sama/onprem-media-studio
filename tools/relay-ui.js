@@ -9,7 +9,10 @@
 // carrying the shared look once and no default light or camera. The production board: one
 // tile per segment, its progress from the job events, a click goes to the segment and
 // submits nothing; after a regenerated segment the chain continues from the next one;
-// "Stop after this segment" ends the chain once the running segment is done.
+// "Stop after this segment" ends the chain once the running segment is done. A long take
+// from images opens the Relay alone without a job, its subject described by Gemma's
+// vision; its first segment runs from image 1 to image 2 (FL2VA), a segment added after
+// the end starts on the transition frames extracted then, and it resumes as saved.
 // With a folder, screenshots of the Relay at 1440 and 390 px, light and dark.
 // Exit 0 = all green, 1 = a check failed, 2 = the test could not run.
 "use strict";
@@ -70,7 +73,15 @@ const SPLIT = {
       return json({ id, status: "queued", progress: 0, outputs: [] }, 201);
     }
     if (p.startsWith("/api/jobs/")) { const id = p.split("/").pop(); return json(done.get(id) || { id, status: "running", progress: 0, outputs: [] }); }
-    if (p === "/api/llm/chat") { chats.push(JSON.parse(req.postData())); return json({ content: JSON.stringify(SPLIT) }); }
+    if (p === "/api/llm/chat") {
+      const body = JSON.parse(req.postData());
+      chats.push(body);
+      // Vision: the description of a long take's start image.
+      if (body.images?.length) return json({ content: JSON.stringify({ subject: "a woman in a green wool coat", appearance: "auburn bob",
+                                                                      materials: "", palette: "" }) });
+      return json({ content: JSON.stringify(SPLIT) });
+    }
+    if (p === "/api/inputs") return json({ ref: `inputs/up-${++n}.png` }, 201);
     if (p === "/api/loras") return json({ h3: [], krea2: [], qwen21: [], moss: [] });
     if (p === "/api/instructions") return json({});
     if (p === "/api/roles" || p === "/api/chats") return json([]);
@@ -220,6 +231,59 @@ const SPLIT = {
     await page.evaluate(() => document.getElementById("relayBoard").scrollIntoView({ block: "start" }));
     await page.screenshot({ path: path.join(SHOTS, "relay-board-390-light.png") });
   }
+
+  // ── Long take from images (the "sequence" pipeline) ──
+  // A fresh page: no saved project. Two images give one segment from the first to the second.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.reload({ waitUntil: "load" });
+  await page.click('.usecase[data-scenario="storyboard"]');
+  await page.selectOption("#pipelineSelect", "sequence");
+  check(await page.isHidden("#resumeProjectBtn"), "a resume button shows with no saved long take");
+  await page.setInputFiles("#seqFiles", [{ name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") },
+                                         { name: "end.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.fill("#brief", "She walks to the gate.");
+  before = jobs.length;
+  const chats0 = chats.length;
+  await page.click("#generateBtn");
+  await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
+  check(jobs.length === before, `opening the long take submitted ${jobs.length - before} job(s)`);
+  check(chats.length === chats0 + 1 && chats[chats0].images?.length === 1, "the start image was not described once by Gemma's vision");
+  const nav = await page.$$eval("#studioNav .studio-nav-btn", bs => bs.filter(b => !b.hidden).map(b => b.dataset.section));
+  check(JSON.stringify(nav) === JSON.stringify(["relay"]), `long take navigation: ${JSON.stringify(nav)}`);
+  check(await page.inputValue("#relayList .relay-seg textarea") === "She walks to the gate.", "the segment does not start with the brief");
+  check(await page.inputValue("#relayScenario") === "She walks to the gate.", "the screenplay is not the brief");
+  check(await page.isHidden("#relayList .seg-link"), "a long take offers a cut");
+  check(await page.isVisible("#relayList .relay-endframe img"), "the second image is not the segment's end image");
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
+  let lt = jobs.slice(before);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-i2v"]), `long take jobs: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  const clip = lt[0]?.params || {};
+  check(/^inputs\/up-\d+\.png$/.test(clip.image) && /^inputs\/up-\d+\.png$/.test(clip.last_image) && clip.image !== clip.last_image,
+    `long take images: ${clip.image} → ${clip.last_image}`);
+  check(clip.duration === 10 && /<Picture 2>/.test(clip.prompt) && /a woman in a green wool coat/.test(clip.prompt) && lt[0].origin === "relay",
+    `long take clip: ${JSON.stringify({ d: clip.duration, origin: lt[0]?.origin })}`);
+  // A segment added after the end: the previous one's transition frames come first.
+  await page.click("#relayAddBtn");
+  await page.fill('#relayList .relay-seg[data-seg="1"] textarea', "She opens the gate.");
+  await page.dispatchEvent('#relayList .relay-seg[data-seg="1"] textarea', "change");
+  check((await page.textContent("#relayRunBtn")).trim() === "Continue the chain from segment 2", `long take run button: "${await page.textContent("#relayRunBtn")}"`);
+  before = jobs.length;
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
+  lt = jobs.slice(before);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-i2v"]), `extending the long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  check(/^outputs\/job-\d+\.png$/.test(lt[1]?.params.image || ""), `segment 2 does not start on the last frame of segment 1: ${lt[1]?.params.image}`);
+  check(!("last_image" in (lt[1]?.params || {})), "segment 2 has an end image");
+  // Saved and resumed under its own pipeline.
+  await page.click("#studioExitBtn");
+  await page.waitForSelector("#resumeProjectBtn:not([hidden])", { timeout: 5000 });
+  await page.click("#resumeProjectBtn");
+  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 2);
+  check(await page.isVisible("#studioRelay"), "the resumed long take does not open on the Relay");
+  if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "longtake-1440-light.png") });
 
   check(!errs.length, `page errors: ${errs.join(" | ")}`);
   await browser.close();

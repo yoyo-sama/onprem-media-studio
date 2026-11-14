@@ -36,7 +36,7 @@ const SCENARIOS = {
   localization: { pipeline: "image2image",
     example: "Localized promotional poster variant for the Japanese market: keep the premium sci-fi brand identity, adapt background, wardrobe and typography cues to Tokyo night aesthetics." },
 };
-// The sequence brief is a MOTION prompt.
+// The long take's brief is its screenplay, and the first prompt of every segment.
 const MOTION_EXAMPLE = "Smooth cinematic camera transition between the key frames, consistent subject, style and lighting, natural motion.";
 let activeScenario = "campaign";
 
@@ -44,7 +44,7 @@ let activeScenario = "campaign";
 const GENERATE_LABELS = {
   text2image: L("Generate the images"), image2image: L("Generate the variants"),
   text2video: L("Generate the video"), image2video: L("Generate the video"),
-  sequence: L("Generate the sequence"), storyboard: L("Open the studio (step 1/3)"),
+  sequence: L("Open the long take"), storyboard: L("Open the studio (step 1/3)"),
   campaign: L("Start the campaign (posters + thumbnails + teaser)"),
 };
 function refreshGenerateLabel() {
@@ -221,7 +221,7 @@ const SEQ_MAX = 6;
 const seqImages = [];   // {name, ref | blob, dur}: dur = length of the segment that starts on it
 function addSeqImage(img) {
   if (seqImages.length >= SEQ_MAX) { notice(false, "The sequence holds at most {max} images.", { max: SEQ_MAX }); return false; }
-  seqImages.push({ ...img, dur: 5 });
+  seqImages.push({ ...img, dur: 10 });
   renderSeqList();
   return true;
 }
@@ -239,7 +239,8 @@ function renderSeqList() {
     name.textContent = `${i + 1}. ${item.name}`;
     const dur = document.createElement("div");
     dur.className = "seq-dur";
-    if (i < seqImages.length - 1) {
+    // The last image ends the long take, unless it is the only one (then it starts it).
+    if (i < seqImages.length - 1 || seqImages.length === 1) {
       const input = document.createElement("input");
       input.type = "number"; input.min = "5"; input.max = "15"; input.value = item.dur;
       txAria(input, "Segment length (s)");
@@ -264,10 +265,10 @@ function renderSeqList() {
   renderSeqSummary();
 }
 function renderSeqSummary() {
-  const segs = seqImages.length - 1;
-  if (segs < 1) { $("seqSummary").textContent = ""; return; }
-  const asked = seqImages.slice(0, -1).reduce((s, it) => s + it.dur, 0);
-  const real = seqImages.slice(0, -1).reduce((s, it) => s + P.h3RealDuration(it.dur), 0);
+  if (!seqImages.length) { $("seqSummary").textContent = ""; return; }
+  const starts = seqImages.length > 1 ? seqImages.slice(0, -1) : seqImages, segs = starts.length;
+  const asked = starts.reduce((s, it) => s + it.dur, 0);
+  const real = starts.reduce((s, it) => s + P.h3RealDuration(it.dur), 0);
   tx($("seqSummary"), "{n} segment(s), {asked} s asked, {real} s rendered (H3 frame grid).",
     { n: segs, asked, real: real.toFixed(2) });
 }
@@ -524,6 +525,7 @@ async function generate() {
   // the button says so, with the time spent.
   const busy = wf.pipeline === "storyboard" ? L("{llm} is writing the sheets and the shot list… {time}")
     : wf.pipeline === "reference2video" ? L("{llm} is preparing the director… {time}")
+    : wf.pipeline === "sequence" ? L("{llm} is describing the start image… {time}")
     : autoEnrich && wf.enrich !== "builtin" ? L("{llm} is enriching the brief… {time}") : null;
   const start = Date.now();
   const tick = () => {
@@ -541,7 +543,7 @@ async function generate() {
     else if (wf.pipeline === "reference2video") {
       if ($("skipSheetsToggle").checked) await D.r2vWithoutSheets(seed);
       else await D.startR2V(seed);
-    } else if (wf.pipeline === "sequence") await generateSequence(seed);
+    } else if (wf.pipeline === "sequence") await D.startLongTake(seed, seqImages.slice());
     else if (wf.pipeline === "campaign") generateCampaign(seed);
     else await generatePlain(wf, seed);
   } catch (err) { warn(err); }
@@ -570,15 +572,6 @@ async function generatePlain(wf, seed) {
   if (wf.id === "h3_i2v" && lastFile) last = await F.imageRef({ name: lastFile.name, blob: lastFile });
   G.runPlain(wf, { specs, origin: markets.length ? "markets" : "studio", ratio: $("ratioSelect").value,
     count, duration, loras, image, last, refs, seed, mode: $("mossModeSelect").value }).forEach(detach);
-}
-
-// Each pair of images becomes an H3 segment from the first to the last frame, then the
-// segments are joined.
-async function generateSequence(seed) {
-  if (seqImages.length < 2) throw new Error(t("Add at least 2 images to the sequence (files or gallery)."));
-  const items = seqImages.slice(), text = F.brief(), loras = F.formLoras();
-  const [refs, aspect] = await Promise.all([Promise.all(items.map(F.imageRef)), G.seqAspect(items[0])]);
-  detach(G.runSequence({ refs, durs: items.map(it => it.dur), text, loras, aspect, seed }));
 }
 
 // Posters, thumbnails and a social image (Krea 2), plus a vertical H3 teaser.
@@ -682,7 +675,7 @@ const inAssistant = () => document.body.dataset.mode === "assistant";
 
 // ── Project buttons (resume, cancel) ──────────────────────────────────────────
 function updateResumeButton() {
-  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && F.currentPipeline() === "storyboard");
+  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && F.currentPipeline() === D.savedPipeline());
   updateCancelButton();
 }
 function updateCancelButton() {

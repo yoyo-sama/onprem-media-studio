@@ -22,11 +22,6 @@ export const DICT = {
     es: "+ Nueva tarjeta",
     de: "+ Neue Karte",
   },
-  "2 to 6 key images: the video starts on the first and ends on the last; each pair of images becomes a MiniMax H3 segment from the first to the last frame, 5 to 15 seconds long. The brief is the motion prompt.": {
-    fr: "2 à 6 images clés : la vidéo part de la première et finit sur la dernière ; chaque paire d'images devient un segment MiniMax H3 de la première à la dernière frame, de 5 à 15 secondes. Le brief sert de prompt de mouvement.",
-    es: "De 2 a 6 imágenes clave: el vídeo empieza en la primera y termina en la última; cada par de imágenes se convierte en un segmento MiniMax H3 del primer al último fotograma, de 5 a 15 segundos. El brief es el prompt de movimiento.",
-    de: "2 bis 6 Schlüsselbilder: Das Video beginnt beim ersten und endet beim letzten; jedes Bildpaar wird zu einem MiniMax-H3-Segment vom ersten bis zum letzten Bild, 5 bis 15 Sekunden lang. Das Briefing ist der Bewegungs-Prompt.",
-  },
   "35 mm film": {
     fr: "Pellicule 35 mm",
     es: "Película de 35 mm",
@@ -96,11 +91,6 @@ export const DICT = {
     fr: "Ajouter un tag (Entrée)",
     es: "Añadir una etiqueta (Intro)",
     de: "Tag hinzufügen (Enter)",
-  },
-  "Add at least 2 images to the sequence (files or gallery).": {
-    fr: "Ajoute au moins 2 images à la séquence (fichiers ou galerie).",
-    es: "Añade al menos 2 imágenes a la secuencia (archivos o galería).",
-    de: "Füge der Sequenz mindestens 2 Bilder hinzu (Dateien oder Galerie).",
   },
   "Add to the multi-image sequence": {
     fr: "Ajouter à la séquence multi-images",
@@ -1017,11 +1007,6 @@ export const DICT = {
     es: "Generar las imágenes",
     de: "Bilder generieren",
   },
-  "Generate the sequence": {
-    fr: "Générer la séquence",
-    es: "Generar la secuencia",
-    de: "Sequenz generieren",
-  },
   "Generate the sheet": {
     fr: "Générer la planche",
     es: "Generar la lámina",
@@ -1467,11 +1452,6 @@ export const DICT = {
     es: "MiniMax H3 {engine} · {d} s/plano · {n} cortes",
     de: "MiniMax H3 {engine} · {d} s/Einst. · {n} Schnitte",
   },
-  "MiniMax H3 · first and last frames": {
-    fr: "MiniMax H3 · première et dernière images",
-    es: "MiniMax H3 · primera y última imagen",
-    de: "MiniMax H3 · erstes und letztes Bild",
-  },
   "MiniMax H3 · image to video": {
     fr: "MiniMax H3 · image vers vidéo",
     es: "MiniMax H3 · imagen a vídeo",
@@ -1561,11 +1541,6 @@ export const DICT = {
     fr: "Séquence multi-images",
     es: "Secuencia de varias imágenes",
     de: "Mehrbild-Sequenz",
-  },
-  "Multi-image sequence (FL2VA)": {
-    fr: "Séquence multi-images (FL2VA)",
-    es: "Secuencia de varias imágenes (FL2VA)",
-    de: "Mehrbild-Sequenz (FL2VA)",
   },
   "Narrative trailer (several shots)": {
     fr: "Bande-annonce narrative (plusieurs plans)",
@@ -4016,5 +3991,45 @@ export const DICT = {
     fr: "⏹ Arrêter après ce segment",
     es: "⏹ Detener tras este segmento",
     de: "⏹ Nach diesem Segment anhalten",
+  },
+  "Add a start image to the long take (file or gallery).": {
+    fr: "Ajoute une image de départ au plan-séquence (fichier ou galerie).",
+    es: "Añade una imagen inicial al plano secuencia (archivo o galería).",
+    de: "Füge der Plansequenz ein Startbild hinzu (Datei oder Galerie).",
+  },
+  "Long take open: read the segments, then generate the chain.": {
+    fr: "Plan-séquence ouvert : relis les segments, puis génère la chaîne.",
+    es: "Plano secuencia abierto: relee los segmentos y luego genera la cadena.",
+    de: "Plansequenz geöffnet: Lies die Segmente, dann generiere die Kette.",
+  },
+  "Long take from images (Relay)": {
+    fr: "Plan-séquence à partir d'images (Relay)",
+    es: "Plano secuencia a partir de imágenes (Relay)",
+    de: "Plansequenz aus Bildern (Relay)",
+  },
+  "MiniMax H3 · chained segments": {
+    fr: "MiniMax H3 · segments enchaînés",
+    es: "MiniMax H3 · segmentos encadenados",
+    de: "MiniMax H3 · verkettete Segmente",
+  },
+  "1 to 6 images. The long take starts on the first; each next image is where a segment ends (first and last frame), and each segment picks up the previous one's last frame. With one image, one segment starts on it: add more in the long take. The brief is the screenplay and the first text of every segment. Nothing renders yet: the long take opens on its segments.": {
+    fr: "1 à 6 images. Le plan-séquence part de la première ; chaque image suivante est la fin d'un segment (première et dernière image), et chaque segment reprend la dernière image du précédent. Avec une seule image, un segment part d'elle : ajoutes-en d'autres dans le plan-séquence. Le brief est le scénario et le premier texte de chaque segment. Rien ne part encore en rendu : le plan-séquence s'ouvre sur ses segments.",
+    es: "De 1 a 6 imágenes. El plano secuencia empieza en la primera; cada imagen siguiente es donde termina un segmento (primer y último fotograma), y cada segmento retoma el último fotograma del anterior. Con una sola imagen, un segmento empieza en ella: añade más en el plano secuencia. El brief es el guion y el primer texto de cada segmento. Nada se renderiza todavía: el plano secuencia se abre en sus segmentos.",
+    de: "1 bis 6 Bilder. Die Plansequenz beginnt beim ersten; jedes weitere Bild ist das Ende eines Segments (erstes und letztes Bild), und jedes Segment übernimmt das letzte Bild des vorherigen. Mit nur einem Bild beginnt ein Segment darauf: Füge in der Plansequenz weitere hinzu. Das Briefing ist das Drehbuch und der erste Text jedes Segments. Noch wird nichts gerendert: Die Plansequenz öffnet sich mit ihren Segmenten.",
+  },
+  "Long take from images": {
+    fr: "Plan-séquence à partir d'images",
+    es: "Plano secuencia a partir de imágenes",
+    de: "Plansequenz aus Bildern",
+  },
+  "Open the long take": {
+    fr: "Ouvrir le plan-séquence",
+    es: "Abrir el plano secuencia",
+    de: "Plansequenz öffnen",
+  },
+  "{llm} is describing the start image… {time}": {
+    fr: "{llm} décrit l'image de départ… {time}",
+    es: "{llm} está describiendo la imagen inicial… {time}",
+    de: "{llm} beschreibt das Startbild… {time}",
   },
 };

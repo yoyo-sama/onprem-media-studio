@@ -2,7 +2,8 @@
 // pipelines, in the full-screen studio. Sheets (Krea 2) → approval → shot images
 // (Qwen Image 2.1) → cuts (MiniMax H3 image to video) → animatic;
 // the Relay builds a long take out of chained segments. Reference to video stops after
-// the sheets: one H3 Ref2VA job.
+// the sheets: one H3 Ref2VA job. A long take from images (the "sequence" pipeline) opens
+// the Relay alone, on its start image: no sheet, no approval.
 //
 // Rules carried over from 1.4 (docs/LESSONS.md): nothing renders without a click; a
 // prompt the user edited is sent verbatim and never compiled over; the anchoring
@@ -38,7 +39,8 @@ export const sheetsGiven = () => givenSheets;
 
 export const active = () => !!d;
 const isR2V = () => d?.pipeline === "reference2video";
-const origin = () => (isR2V() ? "reference2video" : "storyboard");
+const isLongTake = () => d?.pipeline === "sequence";
+const origin = () => (isR2V() ? "reference2video" : isLongTake() ? "relay" : "storyboard");
 const out = (job, ext) => job.outputs.find(o => o.endsWith(ext)) || null;
 const sameSession = s => d === s;
 
@@ -73,7 +75,8 @@ function subjectLabel(i) {
   return head ? t("Subject {n} · {name}", { n: i + 1, name: head }) : t("Subject {n}", { n: i + 1 });
 }
 
-const anchorsReady = () => !!d && d.chars.every(c => activeVariant(c)?.status === "ready") && locVariant()?.status === "ready";
+// A long take has no sheets to approve: its start image is its anchor.
+const anchorsReady = () => isLongTake() || !!d && d.chars.every(c => activeVariant(c)?.status === "ready") && locVariant()?.status === "ready";
 const keyframesReady = () => !!d?.keyframes?.length && d.keyframes.every(k => k.status === "ready");
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
@@ -102,7 +105,7 @@ async function keyframeJob(subjectRefs, prompt, seed, label, onSubmitted) {
 
 // Cut: H3 image to video from a shot image (FL2VA with an end image).
 function cutJob(imageRef, prompt, duration, seed, label, lastRef, onSubmitted) {
-  return runJob("h3-i2v", { prompt, duration, seed, loras: [], image: imageRef, ...(lastRef ? { last_image: lastRef } : {}) }, {
+  return runJob("h3-i2v", { prompt, duration, seed, loras: d.loras || [], image: imageRef, ...(lastRef ? { last_image: lastRef } : {}) }, {
     origin: origin(), label, onSubmitted,
     sub: ["{info} · seed {seed}", { info: `${lastRef ? "FL2VA" : "I2VA"} · ${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`, seed }] });
 }
@@ -126,6 +129,8 @@ function selectSection(name) {
 function updateNavForPipeline() {
   for (const name of ["storyboard", "montage", "relay"]) navBtn(name).hidden = isR2V();
   navBtn("video").hidden = !isR2V();
+  for (const name of ["character", "location", "storyboard", "montage"]) if (isLongTake()) navBtn(name).hidden = true;
+  if (!isLongTake()) for (const name of ["character", "location"]) navBtn(name).hidden = false;
 }
 export function placeProjectActions() {
   const box = document.querySelector(".studio-project-actions");
@@ -174,8 +179,8 @@ export function refreshSessionBar() {
     tx(box.querySelector(".sb-state"), d.validated ? "Identity anchored" : "Identity to approve");
     box.classList.toggle("locked", d.validated);
   }
-  steps.hidden = !d;
-  if (!d) return;
+  steps.hidden = !d || isLongTake();
+  if (!d || isLongTake()) return;
   const names = isR2V() ? [L("Sheets"), L("Video")] : [L("Sheets"), L("Storyboard"), L("Montage")];
   const cur = !d.validated ? 1 : isR2V() ? 2 : keyframesReady() ? 3 : 2;
   steps.replaceChildren(...names.map((n, i) => {
@@ -236,13 +241,40 @@ function enterSession(s) {
   d = s;
   updateNavForPipeline();
   enterStudio();
-  selectSection("character");
+  selectSection(isLongTake() ? "relay" : "character");
   renderSheetMenu("char");
   renderSheetMenu("loc");
   if (!isR2V()) { renderRelay(); renderShotList(); }
   updateGate();
-  log("ok", "Studio open: no sheet is drawn yet. Generate each one from its description or a photo, or import a finished sheet.");
+  if (isLongTake()) log("ok", "Long take open: read the segments, then generate the chain.");
+  else log("ok", "Studio open: no sheet is drawn yet. Generate each one from its description or a photo, or import a finished sheet.");
   save();
+}
+
+// A long take from key images (`items`: {name, ref | blob, dur}): segment k starts where
+// segment k-1 ended (its last frame, as it is) and ends on image k+1 when there is one
+// (FL2VA); one image gives one segment, to add to. The subject is the first image,
+// described by Gemma's vision; every segment starts with the brief, which is also the
+// screenplay to split. The H3 LoRA stack of the form goes to every segment.
+export async function startLongTake(seed, items) {
+  if (!items.length) throw new Error(t("Add a start image to the long take (file or gallery)."));
+  const text = F.brief();
+  const refs = await Promise.all(items.map(F.imageRef));
+  const [desc] = await F.describeRefs([items[0]]);
+  const durs = (items.length > 1 ? items.slice(0, -1) : items).map(it => F.clampDuration(it.dur, RELAY_SEG_DEFAULT));
+  const s = {
+    pipeline: "sequence", wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value, style: "none", sheetTemplate: "auto",
+    loras: F.formLoras(), startImage: { ref: refs[0] },
+    chars: [newChar({ kind: "other", subject: desc || "" }, [imported({ ref: refs[0] })])], charIdx: 0,
+    locFields: {}, locVariants: [], locActive: 0, validated: true,
+    shots: [], keyframes: null, cutPlan: null, cuts: null, order: null, animatic: null,
+    relay: newRelay({ scenario: text, total: durs.reduce((a, b) => a + b, 0), segMax: Math.max(...durs),
+      segments: durs.map((duration, i) => ({ prompt: text, duration,
+        endImage: refs[i + 1] ? { ref: refs[i + 1], name: items[i + 1].name } : null })) }),
+  };
+  enterSession(s);
+  showRelayComposer();
+  renderRelay();
 }
 
 export async function startStoryboard(seed) {
@@ -1050,7 +1082,7 @@ const relayReady = () => !!d?.relay?.segments.length && d.relay.segments.every(s
 const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min(seg.transitionIdx || 0, seg.transitions.length - 1)] : null);
 
 function updateRelayButtons() {
-  const r = d?.relay, unlocked = anchorsReady() && !!d?.validated, busy = relayBusy();
+  const r = d?.relay, unlocked = isLongTake() || (anchorsReady() && !!d?.validated), busy = relayBusy();
   $("relayComposeBtn").disabled = !r || busy || !$("relayScenario").value.trim();
   document.querySelectorAll("#relayLook textarea").forEach(el => { el.disabled = !r || busy; });
   $("relayRunBtn").disabled = !unlocked || !relayReady() || busy;
@@ -1079,7 +1111,9 @@ async function composeRelay() {
   try {
     log("req", "Relay: splitting the screenplay into {n} segments with {llm}…", { n, llm: LLM });
     const { segments: list, look } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
-    r.segments = list.map((prompt, i) => newRelaySegment(prompt, durs[Math.min(i, n - 1)]));
+    // The end images stay with the segment of the same rank (a long take's key images).
+    const ends = r.segments.map(seg => seg.endImage);
+    r.segments = list.map((prompt, i) => ({ ...newRelaySegment(prompt, durs[Math.min(i, n - 1)]), endImage: ends[i] || null }));
     r.scenario = text;
     // The shared look fills only the fields left empty: what the user wrote stays.
     const kept = RELAY_LOOK_KEYS.filter(k => r.look[k].trim());
@@ -1152,7 +1186,9 @@ function renderRelay() {
     dur.value = seg.duration;
     dur.addEventListener("change", () => { seg.duration = F.clampDuration(dur.value, seg.duration); renderRelay(); save(); });
     const link = el.querySelector(".seg-link");
-    if (i === 0) { tx(link, "🎞 First segment"); link.disabled = true; }
+    // A long take has no sheets to compose a cut on: every link is continuous.
+    if (isLongTake()) link.hidden = true;
+    else if (i === 0) { tx(link, "🎞 First segment"); link.disabled = true; }
     else {
       tx(link, seg.mode === "continue" ? "🔗 Continuous (exact frame)" : "🎞 Cut (new shot image)");
       link.classList.toggle("active", seg.mode === "continue");
@@ -1346,13 +1382,19 @@ async function renderSegment(i) {
   const s = d, r = s.relay, seg = r.segments[i], total = r.segments.length, began = Date.now();
   seg.status = "pending";
   renderRelay();
-  const prev = i > 0 ? transitionOf(r.segments[i - 1]) : null;
+  // A segment added after the end of a rendered chain: the previous one, rendered as the
+  // last, has no transition frames yet; they are extracted now.
+  const before = i > 0 ? r.segments[i - 1] : null;
+  if (before?.ref && !before.transitions?.length && (seg.mode === "continue" || isLongTake())) await extractTransitions(before, i - 1, total);
+  if (!sameSession(s)) return;
+  const prev = before ? transitionOf(before) : null;
   // 🔗 without a transition frame: refused rather than a silent cut.
-  if (i > 0 && seg.mode === "continue" && !prev)
+  if (i > 0 && (seg.mode === "continue" || isLongTake()) && !prev)
     throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
   const subs = relaySubjects(), look = r.look;
   let start;
-  if (i > 0 && prev && seg.mode === "continue") {
+  if (isLongTake() && i === 0) start = s.startImage.ref;
+  else if (i > 0 && prev && (seg.mode === "continue" || isLongTake())) {
     log("req", "Relay, segment {n}/{total}: video (continuous link)…", { n: i + 1, total });
     start = prev.ref;
   } else {
@@ -1372,23 +1414,29 @@ async function renderSegment(i) {
     ["Relay · segment {n}/{total}", { n: i + 1, total }], last, sub));
   if (!sameSession(s)) return;
   seg.ref = out(job, ".mp4");
-  // Candidates: the clip's last frame (saved with it) and frames a little earlier.
   seg.transitions = null;
-  if (i < total - 1) {
-    log("req", "Relay, segment {n}/{total}: transition frames…", { n: i + 1, total });
-    const frames = await tracked(seg, "frames", sub => runJob("video-frames", { video: seg.ref, offsets: RELAY_TRANSITION_OFFSETS },
-      { origin: "relay", label: ["Relay · transition frames"], sub: ["{n} image(s)", { n: RELAY_TRANSITION_OFFSETS.length }], onSubmitted: sub }));
-    if (!sameSession(s)) return;
-    seg.transitions = [{ ref: out(job, ".png"), offset: 0 },
-      ...RELAY_TRANSITION_OFFSETS.map((offset, k) => ({ ref: frames.outputs[k], offset }))].filter(x => x.ref);
-    seg.transitionIdx = 0;
-  }
+  seg.lastFrame = out(job, ".png");
+  if (i < total - 1) await extractTransitions(seg, i, total);
+  if (!sameSession(s)) return;
   // Ready only once its transition frames are there: the next segment starts on them.
   seg.status = "ready";
   seg.renderSec = Math.round((Date.now() - began) / 1000);
   relayLive.delete(seg);
   renderRelay();
   save();
+}
+
+// Candidates of a segment's transition: the clip's last frame (saved with it) and frames
+// a little earlier (a CPU job).
+async function extractTransitions(seg, i, total) {
+  log("req", "Relay, segment {n}/{total}: transition frames…", { n: i + 1, total });
+  const frames = await tracked(seg, "frames", sub => runJob("video-frames", { video: seg.ref, offsets: RELAY_TRANSITION_OFFSETS },
+    { origin: "relay", label: ["Relay · transition frames"], sub: ["{n} image(s)", { n: RELAY_TRANSITION_OFFSETS.length }], onSubmitted: sub }));
+  // A segment saved before its last frame was kept has only the earlier candidates.
+  seg.transitions = [...(seg.lastFrame ? [{ ref: seg.lastFrame, offset: 0 }] : []),
+    ...RELAY_TRANSITION_OFFSETS.map((offset, k) => ({ ref: frames.outputs[k], offset }))].filter(x => x.ref);
+  seg.transitionIdx = 0;
+  relayLive.delete(seg);
 }
 
 function relayFail(err) {
@@ -1554,6 +1602,8 @@ function loadSaved() {
   return p;
 }
 export const hasSavedProject = () => !!savedCache;
+// Pipeline of the saved project: "Resume the project" shows under that pipeline only.
+export const savedPipeline = () => savedCache?.pipeline || null;
 
 const exists = ref => fetch(refURL(ref), { method: "HEAD" }).then(r => r.ok, () => false);
 
@@ -1562,9 +1612,11 @@ export async function restoreProject() {
   if (!p) { savedCache = null; hooks.onChange?.(); return; }
   reset();
   $("brief").value = p.brief || $("brief").value;
-  $("shotCount").value = p.n;
-  $("videoDuration").value = p.segDur;
-  $("holdDuration").value = p.holdDur;
+  if (p.pipeline !== "sequence") {
+    $("shotCount").value = p.n;
+    $("videoDuration").value = p.segDur;
+    $("holdDuration").value = p.holdDur;
+  }
   $("ratioSelect").value = p.ratio;
   if (P.STYLE_PACKS[p.style]) $("styleSelect").value = p.style;
   $("seed").value = String(p.seed);
@@ -1583,7 +1635,7 @@ export async function restoreProject() {
   const s = d;
   updateNavForPipeline();
   enterStudio();
-  selectSection("character");
+  selectSection(isLongTake() ? "relay" : "character");
   renderSheetMenu("char"); renderSheetMenu("loc");
   renderShotList();
   showRelayComposer();

@@ -60,7 +60,7 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
   code, never sent through Gemma.
 - **One Gemma instruction per model.** `Prompts.briefEnrichSystem(workflow)` routes the ✨
   buttons of both pages: Krea 2 → `KREA2_ENRICH_SYSTEM`, MiniMax H3 text/image to video and
-  the multi-image sequence → `H3_VIDEO_ENRICH_SYSTEM`, reference to video →
+  the long take from images → `H3_VIDEO_ENRICH_SYSTEM`, reference to video →
   `R2V_BRIEF_ENRICH_SYSTEM`, storyboard briefs and sheets → `SHEET_BRIEF_ENRICH_SYSTEM`,
   Qwen Image 2.1 and MOSS-Image → the generic `ENRICH_SYSTEM`. `<Subject N>` and `<imageN>` tokens cross Gemma
   as stand-ins and are checked on the way back.
@@ -125,7 +125,20 @@ to it.
   order, with the prompt of `buildH3RefPrompt` ([H3.md](H3.md)); a clip goes silent.
 - In the director, a reference-to-video clip plays under its button once rendered, and the
   button becomes "Regenerate the video": a new job on the same sheets, with the next seed.
-- The multi-image sequence uses the H3 video instruction (1.4 used LTX there).
+- The multi-image sequence of 1.4 became the long take from images (pipeline `sequence`,
+  workflow `h3_sequence`): 1 to 6 images, then "Open the long take" opens the director on the
+  Relay alone, with no sheet and no approval, and submits nothing. Gemma's vision describes the
+  first image (the subject of every segment); segment k ends on image k+1 (FL2VA) and each
+  segment starts on the previous one's last frame, as it is (1.4 started each pair on the key
+  image itself); one image gives one segment to add to. The brief is the screenplay and the first
+  text of every segment, so "Generate the chain" right away renders what 1.4's sequence did. No
+  cut link (no sheet to compose it on); the form's H3 LoRA stack goes to every segment; the
+  project is saved and resumed like a storyboard (one project at a time), under its own
+  pipeline. The assistant's `image_sequence` card still renders its pairs at once
+  (`G.runSequence`); its "Open in the Studio" opens the long take. ✨ uses the H3 video
+  instruction, as 1.4's sequence did with LTX.
+- A segment added after the end of a rendered chain gets the previous segment's transition
+  frames extracted first (the last segment of a chain has none).
 - The Relay legend names every subject of the shot (1.4 lost the main character).
 - The Relay is set by a total length and a maximum per segment (10 s by default, the longest H3
   render qualified on the GB10): the studio cuts the total into as few segments as possible, as
@@ -157,7 +170,7 @@ to it.
 | `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256 (or is the replaced one, for its engine only), the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
 | `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready; that step opens the studio without drawing a sheet, and a sheet's own click sends it with the first step's seed; a card's LoRA chips submit nothing and its Generate sends the ones turned on | Node, Playwright and its Chromium |
 | `node tools/lora-ui.js` | The LoRA stack headless with `/api` stubbed: in the Studio it shows for the workflows that take LoRAs only, takes up to 4 files (each once) with strengths clamped to -2…2, submits nothing while edited, Generate sends the rows on screen, another engine sends none and coming back finds the stack; the Models panel uploads into the chosen folder; a Canvas saved with the old `lora` property comes back as a one-row stack and its Generate sends the stack | Node, Playwright and its Chromium |
-| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera; the production board shows each segment's state and the progress sent by the job events, a tile click focuses its segment without a job, the chain continues from the first segment not ready, and "Stop after this segment" ends it there | Node, Playwright and its Chromium |
+| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera; the production board shows each segment's state and the progress sent by the job events, a tile click focuses its segment without a job, the chain continues from the first segment not ready, and "Stop after this segment" ends it there; the long take from two images opens the Relay alone without a job (one vision call), renders image 1 → image 2 as one FL2VA clip, a segment added after the end starts on segment 1's last frame, and the project resumes under its pipeline | Node, Playwright and its Chromium |
 
 Changing a prompt compiler or an instruction makes `parity-prompts.js` and `prompt-systems.js` fail; if the change is wanted,
 update the reference in the same commit and say why.

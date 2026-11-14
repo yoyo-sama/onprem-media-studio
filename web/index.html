@@ -333,8 +333,8 @@
           </details>
 
           <div class="form-stack" id="seqWrap" hidden>
-            <h3 class="section-title">Multi-image sequence (FL2VA)</h3>
-            <p class="hint">2 to 6 key images: the video starts on the first and ends on the last; each pair of images becomes a MiniMax H3 segment from the first to the last frame, 5 to 15 seconds long. The brief is the motion prompt.</p>
+            <h3 class="section-title">Long take from images</h3>
+            <p class="hint">1 to 6 images. The long take starts on the first; each next image is where a segment ends (first and last frame), and each segment picks up the previous one's last frame. With one image, one segment starts on it: add more in the long take. The brief is the screenplay and the first text of every segment. Nothing renders yet: the long take opens on its segments.</p>
             <input type="file" id="seqFiles" accept="image/*" multiple>
             <div class="seq-list" id="seqList"></div>
             <div class="hint" id="seqSummary"></div>
