@@ -67,6 +67,7 @@ const SPLIT = {
       const body = JSON.parse(req.postData()), id = `job-${++n}`;
       jobs.push(body);
       const outputs = body.pipeline === "h3-i2v" ? [`outputs/${id}.mp4`, `outputs/${id}.png`]
+        : body.pipeline === "video-concat" ? [`outputs/${id}.mp4`]
         : body.pipeline === "video-frames" ? body.params.offsets.map(o => `outputs/${id}-${o}.png`) : [`outputs/${id}.png`];
       if (hold) held.push({ id, status: "done", progress: 1, outputs });
       else done.set(id, { id, status: "done", progress: 1, outputs });
@@ -191,6 +192,14 @@ const SPLIT = {
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"));
   check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-i2v"]),
     `continuing from segment 3: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
+
+  // Assembling the long take matches the sound levels of its segments.
+  before = jobs.length;
+  await page.click("#relayAssembleBtn");
+  await page.waitForTimeout(300);
+  const join = jobs.slice(before).find(j => j.pipeline === "video-concat");
+  check(join && join.params.smooth_audio === true && join.params.clips.length === 3,
+    `assembly job: ${JSON.stringify(join && join.params)}`);
 
   // The whole chain again, held: progress on the tile, then "Stop after this segment".
   hold = true;

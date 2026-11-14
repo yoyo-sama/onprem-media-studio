@@ -40,7 +40,7 @@ request.
 | `studio/pipelines/h3_runtime.py` | FastVideo adapter: Spark recipes, NVFP4 profile, latent output and refine-pass overrides, cancellation |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | H3 latent upscaler (3D conv, LBH v1 checkpoint) and LoRA stack (exact merge into one side branch) |
 | `studio/pipelines/image_lora.py` | Style LoRA stacks of Krea 2 and Qwen Image 2.1 as unmerged PEFT adapters (MOSS-Image hooks them in `moss.py`): [IMAGE-ENGINES.md](IMAGE-ENGINES.md#style-loras) |
-| `studio/pipelines/montage.py` | CPU jobs on rendered files with ffmpeg and Pillow: `video-concat` (clips end to end), `image-grid` (contact sheet), `video-frames` (frames near a clip's end, for Relay transitions); they run on the CPU worker, never behind a render |
+| `studio/pipelines/montage.py` | CPU jobs on rendered files with ffmpeg and Pillow: `video-concat` (clips end to end; with `smooth_audio`, the clips of one continuous take get one sound level and a 25 ms fade at each join), `image-grid` (contact sheet), `video-frames` (frames near a clip's end, for Relay transitions); they run on the CPU worker, never behind a render |
 | `studio/pipelines/upscale.py` | `upscale-2x`: an image or a video twice as large through the SPAN network, on a gallery click: [IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2) |
 | `studio/pipelines/common.py` | Parameter checks, the pipelines kept in memory (least recently used freed when the next does not fit), step progress, PNG output |
 | `tools/qualify/` | Qualification cases built from the 1.4 prompt compilers, and their runner |

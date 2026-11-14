@@ -200,7 +200,10 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     segment invented its own sounds. The look of a long take is now written once (framing,
     lighting, soundscape, music: by the user, or by Gemma where the field is empty) and added to
     every segment; an empty field adds nothing. A score still restarts at every join, since each
-    segment renders its own audio. The shared field is the framing only: a shared camera
+    segment renders its own audio, and the ambience of two segments rendered on their own came
+    out 7 dB apart: assembling a Relay or a sequence now brings every segment to the median
+    level (`smooth_audio`). A true crossfade is not possible without moving the sound against
+    the image, since a clip has no sound past its end. The shared field is the framing only: a shared camera
     movement ("tracking that follows the subject") next to the segment's own ("slow push-in")
     made the second segment of the first GB10 render jump between framings. A segment's action
     must also stay within what its start frame shows: "stops beside a low stone wall", with no

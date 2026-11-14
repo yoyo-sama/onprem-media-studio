@@ -81,7 +81,7 @@ export function runSequence({ refs, durs, text, loras = [], aspect, seed, origin
   return Promise.all(clips).then(async jobs => {
     const videos = jobs.map(j => j.outputs.find(o => o.endsWith(".mp4")));
     // Submitted later: under the caller's tag, as the segments were.
-    const job = await withJobTag(tag, () => runJob("video-concat", { clips: videos }, { origin, label: ["Sequence · assembly"],
+    const job = await withJobTag(tag, () => runJob("video-concat", { clips: videos, smooth_audio: true }, { origin, label: ["Sequence · assembly"],
       sub: ["{n} segment(s)", { n }] }));
     log("ok", "Sequence assembled.");
     return job;

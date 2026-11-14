@@ -110,10 +110,11 @@ function cutJob(imageRef, prompt, duration, seed, label, lastRef, onSubmitted) {
     sub: ["{info} · seed {seed}", { info: `${lastRef ? "FL2VA" : "I2VA"} · ${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`, seed }] });
 }
 
-// Joins clips (one clip needs no job).
-async function concat(refs, label) {
+// Joins clips (one clip needs no job). `smooth`: the clips of one continuous take,
+// whose sound levels are matched at the joins.
+async function concat(refs, label, smooth = false) {
   if (refs.length === 1) return refs[0];
-  return out(await runJob("video-concat", { clips: refs }, { origin: origin(), label: [label], sub: ["{n} clip(s)", { n: refs.length }] }), ".mp4");
+  return out(await runJob("video-concat", { clips: refs, ...(smooth ? { smooth_audio: true } : {}) }, { origin: origin(), label: [label], sub: ["{n} clip(s)", { n: refs.length }] }), ".mp4");
 }
 
 // ── Studio shell ──────────────────────────────────────────────────────────────
@@ -1507,7 +1508,7 @@ async function assembleRelay() {
   $("relayAssembleBtn").disabled = true;
   try {
     log("req", "Relay: assembling the sequence…");
-    const ref = await concat(r.segments.map(seg => seg.ref), "Relay · sequence");
+    const ref = await concat(r.segments.map(seg => seg.ref), "Relay · sequence", true);
     if (!sameSession(s)) return;
     r.video = { ref };
     player($("relayPlayer"), ref);

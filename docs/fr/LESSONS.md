@@ -220,7 +220,10 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     est désormais écrite une seule fois (cadrage, lumière, ambiance sonore, musique : par
     l'utilisateur, ou par Gemma là où le champ est vide) et ajoutée à chaque segment ; un champ
     vide n'ajoute rien. Une musique repart toujours à chaque raccord, puisque chaque segment rend
-    son propre son. Le champ commun ne porte que le cadrage : un mouvement de caméra commun
+    son propre son, et l'ambiance de deux segments rendus séparément sortait à 7 dB d'écart :
+    l'assemblage d'un Relay ou d'une séquence ramène désormais chaque segment au niveau médian
+    (`smooth_audio`). Un vrai fondu enchaîné est impossible sans décaler le son par rapport à
+    l'image, puisqu'un clip n'a pas de son au-delà de sa fin. Le champ commun ne porte que le cadrage : un mouvement de caméra commun
     (« tracking qui suit le sujet ») à côté de celui du segment (« slow push-in ») faisait sauter
     le cadrage du deuxième segment au premier rendu sur le GB10. L'action d'un segment doit aussi
     rester dans ce que montre son image de départ : « s'arrête près d'un muret », sans muret dans
