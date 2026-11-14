@@ -228,7 +228,8 @@ Nothing below was asked to be done now; each waits for the owner.
 - FastH3 OmniRef r2v timing on promaxgb10-95c7 after the latest update (the load time gain of
   review item 10 shows on the next `engine:` log line of an H3 load; 153 s measured before).
 - r2v with clip and sound references (PR #11): never rendered on a GB10.
-- Character sheet from a photo (Qwen Image 2.1, PR #9): never qualified.
+- Character sheet from a photo (Qwen Image 2.1, PR #9; five-view prompt adapted from H3 Character
+  Sheet Designer since 2026-11-13): never qualified.
 - The SPAN upscaler weights are not yet downloaded on promaxgb10-95c7 (automatic on first use).
 
 **Known defects and leads**

@@ -564,7 +564,7 @@ async function sheetFromPhoto(file) {
     const photo = await F.imageRef({ name: file.name, blob: file });
     const lastGen = [...owner.variants].reverse().find(v => v.source === "generated");
     const seed = F.seedPlus(lastGen ? lastGen.seed : d.seed, 1);
-    const prompt = P.charsheetFromPhotoPrompt(charDesc(owner), P.charKindOf(owner.fields), d.sheetTemplate, d.style);
+    const prompt = P.charsheetFromPhotoPrompt(charDesc(owner), P.charKindOf(owner.fields), d.style);
     const variant = { seed, source: "generated", prompt, edited: false, status: "pending" };
     owner.variants.push(variant);
     owner.active = owner.variants.length - 1;

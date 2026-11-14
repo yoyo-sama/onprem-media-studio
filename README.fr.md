@@ -168,5 +168,8 @@ Ce dépôt ne contient aucun poids de modèle. Chaque modèle garde sa licence, 
   Apache-2.0.
 - **Gemma 4 26B-A4B** (GGUF de ggml-org) : Apache-2.0.
 
+La formulation de la planche du sujet dessinée depuis une photo est adaptée de H3 Character Sheet
+Designer (MIT), crédité dans [NOTICE](NOTICE).
+
 Maestro et WanGP ont inspiré l'approche ; aucun code n'en a été repris (leur licence est non
 commerciale).

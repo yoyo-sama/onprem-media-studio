@@ -44,7 +44,9 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
 - **The director's first step draws nothing** (decided on 2026-11-01, unlike 1.4). "Open the
   studio" has Gemma write the subject and setting descriptions and the shot list, then opens
   the studio with no sheet. Each sheet is generated on its own click: from its fields, from a
-  photo of the subject ("📷 Sheet from a photo", Qwen Image 2.1), or imported finished. A
+  photo of the subject ("📷 Sheet from a photo", Qwen Image 2.1: five views, two portraits and
+  three full-body views, in the image's own style; the sheet layout menu applies to sheets drawn
+  from the fields only), or imported finished. A
   sheet's first generation keeps the seed the automatic step used to give it, so its job is the
   one 1.4 sent.
 - **The brief belongs to the user.** Examples are placeholders, never values; an empty brief
