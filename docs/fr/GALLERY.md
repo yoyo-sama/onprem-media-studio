@@ -171,8 +171,9 @@ aucun port ; le studio le joint à `STUDIO_UPDATER_URL` (`http://updater:8091`) 
   d'un lancement sur l'hôte (même source de volume, aucune recréation parasite). Les valeurs
   utilisées par `compose.yaml` doivent vivre dans `.env`, pas dans des `export` du shell, pour
   survivre à une mise à jour.
-- **Dépôt privé.** `git ls-remote` et `git pull` tournent sans les gestionnaires d'identifiants de
-  l'hôte. Pour un dépôt privé, mets dans `.env` un jeton GitHub qui peut le lire
+- **Fork privé.** `git ls-remote` et `git pull` tournent sans les gestionnaires d'identifiants de
+  l'hôte. Le dépôt public n'a besoin d'aucun identifiant. Pour un fork privé, mets dans `.env` un jeton
+  GitHub qui peut le lire
   (`STUDIO_GIT_TOKEN=...`, un jeton *fine-grained* avec *Contents : read-only* sur ce dépôt), puis
   lance `docker compose up -d` une fois. Il est transmis à git par l'environnement, jamais sur une
   ligne de commande, et n'est jamais journalisé.

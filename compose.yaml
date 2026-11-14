@@ -45,7 +45,8 @@ services:
     restart: unless-stopped
     environment:
       UPDATER_BRANCH: ${STUDIO_UPDATE_BRANCH:-main}
-      # Private repository: a GitHub token that can read it, in .env. Never written here.
+      # Private fork only (the public repository needs none): a GitHub token that can read it, in .env.
+      # Never written here.
       UPDATER_GIT_TOKEN: ${STUDIO_GIT_TOKEN:-}
     volumes:
       - .:/repo
