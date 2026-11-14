@@ -3742,10 +3742,10 @@ export const DICT = {
     es: "📷 Hoja desde una foto",
     de: "📷 Blatt aus einem Foto",
   },
-  "Draws the sheet from a photo or a drawing of the subject, keeping its look (Qwen Image 2.1)": {
-    fr: "Dessine la planche à partir d'une photo ou d'un dessin du sujet, en gardant son apparence (Qwen Image 2.1)",
-    es: "Dibuja la hoja a partir de una foto o un dibujo del sujeto, conservando su aspecto (Qwen Image 2.1)",
-    de: "Zeichnet das Blatt aus einem Foto oder einer Zeichnung des Motivs und behält sein Aussehen (Qwen Image 2.1)",
+  "Draws a five-view sheet (two portraits, three full-body views) from a photo or a drawing of the subject, keeping its look and its style; the sheet layout menu does not apply (Qwen Image 2.1)": {
+    fr: "Dessine une planche à cinq vues (deux portraits, trois vues en pied) à partir d'une photo ou d'un dessin du sujet, en gardant son apparence et son style ; le menu de mise en page des planches ne s'applique pas (Qwen Image 2.1)",
+    es: "Dibuja una hoja de cinco vistas (dos retratos, tres vistas de cuerpo entero) a partir de una foto o un dibujo del sujeto, conservando su aspecto y su estilo; el menú de diseño de hojas no se aplica (Qwen Image 2.1)",
+    de: "Zeichnet ein Blatt mit fünf Ansichten (zwei Porträts, drei Ganzkörperansichten) aus einem Foto oder einer Zeichnung des Motivs und behält sein Aussehen und seinen Stil; das Menü für das Blattlayout gilt hier nicht (Qwen Image 2.1)",
   },
   "Use an image that is already a finished sheet, as it is": {
     fr: "Utilise telle quelle une image qui est déjà une planche terminée",

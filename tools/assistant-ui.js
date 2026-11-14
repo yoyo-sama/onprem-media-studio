@@ -297,15 +297,15 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   const jd = jobs[beforeDir];
   check(jobs.length === beforeDir + 1 && jd.pipeline === "qwen-image-2.1" && jd.params.images?.length === 1 && jd.params.width === 1920
     && jd.params.prompt.startsWith("Using <image1>"), "director sheet from a photo: " + JSON.stringify(jd));
-  // A subject sheet from a photo: one Qwen Image 2.1 edit of the photo, at the sheets' size.
+  // A subject sheet from a photo: one Qwen Image 2.1 edit of the photo into five views, at the sheets' size.
   await page.click('.rail-mode[data-mode="assistant"]');
   const before8 = jobs.length;
   await page.click('.chat-card[data-card="C8"] .primary-btn');
   await page.waitForSelector('.chat-card[data-card="C8"] .status.done');
   const j8 = jobs[before8];
   check(jobs.length === before8 + 1 && j8.pipeline === "qwen-image-2.1" && JSON.stringify(j8.params.images) === '["inputs/att.png"]'
-    && j8.params.width === 1920 && j8.params.height === 1088 && j8.params.prompt.startsWith("Using <image1> only as the identity reference: the person")
-    && j8.params.prompt.includes("a woman in a red coat"), "sheet from a photo: " + JSON.stringify(j8));
+    && j8.params.width === 1920 && j8.params.height === 1088 && j8.params.prompt.startsWith("Using <image1> as the only identity reference, create one character reference sheet of the person from <image1>: a woman in a red coat.")
+    && j8.params.prompt.includes("Five views side by side from left to right, each appearing exactly once"), "sheet from a photo: " + JSON.stringify(j8));
   // Reference to video: once rendered, the clip plays under the button, which becomes
   // "Regenerate the video" and starts one new job with the next seed.
   await page.click('.rail-mode[data-mode="studio"]');

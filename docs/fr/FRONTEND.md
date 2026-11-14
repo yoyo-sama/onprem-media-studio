@@ -43,8 +43,10 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
 - **La première étape du réalisateur ne dessine rien** (décidé le 2026-11-01, contrairement à la
   1.4). « Entrer dans le studio » fait écrire par Gemma les descriptions du sujet et du décor et
   la liste de plans, puis ouvre le studio sans planche. Chaque planche part sur son propre clic :
-  depuis ses champs, depuis une photo du sujet (« 📷 Planche depuis une photo », Qwen Image 2.1),
-  ou importée terminée. La première génération d'une planche garde la seed que l'étape
+  depuis ses champs, depuis une photo du sujet (« 📷 Planche depuis une photo », Qwen Image 2.1 :
+  cinq vues, deux portraits et trois vues en pied, dans le style de l'image ; le menu de mise en
+  page des planches ne vaut que pour les planches dessinées depuis les champs), ou importée
+  terminée. La première génération d'une planche garde la seed que l'étape
   automatique lui donnait : son job est celui qu'envoyait la 1.4.
 - **Le brief n'appartient qu'à l'utilisateur.** Les exemples sont des placeholders, jamais des
   valeurs ; un brief vide ne lance rien.
