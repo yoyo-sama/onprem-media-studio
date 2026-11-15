@@ -141,14 +141,21 @@ to it.
   segment starts on the previous one's last frame, as it is (1.4 started each pair on the key
   image itself); one image gives one segment to add to. The brief is the screenplay and the first
   text of every segment, so "Generate the chain" right away renders what 1.4's sequence did. From
-  one picture there is no cut link (nothing to compose a new shot on); from a sheet, a segment's
-  link switches to "🎞 Cut (new shot from the sheet)": the segment starts on a new Qwen shot
-  image composed from the sheet (seed + 401 + its index), not on the previous frame, so the
-  character can leave the frame and come back in another shot (LESSONS #51); the form's H3 LoRA stack goes to every segment; the
+  segment 2 on, a link can be "🎞 Cut (new shot from the references)", as in the director's
+  Relay (below); the form's H3 LoRA stack goes to every segment; the
   project is saved and resumed like a storyboard (one project at a time), under its own
   pipeline. The assistant's `image_sequence` card still renders its pairs at once
   (`G.runSequence`); its "Open in the Studio" opens the long take. ✨ uses the H3 video
   instruction, as 1.4's sequence did with LTX.
+- A Relay cut (🎞, from segment 2 on, in the director's Relay and in a long take) is one H3
+  Ref2VA clip (`h3-r2v`) with no start image: the references are the sheets of the first two
+  subjects with one (the first is the main character, a further human one a character, a
+  non-human one a reference), then the setting: its sheet, or else the previous segment's last
+  frame (a long take has no setting sheet). H3 keeps them in view for the whole clip, so a
+  subject who left the frame comes back as itself; the prompt is the six-field block
+  (`buildRelayCutPrompt`) with the shared look. A cut takes no end image (its button is hidden).
+  Continuous segments still start on the previous frame, and their prompt now names the first
+  two subjects. LESSONS #51.
 - A segment added after the end of a rendered chain gets the previous segment's transition
   frames extracted first (the last segment of a chain has none).
 - The Relay legend names every subject of the shot (1.4 lost the main character).
@@ -186,7 +193,7 @@ to it.
 | `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256 (or is the replaced one, for its engine only), the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
 | `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready; that step opens the studio without drawing a sheet, and a sheet's own click sends it with the first step's seed; a card's LoRA chips submit nothing and its Generate sends the ones turned on | Node, Playwright and its Chromium |
 | `node tools/lora-ui.js` | The LoRA stack headless with `/api` stubbed: in the Studio it shows for the workflows that take LoRAs only, takes up to 4 files (each once) with strengths clamped to -2…2, submits nothing while edited, Generate sends the rows on screen, another engine sends none and coming back finds the stack; the Models panel uploads into the chosen folder; a Canvas saved with the old `lora` property comes back as a one-row stack and its Generate sends the stack | Node, Playwright and its Chromium |
-| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera; the production board shows each segment's state and the progress sent by the job events, a tile click focuses its segment without a job, the chain continues from the first segment not ready, and "Stop after this segment" ends it there; the long take from two images opens the Relay alone without a job (one vision call), renders image 1 → image 2 as one FL2VA clip, a segment added after the end starts on segment 1's last frame, and the project resumes under its pipeline; the cards follow the plan (empty cards added and removed, written ones kept, the chain waits for empty ones); a long take from a reference sheet renders a Qwen shot image from the sheet then the clip on it, a cut segment composes its own shot from the sheet (never from the previous frame), and switching its start or a link submits nothing; a long take from one picture offers no cut | Node, Playwright and its Chromium |
+| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera; the production board shows each segment's state and the progress sent by the job events, a tile click focuses its segment without a job, the chain continues from the first segment not ready, and "Stop after this segment" ends it there; the long take from two images opens the Relay alone without a job (one vision call), renders image 1 → image 2 as one FL2VA clip, a segment added after the end starts on segment 1's last frame, and the project resumes under its pipeline; the cards follow the plan (empty cards added and removed, written ones kept, the chain waits for empty ones); a long take from a reference sheet renders a Qwen shot image from the sheet then the clip on it, a cut in the director's Relay or in a long take is one `h3-r2v` job on the sheets and the setting (sheet, or the previous last frame) with no start image, and switching its start or a link submits nothing | Node, Playwright and its Chromium |
 
 Changing a prompt compiler or an instruction makes `parity-prompts.js` and `prompt-systems.js` fail; if the change is wanted,
 update the reference in the same commit and say why.

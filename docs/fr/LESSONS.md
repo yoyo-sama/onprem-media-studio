@@ -249,8 +249,15 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     quelle » et « un plan composé à partir de la planche » (sans rien lancer). Un plan-séquence
     n'enchaîne que sur la dernière image : un personnage qui sort du champ ne peut donc pas
     revenir identique, le segment suivant part d'une image vide et H3 n'a que le texte pour le
-    redessiner. À partir d'une planche, un segment peut désormais couper : il part d'un nouveau
-    plan composé à partir de la planche, comme le segment 1. (2026-11-15)
+    redessiner. Une coupe qui recomposait une image de plan puis passait en i2v ne tenait pas
+    non plus le visage (il dérivait pendant un travelling avant), et les coupes du Relay
+    recomposaient sur l'image précédente, ce qui faisait traverser la dérive. Sur le GB10, la
+    meilleure coupe a été H3 Ref2VA sur la planche du personnage plus une image du lieu : le
+    visage est resté celui de la planche pendant tout le clip, et la lumière et le jardin
+    raccordaient avec le segment précédent. Les coupes du Relay sont désormais en Ref2VA sur les
+    planches des sujets et le décor (sa planche, ou la dernière image précédente). Les segments
+    continus ne voient toujours que leur image de départ, et c'est là que la dérive naît.
+    (2026-11-15)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

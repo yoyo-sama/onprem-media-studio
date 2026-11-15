@@ -1927,6 +1927,16 @@ export const DICT = {
     es: "Relay · fotogramas de transición",
     de: "Relay · Übergangsbilder",
   },
+  "Relay · segment {n}/{total}": {
+    fr: "Relay · segment {n}/{total}",
+    es: "Relay · segmento {n}/{total}",
+    de: "Relay · Segment {n}/{total}",
+  },
+  "Relay, segment {n}/{total}: video from the references (cut)…": {
+    fr: "Relay, segment {n}/{total} : vidéo à partir des références (coupe)…",
+    es: "Relay, segmento {n}/{total}: vídeo a partir de las referencias (corte)…",
+    de: "Relay, Segment {n}/{total}: Video aus den Referenzen (Schnitt)…",
+  },
   "Relay, segment {n}/{total}: shot image (cut)…": {
     fr: "Relay, segment {n}/{total} : image du plan (coupe)…",
     es: "Relay, segmento {n}/{total}: imagen del plano (corte)…",
@@ -3112,15 +3122,10 @@ export const DICT = {
     es: "＋ Añadir un segmento",
     de: "＋ Segment hinzufügen",
   },
-  "🎞 Cut (new shot image)": {
-    fr: "🎞 Coupe (nouvelle image de plan)",
-    es: "🎞 Corte (nueva imagen de plano)",
-    de: "🎞 Schnitt (neues Einstellungsbild)",
-  },
-  "🎞 Cut (new shot from the sheet)": {
-    fr: "🎞 Coupe (nouveau plan composé à partir de la planche)",
-    es: "🎞 Corte (nuevo plano compuesto a partir de la hoja)",
-    de: "🎞 Schnitt (neue, aus dem Sheet komponierte Einstellung)",
+  "🎞 Cut (new shot from the references)": {
+    fr: "🎞 Coupe (nouveau plan à partir des références)",
+    es: "🎞 Corte (nuevo plano a partir de las referencias)",
+    de: "🎞 Schnitt (neue Einstellung aus den Referenzen)",
   },
   "🎞 First segment": {
     fr: "🎞 Premier segment",
@@ -3877,10 +3882,10 @@ export const DICT = {
     es: "→ {n} segmento(s): {list} s, {real} s renderizados",
     de: "→ {n} Segment(e): {list} s, {real} s gerendert",
   },
-  "A long video made of short segments rendered one after the other: the subjects and the look are given once, each segment holds one action. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot image is composed on the approved sheets.": {
-    fr: "Une vidéo longue faite de courts segments rendus l'un après l'autre : les sujets et l'ambiance sont donnés une seule fois, chaque segment porte une action. Lien 🔗 : le segment reprend exactement la dernière image du précédent. Lien 🎞 : une coupe voulue, une nouvelle image de plan est composée sur les planches validées.",
-    es: "Un vídeo largo hecho de segmentos cortos renderizados uno tras otro: los sujetos y el estilo se dan una sola vez, cada segmento lleva una acción. Enlace 🔗: el segmento retoma exactamente el último fotograma del anterior. Enlace 🎞: un corte deliberado, se compone una nueva imagen de plano sobre las fichas aprobadas.",
-    de: "Ein langes Video aus kurzen Segmenten, die nacheinander gerendert werden: Motive und Look werden einmal angegeben, jedes Segment trägt eine Handlung. 🔗-Verbindung: Das Segment übernimmt exakt das letzte Bild des vorherigen. 🎞-Verbindung: ein bewusster Schnitt, ein neues Einstellungsbild wird auf den freigegebenen Sheets komponiert.",
+  "A long video made of short segments rendered one after the other: the subjects and the look are given once, each segment holds one action. 🔗 link: the segment picks up the previous one's last frame exactly. 🎞 link: a deliberate cut, a new shot rendered from the references (the subjects' sheets and the setting, or else the previous segment's last frame), so a subject who left the frame comes back as itself.": {
+    fr: "Une vidéo longue faite de courts segments rendus l'un après l'autre : les sujets et l'ambiance sont donnés une seule fois, chaque segment porte une action. Lien 🔗 : le segment reprend exactement la dernière image du précédent. Lien 🎞 : une coupe voulue, un nouveau plan rendu à partir des références (les planches des sujets et le décor, ou à défaut la dernière image du segment précédent), si bien qu'un sujet sorti du champ revient identique.",
+    es: "Un vídeo largo hecho de segmentos cortos renderizados uno tras otro: los sujetos y el estilo se dan una sola vez, cada segmento lleva una acción. Enlace 🔗: el segmento retoma exactamente el último fotograma del anterior. Enlace 🎞: un corte deliberado, un nuevo plano renderizado a partir de las referencias (las fichas de los sujetos y el decorado, o si no el último fotograma del segmento anterior), así un sujeto que salió del cuadro vuelve idéntico.",
+    de: "Ein langes Video aus kurzen Segmenten, die nacheinander gerendert werden: Motive und Look werden einmal angegeben, jedes Segment trägt eine Handlung. 🔗-Verbindung: Das Segment übernimmt exakt das letzte Bild des vorherigen. 🎞-Verbindung: ein bewusster Schnitt, eine neue Einstellung aus den Referenzen gerendert (den Sheets der Motive und dem Schauplatz, sonst dem letzten Bild des vorherigen Segments), sodass ein Motiv, das das Bild verlassen hat, unverändert zurückkommt.",
   },
   "Empty = no music. Each segment renders its own audio: a score starts again at every join.": {
     fr: "Vide = pas de musique. Chaque segment rend son propre son : une musique repart à chaque raccord.",

@@ -226,9 +226,14 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     in the sheet's style, at a format chosen on the card, and the card can switch between "the
     image as it is" and "a shot composed from the sheet" (it starts nothing). A long take only
     chains on the last frame, so a character who leaves the frame cannot come back as herself:
-    the next segment starts on an empty frame and H3 has only the text to redraw her. From a
-    sheet, a segment can now cut: it starts on a new shot composed from the sheet, the same way
-    as segment 1. (2026-11-15)
+    the next segment starts on an empty frame and H3 has only the text to redraw her. A cut that
+    recomposed a shot image then ran i2v did not hold the face either (it drifted during a
+    push-in), and the Relay's cuts recomposed on the previous frame, carrying the drift across.
+    On the GB10 the best cut was H3 Ref2VA on the character sheet plus an image of the place:
+    the face stayed the sheet's for the whole clip and the light and garden matched the previous
+    segment. Relay cuts are now Ref2VA on the subjects' sheets and the setting (its sheet, or
+    the previous last frame). Continuous segments still see only their start frame, which is
+    where the drift is born. (2026-11-15)
 
 ## 8. Front end (for the port in step 4)
 

@@ -1213,6 +1213,20 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     }), onWarn);
   }
 
+  // Prompt of a Relay cut rendered by Ref2VA: the six-field block on the references
+  // themselves (`refs`: [{kind: "character" | "reference" | "environment", desc}], in
+  // the order sent: subjects first, then the setting), so H3 keeps every sheet in view
+  // for the whole clip; the shared look as in buildRelaySegmentPrompt.
+  function buildRelayCutPrompt(action, look, refs, styleId, onWarn) {
+    const lk = look || {}, all = h3AssignRefs(refs.map(x => ({ media: "image", kind: x.kind, desc: x.desc })));
+    const sentence = v => { const x = String(v || "").trim(); return x && !/[.!?…]$/.test(x) ? x + "." : x; };
+    const camera = String(lk.camera || "").trim();
+    const text = [sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "", styleTextFor(styleId)]
+      .filter(Boolean).join(" ");
+    return capH3Prompt(buildH3RefPrompt({ subjects: all, summary: h3Summary(action), body: h3RefBody(all, text),
+      sound: lk.sound, music: lk.music }), onWarn);
+  }
+
   // Legend of the stand-ins, built from h3CutSubjects, the function that numbers the
   // subjects in the rendered prompt, so the two never disagree. `subjects`: those of
   // the segment's prompt (the main character).
@@ -1256,7 +1270,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     isKrea2Workflow, briefEnrichSystem, enrichBrief, ENRICH_INSTRUCTIONS, setInstructionOverrides,
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage, describeStartImage,
-    buildRelaySegmentPrompt, relaySubjectLegend, composeScenario,
+    buildRelaySegmentPrompt, buildRelayCutPrompt, relaySubjectLegend, composeScenario,
   };
   if (typeof module === "object" && module.exports) module.exports = Prompts;
   else global.Prompts = Prompts;
