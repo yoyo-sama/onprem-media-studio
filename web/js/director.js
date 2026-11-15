@@ -1460,9 +1460,9 @@ async function renderSegment(i) {
   seg.status = "pending";
   renderRelay();
   // A segment added after the end of a rendered chain: the previous one, rendered as the
-  // last, has no transition frames yet; they are extracted now.
+  // last, has no transition frames yet; they are extracted now (a cut takes one as its setting).
   const before = i > 0 ? r.segments[i - 1] : null;
-  if (before?.ref && !before.transitions?.length && continuous(seg)) await extractTransitions(before, i - 1, total);
+  if (before?.ref && !before.transitions?.length) await extractTransitions(before, i - 1, total);
   if (!sameSession(s)) return;
   const prev = before ? transitionOf(before) : null;
   // 🔗 without a transition frame: refused rather than a silent cut.
@@ -1518,12 +1518,15 @@ async function renderSegment(i) {
 
 // A cut rendered by H3 Ref2VA: references = the subjects' sheets (the first one is the
 // main character, a further human one a character, a non-human one a reference), then
-// the setting: its sheet, or else the previous segment's last frame. No start image and
-// no end image (Ref2VA takes neither).
+// the setting: its sheet, or else the previous segment's chosen transition frame (its last
+// frame unless another is chosen). No start image and no end image (Ref2VA takes neither).
+// A subject still visible in that frame is drifted already and wins over its sheet (GB10,
+// 2026-11-15): the user picks a frame where nobody is in view.
 async function renderCutSegment(s, seg, i, total, before, began) {
   const r = s.relay, subs = relaySubjects();
+  const frame = before?.ref ? transitionOf(before)?.ref || before.lastFrame : null;
   const setting = !isLongTake() && locVariant()?.ref ? { ref: locVariant().ref, desc: locDesc() }
-    : before?.ref && (before.lastFrame || transitionOf(before)?.ref) ? { ref: before.lastFrame || transitionOf(before).ref, desc: "" } : null;
+    : frame ? { ref: frame, desc: "" } : null;
   const refs = [...subs.map((x, k) => ({ kind: k === 0 || x.kind === "human" ? "character" : "reference", desc: x.desc, ref: x.ref })),
     ...(setting ? [{ kind: "environment", ...setting }] : [])];
   log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });

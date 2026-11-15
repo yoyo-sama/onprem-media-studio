@@ -255,8 +255,15 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     meilleure coupe a été H3 Ref2VA sur la planche du personnage plus une image du lieu : le
     visage est resté celui de la planche pendant tout le clip, et la lumière et le jardin
     raccordaient avec le segment précédent. Les coupes du Relay sont désormais en Ref2VA sur les
-    planches des sujets et le décor (sa planche, ou la dernière image précédente). Les segments
-    continus ne voient toujours que leur image de départ, et c'est là que la dérive naît.
+    planches des sujets et le décor (sa planche, ou l'image de transition du segment précédent).
+    Les segments continus ne voient toujours que leur image de départ, et c'est là que la dérive
+    naît. Deux rendus de suite ont écarté les correctifs évidents : le Ref2VA à qui l'on donne la
+    dernière image dérivée « à 0,00 seconde » plus la planche n'a pas prolongé le plan (le Ref2VA
+    prend toute image comme une référence, jamais comme première image : le plan a été recomposé,
+    écart moyen de 60 par canal contre 6 pour un vrai raccord), et l'image dérivée l'a emporté sur
+    la planche (les cheveux violets sont restés). L'image de décor d'une coupe ne doit donc montrer
+    personne : la seule image d'un sujet est sa planche. Le même segment sans la LoRA de style a
+    gardé la poitrine plus forte que sur la planche : c'est un biais de H3, pas de la LoRA.
     (2026-11-15)
 
 ## 8. Front end (pour le portage de l'étape 4)

@@ -369,7 +369,7 @@ const SPLIT = {
   check(lt[1]?.params.image === `outputs/${lt[0]?.id}.png`,
     `the clip does not start on the shot image: ${lt[1]?.params.image}`);
   // A cut in a long take: Ref2VA on the start sheet and, as the setting, the previous
-  // segment's last frame. The link starts nothing.
+  // segment's transition frame (its last frame by default). The link starts nothing.
   await page.click("#relayAddBtn");
   const seg2 = '#relayList .relay-seg[data-seg="1"]';
   await page.fill(`${seg2} textarea`, "She walks toward the camera on another path.");
@@ -381,12 +381,24 @@ const SPLIT = {
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "Ready", null, { timeout: 10000 });
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]), `cut in a long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
-  const cut = lt[0]?.params || {};
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v"]), `cut in a long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  const cut = lt[1]?.params || {}, framesJob = lt[0];
   const seg1Clip = jobs.slice(0, before).filter(j => j.pipeline === "h3-i2v").pop();
   check(JSON.stringify(cut.references) === JSON.stringify([shot.images?.[0], `outputs/${seg1Clip?.id}.png`]) && cut.aspect === "9:16",
     `cut in a long take, references: ${JSON.stringify({ refs: cut.references, aspect: cut.aspect })}`);
   check(/another path/.test(cut.prompt || "") && /<Subject 2> is the location as defined by <Picture 2>\./.test(cut.prompt || ""), `cut in a long take, prompt: ${cut.prompt}`);
+  // Another transition frame of segment 1 (one where nobody is in view) becomes the cut's
+  // setting; choosing it starts nothing.
+  before = jobs.length;
+  await page.$eval('#relayList .relay-seg[data-seg="0"] .relay-thumb:nth-of-type(2)', b => b.click());
+  await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "To regenerate");
+  check(jobs.length === before, "choosing a transition frame submitted a job");
+  await page.click(`${seg2} .seg-regen`);
+  await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "Ready", null, { timeout: 10000 });
+  lt = jobs.slice(before);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"])
+    && JSON.stringify(lt[0]?.params.references) === JSON.stringify([shot.images?.[0], `outputs/${framesJob?.id}-3.png`]),
+    `cut on a chosen transition frame: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.references]))}`);
   await page.$eval(`${seg2} .seg-del`, b => b.click());
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
   // Saying it is one single picture starts nothing: segment 1 becomes "to regenerate".
