@@ -210,6 +210,21 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     such wall in the frame, made H3 grow melting blobs and floating specks over the whole
     background; re-rendered from the same frame and seed with "slows to a stop on the gravel
     path", the garden held for 10 s. Gemma's split is told so. (2026-11-14)
+51. **A long take renders its cards, and a reference sheet is never a first frame.** On the
+    GB10 a "5 × 10 s" long take rendered three clips and stopped, with no error: the plan line
+    was computed from the total length and the maximum per segment, but the chain renders the
+    segment cards, and changing the total added none (the long take opened from one image had
+    one card, two more were added by hand). The cards are now the plan: a new total or maximum
+    adds the missing cards (empty, so the chain waits until they are written), removes the empty
+    ones beyond it, never a written or rendered one, and the total is the sum of the cards; the
+    plan line describes the cards. In the same run the start image was a character sheet (four
+    full-body views and five close-ups): a long take starts on its first image as it is, so H3
+    animated the whole sheet, its last frame showed three copies of the woman side by side, and
+    the next segments started from there. Gemma's vision now says whether the start image is a
+    sheet (`START_IMAGE_SYSTEM`, which also describes one single instance of the subject); a
+    sheet gives a first segment that starts on a Qwen Image 2.1 shot image composed from it,
+    in the sheet's style, at a format chosen on the card, and the card can switch between "the
+    image as it is" and "a shot composed from the sheet" (it starts nothing). (2026-11-15)
 
 ## 8. Front end (for the port in step 4)
 

@@ -186,6 +186,21 @@ export async function refRefs(ctx) {
   return Promise.all(list.slice(0, max).map(imageRef));
 }
 
+// A long take's start image read by Gemma's vision: {sheet, desc}. When it fails the
+// image is taken as a picture ({sheet: false, desc: ""}), and the Relay's first segment
+// lets the user say otherwise. Never blocks.
+export async function describeStart(img) {
+  log("req", "Describing {n} reference(s) with {llm} (vision)…", { n: 1, llm: LLM });
+  try {
+    const found = await P.describeStartImage(llm, await blobToBase64(await imageBlob(img)));
+    log("ok", "{ok}/{n} reference(s) described by {llm}.", { ok: 1, n: 1, llm: LLM });
+    return found;
+  } catch (err) {
+    log("warn", "Description of {name} unavailable ({error}).", { name: img.name, error: err.message });
+    return { sheet: false, desc: "" };
+  }
+}
+
 // Gemma's description of each image (vision), "" when it fails: an undescribed
 // reference still goes to the model, it only weighs less. Never blocks a render.
 export async function describeRefs(images) {

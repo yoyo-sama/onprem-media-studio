@@ -282,6 +282,31 @@
     return s;
   }
 
+  // Start frame of a long take whose start image is a reference sheet: one single
+  // instance of its subject, composed in the opening moment, in the sheet's own style
+  // (a drawn sheet stays drawn). `scene`: the screenplay, `text`: the first segment's
+  // action; a <Subject N> marker becomes "the character". No setting sheet here: the
+  // place comes from the text.
+  function relayStartFromSheetPrompt(scene, text, charDesc, styleId) {
+    const plain = v => String(v || "").replace(H3_TOKEN_RE, "the character").trim().replace(/[\s.!?…]+$/, "");
+    const sc = plain(scene), act = plain(text);
+    let s = "Use the reference image only as the appearance guide for one single character"
+      + (charDesc ? ", " + charDesc : "") + ". The reference image is a character sheet that shows this "
+      + "character several times: take the character from it, never its layout. "
+      + "Create one brand-new cinematic film still, in the same visual style as the reference image, "
+      + "that shows exactly one single instance of that character"
+      + (sc && sc !== act ? ". The scene: " + sc + ". The opening moment, shown in this still: " : ": ")
+      + (act || sc) + ". "
+      + "The character is fully present in that place, with correct perspective and scale. The whole "
+      + "picture is one single continuous scene that extends all the way to all four edges: one single "
+      + "view of the character, with no panels, grid, thumbnails, repeated poses, borders, caption or "
+      + "text. Keep the character's face, hair, anatomy, body plan, surface, clothing if any and colors "
+      + "identical to the reference image.";
+    const styleText = styleTextFor(styleId);
+    if (styleText) s += " " + styleText;
+    return s;
+  }
+
   // Camera motion of the pseudo-shot that holds on the last shot of a storyboard.
   const HOLD_MOTION = "Locked camera holding on the final shot, subtle ambient motion only.";
 
@@ -909,6 +934,11 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
   const REF_VISION_SYSTEM = `You are describing a reference image for a video model. Describe ONLY what is visibly present, so the subject stays IDENTICAL across shots. No camera, scene, action or mood wording, no speculation about story. Answer ONLY with JSON with these fields, each a dense ~10-20 word English string: {"subject":"...","appearance":"...","materials":"...","palette":"..."}.`;
 
+  // Start image of a long take: is it a reference sheet (the same subject shown several
+  // times), and what is that subject? A sheet is never a first frame: H3 would animate
+  // every view of it (LESSONS #51). The description is of one single instance.
+  const START_IMAGE_SYSTEM = `You are looking at the start image of a video. FIRST set "sheet": true when the image is a reference sheet that shows the same character or subject more than once (turnaround, front, side and back views, close-up portraits next to full-body views, expressions or poses side by side, a model sheet or a grid of panels), false when it is one single picture of a scene. THEN describe that subject ONLY as it is visibly present, so it stays IDENTICAL across shots: one single instance of it, never the sheet, its views, poses, expressions, panels, layout or background. No camera, scene, action or mood wording, no speculation about story. Answer ONLY with JSON: {"sheet": true or false, "subject":"...","appearance":"...","materials":"...","palette":"..."}, each text field a dense ~10-20 word English string.`;
+
   const CHARACTER_SHEET_SYSTEM = `You are a character designer. From the user's scene, take the SINGLE most prominent character or subject and describe it so it stays IDENTICAL across shots. It can be anything: a human being, an animal, an imaginary creature, a robot or machine of any shape, an alien, a vehicle, a plant or an inanimate object. FIRST set "kind": "human" only for a human being, "other" for everything else. THEN use the field set of that kind, each value a dense ~10-20 word English string, no camera/scene/action wording. Also set "label": a plain 2-to-4-word name for this subject that tells it apart from other subjects of the same scene, e.g. "weary detective", "young farmhand", "adult male lion", "six-legged mining robot". If kind is "human", answer ONLY with JSON {"kind":"human","label":"...","face":"...","hair":"...","outfit":"...","accessories":"...","palette":"..."}. If kind is "other", answer ONLY with JSON {"kind":"other","label":"...","subject":"what it is, in its own terms: type or species, and how many limbs, heads, wheels or parts it has, e.g. adult male African lion, four-legged big cat, or six-legged insect-like mining robot","form":"its silhouette, structure, proportions and natural resting posture","surface":"what its body is made of and how it looks: fur, scales, skin, bark, metal, glass, worn paint","details":"the distinctive parts and marks that identify it","palette":"..."}. When kind is "other", describe it strictly as the thing it is: give it no human face, no human hair, no clothing and no human stance unless the user's scene explicitly says so.`;
   const characterSheetSystem = force => CHARACTER_SHEET_SYSTEM
     + (force ? ` The user has already decided: kind is "${force}". Set "kind" to "${force}" and fill only the ${force} field set.` : "");
@@ -1158,6 +1188,13 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     return stripPromptPadding(REF_FIELD_KEYS.map(k => fieldText(out[k])).filter(Boolean).join(", "));
   }
 
+  // {sheet, desc} of a long take's start image (START_IMAGE_SYSTEM).
+  async function describeStartImage(llm, base64) {
+    const out = await llm(START_IMAGE_SYSTEM, "Describe this start image.", [base64]);
+    return { sheet: out.sheet === true || /^\s*true\s*$/i.test(String(out.sheet)),
+             desc: stripPromptPadding(REF_FIELD_KEYS.map(k => fieldText(out[k])).filter(Boolean).join(", ")) };
+  }
+
   // ── Relay scenario ──────────────────────────────────────────────────────────
 
   // Prompt of a Relay segment: the subjects defined once (subject_definitions), the
@@ -1205,7 +1242,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     fieldText, CHAR_FIELD_KEYS, CHAR_OTHER_FIELD_KEYS, charKindOf, charFieldKeys, LOC_FIELD_KEYS,
     stripPromptPadding, charDescFromFields, locDescFromFields,
     KEYFRAME_ANCHOR_SOLO, KEYFRAME_ANCHOR_DUAL, compileKeyframePrompt, stripKeyframeAnchor, ensureKeyframeAnchor,
-    compileRelayKeyframePrompt, HOLD_MOTION,
+    compileRelayKeyframePrompt, relayStartFromSheetPrompt, HOLD_MOTION,
     H3_PROMPT_CHARS, h3Subject, h3Picture, H3_TOKEN_STUB, H3_TOKEN_RE, h3TokensOut, h3TokensIn, h3NormalizeTokens,
     h3AssignSubjects, h3AssignRefs, h3Summary, h3RefBody, buildH3RefPrompt, capH3Prompt, h3VideoFrames, h3RealDuration,
     h3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, h3CutBodyOf, restoreCameraClause,
@@ -1215,10 +1252,10 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     CAMPAIGN_IMAGES, CAMPAIGN_TEASER, campaignPrompt,
     KREA2_ENRICH_SYSTEM, H3_VIDEO_ENRICH_SYSTEM, R2V_BRIEF_ENRICH_SYSTEM, QWEN_EDIT_INSTRUCTION_ENRICH_SYSTEM,
     SHEET_BRIEF_ENRICH_SYSTEM, ENRICH_SYSTEM, QWEN_EDIT_ENRICH_SYSTEM, keyframeModelName, SHEET_DESC_ENRICH_SYSTEM,
-    SHOT_ACTION_ENRICH_SYSTEM, CUT_ENRICH_SYSTEM, H3_SCENARIO_SYSTEM, REF_VISION_SYSTEM,
+    SHOT_ACTION_ENRICH_SYSTEM, CUT_ENRICH_SYSTEM, H3_SCENARIO_SYSTEM, REF_VISION_SYSTEM, START_IMAGE_SYSTEM,
     isKrea2Workflow, briefEnrichSystem, enrichBrief, ENRICH_INSTRUCTIONS, setInstructionOverrides,
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
-    characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage,
+    characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage, describeStartImage,
     buildRelaySegmentPrompt, relaySubjectLegend, composeScenario,
   };
   if (typeof module === "object" && module.exports) module.exports = Prompts;

@@ -10,7 +10,7 @@
 // blocks are re-appended by code; a shot holds at most two subjects.
 
 import { blobToBase64, on, refURL } from "./api.js";
-import { L, LANG, t, translateTree, tx } from "./i18n.js";
+import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
 import { $, LLM, MOBILE, log, openPromptEditor, promptLog, runJob, undoToast, warn } from "./ui.js";
 import { openLightbox } from "./gallery.js";
 import * as F from "./form.js";
@@ -257,15 +257,18 @@ function enterSession(s) {
 // (FL2VA); one image gives one segment, to add to. The subject is the first image,
 // described by Gemma's vision; every segment starts with the brief, which is also the
 // screenplay to split. The H3 LoRA stack of the form goes to every segment.
+// A first image that is a reference sheet (several views of one subject) is never the
+// first frame: segment 1 starts on a shot image Qwen composes from it (`startImage.sheet`,
+// which the first segment's card can switch).
 export async function startLongTake(seed, items) {
   if (!items.length) throw new Error(t("Add a start image to the long take (file or gallery)."));
   const text = F.brief();
   const refs = await Promise.all(items.map(F.imageRef));
-  const [desc] = await F.describeRefs([items[0]]);
+  const { sheet, desc } = await F.describeStart(items[0]);
   const durs = (items.length > 1 ? items.slice(0, -1) : items).map(it => F.clampDuration(it.dur, RELAY_SEG_DEFAULT));
   const s = {
     pipeline: "sequence", wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value, style: "none", sheetTemplate: "auto",
-    loras: F.formLoras(), startImage: { ref: refs[0] },
+    loras: F.formLoras(), startImage: { ref: refs[0], sheet },
     chars: [newChar({ kind: "other", subject: desc || "" }, [imported({ ref: refs[0] })])], charIdx: 0,
     locFields: {}, locVariants: [], locActive: 0, validated: true,
     shots: [], keyframes: null, cutPlan: null, cuts: null, order: null, animatic: null,
@@ -274,6 +277,7 @@ export async function startLongTake(seed, items) {
         endImage: refs[i + 1] ? { ref: refs[i + 1], name: items[i + 1].name } : null })) }),
   };
   enterSession(s);
+  if (sheet) log("ok", "The start image is a reference sheet: segment 1 starts on a shot image composed from it, the sheet itself is never animated.");
   showRelayComposer();
   renderRelay();
 }
@@ -1055,13 +1059,18 @@ function renderTimeline() {
 const newRelaySegment = (prompt = "", duration = RELAY_SEG_DEFAULT) => ({ prompt, duration, mode: "continue", status: "idle", ref: null,
   seed: 0, prompt_used: null, start: null, transitions: null, transitionIdx: 0, endImage: null });
 const RELAY_LOOK_KEYS = ["camera", "lighting", "sound", "music"];
-const newRelay = (p = {}) => ({
-  scenario: p.scenario || "", video: p.video || null,
-  total: clampTotal(p.total ?? 30), segMax: F.clampDuration(p.segMax ?? RELAY_SEG_DEFAULT),
-  look: Object.fromEntries(RELAY_LOOK_KEYS.map(k => [k, String(p.look?.[k] || "")])),
-  segments: (p.segments || [newRelaySegment()]).map(seg => ({ ...newRelaySegment(), ...seg,
-    status: seg.ref ? (seg.status === "stale" ? "stale" : "ready") : "idle" })),
-});
+// The cards are the plan: a new Relay gets one empty card per planned segment, and the
+// total length of a given (or saved) chain is the sum of its cards.
+function newRelay(p = {}) {
+  const segMax = F.clampDuration(p.segMax ?? RELAY_SEG_DEFAULT);
+  const given = p.segments?.length ? p.segments : relayDurations(clampTotal(p.total ?? 30), segMax).map(dur => newRelaySegment("", dur));
+  const segments = given.map(seg => ({ ...newRelaySegment(), ...seg, status: seg.ref ? (seg.status === "stale" ? "stale" : "ready") : "idle" }));
+  return {
+    scenario: p.scenario || "", video: p.video || null, segMax, segments,
+    total: clampTotal(segments.reduce((sum, seg) => sum + seg.duration, 0)),
+    look: Object.fromEntries(RELAY_LOOK_KEYS.map(k => [k, String(p.look?.[k] || "")])),
+  };
+}
 function clampTotal(v) {
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? Math.min(RELAY_TOTAL_MAX, Math.max(5, n)) : 30;
@@ -1115,6 +1124,7 @@ async function composeRelay() {
     // The end images stay with the segment of the same rank (a long take's key images).
     const ends = r.segments.map(seg => seg.endImage);
     r.segments = list.map((prompt, i) => ({ ...newRelaySegment(prompt, durs[Math.min(i, n - 1)]), endImage: ends[i] || null }));
+    syncRelayTotal();
     r.scenario = text;
     // The shared look fills only the fields left empty: what the user wrote stays.
     const kept = RELAY_LOOK_KEYS.filter(k => r.look[k].trim());
@@ -1140,11 +1150,42 @@ function showRelayComposer() {
   document.querySelectorAll("#relayLook textarea").forEach(el => { el.value = r?.look[el.dataset.look] || ""; });
   renderRelayPlan();
 }
+// The plan line says what "Generate the chain" renders: the segment cards, never a count
+// the cards do not have (a 5 × 10 s plan once ran as its 3 cards, LESSONS #51).
 function renderRelayPlan() {
   const r = d?.relay;
   if (!r) { $("relayPlan").textContent = ""; return; }
+  const durs = r.segments.map(seg => seg.duration), empty = r.segments.filter(seg => !seg.prompt.trim()).length;
+  const line = t("→ {n} segment(s): {list} s, {real} s rendered", { n: durs.length, list: durs.join(" + "), real: realSeconds(durs).toFixed(1) });
+  $("relayPlan").textContent = empty ? `${line} · ${t("{n} segment(s) still to write", { n: empty })}` : line;
+}
+// The total length is the sum of the cards: kept so after a card is added, removed or
+// changed length.
+function syncRelayTotal() {
+  const r = d?.relay;
+  if (!r) return;
+  r.total = clampTotal(r.segments.reduce((sum, seg) => sum + seg.duration, 0));
+  $("relayTotal").value = r.total;
+}
+// A new total length or maximum per segment reshapes the cards: the plan's lengths go to
+// the cards not rendered yet, missing cards are added empty (to write before the chain
+// can start), extra cards are removed when empty. A card with text or a render is never
+// removed: it stays, and the log says so. Nothing renders.
+function fitRelayToPlan() {
+  const r = d?.relay;
+  if (!r || relayBusy()) return;
   const durs = relayDurations(r.total, r.segMax);
-  tx($("relayPlan"), "→ {n} segment(s): {list} s, {real} s rendered", { n: durs.length, list: durs.join(" + "), real: realSeconds(durs).toFixed(1) });
+  r.segments.forEach((seg, k) => { if (k < durs.length && !seg.ref) seg.duration = durs[k]; });
+  for (let k = r.segments.length; k < durs.length; k++) r.segments.push(newRelaySegment("", durs[k]));
+  while (r.segments.length > durs.length) {
+    const last = r.segments[r.segments.length - 1];
+    if (last.prompt.trim() || last.ref || last.endImage) break;
+    r.segments.pop();
+  }
+  const kept = r.segments.length - durs.length;
+  if (kept > 0) log("warn", "Relay: {n} written segment(s) kept beyond the plan: remove them (✕ under the advanced options) for a shorter take.", { n: kept });
+  syncRelayTotal();
+  renderRelay();
 }
 
 function renderRelay() {
@@ -1160,6 +1201,10 @@ function renderRelay() {
     el.dataset.seg = String(i);
     el.innerHTML = `<div class="seg-head"><strong></strong><span class="seg-status"></span></div>
       <textarea spellcheck="false" placeholder="What happens in this segment, and its own camera motion."></textarea>
+      <div class="seg-row seg-start-row" hidden>
+        <button type="button" class="secondary-btn seg-start"></button>
+        <label class="seg-start-ratio">Shot image format<select>${Object.keys(F.QWEN21_RATIOS).map(k => `<option data-raw>${k}</option>`).join("")}</select></label>
+      </div>
       <div class="seg-row">
         <label>Length (s)<input type="number" min="5" max="15"></label>
         <button type="button" class="secondary-btn seg-link"></button>
@@ -1185,10 +1230,11 @@ function renderRelay() {
     area.addEventListener("input", () => { seg.prompt = area.value; updateRelayButtons(); });
     const dur = el.querySelector('input[type="number"]');
     dur.value = seg.duration;
-    dur.addEventListener("change", () => { seg.duration = F.clampDuration(dur.value, seg.duration); renderRelay(); save(); });
+    dur.addEventListener("change", () => { seg.duration = F.clampDuration(dur.value, seg.duration); syncRelayTotal(); renderRelay(); save(); });
     const link = el.querySelector(".seg-link");
     // A long take has no sheets to compose a cut on: every link is continuous.
     if (isLongTake()) link.hidden = true;
+    if (isLongTake() && i === 0) renderStartChoice(el.querySelector(".seg-start-row"), seg, busy);
     else if (i === 0) { tx(link, "🎞 First segment"); link.disabled = true; }
     else {
       tx(link, seg.mode === "continue" ? "🔗 Continuous (exact frame)" : "🎞 Cut (new shot image)");
@@ -1210,7 +1256,7 @@ function renderRelay() {
     renderEndImage(el, i, seg, busy);
     const del = el.querySelector(".seg-del");
     del.disabled = busy || r.segments.length < 2;
-    del.addEventListener("click", () => { r.segments.splice(i, 1); renderRelay(); save(); });
+    del.addEventListener("click", () => { r.segments.splice(i, 1); syncRelayTotal(); renderRelay(); save(); });
     const vid = el.querySelector("video");
     if (seg.ref) { vid.hidden = false; vid.src = refURL(seg.ref); }
     renderTransitions(el.querySelector(".relay-transitions"), i, seg, busy);
@@ -1221,8 +1267,30 @@ function renderRelay() {
     return el;
   }));
   translateTree(list);
+  renderRelayPlan();
   updateRelayButtons();
   renderBoard();
+}
+
+// How a long take starts: on its start image as it is, or, when that image is a
+// reference sheet, on a shot image Qwen composes from it at the format chosen here.
+// Switching starts nothing: a rendered first segment becomes "to regenerate".
+function renderStartChoice(row, seg, busy) {
+  const st = d.startImage, stale = () => { if (seg.status === "ready") seg.status = "stale"; };
+  row.hidden = false;
+  const btn = row.querySelector(".seg-start");
+  tx(btn, st.sheet ? "🧍 Start: a shot composed from the sheet" : "🖼 Start: the image as it is");
+  txAttr(btn, "title", st.sheet
+    ? "The start image is a reference sheet: Qwen Image 2.1 composes the first frame from its character. Click if it is one single picture."
+    : "The start image is the first frame of the video. Click if it is a reference sheet (several views of the character).");
+  btn.classList.toggle("active", !!st.sheet);
+  btn.disabled = busy;
+  btn.addEventListener("click", () => { st.sheet = !st.sheet; stale(); renderRelay(); save(); });
+  const lab = row.querySelector(".seg-start-ratio"), sel = lab.querySelector("select");
+  lab.hidden = !st.sheet;
+  sel.value = F.QWEN21_RATIOS[d.ratio] ? d.ratio : "16:9";
+  sel.disabled = busy;
+  sel.addEventListener("change", () => { d.ratio = sel.value; stale(); renderRelay(); save(); });
 }
 
 // ── Relay production board ────────────────────────────────────────────────────
@@ -1394,7 +1462,17 @@ async function renderSegment(i) {
     throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
   const subs = relaySubjects(), look = r.look;
   let start;
-  if (isLongTake() && i === 0) start = s.startImage.ref;
+  if (isLongTake() && i === 0 && s.startImage.sheet) {
+    log("req", "Relay, segment {n}/{total}: shot image from the sheet…", { n: i + 1, total });
+    const text = [seg.prompt, look.lighting].map(x => x.trim().replace(/[\s.!?…]+$/, "")).filter(Boolean).join(". ");
+    const prompt = P.relayStartFromSheetPrompt(r.scenario, text, subs[0].desc, s.style);
+    const [width, height] = F.QWEN21_RATIOS[s.ratio] || F.QWEN21_RATIOS["16:9"];
+    const job = await tracked(seg, "image", sub => runJob("qwen-image-2.1",
+      { prompt, images: [s.startImage.ref], width, height, seed: F.seedPlus(s.seed, 401) },
+      { origin: origin(), label: ["Relay · shot image {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
+        sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed: F.seedPlus(s.seed, 401) }] }));
+    start = out(job, ".png");
+  } else if (isLongTake() && i === 0) start = s.startImage.ref;
   else if (i > 0 && prev && (seg.mode === "continue" || isLongTake())) {
     log("req", "Relay, segment {n}/{total}: video (continuous link)…", { n: i + 1, total });
     start = prev.ref;
@@ -1706,6 +1784,7 @@ export function initDirector(h) {
     const r = d?.relay;
     if (!r || r.segments.length >= RELAY_MAX_SEGMENTS) return;
     r.segments.push(newRelaySegment("", r.segMax));
+    syncRelayTotal();
     renderRelay();
     save();
   });
@@ -1718,14 +1797,13 @@ export function initDirector(h) {
   $("relayTotal").addEventListener("change", () => {
     if (!d?.relay) return;
     d.relay.total = clampTotal($("relayTotal").value);
-    $("relayTotal").value = d.relay.total;
-    renderRelayPlan(); save();
+    fitRelayToPlan(); save();
   });
   $("relaySegDur").addEventListener("change", () => {
     if (!d?.relay) return;
     d.relay.segMax = F.clampDuration($("relaySegDur").value, d.relay.segMax);
     $("relaySegDur").value = d.relay.segMax;
-    renderRelayPlan(); save();
+    fitRelayToPlan(); save();
   });
   // A shared field changes every segment's next prompt; it starts nothing.
   document.querySelectorAll("#relayLook textarea").forEach(el => el.addEventListener("change", () => {

@@ -56,7 +56,7 @@ const SPLIT = {
   const fails = [];
   const check = (ok, msg) => { if (!ok) fails.push(msg); };
   const jobs = [], chats = [], done = new Map(), held = [];
-  let n = 0, hold = false, sock = null;
+  let n = 0, hold = false, sock = null, visionSheet = false;
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.addInitScript(p => { if (!sessionStorage.getItem("seeded")) { localStorage.setItem("studioProject", p); sessionStorage.setItem("seeded", "1"); } },
     JSON.stringify(PROJECT));
@@ -65,7 +65,7 @@ const SPLIT = {
     const json = (b, s = 200) => route.fulfill({ status: s, contentType: "application/json", body: JSON.stringify(b) });
     if (p === "/api/jobs" && req.method() === "POST") {
       const body = JSON.parse(req.postData()), id = `job-${++n}`;
-      jobs.push(body);
+      jobs.push({ ...body, id });
       const outputs = body.pipeline === "h3-i2v" ? [`outputs/${id}.mp4`, `outputs/${id}.png`]
         : body.pipeline === "video-concat" ? [`outputs/${id}.mp4`]
         : body.pipeline === "video-frames" ? body.params.offsets.map(o => `outputs/${id}-${o}.png`) : [`outputs/${id}.png`];
@@ -78,7 +78,7 @@ const SPLIT = {
       const body = JSON.parse(req.postData());
       chats.push(body);
       // Vision: the description of a long take's start image.
-      if (body.images?.length) return json({ content: JSON.stringify({ subject: "a woman in a green wool coat", appearance: "auburn bob",
+      if (body.images?.length) return json({ content: JSON.stringify({ sheet: visionSheet, subject: "a woman in a green wool coat", appearance: "auburn bob",
                                                                       materials: "", palette: "" }) });
       return json({ content: JSON.stringify(SPLIT) });
     }
@@ -106,11 +106,19 @@ const SPLIT = {
   await page.waitForSelector('#studioNav [data-section="relay"]:not([disabled])', { timeout: 5000 });
   await page.click('#studioNav [data-section="relay"]');
 
-  // Plan: 25 s at 10 s max → 8 + 8 + 9.
+  // Plan: 25 s at 10 s max → 8 + 8 + 9, as three cards: the chain renders the cards, so
+  // the plan line never announces more segments than there are cards.
   await page.fill("#relayTotal", "25");
   await page.dispatchEvent("#relayTotal", "change");
   const plan = await page.textContent("#relayPlan");
-  check(/3 segment\(s\): 8 \+ 8 \+ 9 s/.test(plan), `plan for 25 s at 10 s max: "${plan}"`);
+  check(/3 segment\(s\): 8 \+ 8 \+ 9 s/.test(plan) && /3 segment\(s\) still to write/.test(plan), `plan for 25 s at 10 s max: "${plan}"`);
+  const cardDurs = () => page.$$eval('#relayList input[type="number"]', els => els.map(e => e.value).join(","));
+  check(await cardDurs() === "8,8,9", `cards for 25 s: ${await cardDurs()}`);
+  check(await page.isDisabled("#relayRunBtn"), "the chain can start with empty segments");
+  // Fewer seconds: the empty cards beyond the plan go.
+  await page.fill("#relayTotal", "10");
+  await page.dispatchEvent("#relayTotal", "change");
+  check(await cardDurs() === "10", `cards for 10 s: ${await cardDurs()}`);
   await page.fill("#relayTotal", "30");
   await page.dispatchEvent("#relayTotal", "change");
   check(/3 segment\(s\): 10 \+ 10 \+ 10 s, 30\.4 s rendered/.test(await page.textContent("#relayPlan")), `plan for 30 s: "${await page.textContent("#relayPlan")}"`);
@@ -121,7 +129,8 @@ const SPLIT = {
   await page.fill("#relayScenario", "She walks through the garden, stops by a tree, then looks at the sun.");
   await page.dispatchEvent("#relayScenario", "input");
   await page.click("#relayComposeBtn");
-  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 3);
+  // The plan already gave 3 empty cards: wait for the split's text in them.
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .relay-seg textarea")].map(a => a.value.trim()).filter(Boolean).length === 3);
   check(jobs.length === 0, `the split or a shared field submitted ${jobs.length} job(s)`);
   check(chats.length === 1 && /exactly 3 segments/.test(chats[0].system), "the split did not ask Gemma for 3 segments");
   const look = await page.$$eval("#relayLook textarea", els => Object.fromEntries(els.map(e => [e.dataset.look, e.value])));
@@ -133,6 +142,12 @@ const SPLIT = {
     `segment headers: ${JSON.stringify(heads)}`);
   const durs = await page.$$eval('#relayList input[type="number"]', els => els.map(e => e.value));
   check(JSON.stringify(durs) === JSON.stringify(["10", "10", "10"]), `segment lengths: ${JSON.stringify(durs)}`);
+  // A shorter total never drops a written segment: kept, and the total says so.
+  await page.fill("#relayTotal", "10");
+  await page.dispatchEvent("#relayTotal", "change");
+  check(await cardDurs() === "10,10,10" && await page.inputValue("#relayTotal") === "30",
+    `written cards after a shorter total: ${await cardDurs()}, total ${await page.inputValue("#relayTotal")}`);
+  check(jobs.length === 0, "changing the total submitted a job");
 
   if (SHOTS) {
     fs.mkdirSync(SHOTS, { recursive: true });
@@ -264,6 +279,9 @@ const SPLIT = {
   check(await page.inputValue("#relayList .relay-seg textarea") === "She walks to the gate.", "the segment does not start with the brief");
   check(await page.inputValue("#relayScenario") === "She walks to the gate.", "the screenplay is not the brief");
   check(await page.isHidden("#relayList .seg-link"), "a long take offers a cut");
+  check(/reference sheet/.test(chats[chats0].system || ""), "the start image was not checked for a reference sheet");
+  check((await page.textContent("#relayList .seg-start")).trim() === "🖼 Start: the image as it is" && await page.isHidden("#relayList .seg-start-ratio"),
+    `start of a long take from a picture: "${await page.textContent("#relayList .seg-start")}"`);
   check(await page.isVisible("#relayList .relay-endframe img"), "the second image is not the segment's end image");
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
@@ -293,6 +311,55 @@ const SPLIT = {
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 2);
   check(await page.isVisible("#studioRelay"), "the resumed long take does not open on the Relay");
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "longtake-1440-light.png") });
+
+  // ── Long take from a character sheet ──
+  // The sheet is never the first frame: segment 1 starts on a shot image Qwen composes
+  // from it. A 50 s plan gives five cards, and the chain waits until all are written.
+  visionSheet = true;
+  await page.click("#studioExitBtn");
+  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.reload({ waitUntil: "load" });
+  await page.click('.usecase[data-scenario="storyboard"]');
+  await page.selectOption("#pipelineSelect", "sequence");
+  await page.setInputFiles("#seqFiles", [{ name: "sheet.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.fill("#brief", "She walks along the garden path at dawn.");
+  before = jobs.length;
+  await page.click("#generateBtn");
+  await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
+  check((await page.textContent("#relayList .seg-start")).trim() === "🧍 Start: a shot composed from the sheet" && await page.isVisible("#relayList .seg-start-ratio"),
+    `start of a long take from a sheet: "${await page.textContent("#relayList .seg-start")}"`);
+  await page.fill("#relayTotal", "50");
+  await page.dispatchEvent("#relayTotal", "change");
+  check(await page.$$eval("#relayList .relay-seg", els => els.length) === 5, "a 50 s plan does not give five cards");
+  check(/5 segment\(s\): 10 \+ 10 \+ 10 \+ 10 \+ 10 s/.test(await page.textContent("#relayPlan")) && await page.isDisabled("#relayRunBtn"),
+    `50 s plan: "${await page.textContent("#relayPlan")}", run enabled: ${!(await page.isDisabled("#relayRunBtn"))}`);
+  await page.fill("#relayTotal", "10");
+  await page.dispatchEvent("#relayTotal", "change");
+  await page.selectOption("#relayList .seg-start-ratio select", "9:16");
+  check(jobs.length === before, "opening a long take from a sheet or setting its plan submitted a job");
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
+  lt = jobs.slice(before);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-i2v"]), `long take from a sheet: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  const shot = lt[0]?.params || {};
+  check(shot.images?.length === 1 && /^inputs\/up-\d+\.png$/.test(shot.images[0]) && shot.width === 768 && shot.height === 1344,
+    `shot image from the sheet: ${JSON.stringify({ images: shot.images, w: shot.width, h: shot.height })}`);
+  check(/character sheet/.test(shot.prompt) && /exactly one single instance/.test(shot.prompt) && /a woman in a green wool coat/.test(shot.prompt)
+    && /garden path at dawn/.test(shot.prompt), `shot image prompt: ${shot.prompt}`);
+  check(lt[1]?.params.image === `outputs/${lt[0]?.id}.png`,
+    `the clip does not start on the shot image: ${lt[1]?.params.image}`);
+  // Saying it is one single picture starts nothing: segment 1 becomes "to regenerate".
+  before = jobs.length;
+  await page.click("#relayList .seg-start");
+  await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "To regenerate");
+  check((await page.textContent("#relayList .seg-start")).trim() === "🖼 Start: the image as it is", "the start choice does not switch");
+  check(jobs.length === before, "switching the start submitted a job");
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
+  lt = jobs.slice(before);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-i2v"]) && lt[0].params.image === shot.images?.[0],
+    `long take from the image as it is: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.image]))}`);
 
   check(!errs.length, `page errors: ${errs.join(" | ")}`);
   await browser.close();

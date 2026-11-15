@@ -4037,4 +4037,54 @@ export const DICT = {
     es: "{llm} está describiendo la imagen inicial… {time}",
     de: "{llm} beschreibt das Startbild… {time}",
   },
+  "🧍 Start: a shot composed from the sheet": {
+    fr: "🧍 Départ : un plan composé à partir de la planche",
+    es: "🧍 Inicio: un plano compuesto a partir de la hoja",
+    de: "🧍 Start: ein aus dem Sheet komponiertes Bild",
+  },
+  "🖼 Start: the image as it is": {
+    fr: "🖼 Départ : l'image telle quelle",
+    es: "🖼 Inicio: la imagen tal cual",
+    de: "🖼 Start: das Bild, wie es ist",
+  },
+  "The start image is a reference sheet: Qwen Image 2.1 composes the first frame from its character. Click if it is one single picture.": {
+    fr: "L'image de départ est une planche de référence : Qwen Image 2.1 compose la première image à partir de son personnage. Clique si c'est une image unique.",
+    es: "La imagen inicial es una hoja de referencia: Qwen Image 2.1 compone el primer fotograma a partir de su personaje. Haz clic si es una sola imagen.",
+    de: "Das Startbild ist ein Referenz-Sheet: Qwen Image 2.1 komponiert das erste Bild aus seiner Figur. Klicke, wenn es ein einzelnes Bild ist.",
+  },
+  "The start image is the first frame of the video. Click if it is a reference sheet (several views of the character).": {
+    fr: "L'image de départ est la première image de la vidéo. Clique si c'est une planche de référence (plusieurs vues du personnage).",
+    es: "La imagen inicial es el primer fotograma del vídeo. Haz clic si es una hoja de referencia (varias vistas del personaje).",
+    de: "Das Startbild ist das erste Bild des Videos. Klicke, wenn es ein Referenz-Sheet ist (mehrere Ansichten der Figur).",
+  },
+  "Shot image format": {
+    fr: "Format de l'image de plan",
+    es: "Formato de la imagen del plano",
+    de: "Format des Einstellungsbilds",
+  },
+  "{n} segment(s) still to write": {
+    fr: "{n} segment(s) encore à écrire",
+    es: "{n} segmento(s) aún por escribir",
+    de: "{n} Segment(e) noch zu schreiben",
+  },
+  "The start image is a reference sheet: segment 1 starts on a shot image composed from it, the sheet itself is never animated.": {
+    fr: "L'image de départ est une planche de référence : le segment 1 démarre sur une image de plan composée à partir d'elle, la planche elle-même n'est jamais animée.",
+    es: "La imagen inicial es una hoja de referencia: el segmento 1 empieza en una imagen de plano compuesta a partir de ella, la hoja nunca se anima.",
+    de: "Das Startbild ist ein Referenz-Sheet: Segment 1 beginnt mit einem daraus komponierten Einstellungsbild, das Sheet selbst wird nie animiert.",
+  },
+  "Relay, segment {n}/{total}: shot image from the sheet…": {
+    fr: "Relay, segment {n}/{total} : image de plan à partir de la planche…",
+    es: "Relay, segmento {n}/{total}: imagen del plano a partir de la hoja…",
+    de: "Relay, Segment {n}/{total}: Einstellungsbild aus dem Sheet…",
+  },
+  "Relay: {n} written segment(s) kept beyond the plan: remove them (✕ under the advanced options) for a shorter take.": {
+    fr: "Relay : {n} segment(s) écrit(s) gardé(s) au-delà du plan : supprime-les (✕ dans les options avancées) pour un plan plus court.",
+    es: "Relay: {n} segmento(s) escrito(s) conservado(s) más allá del plan: elimínalos (✕ en las opciones avanzadas) para una toma más corta.",
+    de: "Relay: {n} geschriebene(s) Segment(e) über den Plan hinaus behalten: entferne sie (✕ unter den erweiterten Optionen) für eine kürzere Einstellung.",
+  },
+  "Relay · shot image {n}/{total}": {
+    fr: "Relay · image de plan {n}/{total}",
+    es: "Relay · imagen del plano {n}/{total}",
+    de: "Relay · Einstellungsbild {n}/{total}",
+  },
 };
