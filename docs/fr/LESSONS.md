@@ -230,6 +230,23 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     l'image, faisait pousser à H3 des formes fondues et des taches flottantes sur tout le fond ;
     refait depuis la même image et le même seed avec « s'arrête sur l'allée de gravier », le
     jardin tenait 10 s. Le découpage de Gemma le demande. (2026-11-14)
+51. **Un plan-séquence rend ses cartes, et une planche de référence n'est jamais une première
+    image.** Sur le GB10, un plan-séquence « 5 × 10 s » a rendu trois clips puis s'est arrêté,
+    sans erreur : la ligne du plan était calculée à partir de la durée totale et du maximum par
+    segment, mais la chaîne rend les cartes de segment, et changer la durée totale n'en ajoutait
+    aucune (le plan-séquence ouvert depuis une image avait une carte, deux autres avaient été
+    ajoutées à la main). Les cartes sont désormais le plan : une nouvelle durée totale ou un
+    nouveau maximum ajoute les cartes manquantes (vides, la chaîne attend donc qu'elles soient
+    écrites), retire les cartes vides en trop, jamais une carte écrite ou rendue, et la durée
+    totale est la somme des cartes ; la ligne du plan décrit les cartes. Dans le même rendu,
+    l'image de départ était une planche de personnage (quatre vues en pied et cinq gros plans) :
+    un plan-séquence part de sa première image telle quelle, H3 a donc animé toute la planche, sa
+    dernière image montrait trois copies de la femme côte à côte, et les segments suivants sont
+    repartis de là. La vision de Gemma dit désormais si l'image de départ est une planche
+    (`START_IMAGE_SYSTEM`, qui décrit aussi une seule instance du sujet) ; une planche donne un
+    premier segment qui part d'une image de plan Qwen Image 2.1 composée à partir d'elle, dans le
+    style de la planche, au format choisi sur la carte, et la carte bascule entre « l'image telle
+    quelle » et « un plan composé à partir de la planche » (sans rien lancer). (2026-11-15)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

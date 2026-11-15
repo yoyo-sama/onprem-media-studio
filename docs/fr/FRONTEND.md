@@ -138,7 +138,11 @@ ajoute une carte Import d'image reliée à elle.
 - La séquence multi-images de la 1.4 est devenue le plan-séquence à partir d'images (pipeline
   `sequence`, workflow `h3_sequence`) : 1 à 6 images, puis « Ouvrir le plan-séquence » ouvre le
   réalisateur sur le Relay seul, sans planche ni validation, et ne soumet rien. La vision de
-  Gemma décrit la première image (le sujet de chaque segment) ; le segment k finit sur l'image
+  Gemma décrit la première image (le sujet de chaque segment) et dit si c'est une planche de
+  référence : une planche n'est jamais une première image, le segment 1 part alors d'une image de
+  plan Qwen Image 2.1 composée à partir d'elle, et sa carte bascule entre « l'image telle quelle »
+  et « un plan composé à partir de la planche », avec le format de l'image de plan (LESSONS n°51) ;
+  le segment k finit sur l'image
   k+1 (FL2VA) et chaque segment part de la dernière image du précédent, telle quelle (la 1.4
   partait de l'image clé elle-même) ; une seule image donne un segment, à compléter. Le brief
   est le scénario et le premier texte de chaque segment, si bien que « Générer la chaîne »
@@ -154,7 +158,11 @@ ajoute une carte Import d'image reliée à elle.
 - Le Relay se règle par une durée totale et un maximum par segment (10 s par défaut, le plus long
   rendu H3 qualifié sur le GB10) : le studio découpe le total en aussi peu de segments que
   possible, aussi égaux que possible, et montre la place de chaque segment dans la séquence
-  (`00:10.1–00:20.3`, d'après les durées que H3 rend vraiment). Gemma écrit, en plus d'une action
+  (`00:10.1–00:20.3`, d'après les durées que H3 rend vraiment). Les cartes sont le plan : une
+  nouvelle durée totale ou un nouveau maximum ajoute les cartes manquantes, vides (la chaîne
+  attend qu'elles soient écrites), et retire les cartes vides en trop, jamais une carte écrite ou
+  rendue ; la durée totale est la somme des cartes et la ligne du plan les décrit (LESSONS n°51).
+  Gemma écrit, en plus d'une action
   par segment, l'ambiance commune à toute la séquence (cadrage, lumière, ambiance sonore,
   musique) ; il ne remplit que les champs communs laissés vides. Le cadrage commun ne porte que
   la valeur de plan et la hauteur de caméra : chaque segment donne son propre mouvement de
@@ -185,7 +193,7 @@ ajoute une carte Import d'image reliée à elle.
 | `node tools/prompt-systems.js` | Lance les deux pages sans affichage avec `/api` bouchonné : pour chaque moteur et bouton ✨ (et l'enrichissement automatique), la consigne reçue par Gemma a le sha256 de la 1.4 (ou est la consigne remplacée, pour son seul moteur), le nombre d'appels et le contenu sont justes, le texte revient dans le champ | Node, Playwright et son Chromium (`NODE_PATH=$(npm root -g)`) |
 | `node tools/assistant-ui.js` | Le mode Assistant sans affichage, avec `/api` bouchonné et une réponse scriptée : la page s'ouvre sur l'assistant ; aucun job au changement de mode, à la Bibliothèque, à la saisie, à l'envoi ni à la modification d'une carte ; un job par clic sur Générer, avec les réglages de la carte, son avancement affiché sur la carte d'après les événements du job, signalé au serveur ; « Ouvrir dans le Studio » passe au Studio, remplit le formulaire et ne soumet rien ; « Lancer le Réalisateur » passe au Studio et lance le réalisateur, dont le bouton Générer nomme le travail de Gemma et son temps jusqu'à ce que la première étape soit prête ; cette étape ouvre le studio sans dessiner de planche, et le clic d'une planche l'envoie avec la seed de la première étape ; les pastilles LoRA d'une carte ne soumettent rien et son Générer envoie celles qui sont activées | Node, Playwright et son Chromium |
 | `node tools/lora-ui.js` | La pile de LoRA sans affichage, avec `/api` bouchonné : dans le Studio elle n'apparaît que pour les workflows qui prennent des LoRA, accepte jusqu'à 4 fichiers (chacun une fois) avec des forces ramenées à -2…2, ne soumet rien pendant qu'on la modifie, Générer envoie les lignes affichées, un autre moteur n'en envoie aucune et le retour retrouve la pile ; le panneau Modèles téléverse dans le dossier choisi ; un Canvas enregistré avec l'ancienne propriété `lora` revient avec une pile d'une ligne et son Générer envoie la pile | Node, Playwright et son Chromium |
-| `node tools/relay-ui.js` | Le Relay du réalisateur sans affichage, avec `/api` bouchonné, sur un projet restauré aux planches validées : la durée totale et le maximum par segment donnent le découpage (25 s à 10 s → 8 + 8 + 9), le découpage du scénario remplit les segments et seulement les champs communs restés vides sans rien soumettre, les en-têtes de segment montrent leur place dans la séquence, et la chaîne envoie une image de plan puis un clip H3 par segment dont le prompt porte l'ambiance commune une seule fois, sans lumière ni caméra par défaut ; le tableau de production montre l'état de chaque segment et l'avancement envoyé par les événements des jobs, un clic sur une tuile mène à son segment sans job, la chaîne reprend au premier segment pas prêt, et « Arrêter après ce segment » l'arrête là ; le plan-séquence à partir de deux images ouvre le Relay seul sans job (un appel de vision), rend image 1 → image 2 en un clip FL2VA, un segment ajouté après la fin part de la dernière image du segment 1, et le projet se reprend sous son pipeline | Node, Playwright et son Chromium |
+| `node tools/relay-ui.js` | Le Relay du réalisateur sans affichage, avec `/api` bouchonné, sur un projet restauré aux planches validées : la durée totale et le maximum par segment donnent le découpage (25 s à 10 s → 8 + 8 + 9), le découpage du scénario remplit les segments et seulement les champs communs restés vides sans rien soumettre, les en-têtes de segment montrent leur place dans la séquence, et la chaîne envoie une image de plan puis un clip H3 par segment dont le prompt porte l'ambiance commune une seule fois, sans lumière ni caméra par défaut ; le tableau de production montre l'état de chaque segment et l'avancement envoyé par les événements des jobs, un clic sur une tuile mène à son segment sans job, la chaîne reprend au premier segment pas prêt, et « Arrêter après ce segment » l'arrête là ; le plan-séquence à partir de deux images ouvre le Relay seul sans job (un appel de vision), rend image 1 → image 2 en un clip FL2VA, un segment ajouté après la fin part de la dernière image du segment 1, et le projet se reprend sous son pipeline ; les cartes suivent le plan (cartes vides ajoutées et retirées, cartes écrites gardées, la chaîne attend les cartes vides) ; un plan-séquence à partir d'une planche de référence rend une image de plan Qwen à partir de la planche puis le clip dessus, et changer son départ ne soumet rien | Node, Playwright et son Chromium |
 
 Modifier un compilateur de prompt ou une consigne fait échouer `parity-prompts.js` et `prompt-systems.js` ; si le
 changement est voulu, mettre à jour la référence dans le même commit et dire pourquoi.
