@@ -3117,6 +3117,11 @@ export const DICT = {
     es: "🎞 Corte (nueva imagen de plano)",
     de: "🎞 Schnitt (neues Einstellungsbild)",
   },
+  "🎞 Cut (new shot from the sheet)": {
+    fr: "🎞 Coupe (nouveau plan composé à partir de la planche)",
+    es: "🎞 Corte (nuevo plano compuesto a partir de la hoja)",
+    de: "🎞 Schnitt (neue, aus dem Sheet komponierte Einstellung)",
+  },
   "🎞 First segment": {
     fr: "🎞 Premier segment",
     es: "🎞 Primer segmento",

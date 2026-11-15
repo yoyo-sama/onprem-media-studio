@@ -1089,6 +1089,9 @@ const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${(sec % 
 const relaySubjects = () => [{ desc: charDesc(d.chars[0]), kind: P.charKindOf(d.chars[0].fields), ref: activeVariant(d.chars[0])?.ref }];
 const relayBusy = () => !!d?.relay?.segments.some(seg => seg.status === "pending");
 const relayReady = () => !!d?.relay?.segments.length && d.relay.segments.every(seg => seg.prompt.trim());
+// A long take cuts only when it starts from a sheet: the new shot is composed from it.
+const longTakeCuts = () => isLongTake() && !!d.startImage?.sheet;
+const continuous = seg => seg.mode === "continue" || (isLongTake() && !longTakeCuts());
 const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min(seg.transitionIdx || 0, seg.transitions.length - 1)] : null);
 
 function updateRelayButtons() {
@@ -1232,13 +1235,14 @@ function renderRelay() {
     dur.value = seg.duration;
     dur.addEventListener("change", () => { seg.duration = F.clampDuration(dur.value, seg.duration); syncRelayTotal(); renderRelay(); save(); });
     const link = el.querySelector(".seg-link");
-    // A long take has no sheets to compose a cut on: every link is continuous.
-    if (isLongTake()) link.hidden = true;
+    // A long take from one picture has nothing to compose a cut on: every link is
+    // continuous. From a sheet, a cut composes a new shot of its character.
+    if (isLongTake() && (i === 0 || !longTakeCuts())) link.hidden = true;
     if (isLongTake() && i === 0) renderStartChoice(el.querySelector(".seg-start-row"), seg, busy);
     else if (i === 0) { tx(link, "🎞 First segment"); link.disabled = true; }
     else {
-      tx(link, seg.mode === "continue" ? "🔗 Continuous (exact frame)" : "🎞 Cut (new shot image)");
-      link.classList.toggle("active", seg.mode === "continue");
+      tx(link, continuous(seg) ? "🔗 Continuous (exact frame)" : isLongTake() ? "🎞 Cut (new shot from the sheet)" : "🎞 Cut (new shot image)");
+      link.classList.toggle("active", continuous(seg));
       link.disabled = busy;
       link.addEventListener("click", () => { seg.mode = seg.mode === "continue" ? "cut" : "continue"; renderRelay(); save(); });
     }
@@ -1454,26 +1458,27 @@ async function renderSegment(i) {
   // A segment added after the end of a rendered chain: the previous one, rendered as the
   // last, has no transition frames yet; they are extracted now.
   const before = i > 0 ? r.segments[i - 1] : null;
-  if (before?.ref && !before.transitions?.length && (seg.mode === "continue" || isLongTake())) await extractTransitions(before, i - 1, total);
+  if (before?.ref && !before.transitions?.length && continuous(seg)) await extractTransitions(before, i - 1, total);
   if (!sameSession(s)) return;
   const prev = before ? transitionOf(before) : null;
   // 🔗 without a transition frame: refused rather than a silent cut.
-  if (i > 0 && (seg.mode === "continue" || isLongTake()) && !prev)
+  if (i > 0 && continuous(seg) && !prev)
     throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
   const subs = relaySubjects(), look = r.look;
   let start;
-  if (isLongTake() && i === 0 && s.startImage.sheet) {
+  // From a sheet, segment 1 and every cut start on a shot composed from its character.
+  if (isLongTake() && s.startImage.sheet && (i === 0 || !continuous(seg))) {
     log("req", "Relay, segment {n}/{total}: shot image from the sheet…", { n: i + 1, total });
     const text = [seg.prompt, look.lighting].map(x => x.trim().replace(/[\s.!?…]+$/, "")).filter(Boolean).join(". ");
     const prompt = P.relayStartFromSheetPrompt(r.scenario, text, subs[0].desc, s.style);
     const [width, height] = F.QWEN21_RATIOS[s.ratio] || F.QWEN21_RATIOS["16:9"];
     const job = await tracked(seg, "image", sub => runJob("qwen-image-2.1",
-      { prompt, images: [s.startImage.ref], width, height, seed: F.seedPlus(s.seed, 401) },
+      { prompt, images: [s.startImage.ref], width, height, seed: F.seedPlus(s.seed, 401 + i) },
       { origin: origin(), label: ["Relay · shot image {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
-        sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed: F.seedPlus(s.seed, 401) }] }));
+        sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed: F.seedPlus(s.seed, 401 + i) }] }));
     start = out(job, ".png");
   } else if (isLongTake() && i === 0) start = s.startImage.ref;
-  else if (i > 0 && prev && (seg.mode === "continue" || isLongTake())) {
+  else if (i > 0 && prev && continuous(seg)) {
     log("req", "Relay, segment {n}/{total}: video (continuous link)…", { n: i + 1, total });
     start = prev.ref;
   } else {

@@ -297,6 +297,7 @@ const SPLIT = {
   await page.fill('#relayList .relay-seg[data-seg="1"] textarea', "She opens the gate.");
   await page.dispatchEvent('#relayList .relay-seg[data-seg="1"] textarea', "change");
   check((await page.textContent("#relayRunBtn")).trim() === "Continue the chain from segment 2", `long take run button: "${await page.textContent("#relayRunBtn")}"`);
+  check(await page.isHidden('#relayList .relay-seg[data-seg="1"] .seg-link'), "a long take from one picture offers a cut");
   before = jobs.length;
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
@@ -349,6 +350,27 @@ const SPLIT = {
     && /garden path at dawn/.test(shot.prompt), `shot image prompt: ${shot.prompt}`);
   check(lt[1]?.params.image === `outputs/${lt[0]?.id}.png`,
     `the clip does not start on the shot image: ${lt[1]?.params.image}`);
+  // From a sheet, a segment can cut: its new shot is composed from the sheet, never
+  // from the previous frame. The link starts nothing.
+  await page.click("#relayAddBtn");
+  const seg2 = '#relayList .relay-seg[data-seg="1"]';
+  await page.fill(`${seg2} textarea`, "She walks toward the camera on another path.");
+  await page.dispatchEvent(`${seg2} textarea`, "change");
+  check((await page.textContent(`${seg2} .seg-link`)).trim() === "🔗 Continuous (exact frame)", `link of a long take from a sheet: "${await page.textContent(`${seg2} .seg-link`)}"`);
+  before = jobs.length;
+  await page.click(`${seg2} .seg-link`);
+  check((await page.textContent(`${seg2} .seg-link`)).trim() === "🎞 Cut (new shot from the sheet)", `cut link: "${await page.textContent(`${seg2} .seg-link`)}"`);
+  check(jobs.length === before, "switching the link submitted a job");
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "Ready", null, { timeout: 10000 });
+  lt = jobs.slice(before);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-i2v"]), `cut in a long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  const cut = lt[0]?.params || {};
+  check(JSON.stringify(cut.images) === JSON.stringify(shot.images) && /exactly one single instance/.test(cut.prompt) && /another path/.test(cut.prompt)
+    && cut.seed !== shot.seed && cut.width === 768, `cut shot from the sheet: ${JSON.stringify({ images: cut.images, seed: cut.seed, w: cut.width })}`);
+  check(lt[1]?.params.image === `outputs/${lt[0]?.id}.png`, `the cut clip does not start on its shot image: ${lt[1]?.params.image}`);
+  await page.$eval(`${seg2} .seg-del`, b => b.click());
+  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
   // Saying it is one single picture starts nothing: segment 1 becomes "to regenerate".
   before = jobs.length;
   await page.click("#relayList .seg-start");

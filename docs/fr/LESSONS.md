@@ -246,7 +246,11 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     (`START_IMAGE_SYSTEM`, qui décrit aussi une seule instance du sujet) ; une planche donne un
     premier segment qui part d'une image de plan Qwen Image 2.1 composée à partir d'elle, dans le
     style de la planche, au format choisi sur la carte, et la carte bascule entre « l'image telle
-    quelle » et « un plan composé à partir de la planche » (sans rien lancer). (2026-11-15)
+    quelle » et « un plan composé à partir de la planche » (sans rien lancer). Un plan-séquence
+    n'enchaîne que sur la dernière image : un personnage qui sort du champ ne peut donc pas
+    revenir identique, le segment suivant part d'une image vide et H3 n'a que le texte pour le
+    redessiner. À partir d'une planche, un segment peut désormais couper : il part d'un nouveau
+    plan composé à partir de la planche, comme le segment 1. (2026-11-15)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
