@@ -20,7 +20,7 @@ from fastapi.testclient import TestClient
 from studio import loras
 from studio.main import create_app
 from studio.models import MARKER
-from studio.pipelines import REGISTRY, common, h3, h3_lora, h3_runtime
+from studio.pipelines import REGISTRY, common, h3, h3_lora, h3_runtime, h3_start_frame
 
 from .test_api import FakeLlm, wait_for
 from .test_image_pipelines import rejected, run, upload
@@ -223,6 +223,42 @@ def test_r2v_two_passes(client, engines, capsys):
     log = capsys.readouterr().out
     assert "render: h3-r2v 1280×736, 124 frames, 2 reference(s) in " in log
     assert all(part in log for part in ("references ", "pass 1 ", "upscale ", "pass 2 and decoding "))
+
+
+def test_r2v_start_frame_goes_to_both_passes_and_patches_fastvideo(client, engines, monkeypatch, capsys):
+    """A Relay continuous segment: the references AND the previous clip's last frame. The
+    start frame is not a reference (<Picture 1> is the sheet) and reaches both passes."""
+    from studio.pipelines import h3_start_frame
+    installs = []
+    monkeypatch.setattr(h3_start_frame, "install", lambda: installs.append(len(engines["engines"])))
+    sheet, frame = upload(client, 192, 108, "red"), upload(client, 1280, 736, "black")
+    run(client, "h3-r2v", {"prompt": "<Subject 1> in <Picture 1>", "references": [sheet], "image": frame})
+    first, second = calls(engines)
+    assert installs == [0]  # before the engine is built
+    assert first["pil_image"].size == (1280, 736) and second["pil_image"] is first["pil_image"]
+    assert [r[0] for r in first["references"]] == ["ref"]
+    assert "1 reference(s), start frame in " in capsys.readouterr().out
+    assert (first["width"], first["height"], second["width"], second["height"]) == (736, 416, 1280, 736)
+    portrait = upload(client, 720, 1280)
+    run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "image": portrait})
+    assert (calls(engines)[-1]["width"], calls(engines)[-1]["height"]) == (736, 1280)  # follows the start frame
+    run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet]})
+    assert calls(engines)[-1]["pil_image"] is None and len(installs) == 2  # no start frame, no patch
+    assert "<Picture 2>" in rejected(client, "h3-r2v", {"prompt": "<Picture 2>", "references": [sheet], "image": frame})
+
+
+def test_start_frame_rows_take_the_time_of_the_target_frame_0():
+    """Ref2VA layout [text | ref | start frame | audio | video]: the start frame's rows move
+    to the target's frame-0 time and the target goes back by the slot it took."""
+    # times: text 0, sheet 1, start frame 2 (its Ref2VA slot), target audio and video from 3
+    pos = np.zeros((14, 3))
+    pos[:, 0] = [0, 0, 1, 1, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4]
+    layout = SimpleNamespace(num_condition_video_rows=4, num_condition_audio_rows=0, position_ids=pos,
+                             video_indices=np.array([2, 3, 4, 5, 8, 9, 10, 11, 12, 13]),
+                             audio_indices=np.array([6, 7]))
+    h3_start_frame.move_start_frame(layout, 2)
+    assert list(pos[:, 0]) == [0, 0, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3]
+    assert pos[4, 0] == pos[8, 0]  # start frame = target frame 0
 
 
 def test_t2v_progress_follows_the_denoising_steps_then_the_decoding(client, engines):

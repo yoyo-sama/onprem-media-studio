@@ -264,7 +264,21 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     la planche (les cheveux violets sont restés). L'image de décor d'une coupe ne doit donc montrer
     personne : la seule image d'un sujet est sa planche. Le même segment sans la LoRA de style a
     gardé la poitrine plus forte que sur la planche : c'est un biais de H3, pas de la LoRA.
-    (2026-11-15)
+    (2026-11-15) La solution a été de donner à un segment continu son image de départ ET la
+    planche : FastVideo refuse ce mélange, mais les deux pipelines conditionnent par les mêmes
+    lignes d'image et ne diffèrent que par leur temps (le FL2VA place son image à l'image 0 de la
+    cible, le Ref2VA donne à chaque référence une case avant la cible), et les deux transformers
+    ont les mêmes poids à leur tête de sortie près. Patché pour placer l'image de départ à
+    l'image 0 dans une disposition Ref2VA, le checkpoint OmniRef a raccordé au clip précédent
+    (écart de 6 à 9) et le personnage est revenu vers sa planche sur trois segments enchaînés,
+    une seule femme et une seule tenue du début à la fin, là où la chaîne i2v avait fait pousser
+    une deuxième femme et changé ses vêtements. Le checkpoint V2, à qui l'on donnait la planche
+    de la même façon, a dessiné une deuxième femme : il n'a jamais appris à lire une planche. Une
+    image du lieu en deuxième référence a tenu le jardin mais l'a emporté sur une image de départ
+    en plan serré (le plan a sauté au cadrage de l'image du lieu) : un segment continu ne prend
+    donc que la planche décor. Le son du Ref2VA sort 10 à 20 dB sous celui de l'i2v dès sa
+    première passe, avec ou sans image de départ : l'assemblage remonte une prise trop faible.
+    (2026-11-16)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

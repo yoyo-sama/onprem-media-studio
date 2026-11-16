@@ -166,11 +166,18 @@ const SPLIT = {
   await page.waitForFunction(() => document.querySelectorAll("#relayList .seg-status").length === 3
     && [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 15000 });
   const kinds = jobs.map(j => j.pipeline);
-  check(JSON.stringify(kinds) === JSON.stringify(["qwen-image-2.1", "h3-i2v", "video-frames", "h3-i2v", "video-frames", "h3-i2v"]),
+  check(JSON.stringify(kinds) === JSON.stringify(["qwen-image-2.1", "h3-r2v", "video-frames", "h3-r2v", "video-frames", "h3-r2v"]),
     `chain jobs: ${JSON.stringify(kinds)}`);
-  const clips = jobs.filter(j => j.pipeline === "h3-i2v");
+  // Each segment is H3 Ref2VA on the sheets AND its start frame (the shot image, then the
+  // previous segment's transition frame): the canvas follows the start frame.
+  const clips = jobs.filter(j => j.pipeline === "h3-r2v");
+  const starts = [`outputs/${jobs[0].id}.png`, `outputs/${jobs[1].id}.png`, `outputs/${jobs[3].id}.png`];
   for (const [i, j] of clips.entries()) {
     const pr = j.params.prompt;
+    check(j.params.image === starts[i] && JSON.stringify(j.params.references) === JSON.stringify(["outputs/char.png", "outputs/loc.png"])
+      && !("aspect" in j.params), `segment ${i + 1} start and references: ${JSON.stringify(j.params)}`);
+    check(/<Subject 1> is the main character in <Picture 1>/.test(pr) && /<Subject 2> is the location as defined by <Picture 2>/.test(pr),
+      `segment ${i + 1} names the sheets: ${pr}`);
     check(j.params.duration === 10, `segment ${i + 1} duration ${j.params.duration}`);
     check(!/golden|steady framing/i.test(pr), `segment ${i + 1} prompt carries a default look`);
     check(pr.includes("Warm candle light.") && pr.includes(`Framing: ${SPLIT.framing}`), `segment ${i + 1} prompt lacks the shared look`);
@@ -205,7 +212,7 @@ const SPLIT = {
   before = jobs.length;
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"));
-  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-i2v"]),
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]),
     `continuing from segment 3: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
   // A cut: one H3 Ref2VA clip on the subject's sheet and the setting's sheet, no start
   // image; switching the link starts nothing and hides the end image.
@@ -257,7 +264,7 @@ const SPLIT = {
   }
   await page.waitForFunction(() => document.getElementById("relayStopBtn").hidden);
   await page.waitForTimeout(200);
-  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-i2v", "video-frames"]),
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-r2v", "video-frames"]),
     `jobs of the stopped chain: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
   check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-stale", "st-stale"]), `tiles after the stop: ${JSON.stringify(await tiles())}`);
   check((await page.textContent("#relayRunBtn")).trim() === "Continue the chain from segment 2", `run button after the stop: "${await page.textContent("#relayRunBtn")}"`);
@@ -320,8 +327,11 @@ const SPLIT = {
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-i2v"]), `extending the long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v"]), `extending the long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
   check(/^outputs\/job-\d+\.png$/.test(lt[1]?.params.image || ""), `segment 2 does not start on the last frame of segment 1: ${lt[1]?.params.image}`);
+  // The start picture is the subject's only reference: segment 2 sees it as well as its frame.
+  check(JSON.stringify(lt[1]?.params.references) === JSON.stringify([clip.image]) && !("aspect" in (lt[1]?.params || {})),
+    `segment 2 of a long take, references: ${JSON.stringify(lt[1]?.params.references)}`);
   check(!("last_image" in (lt[1]?.params || {})), "segment 2 has an end image");
   // Saved and resumed under its own pipeline.
   await page.click("#studioExitBtn");
@@ -360,7 +370,7 @@ const SPLIT = {
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-i2v"]), `long take from a sheet: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-r2v"]), `long take from a sheet: ${JSON.stringify(lt.map(j => j.pipeline))}`);
   const shot = lt[0]?.params || {};
   check(shot.images?.length === 1 && /^inputs\/up-\d+\.png$/.test(shot.images[0]) && shot.width === 768 && shot.height === 1344,
     `shot image from the sheet: ${JSON.stringify({ images: shot.images, w: shot.width, h: shot.height })}`);
@@ -383,7 +393,7 @@ const SPLIT = {
   lt = jobs.slice(before);
   check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v"]), `cut in a long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
   const cut = lt[1]?.params || {}, framesJob = lt[0];
-  const seg1Clip = jobs.slice(0, before).filter(j => j.pipeline === "h3-i2v").pop();
+  const seg1Clip = jobs.slice(0, before).filter(j => j.pipeline === "h3-r2v").pop();
   check(JSON.stringify(cut.references) === JSON.stringify([shot.images?.[0], `outputs/${seg1Clip?.id}.png`]) && cut.aspect === "9:16",
     `cut in a long take, references: ${JSON.stringify({ refs: cut.references, aspect: cut.aspect })}`);
   check(/another path/.test(cut.prompt || "") && /<Subject 2> is the location as defined by <Picture 2>\./.test(cut.prompt || ""), `cut in a long take, prompt: ${cut.prompt}`);
@@ -410,7 +420,8 @@ const SPLIT = {
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-i2v"]) && lt[0].params.image === shot.images?.[0],
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]) && lt[0].params.image === shot.images?.[0]
+    && JSON.stringify(lt[0].params.references) === JSON.stringify([shot.images?.[0]]),
     `long take from the image as it is: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.image]))}`);
 
   check(!errs.length, `page errors: ${errs.join(" | ")}`);

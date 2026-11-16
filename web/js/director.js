@@ -1499,9 +1499,19 @@ async function renderSegment(i) {
   if (!sameSession(s)) return;
   seg.start = { ref: start };
   const last = seg.endImage?.ref || null;
-  seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
-  const job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,
-    ["Relay · segment {n}/{total}", { n: i + 1, total }], last, sub));
+  // With the subjects' sheets, a segment starts on its frame AND sees the sheets (Ref2VA with a
+  // start frame): i2v sees only its first frame, so a face drifted segment after segment.
+  // An end image (FL2VA) stays i2v: Ref2VA takes no last frame.
+  const refs = last ? [] : relayRefs(settingSheet());
+  let job;
+  if (refs.length) {
+    seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
+    job = await relayR2vJob(s, seg, i, total, refs, start);
+  } else {
+    seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
+    job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,
+      ["Relay · segment {n}/{total}", { n: i + 1, total }], last, sub));
+  }
   if (!sameSession(s)) return;
   seg.ref = out(job, ".mp4");
   seg.transitions = null;
@@ -1516,26 +1526,39 @@ async function renderSegment(i) {
   save();
 }
 
-// A cut rendered by H3 Ref2VA: references = the subjects' sheets (the first one is the
-// main character, a further human one a character, a non-human one a reference), then
-// the setting: its sheet, or else the previous segment's chosen transition frame (its last
-// frame unless another is chosen). No start image and no end image (Ref2VA takes neither).
-// A subject still visible in that frame is drifted already and wins over its sheet (GB10,
-// 2026-11-15): the user picks a frame where nobody is in view.
-async function renderCutSegment(s, seg, i, total, before, began) {
-  const r = s.relay, subs = relaySubjects();
-  const frame = before?.ref ? transitionOf(before)?.ref || before.lastFrame : null;
-  const setting = !isLongTake() && locVariant()?.ref ? { ref: locVariant().ref, desc: locDesc() }
-    : frame ? { ref: frame, desc: "" } : null;
-  const refs = [...subs.map((x, k) => ({ kind: k === 0 || x.kind === "human" ? "character" : "reference", desc: x.desc, ref: x.ref })),
+// The Relay's H3 Ref2VA references: the sheets of the first two subjects with one (the first
+// is the main character, a further human one a character, a non-human one a reference), then
+// the setting, if any.
+function relayRefs(setting) {
+  return [...relaySubjects().map((x, k) => ({ kind: k === 0 || x.kind === "human" ? "character" : "reference", desc: x.desc, ref: x.ref })),
     ...(setting ? [{ kind: "environment", ...setting }] : [])];
+}
+// The setting's sheet (the director's Relay; a long take has none). A continuous segment takes
+// no other image of the place: one framed unlike its start frame wins over that frame (the
+// shot jumped to the place image's framing, GB10 2026-11-16).
+const settingSheet = () => (!isLongTake() && locVariant()?.ref ? { ref: locVariant().ref, desc: locDesc() } : null);
+
+// One Ref2VA clip of the Relay; `start`: the frame the clip starts on (a continuous segment),
+// or none (a cut).
+function relayR2vJob(s, seg, i, total, refs, start) {
+  return tracked(seg, "video", sub => runJob("h3-r2v",
+    { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref),
+      ...(start ? { image: start } : { aspect: s.ratio }) },
+    { origin: origin(), label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
+      sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref.${start ? " + start" : ""} · ${seg.duration} s`, seed: seg.seed }] }));
+}
+
+// A cut: H3 Ref2VA with no start image and no end image. Its setting is the setting's sheet,
+// or else the previous segment's chosen transition frame (its last frame unless another is
+// chosen). A subject still visible in that frame is drifted already and wins over its sheet
+// (GB10, 2026-11-15): the user picks a frame where nobody is in view.
+async function renderCutSegment(s, seg, i, total, before, began) {
+  const frame = before?.ref ? transitionOf(before)?.ref || before.lastFrame : null;
+  const refs = relayRefs(settingSheet() || (frame ? { ref: frame, desc: "" } : null));
   log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });
   seg.start = null;
-  seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), r.look, refs, s.style, h3Warn);
-  const job = await tracked(seg, "video", sub => runJob("h3-r2v",
-    { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], aspect: s.ratio, references: refs.map(x => x.ref) },
-    { origin: origin(), label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
-      sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref. · ${seg.duration} s`, seed: seg.seed }] }));
+  seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), s.relay.look, refs, s.style, h3Warn);
+  const job = await relayR2vJob(s, seg, i, total, refs, null);
   if (!sameSession(s)) return;
   seg.ref = out(job, ".mp4");
   seg.transitions = null;
