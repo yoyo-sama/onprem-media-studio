@@ -251,7 +251,11 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     sheet. An image of the place as a second reference held the garden but won over a close-up
     start frame (the shot jumped to the place image's framing), so a continuous segment takes the
     setting's sheet only. Ref2VA sound is 10 to 20 dB below i2v from its first pass on, whatever
-    the start frame: the assembly lifts a quiet take. (2026-11-16)
+    the start frame: the assembly lifts a quiet take. (2026-11-16) Through the UI, over five
+    segments, OmniRef still let go of its start frame once in three continuous segments (first
+    frame 60 away from the image, against 5 to 7 for a true join): the card measures the gap
+    between the start image and the clip's first frame and says "broken join, regenerate"; nothing
+    is rendered again on its own. (2026-11-16)
 
 ## 8. Front end (for the port in step 4)
 

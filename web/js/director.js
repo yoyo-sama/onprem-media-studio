@@ -1206,6 +1206,7 @@ function renderRelay() {
     el.className = "relay-seg";
     el.dataset.seg = String(i);
     el.innerHTML = `<div class="seg-head"><strong></strong><span class="seg-status"></span></div>
+      <p class="seg-warn" role="status" hidden>The clip does not start on its image (broken join): regenerate this segment.</p>
       <textarea spellcheck="false" placeholder="What happens in this segment, and its own camera motion."></textarea>
       <div class="seg-row seg-start-row" hidden>
         <button type="button" class="secondary-btn seg-start"></button>
@@ -1230,6 +1231,7 @@ function renderRelay() {
       </details>`;
     tx(el.querySelector("strong"), "Segment {n}/{total} · {from}–{to}", { n: i + 1, total: r.segments.length, from: clock(from), to: clock(at) });
     tx(el.querySelector(".seg-status"), statusWord(seg.status));
+    el.querySelector(".seg-warn").hidden = !(seg.status === "ready" && seg.joinGap > JOIN_BROKEN);
     const area = el.querySelector("textarea");
     area.value = seg.prompt;
     area.addEventListener("change", () => { seg.prompt = area.value; updateRelayButtons(); save(); });
@@ -1458,6 +1460,7 @@ function markStaleFrom(from) {
 async function renderSegment(i) {
   const s = d, r = s.relay, seg = r.segments[i], total = r.segments.length, began = Date.now();
   seg.status = "pending";
+  seg.joinGap = null;
   renderRelay();
   // A segment added after the end of a rendered chain: the previous one, rendered as the
   // last, has no transition frames yet; they are extracted now (a cut takes one as its setting).
@@ -1507,6 +1510,10 @@ async function renderSegment(i) {
   if (refs.length) {
     seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
     job = await relayR2vJob(s, seg, i, total, refs, start);
+    // Ref2VA does not always hold its start frame (one join in three broke on the GB10):
+    // measured, and said on the card; nothing is rendered again on its own.
+    seg.joinGap = await joinGap(start, out(job, ".mp4"));
+    if (seg.joinGap > JOIN_BROKEN) log("warn", "Relay, segment {n}/{total}: the clip does not start on its image (broken join). Regenerate this segment.", { n: i + 1, total });
   } else {
     seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
     job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,
@@ -1557,6 +1564,7 @@ async function renderCutSegment(s, seg, i, total, before, began) {
   const refs = relayRefs(settingSheet() || (frame ? { ref: frame, desc: "" } : null));
   log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });
   seg.start = null;
+  seg.joinGap = null;
   seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), s.relay.look, refs, s.style, h3Warn);
   const job = await relayR2vJob(s, seg, i, total, refs, null);
   if (!sameSession(s)) return;
@@ -1570,6 +1578,37 @@ async function renderCutSegment(s, seg, i, total, before, began) {
   relayLive.delete(seg);
   renderRelay();
   save();
+}
+
+// Mean gap per channel (0-255) between an image and a clip's first frame, both drawn at
+// 64×36 (the start frame is stretched to the canvas, as FastVideo does); null when either
+// cannot be read. On the GB10 a true join measured 5 to 9, a broken one 59 to 73.
+const JOIN_BROKEN = 25;
+async function joinGap(imageRef, clipRef) {
+  const W = 64, H = 36;
+  const draw = src => {
+    const c = Object.assign(document.createElement("canvas"), { width: W, height: H });
+    const g = c.getContext("2d", { willReadFrequently: true });
+    g.drawImage(src, 0, 0, W, H);
+    return g.getImageData(0, 0, W, H).data;
+  };
+  try {
+    const img = new Image();
+    img.src = refURL(imageRef);
+    await img.decode();
+    const video = Object.assign(document.createElement("video"), { muted: true, preload: "auto", src: refURL(clipRef) });
+    await Promise.race([new Promise((ok, ko) => { video.onloadeddata = ok; video.onerror = ko; }),
+      new Promise((_, ko) => setTimeout(ko, 15000))]);
+    // After loadeddata the first frame can still draw as nothing (transparent): a decoded
+    // frame is opaque, so the draw is tried again until it is.
+    let b = draw(video);
+    for (let k = 0; k < 40 && !b[3]; k++) { await new Promise(r => setTimeout(r, 50)); b = draw(video); }
+    if (!b[3]) return null;
+    const a = draw(img);
+    let sum = 0;
+    for (let k = 0; k < a.length; k += 4) sum += Math.abs(a[k] - b[k]) + Math.abs(a[k + 1] - b[k + 1]) + Math.abs(a[k + 2] - b[k + 2]);
+    return sum / (W * H * 3);
+  } catch { return null; }
 }
 
 // Candidates of a segment's transition: the clip's last frame (saved with it) and frames

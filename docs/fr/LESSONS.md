@@ -278,7 +278,10 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     en plan serré (le plan a sauté au cadrage de l'image du lieu) : un segment continu ne prend
     donc que la planche décor. Le son du Ref2VA sort 10 à 20 dB sous celui de l'i2v dès sa
     première passe, avec ou sans image de départ : l'assemblage remonte une prise trop faible.
-    (2026-11-16)
+    (2026-11-16) Par l'interface, sur cinq segments, OmniRef a encore lâché son image de départ
+    une fois sur trois segments continus (première image à 60 de l'image, contre 5 à 7 pour un
+    vrai raccord) : la carte mesure l'écart entre l'image de départ et la première image du clip
+    et affiche « raccord cassé, régénère » ; rien ne se relance tout seul. (2026-11-16)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

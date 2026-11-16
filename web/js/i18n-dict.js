@@ -1932,6 +1932,16 @@ export const DICT = {
     es: "Relay · segmento {n}/{total}",
     de: "Relay · Segment {n}/{total}",
   },
+  "Relay, segment {n}/{total}: the clip does not start on its image (broken join). Regenerate this segment.": {
+    fr: "Relay, segment {n}/{total} : le clip ne repart pas de son image (raccord cassé). Régénère ce segment.",
+    es: "Relay, segmento {n}/{total}: el clip no empieza en su imagen (raccord roto). Regenera este segmento.",
+    de: "Relay, Segment {n}/{total}: Der Clip beginnt nicht mit seinem Bild (Anschluss gebrochen). Generiere dieses Segment neu.",
+  },
+  "The clip does not start on its image (broken join): regenerate this segment.": {
+    fr: "Le clip ne repart pas de son image (raccord cassé) : régénère ce segment.",
+    es: "El clip no empieza en su imagen (raccord roto): regenera este segmento.",
+    de: "Der Clip beginnt nicht mit seinem Bild (Anschluss gebrochen): Generiere dieses Segment neu.",
+  },
   "Relay, segment {n}/{total}: video from the references (cut)…": {
     fr: "Relay, segment {n}/{total} : vidéo à partir des références (coupe)…",
     es: "Relay, segmento {n}/{total}: vídeo a partir de las referencias (corte)…",
