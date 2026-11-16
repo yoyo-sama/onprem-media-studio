@@ -491,6 +491,9 @@ function renderVariantStrip(kind) {
   const busy = variants.some(v => v.status === "pending");
   const regen = section.querySelector(".sheet-regen");
   tx(regen, variants.length ? "🔄 Regenerate the sheet" : "Generate the sheet");
+  // The first sheet is the step's main action; a further variant is one choice among others.
+  regen.classList.toggle("primary-btn", !variants.length);
+  regen.classList.toggle("secondary-btn", !!variants.length);
   regen.disabled = !d || busy;
   section.querySelector(".sheet-prompt").disabled = !d || busy;
   section.querySelector(".sheet-import").disabled = !d;
@@ -622,8 +625,16 @@ function updateGate() {
     updateMontageButtons();
     updateRelayButtons();
   }
+  updateNavMarks();
   refreshSessionBar();
 }
+// The menu reads as a checklist: ✓ on each step that has its result.
+function updateNavMarks() {
+  const marks = { character: !!d && d.chars.every(c => activeVariant(c)?.status === "ready"), location: locVariantReady(),
+    storyboard: keyframesReady(), montage: !!d?.animatic?.ref, relay: !!d?.relay?.video?.ref, video: !!d?.r2vVideo?.ref };
+  for (const [name, done] of Object.entries(marks)) navBtn(name).classList.toggle("done", done);
+}
+const locVariantReady = () => !!d && locVariant()?.status === "ready";
 
 // ── Shot list ─────────────────────────────────────────────────────────────────
 // One chip per subject, lit = in the shot. At two subjects the unlit chips are
@@ -867,12 +878,6 @@ function updateMontageButtons() {
   $("directorAssembleBtn").disabled = !(cuts?.length && cuts.every(c => c.ref && (c.status === "ready" || c.status === "stale")));
 }
 
-function renderCutHint() {
-  const dur = d?.segDur || F.formDuration();
-  tx($("cutEngineHint"), "MiniMax H3 image to video, MiniMax H3 Prompt Composer grammar. A {asked} s cut renders {real} s (17n+5 frame grid).",
-    { asked: dur, real: P.h3RealDuration(dur).toFixed(2) });
-}
-
 // "Generate the cuts": contact sheet (not awaited) + one cut per shot, each with its status.
 async function generateCuts() {
   if (!d || !keyframesReady()) return;
@@ -941,6 +946,7 @@ async function assembleAnimatic() {
     if (!sameSession(s)) return;
     s.animatic = { ref };
     renderMontagePlayer();
+    updateNavMarks();
     log("ok", "Montage: animatic assembled.");
   } catch (err) { warn(err); }
   updateMontageButtons();
@@ -1120,7 +1126,10 @@ async function composeRelay() {
   const r = d?.relay, text = $("relayScenario").value.trim();
   if (!r || !text) return;
   const durs = relayDurations(r.total, r.segMax), n = durs.length;
-  if (r.segments.some(seg => seg.prompt.trim() || seg.ref) && !confirm(t("Replace the current segments with the split screenplay?"))) return;
+  // Asked only when something would be lost: a render, or a text that is not the screenplay
+  // itself (a long take opens with it in every card).
+  if (r.segments.some(seg => seg.ref || (seg.prompt.trim() && seg.prompt.trim() !== text))
+      && !confirm(t("Replace the current segments with the split screenplay?"))) return;
   const btn = $("relayComposeBtn");
   btn.disabled = true;
   tx(btn, "Splitting…");
@@ -1154,6 +1163,9 @@ function showRelayComposer() {
   $("relayTotal").value = r?.total ?? 30;
   $("relaySegDur").value = r?.segMax ?? RELAY_SEG_DEFAULT;
   document.querySelectorAll("#relayLook textarea").forEach(el => { el.value = r?.look[el.dataset.look] || ""; });
+  // The shared fields stay folded while they are all empty, and open once one is written
+  // (by the user or by the split): what goes into every prompt is in view.
+  $("relayLook").open = !!r && RELAY_LOOK_KEYS.some(k => r.look[k].trim());
   renderRelayPlan();
 }
 // The plan line says what "Generate the chain" renders: the segment cards, never a count
@@ -1238,11 +1250,14 @@ function renderRelay() {
     dur.value = seg.duration;
     dur.addEventListener("change", () => { seg.duration = F.clampDuration(dur.value, seg.duration); syncRelayTotal(); renderRelay(); save(); });
     const link = el.querySelector(".seg-link");
-    if (isLongTake() && i === 0) link.hidden = true;
+    // The first segment has no link: it starts on the shot image, or the start image.
+    if (i === 0) link.hidden = true;
     if (isLongTake() && i === 0) renderStartChoice(el.querySelector(".seg-start-row"), seg, busy);
-    else if (i === 0) { tx(link, "🎞 First segment"); link.disabled = true; }
-    else {
+    else if (i > 0) {
       tx(link, continuous(seg) ? "🔗 Continuous (exact frame)" : "🎞 Cut (new shot from the references)");
+      txAttr(link, "title", continuous(seg)
+        ? "The segment picks up the previous one's last frame exactly. Click for a cut."
+        : "A deliberate cut: a new shot rendered from the references (the subjects' sheets and the setting, or else the previous segment's transition image: choose one where nobody is in view), so a subject who left the frame comes back as itself. Click for a continuous segment.");
       link.classList.toggle("active", continuous(seg));
       link.disabled = busy;
       link.addEventListener("click", () => { seg.mode = seg.mode === "continue" ? "cut" : "continue"; renderRelay(); save(); });
@@ -1256,7 +1271,9 @@ function renderRelay() {
       finally { tx(enrich, "✨ Enrich"); enrich.disabled = false; updateRelayButtons(); }
     });
     const regen = el.querySelector(".seg-regen");
-    regen.disabled = busy || !["ready", "stale", "error"].includes(seg.status);
+    // Shown once there is a render to make again.
+    regen.hidden = !["ready", "stale", "error"].includes(seg.status);
+    regen.disabled = busy;
     regen.addEventListener("click", () => regenerateSegment(i));
     renderEndImage(el, i, seg, busy);
     const del = el.querySelector(".seg-del");
@@ -1599,12 +1616,17 @@ async function runRelay() {
         break;
       }
     }
-    if (r.segments.every(seg => seg.status === "ready")) log("ok", "Relay: {n} segments generated: assemble the sequence.", { n: r.segments.length });
   } catch (err) { if (sameSession(s)) relayFail(err); }
   finally { relayRunning = false; relayStop = false; }
   if (!sameSession(s)) return;
   renderRelay();
   save();
+  // A finished chain is assembled at once: the click that started it asked for the video
+  // (one segment alone is the video already).
+  if (r.segments.length > 1 && r.segments.every(seg => seg.status === "ready")) {
+    log("ok", "Relay: {n} segments generated: assembling the sequence.", { n: r.segments.length });
+    await assembleRelay();
+  }
 }
 
 // One segment again, on its current start, with a new seed. The following segments are
@@ -1634,6 +1656,7 @@ async function assembleRelay() {
     if (!sameSession(s)) return;
     r.video = { ref };
     player($("relayPlayer"), ref);
+    updateNavMarks();
     log("ok", "Relay: sequence assembled.");
   } catch (err) { warn(err); }
   updateRelayButtons();
@@ -1764,7 +1787,6 @@ export async function restoreProject() {
   showRelayComposer();
   renderRelay(); player($("relayPlayer"), d.relay.video?.ref);
   renderMontage(); renderTimeline(); renderMontagePlayer();
-  renderCutHint();
   updateGate();
   log("ok", "Project restored (saved {date}): checking its files…", { date: new Date(p.savedAt).toLocaleString(LANG) });
   // Every file is checked; a missing one is marked, the rest of the project stays usable.
@@ -1813,6 +1835,8 @@ export function initDirector(h) {
     if (!anchorsReady()) return;
     d.validated = true;
     updateGate();
+    // Approved: on to the next step.
+    selectSection(isR2V() ? "video" : "storyboard");
     save();
   });
   $("directorKeyframesBtn").addEventListener("click", async () => {
@@ -1855,7 +1879,6 @@ export function initDirector(h) {
     d.relay.look[el.dataset.look] = el.value;
     save();
   }));
-  $("videoDuration").addEventListener("change", renderCutHint);
   document.querySelectorAll("#studioNav .studio-nav-btn").forEach(b => b.addEventListener("click", () => {
     selectSection(b.dataset.section);
     if (MOBILE.matches) $(SECTIONS[b.dataset.section]).scrollIntoView({ block: "start" });
@@ -1879,6 +1902,5 @@ export function initDirector(h) {
     renderShotList();
   });
   placeProjectActions();
-  renderCutHint();
   reset();
 }

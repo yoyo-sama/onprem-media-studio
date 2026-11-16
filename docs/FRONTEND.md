@@ -40,7 +40,23 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
 - **Nothing renders without a click.** Choosing a goal card, a pipeline, an engine, a language,
   adding a card or connecting cards submits nothing. Only Generate buttons (and the director's
   step buttons) post to `/api/jobs`, and "⇱ Upscale ×2" in the gallery lightbox, one job per
-  click ([IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2)).
+  click ([IMAGE-ENGINES.md](IMAGE-ENGINES.md#upscale-2)). A click may start, in a row, the
+  jobs its button stands for: "Generate the chain" renders the Relay's segments and, when every
+  one is ready, assembles the sequence (two segments or more; a chain stopped or broken is not
+  assembled).
+- **One main action per step, in view, and the rest folded** (2026-11-16). The form reads top
+  to bottom: the brief on its full width, the pipeline's own settings, what it takes besides the
+  brief (input image, images of a long take, extra references, sheets from the assistant), the
+  "Advanced options" (seed, hold on the last shot, sheet layout, enrichment), then Generate:
+  nothing to fill sits under the button. The Engine menu shows only when the pipeline has more
+  than one engine (Text2Image). What skipping the sheets does is said once the box is ticked.
+  The director's menu is a checklist: ✓ on a step that has its result (sheets ready, shot
+  images, animatic, assembled long take, video), 🔒 on a step not open yet, and "Approve the
+  sheets" right under the two sheets; approving opens the next step (Storyboard, or Video) and
+  submits nothing. A sheet's first "Generate the sheet" is the primary button of its page. The
+  step's main button ("Generate the shot images", the Relay's chain buttons) stays at the foot
+  of the panel while the cards scroll. Folding never changes what is sent: a folded field keeps
+  its value.
 - **The director's first step draws nothing** (decided on 2026-11-01, unlike 1.4). "Open the
   studio" has Gemma write the subject and setting descriptions and the shot list, then opens
   the studio with no sheet. Each sheet is generated on its own click: from its fields, from a
@@ -140,7 +156,9 @@ to it.
   shot image's format (LESSONS #51); segment k ends on image k+1 (FL2VA) and each
   segment starts on the previous one's last frame, as it is (1.4 started each pair on the key
   image itself); one image gives one segment to add to. The brief is the screenplay and the first
-  text of every segment, so "Generate the chain" right away renders what 1.4's sequence did. From
+  text of every segment, so "Generate the chain" right away renders what 1.4's sequence did
+  (splitting that screenplay asks nothing: a card that only holds the screenplay loses nothing).
+  The goal card "Long video (long take)" opens this pipeline in one click. From
   segment 2 on, a link can be "🎞 Cut (new shot from the references)", as in the director's
   Relay (below); the form's H3 LoRA stack goes to every segment; the
   project is saved and resumed like a storyboard (one project at a time), under its own
@@ -153,8 +171,8 @@ to it.
   non-human one a reference), then the setting: its sheet, or else the previous segment's
   chosen transition frame, its last frame by default (a long take has no setting sheet; the
   frames are extracted first when the previous segment was the last). A subject still visible
-  in that frame is drifted already and wins over its sheet, so the hint asks for a frame where
-  nobody is in view. H3 keeps the references in view for the whole clip, so a
+  in that frame is drifted already and wins over its sheet, so the cut button's tooltip asks for
+  a frame where nobody is in view. H3 keeps the references in view for the whole clip, so a
   subject who left the frame comes back as itself; the prompt is the six-field block
   (`buildRelayCutPrompt`) with the shared look. A cut takes no end image (its button is hidden).
   Continuous segments still start on the previous frame, and their prompt now names the first
@@ -163,7 +181,8 @@ to it.
   frames extracted first (the last segment of a chain has none).
 - The Relay legend names every subject of the shot (1.4 lost the main character).
 - The Relay is set by a total length and a maximum per segment (10 s by default, the longest H3
-  render qualified on the GB10): the studio cuts the total into as few segments as possible, as
+  render qualified on the GB10; under the composer's "Advanced options", each card having its
+  own length): the studio cuts the total into as few segments as possible, as
   even as possible, and shows each segment's place in the sequence (`00:10.1–00:20.3`, from the
   durations H3 really renders). The cards are the plan: a new total or maximum adds the missing
   cards empty (the chain waits until they are written) and removes the empty ones beyond it,
@@ -173,7 +192,8 @@ to it.
   left empty. The shared framing is shot size and camera height only: each segment gives its
   own camera movement, one per segment. Each segment's prompt takes that look once, and nothing else: 1.4 appended a
   golden-hour light and a "steady framing" to every segment whatever it said (LESSONS #50). The
-  first shot image takes the shared lighting too.
+  first shot image takes the shared lighting too. The four shared fields are folded while they
+  are all empty and open once one is written, by the user or by the split.
 - The Relay has a production board: one tile per segment, as wide as its length, with its start
   image, its place in the sequence, its state and the progress of the job running for it (shot
   image, video, transition frames, from the job events); a click goes to the segment and starts
@@ -181,8 +201,11 @@ to it.
   been timed, about how long is left. "Generate the chain" starts at the first segment that is
   not ready ("Continue the chain from segment n"), and marks the following ones "to
   regenerate"; when all are ready it renders them all again with new seeds, once confirmed.
-  "Stop after this segment" ends the chain once the running segment is done. A segment's end
-  image, transition choice and removal sit under its "Advanced options". A segment is ready only
+  "Stop after this segment" ends the chain once the running segment is done. A chain that ends
+  with every segment ready assembles the sequence at once, which plays under the board;
+  "Assemble the sequence" stays for a chain with a segment regenerated since. A segment's end
+  image, transition choice and removal sit under its "Advanced options"; the first segment
+  shows no link, and "Regenerate" shows once a segment has a render. A segment is ready only
   once its transition frames are there.
 - Canvas: ✨ follows the Studio routing (1.4 had its own copy of the generic instruction), the
   final video has no audio switch (clips keep their sound), imports are images only.
@@ -194,9 +217,9 @@ to it.
 | `python -m pytest` | Server, engines' parameters, gallery, and `tests/test_i18n.py`: every interface string of both pages has its French, Spanish and German translation with the same `{placeholders}`, and no entry is unused | Python, Node |
 | `node tools/parity-prompts.js` | Every prompt compiler and instruction gives, character for character, what 1.4 (`234f37c`, read from `../dellaicontent`) gives, with scripted Gemma answers | Node, the 1.4 checkout |
 | `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256 (or is the replaced one, for its engine only), the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
-| `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready; that step opens the studio without drawing a sheet, and a sheet's own click sends it with the first step's seed; a card's LoRA chips submit nothing and its Generate sends the ones turned on | Node, Playwright and its Chromium |
-| `node tools/lora-ui.js` | The LoRA stack headless with `/api` stubbed: in the Studio it shows for the workflows that take LoRAs only, takes up to 4 files (each once) with strengths clamped to -2…2, submits nothing while edited, Generate sends the rows on screen, another engine sends none and coming back finds the stack; the Models panel uploads into the chosen folder; a Canvas saved with the old `lora` property comes back as a one-row stack and its Generate sends the stack | Node, Playwright and its Chromium |
-| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera; the production board shows each segment's state and the progress sent by the job events, a tile click focuses its segment without a job, the chain continues from the first segment not ready, and "Stop after this segment" ends it there; the long take from two images opens the Relay alone without a job (one vision call), renders image 1 → image 2 as one FL2VA clip, a segment added after the end starts on segment 1's last frame, and the project resumes under its pipeline; the cards follow the plan (empty cards added and removed, written ones kept, the chain waits for empty ones); a long take from a reference sheet renders a Qwen shot image from the sheet then the clip on it, a cut in the director's Relay or in a long take is one `h3-r2v` job on the sheets and the setting (sheet, or the previous segment's transition frame, extracted first) with no start image, another transition frame chosen becomes its setting, and switching its start, a link or a transition frame submits nothing | Node, Playwright and its Chromium |
+| `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready; that step opens the studio without drawing a sheet, and a sheet's own click sends it with the first step's seed; a card's LoRA chips submit nothing and its Generate sends the ones turned on; the director's menu marks the ready sheets, and approving them opens the next step without a job | Node, Playwright and its Chromium |
+| `node tools/lora-ui.js` | The LoRA stack headless with `/api` stubbed: in the Studio it shows for the workflows that take LoRAs only, takes up to 4 files (each once) with strengths clamped to -2…2, submits nothing while edited, Generate sends the rows on screen, another engine sends none and coming back finds the stack; the Models panel uploads into the chosen folder; a Canvas saved with the old `lora` property comes back as a one-row stack and its Generate sends the stack; a pipeline with one engine shows no engine menu, and the seed sits under the advanced options | Node, Playwright and its Chromium |
+| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera; the production board shows each segment's state and the progress sent by the job events, a tile click focuses its segment without a job, the chain continues from the first segment not ready, and "Stop after this segment" ends it there; the long take from two images opens the Relay alone without a job (one vision call), renders image 1 → image 2 as one FL2VA clip, a segment added after the end starts on segment 1's last frame, and the project resumes under its pipeline; the cards follow the plan (empty cards added and removed, written ones kept, the chain waits for empty ones); a long take from a reference sheet renders a Qwen shot image from the sheet then the clip on it, a cut in the director's Relay or in a long take is one `h3-r2v` job on the sheets and the setting (sheet, or the previous segment's transition frame, extracted first) with no start image, another transition frame chosen becomes its setting, and switching its start, a link or a transition frame submits nothing; the empty shared fields are folded and open once filled, a chain that ends with every segment ready assembles the sequence (a stopped one does not), the "Long video" goal card opens the long take, and splitting a long take that only holds its screenplay asks nothing | Node, Playwright and its Chromium |
 
 Changing a prompt compiler or an instruction makes `parity-prompts.js` and `prompt-systems.js` fail; if the change is wanted,
 update the reference in the same commit and say why.

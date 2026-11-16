@@ -52,6 +52,8 @@ function refreshGenerateLabel() {
   tx($("generateBtn"), p === "reference2video"
     ? ($("skipSheetsToggle").checked ? "Generate the video" : "Open the studio (step 1/2)")
     : GENERATE_LABELS[p] || "Generate");
+  // What skipping the sheets does is said only once it is ticked.
+  $("skipSheetsHint").hidden = !F.hasControl("skipSheets") || !$("skipSheetsToggle").checked;
 }
 
 function selectScenario(scenario, pipeline = SCENARIOS[scenario].pipeline) {
@@ -81,6 +83,8 @@ let lastPipeline = null;
 function updateModelOptions() {
   const p = F.currentPipeline(), def = F.pipelineDef(p);
   fillSelect($("modelSelect"), F.WORKFLOWS.filter(w => w.pipeline === p).map(w => [w.id, w.label]), $("modelSelect").value);
+  // One engine: nothing to choose, the menu is left out (the Monitor names the engine).
+  $("modelWrap").hidden = $("modelSelect").options.length < 2;
   for (const [name, id] of Object.entries(CONTROL_WRAPS)) $(id).hidden = !def?.controls.includes(name);
   brief.placeholder = p === "sequence" ? MOTION_EXAMPLE : SCENARIOS[activeScenario].example;
   document.querySelectorAll(".usecase").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.pipeline === p)));

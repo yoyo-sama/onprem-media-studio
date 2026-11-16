@@ -318,8 +318,13 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   for (const sec of ["#studioCharacter", "#studioLocation"])
     await page.setInputFiles(`${sec} .sheet-import-input`, { name: "s.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
   await page.waitForSelector("#directorValidateBtn:not([disabled])");
+  // The menu is a checklist: both sheets are marked, and approving them opens the next step.
+  check(await page.$$eval('#studioNav [data-section="character"], #studioNav [data-section="location"]', bs => bs.every(b => b.classList.contains("done"))),
+    "reference to video: the menu does not mark the ready sheets");
+  const beforeApprove = jobs.length;
   await page.click("#directorValidateBtn");
-  await page.click('#studioNav [data-section="video"]');
+  check(await page.isVisible("#studioVideoR2V") && await page.isHidden("#directorValidateBtn") && jobs.length === beforeApprove,
+    "reference to video: approving the sheets does not open the Video step, or submits a job");
   const beforeR2V = jobs.length;
   await page.click("#directorR2VLaunchBtn");
   await page.waitForTimeout(400);

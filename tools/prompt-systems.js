@@ -138,7 +138,9 @@ const SCENARIOS = [
 async function runStudio(page, s) {
   await page.click(`.usecase[data-scenario="${s.scenario}"]`);
   await page.selectOption("#pipelineSelect", s.pipeline);
-  await page.selectOption("#modelSelect", s.model);
+  // A pipeline with one engine shows no engine menu: that engine is the one in use.
+  if (await page.isVisible("#modelSelect")) await page.selectOption("#modelSelect", s.model);
+  else if (await page.inputValue("#modelSelect") !== s.model) throw new Error(`${s.pipeline}: engine ${await page.inputValue("#modelSelect")}, expected ${s.model}`);
   await page.fill("#brief", s.brief);
   await page.evaluate(() => { document.querySelector(".generate-more").open = true; });  // ✨ is under "Advanced options"
   if (s.auto) { await page.click("#autoEnrichBtn"); await page.click("#generateBtn"); }
