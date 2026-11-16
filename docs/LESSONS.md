@@ -224,7 +224,22 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     sheet (`START_IMAGE_SYSTEM`, which also describes one single instance of the subject); a
     sheet gives a first segment that starts on a Qwen Image 2.1 shot image composed from it,
     in the sheet's style, at a format chosen on the card, and the card can switch between "the
-    image as it is" and "a shot composed from the sheet" (it starts nothing). (2026-11-15)
+    image as it is" and "a shot composed from the sheet" (it starts nothing). A long take only
+    chains on the last frame, so a character who leaves the frame cannot come back as herself:
+    the next segment starts on an empty frame and H3 has only the text to redraw her. A cut that
+    recomposed a shot image then ran i2v did not hold the face either (it drifted during a
+    push-in), and the Relay's cuts recomposed on the previous frame, carrying the drift across.
+    On the GB10 the best cut was H3 Ref2VA on the character sheet plus an image of the place:
+    the face stayed the sheet's for the whole clip and the light and garden matched the previous
+    segment. Relay cuts are now Ref2VA on the subjects' sheets and the setting (its sheet, or
+    the previous segment's transition frame). Continuous segments still see only their start
+    frame, which is where the drift is born. Two follow-up renders closed the obvious fixes:
+    Ref2VA given the drifted last frame "at 0.00 seconds" plus the sheet did not continue the
+    shot (Ref2VA takes every image as a reference, never as the first frame: the shot was
+    recomposed, mean gap 60 per channel against 6 for a true join), and the drifted frame won
+    over the sheet (the purple hair stayed). So a cut's setting frame must show nobody: a
+    subject's only image is its sheet. The same segment without the style LoRA kept the fuller
+    bust than the sheet: that is H3's bias, not the LoRA's. (2026-11-15)
 
 ## 8. Front end (for the port in step 4)
 
