@@ -294,7 +294,7 @@
     const plain = v => String(v || "").replace(H3_TOKEN_RE, "the character").trim().replace(/[\s.!?…]+$/, "");
     const act = plain(text) || plain(scene);
     let s = "Use the reference image only as the appearance guide for one single character"
-      + (charDesc ? ", " + charDesc : "") + ". The reference image is a character sheet that shows this "
+      + (charDesc ? ", " + plain(charDesc) : "") + ". The reference image is a character sheet that shows this "
       + "character several times: take the character from it, never its layout. "
       + "Create one brand-new cinematic film still, in the same visual style as the reference image, "
       + "that shows exactly one single instance of that character, at one single instant. "
