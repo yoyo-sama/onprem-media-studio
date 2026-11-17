@@ -504,14 +504,21 @@ textarea:disabled, input:disabled, select:disabled { opacity: .45; cursor: not-a
   box-shadow: var(--shadow);
 }
 
-.generate-bar .gb-prompt { flex: 4 1 260px; }
-.generate-bar .gb-prompt textarea { min-height: 64px; }
+.generate-bar .gb-prompt { flex: 1 1 100%; }
+.generate-bar .gb-prompt textarea { min-height: 84px; }
 .generate-bar .gb-field { flex: 0 1 165px; min-width: 130px; }
 .generate-bar .gb-field:has(> #pipelineSelect), .generate-bar .gb-field:has(> #modelSelect) { flex: 1 1 250px; }
 .generate-bar .tpl-field { flex: 1 1 100%; }
 .generate-bar .gb-wide { flex: 0 1 240px; }
 .generate-bar #marketsWrap { flex: 1 1 100%; }
 .generate-bar .check-row { flex: 1 1 100%; }
+.generate-bar > .hint { flex: 1 1 100%; margin: -4px 0 0; }
+/* What a pipeline takes besides the brief (images of a long take, references), before the button. */
+.generate-bar .gb-block { flex: 1 1 100%; gap: 6px; padding-top: 10px; border-top: 1px solid var(--border-light); }
+.gb-block .section-title, .gb-block .hint { margin: 0; }
+.gb-block .form-stack { gap: 6px; }
+.generate-bar .generate-more { flex: 1 1 100%; margin-top: 0; }
+.generate-more .gb-more { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 10px; }
 
 .generate-bar .gb-go { flex: 1 1 100%; padding: 14px 22px; font-size: 14.5px; }
 
@@ -1121,6 +1128,18 @@ body[data-studio="1"] #sessionBar { min-height: 54px; }
 .relay-seg .seg-row input[type="number"] { width: 72px; }
 .relay-seg video { grid-column: 1 / -1; width: 100%; border-radius: 8px; }
 .relay-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+/* The step's main action stays in view under a long list of cards. */
+.relay-foot, .step-foot {
+  position: sticky; bottom: -22px; z-index: 2;
+  margin: 8px -22px -22px; padding: 10px 22px 14px;
+  background: var(--bg); border-top: 1px solid var(--border-light);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.step-foot:not(:has(> :not([hidden]))) { display: none; }
+/* A phone has no room for a pinned bar: the buttons end the list there. */
+@media screen and (max-width: 767px) {
+  .relay-foot, .step-foot { position: static; margin: 8px 0 0; padding: 0; background: none; border-top: 0; }
+}
 .relay-composer {
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
@@ -1147,15 +1166,19 @@ body[data-studio="1"] #sessionBar { min-height: 54px; }
 .relay-composer .composer-row input[type="number"] { width: 72px; }
 .relay-composer .hint { margin-top: 8px; }
 .relay-composer #relayPlan { margin-top: 0; }
-.relay-look { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.relay-look .composer-lbl, .relay-look .hint { grid-column: 1 / -1; margin: 0; }
+.relay-look > summary { cursor: pointer; }
+.relay-look-body { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.relay-look-body .hint { grid-column: 1 / -1; margin: 0; }
 .relay-look label { display: flex; flex-direction: column; font-size: 12px; color: var(--text-2); }
 .relay-look textarea { min-height: 48px; margin-top: 4px; }
-@media screen and (max-width: 767px) { .relay-look { grid-template-columns: 1fr; } }
+@media screen and (max-width: 767px) { .relay-look-body { grid-template-columns: 1fr; } }
 
-.relay-seg .seg-more { grid-column: 1 / -1; font-size: 12px; }
-.relay-seg .seg-more summary { cursor: pointer; color: var(--text-2); padding: 4px 0; }
+.seg-more { grid-column: 1 / -1; font-size: 12px; }
+.seg-more summary { cursor: pointer; color: var(--text-2); padding: 4px 0; }
 .relay-seg .seg-more[open] > * + * { margin-top: 8px; }
+.relay-composer .seg-more { margin-top: 8px; }
+.relay-composer .seg-more .composer-row { margin-top: 4px; }
+.relay-composer .seg-more .hint { margin-top: 0; }
 .relay-seg.flash { animation: relay-flash 1.2s ease-out; }
 @keyframes relay-flash { from { box-shadow: 0 0 0 3px var(--highlight); } to { box-shadow: 0 0 0 3px transparent; } }
 .relay-board {
@@ -1197,7 +1220,7 @@ body[data-studio="1"] #sessionBar { min-height: 54px; }
 .relay-tile.st-error, .relay-tile.st-missing { border-color: var(--hot); }
 @media screen and (max-width: 767px) {
   .relay-tile { min-height: 44px; }
-  .relay-seg .seg-more summary { padding: 13px 0; }
+  .seg-more summary { padding: 13px 0; }
 }
 .relay-endframe { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .relay-endframe img { width: 84px; height: 48px; object-fit: cover; border-radius: 4px; border: 2px solid var(--highlight); display: block; }
@@ -1537,6 +1560,8 @@ body[data-studio="1"] #studioShell { display: grid; }
 .studio-nav-btn.active { background: var(--selected); color: var(--highlight); border-color: transparent; }
 .studio-nav-btn:disabled, .studio-nav-btn.locked { opacity: 0.45; cursor: default; }
 .studio-nav-btn.locked::after { content: " 🔒"; float: right; }
+.studio-nav-btn.done:not(.locked)::after { content: "✓"; float: right; color: var(--highlight); }
+#studioNav > .primary-btn { padding: 11px 12px; font-size: 12px; }
 .studio-nav-foot { margin-top: auto; display: grid; gap: 8px; }
 .studio-nav-foot .primary-btn, .studio-nav-foot .secondary-btn { padding: 11px 12px; font-size: 11px; }
 .studio-project-actions { display: grid; gap: 8px; }

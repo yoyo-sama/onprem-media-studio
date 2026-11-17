@@ -217,6 +217,11 @@
             <span>You approve the character and setting sheets first, then each shot.</span>
             <small>Director / Storyboard artist</small>
           </button>
+          <button type="button" class="usecase" data-scenario="storyboard" data-pipeline="sequence" aria-pressed="false">
+            <strong>Long video (long take)</strong>
+            <span>One continuous video made of chained segments, from a photo or a character sheet.</span>
+            <small>Director / Videographer</small>
+          </button>
           <button type="button" class="usecase" data-scenario="localization" data-pipeline="image2image" aria-pressed="false">
             <strong>Local versions</strong>
             <span>Adapts an existing image to several markets.</span>
@@ -232,14 +237,14 @@
           <div class="generate-bar">
             <label class="gb-prompt">
               Prompt or brief
-              <textarea id="brief"></textarea>
+              <textarea id="brief" rows="4"></textarea>
               <div class="subject-chips" id="subjectChips" hidden></div>
             </label>
             <label class="gb-field">
               Pipeline
               <select id="pipelineSelect"></select>
             </label>
-            <label class="gb-field">
+            <label class="gb-field" id="modelWrap">
               Engine
               <select id="modelSelect"></select>
             </label>
@@ -260,15 +265,6 @@
                 <option data-raw>4:5</option>
               </select>
             </label>
-            <div class="gb-field lora-field" id="loraWrap" role="group" aria-labelledby="loraCaption" hidden>
-              <span class="lora-caption" id="loraCaption">LoRA (up to 4, each with its strength)</span>
-              <div id="loraStack"></div>
-            </div>
-            <div class="gb-field tpl-field" id="sheetTemplateWrap" hidden>
-              <span class="tpl-caption">Sheet layout</span>
-              <select id="sheetTemplateSelect" hidden></select>
-              <div class="tpl-grid" role="group" aria-label="Sheet layout"></div>
-            </div>
             <label class="gb-field" id="variantsWrap" hidden>
               Variants
               <input type="number" id="variants" min="1" max="4" value="2">
@@ -281,14 +277,10 @@
               Number of shots
               <input type="number" id="shotCount" min="4" max="16" value="6">
             </label>
-            <label class="gb-field" id="holdWrap" hidden>
-              Hold on the last shot (s), 0 for none
-              <input type="number" id="holdDuration" min="0" max="15" value="0">
-            </label>
-            <label class="gb-field">
-              Seed
-              <input type="text" id="seed" value="Auto">
-            </label>
+            <div class="gb-field lora-field" id="loraWrap" role="group" aria-labelledby="loraCaption" hidden>
+              <span class="lora-caption" id="loraCaption">LoRA (up to 4, each with its strength)</span>
+              <div id="loraStack"></div>
+            </div>
             <label class="gb-field gb-wide" id="imageInputWrap" hidden>
               Input image
               <input type="file" id="imageInput" accept="image/*">
@@ -306,10 +298,60 @@
               <div class="market-chips" id="marketChips"></div>
               <p class="hint">One job per selected market, with the prompt adapted to it. None selected: the prompt as it is.</p>
             </div>
+            <div class="form-stack gb-block" id="seqWrap" hidden>
+              <h3 class="section-title">Long take from images</h3>
+              <p class="hint">1 to 6 images: the long take starts on the first, and each next image is where a segment ends. The brief is its screenplay. Nothing renders yet: the long take opens on its segments.</p>
+              <input type="file" id="seqFiles" accept="image/*" multiple>
+              <div class="seq-list" id="seqList"></div>
+              <div class="hint" id="seqSummary"></div>
+            </div>
+            <div class="form-stack gb-block" id="givenSheetsWrap" hidden>
+              <h3 class="section-title">Sheets from the assistant</h3>
+              <p class="hint">The director keeps these sheets and draws only the missing ones.</p>
+              <div class="ref-subjects" id="givenSheets"></div>
+            </div>
+            <div class="form-stack gb-block" id="refExtrasWrap" hidden>
+              <h3 class="section-title">Extra references</h3>
+              <p class="hint r2v-only">In addition to the character and setting sheets. None required.</p>
+              <p class="hint sb-only" hidden>Added to every Qwen Image 2.1 shot image, after the sheets: &lt;image3&gt;, &lt;image4&gt;… (one rank further in a two-subject shot). Name them in the shot's action.</p>
+              <p class="hint i2i-only" hidden>Qwen Image 2.1 takes up to 10 images in all. The input image is &lt;image1&gt;; your references are &lt;image2&gt;, &lt;image3&gt;… in the order of the list below. Cite them in your instruction, for example: “put the character of &lt;image1&gt; in the setting of &lt;image2&gt;”. The result keeps the input image's size; each reference makes the render longer.</p>
+              <div class="form-stack" id="refDropZone">
+                <label>
+                  <span id="refCapLabel">Extra reference images</span>
+                  <input type="file" id="refImagesInput" accept="image/*" multiple>
+                </label>
+                <p class="hint r2v-only">Each image gets a subject number, each clip and sound its own label, used automatically in the prompt. A clip is sent silent: to use its sound, add the sound itself.</p>
+                <div class="ref-subjects" id="refSubjects"></div>
+              </div>
+            </div>
             <label id="skipSheetsWrap" class="check-row" hidden>
               <input type="checkbox" id="skipSheetsToggle">
-              <span>Skip the sheets, use my references only: the first image of “Extra references” becomes the character, the others stay free references</span>
+              <span>Skip the sheets: use my references only</span>
             </label>
+            <p class="hint" id="skipSheetsHint" hidden>The first image of “Extra references” becomes the character, the others stay free references.</p>
+            <details class="generate-more">
+              <summary>Advanced options</summary>
+              <div class="gb-more">
+                <label class="gb-field">
+                  Seed
+                  <input type="text" id="seed" value="Auto">
+                </label>
+                <label class="gb-field" id="holdWrap" hidden>
+                  Hold on the last shot (s), 0 for none
+                  <input type="number" id="holdDuration" min="0" max="15" value="0">
+                </label>
+                <div class="gb-field tpl-field" id="sheetTemplateWrap" hidden>
+                  <span class="tpl-caption">Sheet layout</span>
+                  <select id="sheetTemplateSelect" hidden></select>
+                  <div class="tpl-grid" role="group" aria-label="Sheet layout"></div>
+                </div>
+              </div>
+              <p class="hint">No engine of this studio encodes a negative prompt: say every constraint positively in the brief.</p>
+              <div class="actions">
+                <button class="secondary-btn" id="enrichBtn" title="Rewrites your brief into a detailed prompt with the local LLM, once, without starting a render">✨ Enrich the brief</button>
+                <button class="secondary-btn" id="autoEnrichBtn" aria-pressed="false" title="Enriches the brief with Gemma 4 before every render (except workflows that build their own prompts)">✨ Auto enrichment (Gemma 4): off</button>
+              </div>
+            </details>
             <p class="model-notice" id="modelNotice" role="status" hidden></p>
             <p class="model-notice" id="generateError" role="alert" hidden></p>
             <button class="primary-btn gb-go" id="generateBtn">Generate</button>
@@ -322,45 +364,6 @@
             </div>
           </div>
 
-          <details class="generate-more">
-            <summary>Advanced options</summary>
-            <div class="form-stack">
-              <p class="hint">No engine of this studio encodes a negative prompt: say every constraint positively in the brief.</p>
-              <div class="actions">
-                <button class="secondary-btn" id="enrichBtn" title="Rewrites your brief into a detailed prompt with the local LLM, once, without starting a render">✨ Enrich the brief</button>
-                <button class="secondary-btn" id="autoEnrichBtn" aria-pressed="false" title="Enriches the brief with Gemma 4 before every render (except workflows that build their own prompts)">✨ Auto enrichment (Gemma 4): off</button>
-              </div>
-            </div>
-          </details>
-
-          <div class="form-stack" id="seqWrap" hidden>
-            <h3 class="section-title">Long take from images</h3>
-            <p class="hint">1 to 6 images. The long take starts on the first; each next image is where a segment ends (first and last frame), and each segment picks up the previous one's last frame. With one image, one segment starts on it: add more in the long take. The brief is the screenplay and the first text of every segment. Nothing renders yet: the long take opens on its segments.</p>
-            <input type="file" id="seqFiles" accept="image/*" multiple>
-            <div class="seq-list" id="seqList"></div>
-            <div class="hint" id="seqSummary"></div>
-          </div>
-
-          <div class="form-stack" id="givenSheetsWrap" hidden>
-            <h3 class="section-title">Sheets from the assistant</h3>
-            <p class="hint">The director keeps these sheets and draws only the missing ones.</p>
-            <div class="ref-subjects" id="givenSheets"></div>
-          </div>
-
-          <div class="form-stack" id="refExtrasWrap" hidden>
-            <h3 class="section-title">Extra references</h3>
-            <p class="hint r2v-only">In addition to the character and setting sheets. None required.</p>
-            <p class="hint sb-only" hidden>Added to every Qwen Image 2.1 shot image, after the sheets: &lt;image3&gt;, &lt;image4&gt;… (one rank further in a two-subject shot). Name them in the shot's action.</p>
-            <p class="hint i2i-only" hidden>Qwen Image 2.1 takes up to 10 images in all. The input image is &lt;image1&gt;; your references are &lt;image2&gt;, &lt;image3&gt;… in the order of the list below. Cite them in your instruction, for example: “put the character of &lt;image1&gt; in the setting of &lt;image2&gt;”. The result keeps the input image's size; each reference makes the render longer.</p>
-            <div class="form-stack" id="refDropZone">
-              <label>
-                <span id="refCapLabel">Extra reference images</span>
-                <input type="file" id="refImagesInput" accept="image/*" multiple>
-              </label>
-              <p class="hint r2v-only">Each image gets a subject number, each clip and sound its own label, used automatically in the prompt. A clip is sent silent: to use its sound, add the sound itself.</p>
-              <div class="ref-subjects" id="refSubjects"></div>
-            </div>
-          </div>
         </section>
 
         <section class="output-panel">
@@ -425,12 +428,12 @@
       <h3 class="section-title">Director mode</h3>
       <button type="button" class="studio-nav-btn active" data-section="character">Character</button>
       <button type="button" class="studio-nav-btn" data-section="location">Setting</button>
+      <button type="button" class="primary-btn" id="directorValidateBtn" disabled>Approve the sheets</button>
       <button type="button" class="studio-nav-btn locked" data-section="storyboard" disabled>Storyboard</button>
       <button type="button" class="studio-nav-btn locked" data-section="montage" disabled>Montage</button>
       <button type="button" class="studio-nav-btn locked" data-section="relay" disabled>Long take (Relay)</button>
       <button type="button" class="studio-nav-btn locked" data-section="video" disabled hidden>Video</button>
       <div class="studio-nav-foot">
-        <button type="button" class="primary-btn" id="directorValidateBtn" disabled>Approve the sheets</button>
         <div class="studio-project-actions">
           <button type="button" class="secondary-btn" id="studioCancelBtn" hidden>Cancel the project</button>
           <button type="button" class="secondary-btn" id="studioNewBtn">New project</button>
@@ -493,14 +496,15 @@
         <div class="form-stack">
           <div class="shot-strip" id="shotStrip" role="group" aria-label="Shots overview" hidden></div>
           <div class="shot-edit-list" id="shotEditList" hidden></div>
-          <button type="button" class="secondary-btn" id="directorKeyframesBtn" hidden>Generate the shot images</button>
+        </div>
+        <div class="step-foot">
+          <button type="button" class="primary-btn" id="directorKeyframesBtn" hidden>Generate the shot images</button>
         </div>
       </section>
 
       <section id="studioMontage" class="studio-section" hidden>
         <h3 class="section-title">Montage</h3>
         <p class="hint">Generate the cuts, reorder or regenerate each shot, then assemble the animatic. Reordering starts nothing.</p>
-        <p class="hint" id="cutEngineHint"></p>
         <button type="button" class="primary-btn" id="directorLaunchBtn" disabled>Generate the cuts</button>
         <div class="montage-list" id="montageList"></div>
         <button type="button" class="primary-btn" id="directorAssembleBtn" disabled>Assemble the animatic</button>
@@ -509,39 +513,46 @@
 
       <section id="studioRelay" class="studio-section" hidden>
         <h3 class="section-title">Long take (Relay)</h3>
-        <p class="hint">A long video made of short segments rendered one after the other: the subjects and the look are given once, each segment holds one action. 🔗 link: the segment picks up the previous one's last frame exactly, and keeps the subjects' sheets in view so they stay the same. 🎞 link: a deliberate cut, a new shot rendered from the references (the subjects' sheets and the setting, or else the previous segment's transition image: choose one where nobody is in view), so a subject who left the frame comes back as itself.</p>
+        <p class="hint">A long video made of short segments rendered one after the other: the subjects and the look are given once, each segment holds one action.</p>
         <div class="relay-composer" id="relayComposer">
           <label class="composer-lbl">Screenplay
             <textarea id="relayScenario" rows="4" spellcheck="false" placeholder="The whole screenplay of the sequence, written in one go."></textarea>
           </label>
           <div class="composer-row">
             <label>Total length (s) <input type="number" id="relayTotal" min="5" max="150" value="30"></label>
-            <label>Max per segment (s) <input type="number" id="relaySegDur" min="5" max="15" value="10"></label>
+            <button type="button" class="secondary-btn" id="relayComposeBtn" title="Gemma writes one action per segment and fills the shared fields left empty. Nothing renders: read and fix each segment before starting the chain." disabled>✨ Split the screenplay</button>
             <span class="hint" id="relayPlan"></span>
-            <button type="button" class="secondary-btn" id="relayComposeBtn" disabled>✨ Split the screenplay</button>
           </div>
-          <p class="hint">The screenplay is split into consecutive segments of at most the length chosen (10 s is the longest render qualified on the GB10), with one action each, and the shared fields below are filled where they are empty. Nothing renders: read and fix each segment before starting the chain.</p>
+          <details class="seg-more">
+            <summary>Advanced options</summary>
+            <div class="composer-row">
+              <label>Max per segment (s) <input type="number" id="relaySegDur" min="5" max="15" value="10"></label>
+              <span class="hint">10 s is the longest render qualified on the GB10.</span>
+            </div>
+          </details>
         </div>
-        <div class="relay-composer relay-look" id="relayLook">
-          <span class="composer-lbl">Shared by every segment</span>
-          <p class="hint">Written once and added to the prompt of every segment. An empty field is left out.</p>
-          <label>Framing<textarea data-look="camera" rows="2" spellcheck="false" placeholder="Shot size and camera height of the whole sequence. Each segment gives its own camera movement."></textarea></label>
-          <label>Lighting<textarea data-look="lighting" rows="2" spellcheck="false" placeholder="The light, the same in every segment."></textarea></label>
-          <label>Soundscape<textarea data-look="sound" rows="2" spellcheck="false" placeholder="The natural sounds heard throughout."></textarea></label>
-          <label>Music<textarea data-look="music" rows="2" spellcheck="false" placeholder="Empty = no music. Each segment renders its own audio: a score starts again at every join."></textarea></label>
-        </div>
+        <details class="relay-composer relay-look" id="relayLook">
+          <summary class="composer-lbl">Shared by every segment: framing, lighting, soundscape, music</summary>
+          <div class="relay-look-body">
+            <p class="hint">Written once and added to the prompt of every segment. An empty field is left out.</p>
+            <label>Framing<textarea data-look="camera" rows="2" spellcheck="false" placeholder="Shot size and camera height of the whole sequence. Each segment gives its own camera movement."></textarea></label>
+            <label>Lighting<textarea data-look="lighting" rows="2" spellcheck="false" placeholder="The light, the same in every segment."></textarea></label>
+            <label>Soundscape<textarea data-look="sound" rows="2" spellcheck="false" placeholder="The natural sounds heard throughout."></textarea></label>
+            <label>Music<textarea data-look="music" rows="2" spellcheck="false" placeholder="Empty = no music. Each segment renders its own audio: a score starts again at every join."></textarea></label>
+          </div>
+        </details>
         <div class="relay-board" id="relayBoard" hidden>
           <div class="relay-summary hint" aria-live="polite"></div>
           <div class="relay-strip" role="group" aria-label="Segments overview"></div>
         </div>
+        <div id="relayPlayer"></div>
         <div class="relay-list" id="relayList"></div>
         <div class="relay-foot">
           <button type="button" class="secondary-btn" id="relayAddBtn">＋ Add a segment</button>
           <button type="button" class="primary-btn" id="relayRunBtn" disabled>Generate the chain</button>
           <button type="button" class="secondary-btn" id="relayStopBtn" hidden>⏹ Stop after this segment</button>
-          <button type="button" class="primary-btn" id="relayAssembleBtn" disabled>Assemble the sequence</button>
+          <button type="button" class="secondary-btn" id="relayAssembleBtn" disabled>Assemble the sequence</button>
         </div>
-        <div id="relayPlayer"></div>
       </section>
 
       <section id="studioVideoR2V" class="studio-section" hidden>

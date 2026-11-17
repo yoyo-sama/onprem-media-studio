@@ -108,7 +108,10 @@ const LISTING = { h3: FILES.map(name => ({ name, size: 2 ** 20 })), krea2: [{ na
   // Image to video: the same folder, so the same stack.
   await page.selectOption("#pipelineSelect", "image2video");
   check((await rows()).length === 2, "the H3 stack is not kept across H3 workflows");
+  // One engine: no engine menu. The seed sits under the advanced options.
+  check(await page.isHidden("#modelSelect") && await page.isHidden("#seed"), "image2video shows an engine menu with one engine, or the seed outside the advanced options");
   await page.selectOption("#pipelineSelect", "text2image");
+  check(await page.isVisible("#modelSelect"), "text2image hides its engine menu");
   await page.click("#generateBtn");
   await page.waitForFunction(() => !document.getElementById("generateBtn").disabled);
   await page.waitForTimeout(300);

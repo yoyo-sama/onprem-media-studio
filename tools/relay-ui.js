@@ -13,6 +13,10 @@
 // from images opens the Relay alone without a job, its subject described by Gemma's
 // vision; its first segment runs from image 1 to image 2 (FL2VA), a segment added after
 // the end starts on the transition frames extracted then, and it resumes as saved.
+// The shared fields are folded while empty and open once filled; a chain that ends with
+// every segment ready assembles the sequence, a stopped one does not; the "Long video" goal
+// card opens the long take, whose screenplay is split without a question while its cards
+// only hold that screenplay.
 // With a folder, screenshots of the Relay at 1440 and 390 px, light and dark.
 // Exit 0 = all green, 1 = a check failed, 2 = the test could not run.
 "use strict";
@@ -104,9 +108,12 @@ const SPLIT = {
     return r.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") });
   });
   const page = await ctx.newPage();
+  // A chain that ends with every segment ready assembles the sequence: wait for that job.
+  const assembled = async from => { for (let w = 0; w < 100 && !jobs.slice(from).some(j => j.pipeline === "video-concat"); w++) await page.waitForTimeout(50); };
   const errs = [];
   page.on("pageerror", e => errs.push(e.message));
-  page.on("dialog", d => d.accept());
+  let dialogs = 0;
+  page.on("dialog", d => { dialogs++; d.accept(); });
 
   await page.goto(base + "index.html#studio", { waitUntil: "load" });
   await page.click('.usecase[data-scenario="storyboard"]');
@@ -133,6 +140,11 @@ const SPLIT = {
   await page.dispatchEvent("#relayTotal", "change");
   check(/3 segment\(s\): 10 \+ 10 \+ 10 s, 30\.4 s rendered/.test(await page.textContent("#relayPlan")), `plan for 30 s: "${await page.textContent("#relayPlan")}"`);
 
+  // The shared fields are folded while they are all empty, and "Max per segment" sits under
+  // the composer's advanced options.
+  check(!(await page.$eval("#relayLook", el => el.open)), "the empty shared fields are not folded");
+  check(await page.isHidden("#relaySegDur"), "the maximum per segment is not under the advanced options");
+  await page.click("#relayLook > summary");
   // A shared field the user wrote is kept by the split; editing it submits nothing.
   await page.fill('#relayLook textarea[data-look="lighting"]', "Warm candle light.");
   await page.dispatchEvent('#relayLook textarea[data-look="lighting"]', "change");
@@ -145,6 +157,10 @@ const SPLIT = {
   check(chats.length === 1 && /exactly 3 segments/.test(chats[0].system), "the split did not ask Gemma for 3 segments");
   const look = await page.$$eval("#relayLook textarea", els => Object.fromEntries(els.map(e => [e.dataset.look, e.value])));
   check(look.lighting === "Warm candle light.", `the user's lighting was overwritten: "${look.lighting}"`);
+  check(await page.$eval("#relayLook", el => el.open), "the shared fields the split filled are folded");
+  // The first segment has no link, and nothing to regenerate before its render.
+  check(await page.isHidden('#relayList .relay-seg[data-seg="0"] .seg-link') && await page.isHidden('#relayList .relay-seg[data-seg="0"] .seg-regen'),
+    "the first segment shows a link or a Regenerate button before its render");
   check(look.camera === SPLIT.framing && look.sound === SPLIT.soundscape && look.music === "",
     `empty shared fields not filled as expected: ${JSON.stringify(look)}`);
   const heads = await page.$$eval("#relayList .seg-head strong", els => els.map(e => e.textContent));
@@ -175,9 +191,13 @@ const SPLIT = {
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelectorAll("#relayList .seg-status").length === 3
     && [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 15000 });
+  // The finished chain is assembled at once, by the same click.
+  await page.waitForSelector("#relayPlayer video", { timeout: 5000 });
   const kinds = jobs.map(j => j.pipeline);
-  check(JSON.stringify(kinds) === JSON.stringify(["qwen-image-2.1", "h3-r2v", "video-frames", "h3-r2v", "video-frames", "h3-r2v"]),
+  check(JSON.stringify(kinds) === JSON.stringify(["qwen-image-2.1", "h3-r2v", "video-frames", "h3-r2v", "video-frames", "h3-r2v", "video-concat"]),
     `chain jobs: ${JSON.stringify(kinds)}`);
+  check(jobs[6]?.params.smooth_audio === true && jobs[6]?.params.clips.length === 3, `assembly at the end of the chain: ${JSON.stringify(jobs[6]?.params)}`);
+  check(await page.$eval('#studioNav [data-section="relay"]', b => b.classList.contains("done")), "the menu does not mark the assembled long take");
   // Each segment is H3 Ref2VA on the sheets AND its start frame (the shot image, then the
   // previous segment's transition frame): the canvas follows the start frame.
   const clips = jobs.filter(j => j.pipeline === "h3-r2v");
@@ -199,7 +219,7 @@ const SPLIT = {
   // nothing is submitted for it.
   const warned = () => page.$$eval("#relayList .seg-warn", els => els.map(e => !e.hidden));
   check(JSON.stringify(await warned()) === JSON.stringify([false, true, false]), `broken-join warnings after the chain: ${JSON.stringify(await warned())}`);
-  check(jobs.length === 6, `a broken join submitted ${jobs.length - 6} job(s)`);
+  check(jobs.length === 7, `a broken join submitted ${jobs.length - 7} job(s)`);
 
   // ── Production board ──
   const tiles = () => page.$$eval("#relayBoard .relay-tile", ts => ts.map(t => t.className.replace("relay-tile ", "")));
@@ -228,7 +248,8 @@ const SPLIT = {
   before = jobs.length;
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"));
-  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]),
+  await assembled(before);
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-r2v", "video-concat"]),
     `continuing from segment 3: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
   // A cut: one H3 Ref2VA clip on the subject's sheet and the setting's sheet, no start
   // image; switching the link starts nothing and hides the end image.
@@ -342,8 +363,9 @@ const SPLIT = {
   before = jobs.length;
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
+  await assembled(before);
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v"]), `extending the long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v", "video-concat"]), `extending the long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
   check(/^outputs\/job-\d+\.png$/.test(lt[1]?.params.image || ""), `segment 2 does not start on the last frame of segment 1: ${lt[1]?.params.image}`);
   // The start picture is the subject's only reference: segment 2 sees it as well as its frame.
   check(JSON.stringify(lt[1]?.params.references) === JSON.stringify([clip.image]) && !("aspect" in (lt[1]?.params || {})),
@@ -406,8 +428,9 @@ const SPLIT = {
   check(jobs.length === before, "switching the link submitted a job");
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "Ready", null, { timeout: 10000 });
+  await assembled(before);
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v"]), `cut in a long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v", "video-concat"]), `cut in a long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
   const cut = lt[1]?.params || {}, framesJob = lt[0];
   const seg1Clip = jobs.slice(0, before).filter(j => j.pipeline === "h3-r2v").pop();
   check(JSON.stringify(cut.references) === JSON.stringify([shot.images?.[0], `outputs/${seg1Clip?.id}.png`]) && cut.aspect === "9:16",
@@ -439,6 +462,32 @@ const SPLIT = {
   check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]) && lt[0].params.image === shot.images?.[0]
     && JSON.stringify(lt[0].params.references) === JSON.stringify([shot.images?.[0]]),
     `long take from the image as it is: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.image]))}`);
+
+  // A new long take holds its screenplay in its card: splitting it loses nothing, so nothing
+  // is asked; a card rewritten by hand is asked about before it is replaced.
+  visionSheet = false;
+  await page.click("#studioExitBtn");
+  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.reload({ waitUntil: "load" });
+  await page.click('.usecase[data-pipeline="sequence"]');
+  check(await page.inputValue("#pipelineSelect") === "sequence" && await page.isHidden("#modelSelect"),
+    "the long video card does not open the long take, or shows its one-engine menu");
+  await page.setInputFiles("#seqFiles", [{ name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.fill("#brief", "She walks through the garden, stops by a tree, then looks at the sun.");
+  await page.click("#generateBtn");
+  await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
+  await page.fill("#relayTotal", "30");
+  await page.dispatchEvent("#relayTotal", "change");
+  dialogs = 0; before = jobs.length;
+  await page.click("#relayComposeBtn");
+  await page.waitForFunction(() => /gravel path/.test(document.querySelector("#relayList .relay-seg textarea")?.value || ""));
+  check(dialogs === 0, "splitting a long take that only holds its screenplay asked for a confirmation");
+  await page.fill('#relayList .relay-seg[data-seg="1"] textarea', "She sits on a bench.");
+  await page.dispatchEvent('#relayList .relay-seg[data-seg="1"] textarea', "change");
+  await page.click("#relayComposeBtn");
+  await page.waitForFunction(() => /flowering tree/.test(document.querySelector('#relayList .relay-seg[data-seg="1"] textarea')?.value || ""));
+  check(dialogs === 1, `replacing a rewritten segment asked ${dialogs} time(s)`);
+  check(jobs.length === before, "splitting the screenplay submitted a job");
 
   check(!errs.length, `page errors: ${errs.join(" | ")}`);
   await browser.close();
