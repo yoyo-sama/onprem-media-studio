@@ -2,7 +2,8 @@
 
 - `video-concat` joins clips with hard cuts, sound included: the storyboard
   animatic, the Relay sequence and the multi-image sequence. For one continuous
-  take (`smooth_audio`), every clip's sound is brought to a common level first.
+  take (`smooth_audio`), every clip's sound is brought to a common level first,
+  never below the level of an ordinary H3 clip.
 - `image-grid` lays shot images out as one contact sheet.
 - `video-frames` saves frames counted back from the end of a clip: the
   candidate transition images of a Relay segment.
@@ -29,8 +30,13 @@ MAX_CLIPS = 32
 MAX_GRID = 16
 MAX_FRAME_OFFSET = 48  # two seconds at 24 fps
 FPS = 24  # every H3 clip
-MAX_GAIN_DB = 12.0  # level matching never lifts or cuts a clip by more
+MAX_GAIN_DB = 24.0  # level matching never lifts or cuts a clip by more
 SILENT_DB = -70.0   # below this mean level a clip is left as it is
+# The quietest common level of a continuous take: a typical h3-i2v clip's mean. H3 Ref2VA
+# renders its sound 10 to 20 dB lower (-48 to -59 dB on the GB10, 2026-11-16), from its
+# first pass on, so a take of Ref2VA segments only was nearly inaudible.
+FLOOR_DB = -40.0
+PEAK_DB = -1.0      # a lift never takes a clip's peak above this
 JOIN_FADE = 0.025   # seconds: a fade this short removes the click, not the sound
 
 
@@ -73,24 +79,30 @@ def probe(path: Path) -> dict:
             "audio": any(s.get("codec_type") == "audio" for s in out.get("streams", []))}
 
 
-def audio_level(path: Path) -> tuple[float, float]:
-    """Mean level (dB) and length (s) of a clip's sound."""
+def audio_level(path: Path) -> tuple[float, float, float]:
+    """Mean level (dB), length (s) and peak (dB) of a clip's sound."""
     out = ffmpeg("ffmpeg", "-v", "info", "-nostats", "-i", str(path), "-map", "0:a:0", "-af", "volumedetect",
                  "-f", "null", "-", capture_stderr=True)
     mean = re.search(r"mean_volume:\s*(-?[\d.]+|-inf) dB", out)
+    peak = re.search(r"max_volume:\s*(-?[\d.]+|-inf) dB", out)
     length = json.loads(ffmpeg("ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries",
                                "stream=duration:format=duration", "-of", "json", str(path)))
     seconds = float(length.get("streams", [{}])[0].get("duration") or length["format"]["duration"])
-    return (float(mean.group(1)) if mean and mean.group(1) != "-inf" else -math.inf), seconds
+    db = lambda m: float(m.group(1)) if m and m.group(1) != "-inf" else -math.inf
+    return db(mean), seconds, db(peak)
 
 
-def level_gains(levels: list[float]) -> list[float]:
-    """Gain (dB) that brings each clip to the median level of the audible ones, clamped."""
+def level_gains(levels: list[float], peaks: list[float] | None = None) -> list[float]:
+    """Gain (dB) that brings each clip to the median level of the audible ones, or to
+    FLOOR_DB when that median is quieter, clamped, and never lifting a peak above PEAK_DB."""
     audible = sorted(v for v in levels if v > SILENT_DB)
     if not audible:
         return [0.0] * len(levels)
-    target = audible[len(audible) // 2] if len(audible) % 2 else (audible[len(audible) // 2 - 1] + audible[len(audible) // 2]) / 2
-    return [max(-MAX_GAIN_DB, min(MAX_GAIN_DB, target - v)) if v > SILENT_DB else 0.0 for v in levels]
+    median = audible[len(audible) // 2] if len(audible) % 2 else (audible[len(audible) // 2 - 1] + audible[len(audible) // 2]) / 2
+    target = max(median, FLOOR_DB)
+    peaks = peaks or [-math.inf] * len(levels)
+    return [max(-MAX_GAIN_DB, min(MAX_GAIN_DB, target - v, max(0.0, PEAK_DB - p))) if v > SILENT_DB else 0.0
+            for v, p in zip(levels, peaks)]
 
 
 def video_refs(params: dict, key: str, files, low: int, high: int) -> list[str]:
@@ -115,7 +127,8 @@ class VideoConcat(Pipeline):
 
     `smooth_audio` is for the clips of one continuous take, each of which rendered
     its own sound: every clip's sound is brought to the median level of the clips
-    (a Relay join jumped by 7 dB on the GB10) and gets a 25 ms fade at each join,
+    (a Relay join jumped by 7 dB on the GB10), or up to FLOOR_DB when they are all
+    quieter (H3 Ref2VA segments), and gets a 25 ms fade at each join,
     against the click. Sound and image stay in step: a real crossfade would need
     sound beyond each clip's end, which a clip does not have."""
 
@@ -141,7 +154,7 @@ class VideoConcat(Pipeline):
         if smooth:
             ctx.progress(0.1, "Matching the sound level of the clips")
             levels = [audio_level(p) for p in paths]
-            gains = level_gains([v for v, _ in levels])
+            gains = level_gains([v for v, _, _ in levels], [p for _, _, p in levels])
         args, chain = ["ffmpeg", "-v", "error", "-y"], ""
         for n, path in enumerate(paths):
             args += ["-i", str(path)]

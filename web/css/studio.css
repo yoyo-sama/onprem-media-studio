@@ -1110,6 +1110,7 @@ body[data-studio="1"] #sessionBar { min-height: 54px; }
   padding: 10px;
 }
 .relay-seg .seg-head { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; color: var(--text-2); }
+.relay-seg .seg-warn { grid-column: 1 / -1; margin: 0; font-size: 12px; color: var(--warn-text); }
 .relay-seg textarea {
   grid-column: 1 / -1;
   min-height: 60px;
