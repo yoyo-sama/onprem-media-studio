@@ -29,6 +29,8 @@ const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwA
 // 64×36 VP8 clips of one color: red as the stub PNG (a true join), blue (a broken one).
 const RED_WEBM = "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAIBEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggHr7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiEBpAAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYjABdBPZejM6JyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAvrwgDgibCBQLqBJJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYjABdBPZejM6GfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDAuMjAwMDAwMDAwAB9DtnXH54EAo8KBAACAkAMAnQEqQAAkAABHCIWFiIWEiAICAnWqA/gD+gIHO3nizzMeXgD+/W7z/+OZNzDE/45t//FhPA4oyP/xUQAcU7trkbuPs4EAt4r3gQHxggGf8IED";
 const BLUE_WEBM = "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAIAEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggHq7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiEBpAAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYi72FjxYvSClpyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAvrwgDgibCBQLqBJJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYi72FjxYvSClmfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDAuMjAwMDAwMDAwAB9DtnXG54EAo8GBAACAUAMAnQEqQAAkAABHCIWFiIWEiAICAnWqA/gCBwjVZ5mPN9IA/v9NEv/8WFfxYV/FhX/xYV/8/M7txfzmABxTu2uRu4+zgQC3iveBAfGCAZ/wgQM=";
+// 64×36 VP8 at 24 fps: red for two frames, then blue (a clip that holds its image, then cuts).
+const CUT_WEBM = "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAMtEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggMG7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiEB8sAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYhRVBha6OujxpyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAJ7yGrgibCBQLqBJJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYhRVBha6OujxmfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDAuNDU5MDAwMDAwAB9DtnVBYeeBAKPCgQAAgJADAJ0BKkAAJAAARwiFhYiFhIgCAgJ1qgP4A/oCBzt54s8zHl4A/v1u8//jmTcwxP+Obf/xYTwOKMj/8VEAo5aBACoA0QEAARAQABgAGFgv9AAIjAAAo5aBAFMA0QEAARAQABgAGFgv9AAIjAAAo8GBAH2AUAMAnQEqQAAkAABHCIWFiIWEiAICAnWqA/gCBwjVZ5mPN9IA/v9NEv/8WFfxYV/FhX/xYV/8/M7txfzmAKOWgQCnANEBAAEQEAAYABhYL/QACIwAAKOWgQDQANEBAAEQEAAYABhYL/QACIwAAKOWgQD6ANEBAAEQEAAYABhYL/QACIwAAKOWgQEkANEBAAEQEAAYABhYL/QACIwAAKOWgQFNANEBAAEQEAAYABhYL/QACIwAAKOWgQF3ANEBAAEQEAAYABhYL/QACIwAAKOVgQGhALEBAAEQEBRgAGFgv9AAIjAAHFO7a6K7j7OBALeK94EB8YIBn/CBA7uPs4F9t4r3gQHxggGf8IF3";
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" };
 const server = http.createServer((req, res) => {
   const file = path.join(WEB, decodeURIComponent(new URL(req.url, "http://x").pathname));
@@ -64,7 +66,7 @@ const SPLIT = {
   const check = (ok, msg) => { if (!ok) fails.push(msg); };
   const jobs = [], chats = [], done = new Map(), held = [];
   let n = 0, hold = false, sock = null, visionSheet = false, r2vCount = 0;
-  const broken = new Set();
+  const broken = new Set(), cutAway = new Set();
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.addInitScript(p => { if (!sessionStorage.getItem("seeded")) { localStorage.setItem("studioProject", p); sessionStorage.setItem("seeded", "1"); } },
     JSON.stringify(PROJECT));
@@ -74,8 +76,9 @@ const SPLIT = {
     if (p === "/api/jobs" && req.method() === "POST") {
       const body = JSON.parse(req.postData()), id = `job-${++n}`;
       jobs.push({ ...body, id });
-      // The second Ref2VA clip (segment 2 of the first chain) does not start on its image.
-      if (body.pipeline === "h3-r2v" && ++r2vCount === 2) broken.add(id);
+      // The second Ref2VA clip (segment 2 of the first chain) does not start on its image;
+      // the third (segment 3) starts on it and cuts away after two frames.
+      if (body.pipeline === "h3-r2v") { ++r2vCount; if (r2vCount === 2) broken.add(id); if (r2vCount === 3) cutAway.add(id); }
       const outputs = ["h3-i2v", "h3-r2v"].includes(body.pipeline) ? [`outputs/${id}.mp4`, `outputs/${id}.png`]
         : body.pipeline === "video-concat" ? [`outputs/${id}.mp4`]
         : body.pipeline === "video-frames" ? body.params.offsets.map(o => `outputs/${id}-${o}.png`) : [`outputs/${id}.png`];
@@ -104,7 +107,15 @@ const SPLIT = {
   const push = job => sock.send(JSON.stringify({ type: "job", job }));
   await ctx.route(/\/(outputs|inputs)\//, r => {
     const m = /\/(job-\d+)\.mp4$/.exec(new URL(r.request().url()).pathname);
-    if (m) return r.fulfill({ contentType: "video/webm", body: Buffer.from(broken.has(m[1]) ? BLUE_WEBM : RED_WEBM, "base64") });
+    if (m) {
+      // Byte ranges, as the server's static files: the join check seeks into the clip.
+      const v = Buffer.from(broken.has(m[1]) ? BLUE_WEBM : cutAway.has(m[1]) ? CUT_WEBM : RED_WEBM, "base64");
+      const range = /bytes=(\d+)-(\d*)/.exec(r.request().headers().range || "");
+      if (!range) return r.fulfill({ contentType: "video/webm", headers: { "Accept-Ranges": "bytes" }, body: v });
+      const a = +range[1], z = range[2] ? Math.min(+range[2], v.length - 1) : v.length - 1;
+      return r.fulfill({ status: 206, contentType: "video/webm", body: v.subarray(a, z + 1),
+        headers: { "Accept-Ranges": "bytes", "Content-Range": `bytes ${a}-${z}/${v.length}` } });
+    }
     return r.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") });
   });
   const page = await ctx.newPage();
@@ -215,10 +226,10 @@ const SPLIT = {
     check(pr.split("Warm candle light.").length === 2, `segment ${i + 1} repeats the lighting`);
   }
   check(/Warm candle light/.test(jobs[0].params.prompt), "the first shot image does not take the shared lighting");
-  // The join check: segment 2's clip does not start on its start frame, the card says so;
-  // nothing is submitted for it.
+  // The join check: segment 2's clip does not start on its start frame, segment 3's cuts away
+  // from it after two frames; both cards say so, and nothing is submitted for them.
   const warned = () => page.$$eval("#relayList .seg-warn", els => els.map(e => !e.hidden));
-  check(JSON.stringify(await warned()) === JSON.stringify([false, true, false]), `broken-join warnings after the chain: ${JSON.stringify(await warned())}`);
+  check(JSON.stringify(await warned()) === JSON.stringify([false, true, true]), `broken-join warnings after the chain: ${JSON.stringify(await warned())}`);
   check(jobs.length === 7, `a broken join submitted ${jobs.length - 7} job(s)`);
 
   // ── Production board ──

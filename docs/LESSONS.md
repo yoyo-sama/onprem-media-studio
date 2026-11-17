@@ -255,7 +255,11 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     segments, OmniRef still let go of its start frame once in three continuous segments (first
     frame 60 away from the image, against 5 to 7 for a true join): the card measures the gap
     between the start image and the clip's first frame and says "broken join, regenerate"; nothing
-    is rendered again on its own. (2026-11-16)
+    is rendered again on its own. (2026-11-16) A long take from a sheet: the Qwen shot image showed
+    the woman twice (walking, and already on the bench: the whole action in one still), and the
+    clip kept that image for two frames, then cut (gap 7 at frame 0, 44 at frame 2). The shot
+    image now shows the first instant of the action only, and the join check also measures the
+    frame 0.2 s in. (2026-11-17)
 
 ## 8. Front end (for the port in step 4)
 

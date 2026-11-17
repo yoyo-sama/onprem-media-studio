@@ -1597,10 +1597,12 @@ async function renderCutSegment(s, seg, i, total, before, began) {
   save();
 }
 
-// Mean gap per channel (0-255) between an image and a clip's first frame, both drawn at
-// 64×36 (the start frame is stretched to the canvas, as FastVideo does); null when either
-// cannot be read. On the GB10 a true join measured 5 to 9, a broken one 59 to 73.
-const JOIN_BROKEN = 25;
+// Mean gap per channel (0-255) between an image and a clip's frames, both drawn at 64×36 (the
+// start frame is stretched to the canvas, as FastVideo does): the larger of the first frame's
+// gap and the gap of the frame JOIN_LATER seconds in; null when the image or the first frame
+// cannot be read. On the GB10 a true join measured 5 to 9, a broken one 59 to 73; a clip that
+// held its start image for two frames then cut measured 7 at frame 0 and 44 just after.
+const JOIN_BROKEN = 25, JOIN_LATER = 0.2;
 async function joinGap(imageRef, clipRef) {
   const W = 64, H = 36;
   const draw = src => {
@@ -1609,22 +1611,36 @@ async function joinGap(imageRef, clipRef) {
     g.drawImage(src, 0, 0, W, H);
     return g.getImageData(0, 0, W, H).data;
   };
+  // After loadeddata or seeked a frame can still draw as nothing (transparent): a decoded
+  // frame is opaque, so the draw is tried again until it is.
+  const frame = async video => {
+    let b = draw(video);
+    for (let k = 0; k < 40 && !b[3]; k++) { await new Promise(r => setTimeout(r, 50)); b = draw(video); }
+    return b[3] ? b : null;
+  };
+  const gap = (a, b) => {
+    let sum = 0;
+    for (let k = 0; k < a.length; k += 4) sum += Math.abs(a[k] - b[k]) + Math.abs(a[k + 1] - b[k + 1]) + Math.abs(a[k + 2] - b[k + 2]);
+    return sum / (W * H * 3);
+  };
+  const wait = (video, event) => Promise.race([new Promise((ok, ko) => { video[`on${event}`] = ok; video.onerror = ko; }),
+    new Promise((_, ko) => setTimeout(ko, 15000))]);
   try {
     const img = new Image();
     img.src = refURL(imageRef);
     await img.decode();
     const video = Object.assign(document.createElement("video"), { muted: true, preload: "auto", src: refURL(clipRef) });
-    await Promise.race([new Promise((ok, ko) => { video.onloadeddata = ok; video.onerror = ko; }),
-      new Promise((_, ko) => setTimeout(ko, 15000))]);
-    // After loadeddata the first frame can still draw as nothing (transparent): a decoded
-    // frame is opaque, so the draw is tried again until it is.
-    let b = draw(video);
-    for (let k = 0; k < 40 && !b[3]; k++) { await new Promise(r => setTimeout(r, 50)); b = draw(video); }
-    if (!b[3]) return null;
-    const a = draw(img);
-    let sum = 0;
-    for (let k = 0; k < a.length; k += 4) sum += Math.abs(a[k] - b[k]) + Math.abs(a[k + 1] - b[k + 1]) + Math.abs(a[k + 2] - b[k + 2]);
-    return sum / (W * H * 3);
+    await wait(video, "loadeddata");
+    const first = await frame(video);
+    if (!first) return null;
+    const a = draw(img), g0 = gap(a, first);
+    // A few frames in: a clip may hold its start image for a frame or two, then cut.
+    try {
+      video.currentTime = Math.min(JOIN_LATER, video.duration || JOIN_LATER);
+      await wait(video, "seeked");
+      const later = await frame(video);
+      return later ? Math.max(g0, gap(a, later)) : g0;
+    } catch { return g0; }
   } catch { return null; }
 }
 

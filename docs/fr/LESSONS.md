@@ -281,7 +281,12 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     (2026-11-16) Par l'interface, sur cinq segments, OmniRef a encore lâché son image de départ
     une fois sur trois segments continus (première image à 60 de l'image, contre 5 à 7 pour un
     vrai raccord) : la carte mesure l'écart entre l'image de départ et la première image du clip
-    et affiche « raccord cassé, régénère » ; rien ne se relance tout seul. (2026-11-16)
+    et affiche « raccord cassé, régénère » ; rien ne se relance tout seul. (2026-11-16) Un
+    plan-séquence à partir d'une planche : l'image de plan Qwen montrait la femme deux fois (qui
+    marche, et déjà sur le banc : toute l'action en une image), et le clip a gardé cette image
+    deux images avant de couper (écart 7 à l'image 0, 44 à l'image 2). L'image de plan ne montre
+    plus que le premier instant de l'action, et le contrôle du raccord mesure aussi l'image à
+    0,2 s. (2026-11-17)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

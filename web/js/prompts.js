@@ -283,7 +283,9 @@
   }
 
   // Start frame of a long take whose start image is a reference sheet: one single
-  // instance of its subject, composed in the opening moment, in the sheet's own style
+  // instance of its subject, at the first instant of the first action (a still that shows
+  // the action's later moments too drew the subject twice, and the clip cut away from it
+  // after two frames, 2026-11-17), in the sheet's own style
   // (a drawn sheet stays drawn). `scene`: the screenplay, `text`: the first segment's
   // action; a <Subject N> marker becomes "the character". No setting sheet here: the
   // place comes from the text.
@@ -294,9 +296,11 @@
       + (charDesc ? ", " + charDesc : "") + ". The reference image is a character sheet that shows this "
       + "character several times: take the character from it, never its layout. "
       + "Create one brand-new cinematic film still, in the same visual style as the reference image, "
-      + "that shows exactly one single instance of that character"
-      + (sc && sc !== act ? ". The scene: " + sc + ". The opening moment, shown in this still: " : ": ")
-      + (act || sc) + ". "
+      + "that shows exactly one single instance of that character, at one single instant"
+      + (sc && sc !== act ? ". The scene: " + sc : "")
+      + ". This still shows only the very first instant of this action, as it begins: " + (act || sc) + ". "
+      + "The character appears once, at that first instant; every later moment of the action and of "
+      + "the scene comes after this still. "
       + "The character is fully present in that place, with correct perspective and scale. The whole "
       + "picture is one single continuous scene that extends all the way to all four edges: one single "
       + "view of the character, with no panels, grid, thumbnails, repeated poses, borders, caption or "
