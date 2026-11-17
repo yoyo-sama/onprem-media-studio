@@ -6,7 +6,8 @@ Three engines:
   `last_image` is given (same checkpoint and FastVideo pipeline: the keyframes
   become conditioning rows);
 - `h3-r2v`: references to video (FastH3 OmniRef): images, silent clips and
-  sounds, in one ordered list; the two passes of the
+  sounds, in one ordered list, and optionally a start frame (`image`, the
+  continuous segments of the Relay: `h3_start_frame`); the two passes of the
   workflow validated on the GB10 in ComfyUI: 8 steps at about 0.3 MP, latent
   upscale to about 0.9 MP, then 3 refine steps at denoise 0.4. `preview` stops
   after the first pass.
@@ -319,14 +320,25 @@ class H3ReferenceToVideo(Pipeline):
     models = [OMNIREF, UPSCALER]
 
     def validate(self, params, files):
-        out = _common(params, files, {"references", "aspect", "preview"})
+        out = _common(params, files, {"references", "image", "aspect", "preview"})
         out["references"] = _references(params, files)
+        # A start frame is frame 0 of the clip, not a reference: <Picture N> are the references.
+        # FastVideo stretches it to the canvas, so the canvas follows it unless an aspect is sent.
+        first = None
+        if params.get("image") is not None:
+            out["image"] = common.image_ref(params["image"], "image", files)
+            first = common.image_size(files.resolve(out["image"]))
         for kind, label in REFERENCE_LABELS.items():
             sent = sum(media_kind(r) == kind for r in out["references"])
             wrong = sorted(n for n in _cited_pictures(out["prompt"], label) if not 1 <= n <= sent)
             if wrong:
                 raise ValueError(f"The prompt cites <{label} {wrong[0]}> but only {sent} {kind} reference(s) were sent")
-        aspect = parse_aspect(params.get("aspect", "16:9"))
+        if "aspect" in params or first is None:
+            aspect = parse_aspect(params.get("aspect", "16:9"))
+        else:
+            aspect = first
+            if not 1 / 4 <= aspect[0] / aspect[1] <= 4:
+                raise ValueError("MiniMax H3 supports aspect ratios from 1:4 to 4:1")
         out["aspect"] = "%d:%d" % aspect
         out["pass1_width"], out["pass1_height"] = size_for(aspect, PASS1_MEGAPIXELS)
         out["width"], out["height"], _ = upscale_target(out["pass1_width"], out["pass1_height"])
@@ -347,6 +359,10 @@ class H3ReferenceToVideo(Pipeline):
         # GB10 and pushed 5.6 GB to swap (promaxgb10-95c7, 2026-11-08, LESSONS #49): Gemma is
         # stopped before each r2v render and starts again on the next LLM request (~27 s cold).
         common.free_llm(self.id)
+        start = _open(ctx, params["image"]) if "image" in params else None
+        if start is not None:
+            from . import h3_start_frame
+            h3_start_frame.install()
         engine = _engine(ctx, model_dir, True, params["loras"])
         # FastVideo resizes reference images to a 2048-pixel short edge, which is
         # what ref_image_size=max did in the validated workflow. Clips are decoded
@@ -354,7 +370,8 @@ class H3ReferenceToVideo(Pipeline):
         began = time.time()
         refs = [_reference(ctx.files.resolve(r)) for r in params["references"]]
         w1, h1, preview = params["pass1_width"], params["pass1_height"], params["preview"]
-        what = f"{params['width']}×{params['height']}, {params['frames']} frames, {len(refs)} reference(s)"
+        what = (f"{params['width']}×{params['height']}, {params['frames']} frames, {len(refs)} reference(s)"
+                + (", start frame" if start is not None else ""))
         marks = [time.time()]
         path = _video_path(ctx)
         pass1 = f"Pass 1: {w1}×{h1}, {params['frames']} frames"
@@ -362,7 +379,7 @@ class H3ReferenceToVideo(Pipeline):
         with engine.overrides(latent_output=not preview):
             first = engine.generate(ctx, prompt=params["prompt"], width=w1, height=h1, frames=params["frames"],
                                     steps=terms["num_inference_steps"], seed=params["seed"], output=path,
-                                    save=preview, references=refs,
+                                    save=preview, references=refs, pil_image=start,
                                     progress=_steps(ctx, 0.1, 0.9 if preview else 0.5, pass1))
         marks.append(time.time())
         if preview:
@@ -379,7 +396,7 @@ class H3ReferenceToVideo(Pipeline):
         with engine.overrides(pdd_step_indices=indices):
             second = engine.generate(ctx, prompt=params["prompt"], width=params["width"], height=params["height"],
                                      frames=params["frames"], steps=len(indices) - 1, seed=params["seed"],
-                                     output=path, references=refs, latents=latents, audio_latents=audio,
+                                     output=path, references=refs, pil_image=start, latents=latents, audio_latents=audio,
                                      progress=_steps(ctx, 0.6, 0.9, f"Pass 2 at {params['width']}×{params['height']}"))
         marks.append(time.time())
         # Each pass includes FastVideo's text and reference encoding; pass 2 also the VAE

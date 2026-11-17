@@ -239,7 +239,23 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     recomposed, mean gap 60 per channel against 6 for a true join), and the drifted frame won
     over the sheet (the purple hair stayed). So a cut's setting frame must show nobody: a
     subject's only image is its sheet. The same segment without the style LoRA kept the fuller
-    bust than the sheet: that is H3's bias, not the LoRA's. (2026-11-15)
+    bust than the sheet: that is H3's bias, not the LoRA's. (2026-11-15) The way out was to give
+    a continuous segment its start frame AND the sheet: FastVideo refuses the mix, yet both
+    pipelines condition with the same image rows and differ only by their time (FL2VA puts its
+    image at the target's frame 0, Ref2VA gives each reference a slot before the target), and the
+    two transformers have the same weights but their output head. Patched to put the start frame
+    at frame 0 inside a Ref2VA layout, the OmniRef checkpoint joined the previous clip (gap 6 to
+    9) and the character came back to her sheet over three chained segments, one woman and one
+    outfit throughout, where the i2v chain had grown a second woman and changed her clothes. The
+    V2 checkpoint, given the sheet the same way, drew a second woman: it never learned to read a
+    sheet. An image of the place as a second reference held the garden but won over a close-up
+    start frame (the shot jumped to the place image's framing), so a continuous segment takes the
+    setting's sheet only. Ref2VA sound is 10 to 20 dB below i2v from its first pass on, whatever
+    the start frame: the assembly lifts a quiet take. (2026-11-16) Through the UI, over five
+    segments, OmniRef still let go of its start frame once in three continuous segments (first
+    frame 60 away from the image, against 5 to 7 for a true join): the card measures the gap
+    between the start image and the clip's first frame and says "broken join, regenerate"; nothing
+    is rendered again on its own. (2026-11-16)
 
 ## 8. Front end (for the port in step 4)
 

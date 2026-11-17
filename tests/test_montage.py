@@ -91,6 +91,27 @@ def test_smooth_audio_matches_the_levels_of_a_continuous_take(client, settings, 
     assert abs(probe(path)["frames"] - 48) <= 1
 
 
+def test_level_gains_lift_a_quiet_take_to_the_floor_without_clipping():
+    """Ref2VA segments render 10 to 20 dB below an i2v clip: a take of them only is lifted
+    to FLOOR_DB, a louder take keeps its median, and no peak goes above PEAK_DB."""
+    from studio.pipelines.montage import FLOOR_DB, level_gains
+    assert level_gains([-55.0, -53.0, -58.0], [-35.0, -33.0, -38.0]) == [15.0, 13.0, 18.0]
+    assert level_gains([-55.0, -53.0], [-10.0, -33.0]) == [9.0, 13.0]  # 9: the peak stops at -1 dB
+    assert level_gains([-30.0, -38.0], [-5.0, -15.0]) == [-4.0, 4.0]   # median -34 > floor
+    assert level_gains([-80.0, -50.0], [-60.0, -30.0]) == [0.0, FLOOR_DB + 50.0]
+
+
+def test_smooth_audio_lifts_a_quiet_take(client, settings):
+    """Two clips at about -51 dB: the smoothed take is lifted by about 11 dB, to the floor."""
+    for name in ("a", "b"):
+        make_clip(settings.output_dir / "h3-r2v" / f"{name}.mp4", "red", gain_db=-30)
+    clips = ["outputs/h3-r2v/a.mp4", "outputs/h3-r2v/b.mp4"]
+    take = {smooth: settings.output_dir / run(client, "video-concat", {"clips": clips, "smooth_audio": smooth})
+            ["outputs"][0].removeprefix("outputs/") for smooth in (False, True)}
+    lift = level(take[True], 0.2, 0.6) - level(take[False], 0.2, 0.6)
+    assert abs(lift - 11) < 1.5, lift
+
+
 def test_concat_without_sound_when_a_clip_has_none(client, settings):
     make_clip(settings.output_dir / "x" / "a.mp4", "red")
     make_clip(settings.output_dir / "x" / "b.mp4", "blue", audio=False)
