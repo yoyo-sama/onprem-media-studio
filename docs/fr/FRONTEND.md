@@ -193,9 +193,10 @@ ajoute une carte Import d'image reliée à elle.
   ensuite cette image à la première image du clip et à son image à 0,2 s (écart moyen par canal,
   en 64×36 ; un clip peut garder son image deux images puis couper) : au-delà de 25 pour l'une
   ou l'autre, la carte affiche « raccord cassé : régénère ce segment » et le journal le dit ; rien
-  ne se relance tout seul. L'image de plan composée à partir d'une planche montre le sujet une
-  seule fois, au tout premier instant de l'action du segment 1 (une image de toute l'action
-  dessinait le sujet deux fois). Un segment avec une image de fin (FL2VA) reste en `h3-i2v`, qui
+  ne se relance tout seul. L'image de plan composée à partir d'une planche ne reçoit que l'action
+  du segment 1, jamais le scénario entier, et montre le sujet une seule fois, au premier instant
+  de cette action (avec le scénario, Qwen en dessinait les moments côte à côte : le sujet deux
+  fois sur 8 images sur 8). Un segment avec une image de fin (FL2VA) reste en `h3-i2v`, qui
   ne prend pas de références. L'assemblage d'un plan-séquence remonte une prise trop faible au
   niveau d'un clip ordinaire (le son du Ref2VA sort 10 à 20 dB plus bas). LESSONS n°51.
 - Un segment ajouté après la fin d'une chaîne rendue fait d'abord extraire les images de

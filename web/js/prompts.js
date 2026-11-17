@@ -283,22 +283,22 @@
   }
 
   // Start frame of a long take whose start image is a reference sheet: one single
-  // instance of its subject, at the first instant of the first action (a still that shows
-  // the action's later moments too drew the subject twice, and the clip cut away from it
-  // after two frames, 2026-11-17), in the sheet's own style
-  // (a drawn sheet stays drawn). `scene`: the screenplay, `text`: the first segment's
-  // action; a <Subject N> marker becomes "the character". No setting sheet here: the
-  // place comes from the text.
+  // instance of its subject, at the first instant of the first segment's action, in the
+  // sheet's own style (a drawn sheet stays drawn). `text`: that action, `scene`: the
+  // screenplay, used only when there is no action yet. Given with the action, the whole
+  // screenplay made Qwen draw its moments side by side: 8 stills out of 8 showed the woman
+  // twice (walking, and already on the bench), 0 out of 8 without it (GB10, 2026-11-17).
+  // A <Subject N> marker becomes "the character". No setting sheet here: the place comes
+  // from the text.
   function relayStartFromSheetPrompt(scene, text, charDesc, styleId) {
     const plain = v => String(v || "").replace(H3_TOKEN_RE, "the character").trim().replace(/[\s.!?…]+$/, "");
-    const sc = plain(scene), act = plain(text);
+    const act = plain(text) || plain(scene);
     let s = "Use the reference image only as the appearance guide for one single character"
       + (charDesc ? ", " + charDesc : "") + ". The reference image is a character sheet that shows this "
       + "character several times: take the character from it, never its layout. "
       + "Create one brand-new cinematic film still, in the same visual style as the reference image, "
-      + "that shows exactly one single instance of that character, at one single instant"
-      + (sc && sc !== act ? ". The scene: " + sc : "")
-      + ". This still shows only the very first instant of this action, as it begins: " + (act || sc) + ". "
+      + "that shows exactly one single instance of that character, at one single instant. "
+      + "This still shows only the very first instant of this action, as it begins: " + act + ". "
       + "The character appears once, at that first instant; every later moment of the action and of "
       + "the scene comes after this still. "
       + "The character is fully present in that place, with correct perspective and scale. The whole "

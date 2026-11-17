@@ -284,9 +284,11 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     et affiche « raccord cassé, régénère » ; rien ne se relance tout seul. (2026-11-16) Un
     plan-séquence à partir d'une planche : l'image de plan Qwen montrait la femme deux fois (qui
     marche, et déjà sur le banc : toute l'action en une image), et le clip a gardé cette image
-    deux images avant de couper (écart 7 à l'image 0, 44 à l'image 2). L'image de plan ne montre
-    plus que le premier instant de l'action, et le contrôle du raccord mesure aussi l'image à
-    0,2 s. (2026-11-17)
+    deux images avant de couper (écart 7 à l'image 0, 44 à l'image 2). Demander « le tout premier
+    instant » n'a rien changé (4 doublons sur 4, mêmes seeds) ; retirer le scénario du prompt, en
+    gardant l'action du segment 1, a corrigé (0 sur 8). Le contrôle du raccord mesure aussi l'image
+    à 0,2 s : sur de vrais clips, les bons raccords y lisent 4,9 à 7,0, les deux coupes cachées
+    29,7 et 47,0. (2026-11-17)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

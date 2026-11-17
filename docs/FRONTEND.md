@@ -184,8 +184,9 @@ to it.
   clip's first frame and with its frame 0.2 s in (mean gap per channel, at 64×36; a clip can hold
   its image for two frames, then cut): above 25 for either, the card says "broken join:
   regenerate this segment" and the log says so; nothing is rendered again on its own. The shot
-  image composed from a sheet shows the subject once, at the first instant of segment 1's action
-  (a still of the whole action drew the subject twice). A
+  image composed from a sheet gets segment 1's action only, never the whole screenplay, and shows
+  the subject once, at that action's first instant (with the screenplay, Qwen drew its moments
+  side by side: the subject twice in 8 stills out of 8). A
   segment with an end image (FL2VA) stays `h3-i2v`, which takes no references. Assembling a long
   take lifts a quiet take to an ordinary clip's level (Ref2VA sound is 10 to 20 dB lower).
   LESSONS #51.
