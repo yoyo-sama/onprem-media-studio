@@ -1516,8 +1516,8 @@ async function renderSegment(i) {
   }
   if (!sameSession(s)) return;
   seg.start = { ref: start };
-  // With the subjects' sheets, the segment ends on a key image Qwen edits from its start
-  // (relayKeyPrompt), and H3 renders from one image to the other (FL2VA): the join to the
+  // With the subjects' sheets, the segment ends on a key image Qwen draws anew from the sheets,
+  // its start giving the place (relayKeyPrompt), and H3 renders from one image to the other (FL2VA): the join to the
   // next segment is exact, and every key brings the faces back to the sheets. Ref2VA with a
   // start frame dropped its start image in 7 clips out of 11, and i2v alone let a face drift
   // within 5 to 9 s (GB10, 2026-11-16 to 18). An end image the user gave is kept as it is.
@@ -1526,9 +1526,10 @@ async function renderSegment(i) {
   if (!last && subs.length) {
     log("req", "Relay, segment {n}/{total}: end image…", { n: i + 1, total });
     const prompt = P.relayKeyPrompt(seg.end, seg.prompt, subs, look.lighting, s.style);
+    const [width, height] = await keySize(start);
     last = await checkedImage(s, seg, i, total, subs.length, (k, sub) => {
       const seed = F.seedPlus(seg.seed, 701 + KEY_RETRY * k);
-      return runJob("qwen-image-2.1", { prompt, images: [start, ...subs.map(x => x.ref)], seed },
+      return runJob("qwen-image-2.1", { prompt, images: [...subs.map(x => x.ref), start], width, height, seed },
         { origin: origin(), label: ["Relay · end image {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
           sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed }] });
     });
@@ -1582,6 +1583,15 @@ async function checkedImage(s, seg, i, total, subjects, submit) {
     log("warn", "Relay, segment {n}/{total}: the image shows {count} figures for {max} subject(s): drawn again.", { n: i + 1, total, count: n, max: subjects });
   }
   throw new Error(t("Relay, segment {n}: the image still shows a subject twice after {tries} tries. Regenerate this segment.", { n: i + 1, tries: KEY_TRIES }));
+}
+
+// Size of a key image: the Qwen Image 2.1 format closest to the segment's start, so the clip
+// runs between two pictures of one shape (the sheets, given first, have their own).
+async function keySize(ref) {
+  const bmp = await createImageBitmap(await F.imageBlob({ ref }));
+  const aspect = bmp.width / bmp.height;
+  bmp.close();
+  return Object.values(F.QWEN21_RATIOS).reduce((best, wh) => (Math.abs(wh[0] / wh[1] - aspect) < Math.abs(best[0] / best[1] - aspect) ? wh : best));
 }
 
 // A Ref2VA clip of the Relay (a cut: no start image).

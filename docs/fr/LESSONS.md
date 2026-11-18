@@ -305,7 +305,14 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     clés doublées 9 fois sur 9 et les bonnes 27 fois sur 27 ; à la question « quelqu'un est-il
     dessiné deux fois », elle en a manqué 2 sur 9 (l'une debout, sa copie assise). Sans musique
     dans le scénario, H3 ne rend que l'ambiance, entre −30 et −51 LUFS : l'assemblage amène chaque
-    clip à −18 LUFS sous un limiteur. (2026-11-18)
+    clip à −18 LUFS sous un limiteur. (2026-11-18) Depuis l'interface, la même recette a tenu
+    l'identité et les raccords sur 50 s, mais les images clés retouchées gardaient le cadrage de
+    la précédente quelle que soit la consigne (toutes en pied, le gros plan final aussi) : H3
+    faisait l'action en milieu de segment (gros plan, autre coin du jardin) puis revenait à son
+    image clé. Les images clés sont désormais dessinées à neuf à partir des planches, l'image clé
+    précédente ne donnant que le lieu. Le limiteur reprenait aussi une partie du gain (des pas à
+    pleine échelle : −23 LUFS au lieu de −18) : la prise assemblée est mesurée puis remontée à
+    nouveau. (2026-11-18)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

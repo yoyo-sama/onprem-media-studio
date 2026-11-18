@@ -5,8 +5,8 @@
 // on a restored storyboard project with approved sheets: the total length and the maximum
 // per segment give the segment plan; the screenplay split fills the segments and only the
 // shared fields left empty, and submits no job; editing a shared field submits nothing;
-// "Generate the chain" sends one shot image, then for each segment a key image Qwen edits
-// from its start (its figures counted by Gemma's vision, drawn again when a subject shows
+// "Generate the chain" sends one shot image, then for each segment a key image Qwen draws
+// from the sheet, its start giving the place (its figures counted by Gemma's vision, drawn again when a subject shows
 // twice, the chain stopped after three tries) and one H3 clip from its start to that key,
 // each prompt carrying the shared look once and no default light or camera. The production board: one
 // tile per segment, its progress from the job events, a click goes to the segment and
@@ -201,16 +201,18 @@ const SPLIT = {
   check(jobs[10]?.params.smooth_audio === true && jobs[10]?.params.clips.length === 3, `assembly at the end of the chain: ${JSON.stringify(jobs[10]?.params)}`);
   check(await page.$eval('#studioNav [data-section="relay"]', b => b.classList.contains("done")), "the menu does not mark the assembled long take");
   const png = k => `outputs/${jobs[k]?.id}.png`;
-  // Each key is an edit of its segment's start with the subject's sheet, at the start's size.
+  // Each key is drawn anew from the subject's sheet, its segment's start giving the place, at
+  // the Qwen format closest to that start (the stub images are square).
   for (const [k, from] of [[1, 0], [2, 0], [5, 2], [8, 5]]) {
     const kp = jobs[k]?.params || {};
-    check(JSON.stringify(kp.images) === JSON.stringify([png(from), "outputs/char.png"]) && !("width" in kp),
-      `key image ${k}: ${JSON.stringify({ images: kp.images, w: kp.width })}`);
-    check(/^Edit <image1>\./.test(kp.prompt || "") && /Every spot a character has left now shows only the setting/.test(kp.prompt || "")
-      && /reference sheet in <image2> \(oval face, freckles/.test(kp.prompt || "") && (kp.prompt || "").includes("Warm candle light."),
+    check(JSON.stringify(kp.images) === JSON.stringify(["outputs/char.png", png(from)]) && kp.width === 1024 && kp.height === 1024,
+      `key image ${k}: ${JSON.stringify({ images: kp.images, w: kp.width, h: kp.height })}`);
+    check(/^Create one brand-new cinematic film still of the moment that comes a few seconds after <image2>/.test(kp.prompt || "")
+      && /never a copy of the framing of <image2>/.test(kp.prompt || "") && /Every spot a character has left now shows only the setting/.test(kp.prompt || "")
+      && /Use <image1> only as the appearance guide for the character, oval face, freckles/.test(kp.prompt || "") && (kp.prompt || "").includes("Warm candle light."),
       `key image ${k} prompt: ${kp.prompt}`);
   }
-  check(/the spot where the same character from <image1> stood is now empty gravel/.test(jobs[1]?.params.prompt || ""),
+  check(/the spot where the character stood is now empty gravel/.test(jobs[1]?.params.prompt || ""),
     `key 1 does not follow the split's end: ${jobs[1]?.params.prompt}`);
   check(jobs[2]?.params.seed === jobs[1]?.params.seed + 100 && jobs[2]?.params.prompt === jobs[1]?.params.prompt,
     `the key drawn again: seeds ${jobs[1]?.params.seed} → ${jobs[2]?.params.seed}`);
@@ -389,9 +391,9 @@ const SPLIT = {
   check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "qwen-image-2.1", "h3-i2v", "video-concat"]),
     `extending the long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
   // Segment 1 ended on the user's end image: segment 2 starts on its last frame, and ends on a
-  // key edited from that frame with the start picture (the subject's only reference).
+  // key drawn from the start picture (the subject's only reference), that frame giving the place.
   check(/^outputs\/job-\d+\.png$/.test(lt[2]?.params.image || ""), `segment 2 does not start on the last frame of segment 1: ${lt[2]?.params.image}`);
-  check(JSON.stringify(lt[1]?.params.images) === JSON.stringify([lt[2]?.params.image, clip.image]) && lt[2]?.params.last_image === `outputs/${lt[1]?.id}.png`,
+  check(JSON.stringify(lt[1]?.params.images) === JSON.stringify([clip.image, lt[2]?.params.image]) && lt[2]?.params.last_image === `outputs/${lt[1]?.id}.png`,
     `segment 2 of a long take, key and end: ${JSON.stringify({ key: lt[1]?.params.images, last: lt[2]?.params.last_image })}`);
   // Saved and resumed under its own pipeline.
   await page.click("#studioExitBtn");
@@ -437,7 +439,7 @@ const SPLIT = {
   check(/character sheet/.test(shot.prompt) && /exactly one single instance/.test(shot.prompt) && /a woman in a green wool coat/.test(shot.prompt)
     && /garden path at dawn/.test(shot.prompt), `shot image prompt: ${shot.prompt}`);
   check(lt[2]?.params.image === `outputs/${lt[0]?.id}.png` && lt[2]?.params.last_image === `outputs/${lt[1]?.id}.png`
-    && JSON.stringify(lt[1]?.params.images) === JSON.stringify([`outputs/${lt[0]?.id}.png`, shot.images?.[0]]),
+    && JSON.stringify(lt[1]?.params.images) === JSON.stringify([shot.images?.[0], `outputs/${lt[0]?.id}.png`]),
     `the clip does not run from the shot image to its key: ${JSON.stringify(lt.map(j => j.params.image || j.params.images))}`);
   // A cut in a long take: Ref2VA on the start sheet and, as the setting, the previous
   // segment's transition frame (its last frame by default). The link starts nothing.

@@ -1260,33 +1260,38 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
                      music: NO_MUSIC_RE.test(music) ? "" : music } };
   }
 
-  // Key image a Relay segment ends on: Qwen Image 2.1 edits the picture the segment starts
-  // on (<image1>) into its final instant (`end`, from the split; the action's last moment
-  // when there is none), with the subjects' sheets after it (<image2>, <image3>) as the
-  // appearance guides. The segment is then rendered from one key image to the next (FL2VA),
-  // so every join is exact and every key re-anchors the faces on the sheets. Without the
-  // sentence about the spot the subject left, Qwen kept her there and added a second one
-  // where she went, 1 edit out of 2 (GB10, 2026-11-18): the code always adds it.
-  // `subjects`: [{desc}] in sheet order; <Subject N> becomes the character of its sheet.
+  // Key image a Relay segment ends on, drawn anew by Qwen Image 2.1: the subjects' sheets
+  // first (<image1>, <image2>) as the only appearance guides, then the picture the segment
+  // starts on, for the place, its light and style only. The segment is rendered from one key
+  // image to the next (FL2VA), so every join is exact and every key re-anchors the faces on the
+  // sheets. An edit of the previous key kept its framing whatever the instruction (a close-up
+  // asked for came out full-body), so H3 did the action mid-segment and swung back to the key
+  // (GB10, 2026-11-18); drawn anew, the key takes the framing of its final instant. Without a
+  // sentence about the spot a subject left, Qwen kept the subject there and added a second one
+  // where it went: the code always adds it. `end`: the final instant from the split (the
+  // action's last moment when there is none); <Subject N> becomes the character of sheet N.
+  // `subjects`: [{desc}] in sheet order.
   function relayKeyPrompt(end, action, subjects, lighting, styleId) {
-    const subs = (subjects || []).slice(0, 2), one = subs.length < 2;
-    const who = n => (one ? "the same character from <image1>" : `the same character from <image1> that <image${n + 1}> shows`);
+    const subs = (subjects || []).slice(0, 2), one = subs.length < 2, place = `<image${subs.length + 1}>`;
+    const who = n => (one ? "the character" : `the character of <image${n}>`);
     const plain = v => String(v || "").replace(H3_TOKEN_RE, (_, n) => who(Number(n))).trim().replace(/[\s.!?…]+$/, "");
-    const cap = v => v.charAt(0).toUpperCase() + v.slice(1);
-    const what = plain(end) || (plain(action) ? "The final instant of this action: " + plain(action) : "");
-    let s = "Edit <image1>. Keep the place, the light, the camera height and the camera side of <image1>. "
-      + (what ? cap(what) + ". " : "")
-      + "Every spot a character has left now shows only the setting. "
-      + (one ? "The character appears only once: nobody else is in the picture. "
-             : "Each character appears only once: nobody else is in the picture. ");
+    const what = plain(end) || (plain(action) ? "the final instant of this action: " + plain(action) : "");
+    let s = `Create one brand-new cinematic film still of the moment that comes a few seconds after ${place}, in the same place`
+      + (what ? `: ${what}. ` : ". ")
+      + `Take the place, its light, its colors and its visual style from ${place}, seen from the camera position and shot size `
+      + `this moment calls for, never a copy of the framing of ${place}. `;
     subs.forEach((x, k) => {
-      const img = `<image${k + 2}>`, desc = plain(x.desc);
-      s += `The face, hair, body and outfit of ${one ? "the character" : `the character that ${img} shows`} are those of the reference sheet in ${img}`
-        + (desc ? ` (${desc})` : "") + `; ${img} is only the appearance guide, never copy its layout or its background. `;
+      const img = `<image${k + 1}>`, desc = plain(x.desc);
+      s += `Use ${img} only as the appearance guide for ${one ? "the character" : `the character of ${img}`}`
+        + (desc ? `, ${desc}` : "") + `: it is a reference sheet that shows the character several times; take the character `
+        + `from it, never its layout or its background. Keep the face, hair, anatomy, clothing and colors identical to ${img}. `;
     });
+    s += (one ? "The character appears exactly once: nobody else is in the picture. "
+              : "Each character appears exactly once: nobody else is in the picture. ")
+      + "Every spot a character has left now shows only the setting. ";
     const light = plain(lighting);
-    if (light) s += cap(light) + ". ";
-    s += "One single continuous picture in the visual style of <image1> that fills the frame, with no panels, borders, caption or text.";
+    if (light) s += light.charAt(0).toUpperCase() + light.slice(1) + ". ";
+    s += "The whole picture is one single continuous scene that fills the frame, with no panels, grid, borders, caption or text.";
     const styleText = styleTextFor(styleId);
     if (styleText) s += " " + styleText;
     return s;

@@ -276,6 +276,12 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     and the clean ones 27 out of 27; asked "is anyone drawn twice", it missed 2 out of 9 (one
     standing, her copy seated). Without music in the screenplay, H3 renders the ambience only,
     at −30 to −51 LUFS: the assembly brings each clip to −18 LUFS under a limiter. (2026-11-18)
+    Through the UI the same recipe held identity and joins over 50 s, but the edited keys kept
+    the previous key's framing whatever the instruction (all full-body, the closing close-up
+    too): H3 did the action mid-segment (close-up, another corner of the garden) and swung back to
+    its key. Keys are now drawn anew from the sheets, the previous key giving the place only. The
+    limiter also took back part of the lift (footsteps at full scale: −23 LUFS instead of −18):
+    the joined take is measured and lifted again. (2026-11-18)
 
 ## 8. Front end (for the port in step 4)
 
