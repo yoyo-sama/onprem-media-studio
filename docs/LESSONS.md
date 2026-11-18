@@ -281,7 +281,14 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     too): H3 did the action mid-segment (close-up, another corner of the garden) and swung back to
     its key. Keys are now drawn anew from the sheets, the previous key giving the place only. The
     limiter also took back part of the lift (footsteps at full scale: −23 LUFS instead of −18):
-    the joined take is measured and lifted again. (2026-11-18)
+    the joined take is measured and lifted again. (2026-11-18) Drawn anew, keys moved more but
+    still kept the place image's framing: "framed from the waist up" left them full-body, while a
+    shot named first with its camera distance ("Medium close-up: ... the camera close to the
+    face") worked 6 stills out of 6. And the video text written by Gemma from the two keys sent the
+    video straight from one to the other, unless Gemma also had the screenplay: it then wrote a
+    push-in between two full shots and the video swung back. The split now names each key's shot
+    from a closed list, and the action is written from the two images and their shot sizes only.
+    (2026-11-18)
 
 ## 8. Front end (for the port in step 4)
 

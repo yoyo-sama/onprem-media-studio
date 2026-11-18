@@ -1066,7 +1066,7 @@ function renderTimeline() {
 // `look` is written once and shared by every segment's prompt (camera, lighting,
 // soundscape, music); a segment holds only its action and its own camera motion.
 const newRelaySegment = (prompt = "", duration = RELAY_SEG_DEFAULT) => ({ prompt, duration, mode: "continue", status: "idle", ref: null,
-  seed: 0, prompt_used: null, start: null, transitions: null, transitionIdx: 0, endImage: null, end: "", key: null });
+  seed: 0, prompt_used: null, start: null, transitions: null, transitionIdx: 0, endImage: null, end: "", shot: "", key: null });
 const RELAY_LOOK_KEYS = ["camera", "lighting", "sound", "music"];
 // The cards are the plan: a new Relay gets one empty card per planned segment, and the
 // total length of a given (or saved) chain is the sum of its cards.
@@ -1135,10 +1135,10 @@ async function composeRelay() {
   tx(btn, "Splitting…");
   try {
     log("req", "Relay: splitting the screenplay into {n} segments with {llm}…", { n, llm: LLM });
-    const { segments: list, ends: finals, look } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
+    const { segments: list, ends: finals, shots, look } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
     // The end images stay with the segment of the same rank (a long take's key images).
     const ends = r.segments.map(seg => seg.endImage);
-    r.segments = list.map((prompt, i) => ({ ...newRelaySegment(prompt, durs[Math.min(i, n - 1)]), end: finals[i] || "", endImage: ends[i] || null }));
+    r.segments = list.map((prompt, i) => ({ ...newRelaySegment(prompt, durs[Math.min(i, n - 1)]), end: finals[i] || "", shot: shots[i] || "", endImage: ends[i] || null }));
     syncRelayTotal();
     r.scenario = text;
     // The shared look fills only the fields left empty: what the user wrote stays.
@@ -1244,8 +1244,9 @@ function renderRelay() {
     tx(el.querySelector(".seg-status"), statusWord(seg.status));
     const area = el.querySelector("textarea");
     area.value = seg.prompt;
-    // An action rewritten by hand: its key image follows the new text, not the split's final instant.
-    area.addEventListener("change", () => { seg.prompt = area.value; seg.end = ""; updateRelayButtons(); save(); });
+    // An action rewritten by hand: its key image follows the new text, not the split's final
+    // instant, and the video renders that text as it is.
+    area.addEventListener("change", () => { seg.prompt = area.value; seg.end = ""; seg.shot = ""; updateRelayButtons(); save(); });
     area.addEventListener("input", () => { seg.prompt = area.value; updateRelayButtons(); });
     const dur = el.querySelector('input[type="number"]');
     dur.value = seg.duration;
@@ -1525,7 +1526,7 @@ async function renderSegment(i) {
   let last = seg.endImage?.ref || null;
   if (!last && subs.length) {
     log("req", "Relay, segment {n}/{total}: end image…", { n: i + 1, total });
-    const prompt = P.relayKeyPrompt(seg.end, seg.prompt, subs, look.lighting, s.style);
+    const prompt = P.relayKeyPrompt(seg.end, seg.prompt, subs, look.lighting, s.style, seg.shot);
     const [width, height] = await keySize(start);
     last = await checkedImage(s, seg, i, total, subs.length, (k, sub) => {
       const seed = F.seedPlus(seg.seed, 701 + KEY_RETRY * k);
@@ -1535,6 +1536,22 @@ async function renderSegment(i) {
     });
     if (!sameSession(s)) return;
     seg.key = { ref: last };
+    // The split's action becomes what Gemma sees between the two images, so the video goes
+    // straight from one to the other; a card rewritten by hand (no `end`) is rendered as it is.
+    if (seg.end) {
+      const shotBefore = i > 0 && continuous(seg) && before?.key ? before.shot : "";
+      try {
+        const b64 = async ref => blobToBase64(await F.imageBlob({ ref }));
+        const action = await P.relayMotionFromKeys(F.llm, await b64(start), await b64(last), [shotBefore, seg.shot], subs);
+        if (!sameSession(s)) return;
+        if (action) {
+          seg.prompt = action;
+          log("ok", "Relay, segment {n}/{total}: action written by {llm} from its start and end images.", { n: i + 1, total, llm: LLM });
+        }
+      } catch (err) {
+        log("warn", "Relay, segment {n}/{total}: action not rewritten from the images ({error}): the card's text is used.", { n: i + 1, total, error: err.message });
+      }
+    }
   }
   seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
   const job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,

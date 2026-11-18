@@ -46,14 +46,15 @@ const PROJECT = {
   shots: [], keyframes: null, cuts: null, order: null, animatic: null,
   relay: { scenario: "", segments: [{ prompt: "", duration: 5 }] },
 };
+const MOTION = "SUBJECTREF1 walks on toward the camera; the camera tracks back at the same distance.";
 const SPLIT = {
   framing: "Medium shots at eye level.", lighting: "Soft cool morning light with long shadows.",
   soundscape: "Birdsong, a light breeze and footsteps on gravel.", music: "none",
   segments: [
     { action: "SUBJECTREF1 walks along the gravel path; the camera tracks backward.",
-      end: "SUBJECTREF1 is halfway down the path, medium shot; the spot where SUBJECTREF1 stood is now empty gravel." },
-    { action: "SUBJECTREF1 stops by a flowering tree and turns.", end: "SUBJECTREF1 stands by the flowering tree, facing the camera." },
-    { action: "SUBJECTREF1 looks toward the sun and smiles; slow push-in.", end: "SUBJECTREF1 smiles toward the sun, in a close-up." }],
+      end: "SUBJECTREF1 is halfway down the path, medium shot; the spot where SUBJECTREF1 stood is now empty gravel.", shot: "medium shot" },
+    { action: "SUBJECTREF1 stops by a flowering tree and turns.", end: "SUBJECTREF1 stands by the flowering tree, facing the camera.", shot: "Full shot." },
+    { action: "SUBJECTREF1 looks toward the sun and smiles; slow push-in.", end: "SUBJECTREF1 smiles toward the sun, in a close-up.", shot: "close-up" }],
 };
 
 (async () => {
@@ -87,6 +88,8 @@ const SPLIT = {
     if (p === "/api/llm/chat") {
       const body = JSON.parse(req.postData());
       chats.push(body);
+      // Vision: the action between a segment's start and its key.
+      if (/^You write the action of one continuous/.test(body.system || "")) return json({ content: JSON.stringify({ action: MOTION }) });
       if (/^Count the people/.test(body.system || "")) return json({ content: JSON.stringify({ count: counts.length ? counts.shift() : 1, note: "" }) });
       // Vision: the description of a long take's start image.
       if (body.images?.length) return json({ content: JSON.stringify({ sheet: visionSheet, subject: "a woman in a green wool coat", appearance: "auburn bob",
@@ -207,11 +210,23 @@ const SPLIT = {
     const kp = jobs[k]?.params || {};
     check(JSON.stringify(kp.images) === JSON.stringify(["outputs/char.png", png(from)]) && kp.width === 1024 && kp.height === 1024,
       `key image ${k}: ${JSON.stringify({ images: kp.images, w: kp.width, h: kp.height })}`);
-    check(/^Create one brand-new cinematic film still of the moment that comes a few seconds after <image2>/.test(kp.prompt || "")
+    check(/Create one brand-new cinematic film still of the moment that comes a few seconds after <image2>/.test(kp.prompt || "")
       && /never a copy of the framing of <image2>/.test(kp.prompt || "") && /Every spot a character has left now shows only the setting/.test(kp.prompt || "")
       && /Use <image1> only as the appearance guide for the character, oval face, freckles/.test(kp.prompt || "") && (kp.prompt || "").includes("Warm candle light."),
       `key image ${k} prompt: ${kp.prompt}`);
   }
+  // The key opens on its shot size, named with the camera distance.
+  check(/^Medium shot: the character seen from the waist up/.test(jobs[1]?.params.prompt || "") && /^Full shot: /.test(jobs[5]?.params.prompt || "")
+    && /^Close-up: the character's face fills the frame/.test(jobs[8]?.params.prompt || ""),
+    `key shot sizes: ${[1, 5, 8].map(k => (jobs[k]?.params.prompt || "").split(":")[0]).join(", ")}`);
+  // Each split action is rewritten by Gemma's vision from the segment's start and key only
+  // (with their shot sizes, never the screenplay), and the clip and the card take that text.
+  const motions = chats.filter(c => /^You write the action of one continuous/.test(c.system || ""));
+  check(motions.length === 3 && motions.every(c => c.images?.length === 2 && /SUBJECTREF1 is oval face/.test(c.prompt) && !/flowering tree|gravel path/.test(c.prompt))
+    && /Image 1 is a medium shot; image 2 is a full shot\./.test(motions[1]?.prompt || "") && /^SUBJECTREF1 is [^.]*\. Image 2 is a medium shot\.$/.test(motions[0]?.prompt || ""),
+    `action from the keys: ${JSON.stringify(motions.map(c => c.prompt))}`);
+  check(await page.inputValue('#relayList .relay-seg[data-seg="0"] textarea') === MOTION.replace("SUBJECTREF1", "<Subject 1>"),
+    `card 1 after the chain: ${await page.inputValue('#relayList .relay-seg[data-seg="0"] textarea')}`);
   check(/the spot where the character stood is now empty gravel/.test(jobs[1]?.params.prompt || ""),
     `key 1 does not follow the split's end: ${jobs[1]?.params.prompt}`);
   check(jobs[2]?.params.seed === jobs[1]?.params.seed + 100 && jobs[2]?.params.prompt === jobs[1]?.params.prompt,
@@ -222,7 +237,7 @@ const SPLIT = {
   for (const [i, j] of clips.entries()) {
     const pr = j.params.prompt;
     check(j.params.image === ends[i][0] && j.params.last_image === ends[i][1], `segment ${i + 1} images: ${j.params.image} → ${j.params.last_image}`);
-    check(/<Picture 2>/.test(pr) && /<Subject 1> is the main character/.test(pr), `segment ${i + 1} prompt: ${pr}`);
+    check(/<Picture 2>/.test(pr) && /<Subject 1> is the main character/.test(pr) && pr.includes("walks on toward the camera"), `segment ${i + 1} prompt: ${pr}`);
     check(j.params.duration === 10, `segment ${i + 1} duration ${j.params.duration}`);
     check(!/golden|steady framing/i.test(pr), `segment ${i + 1} prompt carries a default look`);
     check(pr.includes("Warm candle light.") && pr.includes(`Framing: ${SPLIT.framing}`), `segment ${i + 1} prompt lacks the shared look`);

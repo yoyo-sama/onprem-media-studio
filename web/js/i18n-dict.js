@@ -4147,4 +4147,14 @@ export const DICT = {
     es: "Relay, segmento {n}: la imagen sigue mostrando un sujeto dos veces tras {tries} intentos. Regenera este segmento.",
     de: "Relay, Segment {n}: Das Bild zeigt ein Subjekt nach {tries} Versuchen immer noch doppelt. Generiere dieses Segment neu.",
   },
+  "Relay, segment {n}/{total}: action written by {llm} from its start and end images.": {
+    fr: "Relay, segment {n}/{total} : action écrite par {llm} d'après ses images de départ et de fin.",
+    es: "Relay, segmento {n}/{total}: acción escrita por {llm} a partir de sus imágenes inicial y final.",
+    de: "Relay, Segment {n}/{total}: Handlung von {llm} aus Start- und Endbild geschrieben.",
+  },
+  "Relay, segment {n}/{total}: action not rewritten from the images ({error}): the card's text is used.": {
+    fr: "Relay, segment {n}/{total} : action non réécrite d'après les images ({error}) : le texte de la carte est utilisé.",
+    es: "Relay, segmento {n}/{total}: acción no reescrita a partir de las imágenes ({error}): se usa el texto de la tarjeta.",
+    de: "Relay, Segment {n}/{total}: Handlung nicht aus den Bildern neu geschrieben ({error}): Der Text der Karte wird verwendet.",
+  },
 };

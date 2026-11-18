@@ -184,8 +184,12 @@ to it.
   `last_image`, FL2VA). The next segment starts on that key, so every join is exact and every key
   brings the faces back to the sheets. The split gives each segment its `end` (its final
   instant: where each subject is, pose, the shot size its camera motion ends on, and the spot a
-  subject left, now showing only the setting); an action rewritten by hand drops it and the key
-  follows the action. Gemma's vision counts the figures of every shot and key image
+  subject left, now showing only the setting) and its `shot` (full shot, medium shot, medium
+  close-up or close-up), which opens the key's prompt with its camera distance. Once the key is
+  drawn, Gemma's vision writes the segment's action from its start and its key only, with their
+  shot sizes, never the screenplay (`relayMotionFromKeys`): the card takes that text and the video
+  goes straight from one image to the other. An action rewritten by hand drops `end` and `shot`:
+  the key follows the action and the video renders it as it is. Gemma's vision counts the figures of every shot and key image
   (`countFigures`): more than the segment has subjects (a subject drawn twice) and the image is
   drawn again with another seed, twice at most, then the chain stops on that segment, to
   regenerate; an image Gemma cannot read is kept, and the log says so. The shot image composed

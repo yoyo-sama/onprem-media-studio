@@ -312,7 +312,14 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     image clé. Les images clés sont désormais dessinées à neuf à partir des planches, l'image clé
     précédente ne donnant que le lieu. Le limiteur reprenait aussi une partie du gain (des pas à
     pleine échelle : −23 LUFS au lieu de −18) : la prise assemblée est mesurée puis remontée à
-    nouveau. (2026-11-18)
+    nouveau. (2026-11-18) Dessinées à neuf, les images clés bougeaient davantage mais gardaient
+    le cadrage de l'image de lieu : « cadré à la taille » les laissait en pied, alors qu'un plan
+    nommé en tête avec sa distance de caméra (« Medium close-up: ... the camera close to the
+    face ») a marché 6 fois sur 6. Et le texte vidéo écrit par Gemma d'après les deux images clés
+    menait la vidéo droit de l'une à l'autre, sauf quand Gemma avait aussi le scénario : il
+    écrivait alors une avancée entre deux plans d'ensemble et la vidéo revenait en arrière. Le
+    découpage nomme désormais le plan de chaque image clé dans une liste fermée, et l'action est
+    écrite d'après les deux images et leurs valeurs de plan seulement. (2026-11-18)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

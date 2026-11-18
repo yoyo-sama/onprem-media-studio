@@ -925,6 +925,7 @@ Rules:
 - "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.
 - Each segment has an "action": ONE English paragraph of 20 to 45 words, what happens in that segment, then its own camera motion, one single movement. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
 - Each segment also has an "end": ONE English paragraph of 20 to 50 words, the final instant of that segment as one still picture, for an image editor that changes the picture the segment starts on. Say what is different at that instant: where each subject now is in the place, their pose, gaze and expression, then the shot size and camera angle at that instant, which are exactly where the segment's own camera motion ends (a push-in ends closer, a pull-back ends wider, a fixed camera keeps the shot). Each end differs visibly from the previous one. When a subject has moved, name the spot it left, which now shows only the setting. Never describe the light, the sounds or the appearance of the subjects.
+- Each segment also has a "shot": the shot size of its end, EXACTLY ONE of "full shot", "medium shot", "medium close-up", "close-up". Vary it along the sequence as the scenario's camera does.
 - A segment acts within the place already shown: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
 - The segments follow on from one another: segment k+1 starts exactly where segment k ended. Never restart the scene, never retell the whole scenario inside one segment, never jump elsewhere unless the scenario says so.
 - The recurring subjects are named by a marker, one bare word each. Copy each marker character for character wherever that subject acts:
@@ -933,7 +934,7 @@ ${legend}
 - Use ONLY positive phrasing (never "no", "without", "avoid").
 - Plain prose only: no field name, no heading, no numbering, no timestamp, no angle bracket, no square bracket.
 - Never write "masterpiece", "best quality", "8k" or "ultra detailed".
-Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": [{"action": "...", "end": "..."}, {"action": "...", "end": "..."}]} with exactly ${n} segments, in order.`;
+Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": [{"action": "...", "end": "...", "shot": "..."}, {"action": "...", "end": "...", "shot": "..."}]} with exactly ${n} segments, in order.`;
 
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
   const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
@@ -1243,19 +1244,20 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
 
   // Splits a scenario into at most `max` segment texts (Gemma may return one more or one
   // less than `n`: what it wrote is kept), the final instant of each (`ends`, "" when
-  // Gemma gave none: the key image then follows the action) and the shared look. Returns
-  // {segments, ends, look}; throws when no segment came back. A segment given as a bare
-  // string is its action.
+  // Gemma gave none: the key image then follows the action), its shot size (`shots`, a
+  // RELAY_SHOTS key or "") and the shared look. Returns {segments, ends, shots, look};
+  // throws when no segment came back. A segment given as a bare string is its action.
   const NO_MUSIC_RE = /^(none|n\/a|no music|silence)\.?$/i;
   async function composeScenario(llm, text, n, locDesc, max, subjects) {
     const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects)), text);
     const clean = v => h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(v))));
     const given = v => v && typeof v === "object" && !Array.isArray(v) && "action" in v;
+    const shot = v => { const k = String(v || "").trim().toLowerCase().replace(/[.\s]+$/, ""); return k in RELAY_SHOTS ? k : ""; };
     const pairs = (Array.isArray(out.segments) ? out.segments : [])
-      .map(v => (given(v) ? [clean(v.action), clean(v.end)] : [clean(v), ""])).filter(([a]) => a).slice(0, max);
+      .map(v => (given(v) ? [clean(v.action), clean(v.end), shot(v.shot)] : [clean(v), "", ""])).filter(([a]) => a).slice(0, max);
     if (!pairs.length) throw new Error("no segment returned");
     const music = clean(out.music);
-    return { segments: pairs.map(([a]) => a), ends: pairs.map(([, e]) => e),
+    return { segments: pairs.map(([a]) => a), ends: pairs.map(([, e]) => e), shots: pairs.map(([, , sh]) => sh),
              look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
                      music: NO_MUSIC_RE.test(music) ? "" : music } };
   }
@@ -1270,13 +1272,24 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // sentence about the spot a subject left, Qwen kept the subject there and added a second one
   // where it went: the code always adds it. `end`: the final instant from the split (the
   // action's last moment when there is none); <Subject N> becomes the character of sheet N.
-  // `subjects`: [{desc}] in sheet order.
-  function relayKeyPrompt(end, action, subjects, lighting, styleId) {
+  // `subjects`: [{desc}] in sheet order. `shot`: a RELAY_SHOTS key, said first: Qwen followed
+  // a shot named with its camera distance ("Medium close-up: ... the camera close to the
+  // face", 6 stills out of 6), not a description of where the body is cut ("framed from the
+  // waist up" left the keys full-body).
+  const RELAY_SHOTS = {
+    "full shot": "Full shot: {who} seen whole, head to feet, the camera a few metres away.",
+    "medium shot": "Medium shot: {who} seen from the waist up, the camera at a short distance.",
+    "medium close-up": "Medium close-up: {whose} face and shoulders fill the frame, the camera close to the face at eye level.",
+    "close-up": "Close-up: {whose} face fills the frame, the camera very close to the face.",
+  };
+  function relayKeyPrompt(end, action, subjects, lighting, styleId, shot) {
     const subs = (subjects || []).slice(0, 2), one = subs.length < 2, place = `<image${subs.length + 1}>`;
     const who = n => (one ? "the character" : `the character of <image${n}>`);
     const plain = v => String(v || "").replace(H3_TOKEN_RE, (_, n) => who(Number(n))).trim().replace(/[\s.!?…]+$/, "");
     const what = plain(end) || (plain(action) ? "the final instant of this action: " + plain(action) : "");
-    let s = `Create one brand-new cinematic film still of the moment that comes a few seconds after ${place}, in the same place`
+    const lead = RELAY_SHOTS[shot] ? RELAY_SHOTS[shot].replace("{who}", one ? "the character" : "the characters")
+      .replace("{whose}", one ? "the character's" : "the characters'") + " " : "";
+    let s = lead + `Create one brand-new cinematic film still of the moment that comes a few seconds after ${place}, in the same place`
       + (what ? `: ${what}. ` : ". ")
       + `Take the place, its light, its colors and its visual style from ${place}, seen from the camera position and shot size `
       + `this moment calls for, never a copy of the framing of ${place}. `;
@@ -1295,6 +1308,22 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const styleText = styleTextFor(styleId);
     if (styleText) s += " " + styleText;
     return s;
+  }
+
+  // The action of a segment once its two key images are drawn, written by Gemma's vision from
+  // those two images only: the video then goes straight from one to the other. Given the
+  // screenplay as well, Gemma followed it and wrote a push-in between two full shots, and the
+  // video pushed in, then swung back to its key (GB10, 2026-11-18). `shots`: the planned shot
+  // sizes of the two images ("" when unknown); `subjects`: [{desc}]. Returns the action with
+  // its <Subject N> markers, or "" when the answer gives none.
+  const KEY_MOTION_SYSTEM = `You write the action of one continuous video shot that starts exactly on image 1 and ends exactly on image 2. Describe only the continuous change from image 1 to image 2: how each character moves and changes pose, and the one camera movement that takes the framing of image 1 to the framing of image 2 (push-in, pull-back, pan, or a fixed camera). When both images have the same shot size, the camera keeps its distance: a fixed camera, or a tracking shot that follows at the same distance, never a push-in or a pull-back. Mention nothing that neither image shows. Name the characters by their markers, copied character for character. One English paragraph of 20 to 45 words, positive phrasing only, no light, no sound, no appearance. Answer ONLY with JSON: {"action": "..."}`;
+  async function relayMotionFromKeys(llm, first, last, shots, subjects) {
+    const subs = (subjects || []).slice(0, 2);
+    const who = subs.map((x, k) => `${H3_TOKEN_STUB(k + 1)} is ${x.desc || (k ? "the second character" : "the character")}.`).join(" ");
+    const [a, b] = shots || [];
+    const sizes = a && b ? ` Image 1 is a ${a}; image 2 is a ${b}.` : b ? ` Image 2 is a ${b}.` : "";
+    const out = await llm(KEY_MOTION_SYSTEM, (who + sizes).trim() || "Write the action.", [first, last]);
+    return h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(out?.action))));
   }
 
   // Gemma's vision counts the figures of a key image: a key that shows a subject twice is
@@ -1328,7 +1357,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage, describeStartImage,
     buildRelaySegmentPrompt, buildRelayCutPrompt, relaySubjectLegend, composeScenario,
-    relayKeyPrompt, KEY_COUNT_SYSTEM, countFigures,
+    relayKeyPrompt, RELAY_SHOTS, KEY_COUNT_SYSTEM, countFigures, KEY_MOTION_SYSTEM, relayMotionFromKeys,
   };
   if (typeof module === "object" && module.exports) module.exports = Prompts;
   else global.Prompts = Prompts;
