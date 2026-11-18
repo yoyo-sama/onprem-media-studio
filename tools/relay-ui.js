@@ -217,6 +217,8 @@ const SPLIT = {
     const pr = j.params.prompt;
     check(j.params.image === starts[i] && JSON.stringify(j.params.references) === JSON.stringify(["outputs/char.png", "outputs/loc.png"])
       && !("aspect" in j.params), `segment ${i + 1} start and references: ${JSON.stringify(j.params)}`);
+    // Segment 1 drops its first two frames (Ref2VA blends the still in them); the others keep theirs.
+    check(i === 0 ? j.params.trim_start === 2 : !("trim_start" in j.params), `segment ${i + 1} trim_start: ${j.params.trim_start}`);
     check(/<Subject 1> is the main character in <Picture 1>/.test(pr) && /<Subject 2> is the location as defined by <Picture 2>/.test(pr),
       `segment ${i + 1} names the sheets: ${pr}`);
     check(j.params.duration === 10, `segment ${i + 1} duration ${j.params.duration}`);
@@ -425,8 +427,8 @@ const SPLIT = {
     `shot image from the sheet: ${JSON.stringify({ images: shot.images, w: shot.width, h: shot.height })}`);
   check(/character sheet/.test(shot.prompt) && /exactly one single instance/.test(shot.prompt) && /a woman in a green wool coat/.test(shot.prompt)
     && /garden path at dawn/.test(shot.prompt), `shot image prompt: ${shot.prompt}`);
-  check(lt[1]?.params.image === `outputs/${lt[0]?.id}.png`,
-    `the clip does not start on the shot image: ${lt[1]?.params.image}`);
+  check(lt[1]?.params.image === `outputs/${lt[0]?.id}.png` && lt[1]?.params.trim_start === 2,
+    `the clip does not start on the shot image, or keeps its first frames: ${JSON.stringify(lt[1]?.params)}`);
   // A cut in a long take: Ref2VA on the start sheet and, as the setting, the previous
   // segment's transition frame (its last frame by default). The link starts nothing.
   await page.click("#relayAddBtn");

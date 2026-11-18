@@ -187,7 +187,9 @@ to it.
   image composed from a sheet gets segment 1's action only, never the whole screenplay, and shows
   the subject once, at that action's first instant (with the screenplay, Qwen drew its moments
   side by side: the subject twice in 8 stills out of 8). A
-  segment with an end image (FL2VA) stays `h3-i2v`, which takes no references. Assembling a long
+  segment with an end image (FL2VA) stays `h3-i2v`, which takes no references. Segment 1 starts
+  on a still (a shot image, or the user's picture): Ref2VA blended it into its first two frames,
+  then cut, so segment 1 drops them (`trim_start: 2`, 83 ms) and has no join to check. Assembling a long
   take lifts a quiet take to an ordinary clip's level (Ref2VA sound is 10 to 20 dB lower).
   LESSONS #51.
 - A segment added after the end of a rendered chain gets the previous segment's transition

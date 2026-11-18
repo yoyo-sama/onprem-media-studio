@@ -220,6 +220,9 @@ def _outputs(result, path: Path, ctx, params: dict) -> list[Path]:
         raise RuntimeError("FastVideo reported success but wrote no video (LESSONS.md #1)")
     if not result.frames:
         raise RuntimeError("FastVideo returned no frames")
+    if params.get("trim_start"):
+        from .montage import trim_start
+        trim_start(video, params["trim_start"], ctx.check)
     common.tag_video(video, ctx, params)
     last = common.save_images([Image.fromarray(result.frames[-1])], ctx, params, role="last-frame", stem=video.stem)
     return [video, *last]
@@ -320,8 +323,10 @@ class H3ReferenceToVideo(Pipeline):
     models = [OMNIREF, UPSCALER]
 
     def validate(self, params, files):
-        out = _common(params, files, {"references", "image", "aspect", "preview"})
+        out = _common(params, files, {"references", "image", "aspect", "preview", "trim_start"})
         out["references"] = _references(params, files)
+        # Frames dropped at the start of the clip (a Relay segment 1 on a still: montage.trim_start).
+        out["trim_start"] = common.integer(params, "trim_start", 0, 0, 8)
         # A start frame is frame 0 of the clip, not a reference: <Picture N> are the references.
         # FastVideo stretches it to the canvas, so the canvas follows it unless an aspect is sent.
         first = None

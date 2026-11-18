@@ -288,7 +288,13 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     instant » n'a rien changé (4 doublons sur 4, mêmes seeds) ; retirer le scénario du prompt, en
     gardant l'action du segment 1, a corrigé (0 sur 8). Le contrôle du raccord mesure aussi l'image
     à 0,2 s : sur de vrais clips, les bons raccords y lisent 4,9 à 7,0, les deux coupes cachées
-    29,7 et 47,0. (2026-11-17)
+    29,7 et 47,0. (2026-11-17) Avec
+    une image fixe juste et unique, Ref2VA l'a encore lâchée : sur 5 segments 1 sur 5 (3
+    départs, 3 seeds), les images 0 et 1 fondent l'image fixe avec un fantôme ou la gardent,
+    l'image 2 coupe sur le plan que le clip tient ensuite. L'i2v depuis la même image l'a tenue
+    (2 sur 2) mais a perdu le visage de la planche (yeux verts au lieu de bruns) et sortait 3 à
+    8 LU plus fort. Le segment 1 reste en Ref2VA et retire ses deux premières images : rien ne
+    vient avant lui. (2026-11-18)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

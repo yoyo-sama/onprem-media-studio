@@ -1526,10 +1526,14 @@ async function renderSegment(i) {
   let job;
   if (refs.length) {
     seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
-    job = await relayR2vJob(s, seg, i, total, refs, start);
+    // Segment 1 starts on a still (a shot image, or the user's picture): Ref2VA blended it with
+    // the shot it then holds for two frames, and cut at frame 2, 5 clips out of 5 (GB10,
+    // 2026-11-16/17). Nothing comes before segment 1, so those two frames are dropped, and
+    // there is no join to check.
+    job = await relayR2vJob(s, seg, i, total, refs, start, i === 0 ? RELAY_FIRST_TRIM : 0);
     // Ref2VA does not always hold its start frame (one join in three broke on the GB10):
     // measured, and said on the card; nothing is rendered again on its own.
-    seg.joinGap = await joinGap(start, out(job, ".mp4"));
+    seg.joinGap = i === 0 ? null : await joinGap(start, out(job, ".mp4"));
     if (seg.joinGap > JOIN_BROKEN) log("warn", "Relay, segment {n}/{total}: the clip does not start on its image (broken join). Regenerate this segment.", { n: i + 1, total });
   } else {
     seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
@@ -1563,11 +1567,12 @@ function relayRefs(setting) {
 const settingSheet = () => (!isLongTake() && locVariant()?.ref ? { ref: locVariant().ref, desc: locDesc() } : null);
 
 // One Ref2VA clip of the Relay; `start`: the frame the clip starts on (a continuous segment),
-// or none (a cut).
-function relayR2vJob(s, seg, i, total, refs, start) {
+// or none (a cut); `trim`: frames dropped at its start (segment 1).
+const RELAY_FIRST_TRIM = 2;
+function relayR2vJob(s, seg, i, total, refs, start, trim = 0) {
   return tracked(seg, "video", sub => runJob("h3-r2v",
     { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref),
-      ...(start ? { image: start } : { aspect: s.ratio }) },
+      ...(start ? { image: start } : { aspect: s.ratio }), ...(trim ? { trim_start: trim } : {}) },
     { origin: origin(), label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
       sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref.${start ? " + start" : ""} · ${seg.duration} s`, seed: seg.seed }] }));
 }

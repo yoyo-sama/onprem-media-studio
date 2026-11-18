@@ -174,3 +174,18 @@ def test_frames_refuse_bad_offsets(client, settings):
         res = client.post("/api/jobs", json={"pipeline": "video-frames",
                                              "params": {"video": "outputs/x/a.mp4", "offsets": offsets}})
         assert res.status_code == 422
+
+
+def test_trim_start_drops_frames_and_as_much_sound(tmp_path):
+    """A Relay segment 1 on a still loses its first two frames and 2/24 s of sound, in place."""
+    from studio.pipelines.montage import trim_start
+    clip = tmp_path / "seg1.mp4"
+    make_clip(clip, "red", seconds=1)
+    before = probe(clip)
+    trim_start(clip, 2)
+    after = probe(clip)
+    assert (before["frames"], after["frames"]) == (24, 22) and after["audio"]
+    sound = float(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=duration",
+                                  "-of", "csv=p=0", str(clip)], capture_output=True, text=True, check=True).stdout)
+    assert sound == pytest.approx(22 / 24, abs=0.03)
+    assert not list(tmp_path.glob("*.trim.mp4"))

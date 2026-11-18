@@ -261,7 +261,12 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     "the very first instant" changed nothing (4 doubles out of 4, same seeds); removing the
     screenplay from the prompt, segment 1's action kept, fixed it (0 out of 8). The join check
     also measures the frame 0.2 s in: on real clips true joins read 4.9 to 7.0 there, the two
-    hidden cuts 29.7 and 47.0. (2026-11-17)
+    hidden cuts 29.7 and 47.0. (2026-11-17) With
+    a single, right still, Ref2VA still let go of it: on 5 segments 1 out of 5 (3 starts, 3
+    seeds) frames 0 and 1 blend the still with a ghost or hold it, frame 2 cuts to the shot the
+    clip then keeps. i2v from the same still held it (2 out of 2) but lost the sheet's face
+    (green eyes for brown) and was 3 to 8 LU louder. Segment 1 stays Ref2VA and drops its first
+    two frames: nothing comes before it. (2026-11-18)
 
 ## 8. Front end (for the port in step 4)
 

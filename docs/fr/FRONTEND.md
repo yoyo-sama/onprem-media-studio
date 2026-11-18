@@ -197,7 +197,9 @@ ajoute une carte Import d'image reliée à elle.
   du segment 1, jamais le scénario entier, et montre le sujet une seule fois, au premier instant
   de cette action (avec le scénario, Qwen en dessinait les moments côte à côte : le sujet deux
   fois sur 8 images sur 8). Un segment avec une image de fin (FL2VA) reste en `h3-i2v`, qui
-  ne prend pas de références. L'assemblage d'un plan-séquence remonte une prise trop faible au
+  ne prend pas de références. Le segment 1 part d'une image fixe (image de plan, ou image de
+  l'utilisateur) : Ref2VA la fondait dans ses deux premières images avant de couper, donc le
+  segment 1 les retire (`trim_start: 2`, 83 ms) et n'a pas de raccord à contrôler. L'assemblage d'un plan-séquence remonte une prise trop faible au
   niveau d'un clip ordinaire (le son du Ref2VA sort 10 à 20 dB plus bas). LESSONS n°51.
 - Un segment ajouté après la fin d'une chaîne rendue fait d'abord extraire les images de
   transition du segment précédent (le dernier segment d'une chaîne n'en a pas).

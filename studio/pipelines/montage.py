@@ -67,6 +67,20 @@ def ffmpeg(*args: str, timeout: float = 900, check=None, capture_stderr: bool = 
     return (err if capture_stderr else out).decode(errors="replace")
 
 
+def trim_start(path: Path, frames: int, check=None) -> None:
+    """Drop the first `frames` frames of an H3 clip, and as much of its sound, in place.
+    For a Relay segment 1 rendered by Ref2VA on a still: its first two frames blend the still
+    with the shot the model then holds, and cut away at frame 2 (5 clips out of 5 on the GB10,
+    2026-11-16/17); nothing comes before a segment 1, so they can go."""
+    tmp = path.with_name(path.stem + ".trim.mp4")
+    args = ["ffmpeg", "-v", "error", "-y", "-i", str(path), "-vf", f"trim=start_frame={frames},setpts=PTS-STARTPTS"]
+    if probe(path)["audio"]:
+        args += ["-af", f"atrim=start={frames / FPS:.6f},asetpts=PTS-STARTPTS", "-c:a", "aac", "-b:a", "192k"]
+    args += ["-c:v", "libx264", "-crf", "18", "-preset", "medium", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(tmp)]
+    ffmpeg(*args, check=check)
+    tmp.replace(path)
+
+
 def probe(path: Path) -> dict:
     """Width, height, frame count and whether the file has sound."""
     out = json.loads(ffmpeg("ffprobe", "-v", "error", "-count_packets", "-show_entries",
