@@ -261,12 +261,21 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     "the very first instant" changed nothing (4 doubles out of 4, same seeds); removing the
     screenplay from the prompt, segment 1's action kept, fixed it (0 out of 8). The join check
     also measures the frame 0.2 s in: on real clips true joins read 4.9 to 7.0 there, the two
-    hidden cuts 29.7 and 47.0. (2026-11-17) With
-    a single, right still, Ref2VA still let go of it: on 5 segments 1 out of 5 (3 starts, 3
-    seeds) frames 0 and 1 blend the still with a ghost or hold it, frame 2 cuts to the shot the
-    clip then keeps. i2v from the same still held it (2 out of 2) but lost the sheet's face
-    (green eyes for brown) and was 3 to 8 LU louder. Segment 1 stays Ref2VA and drops its first
-    two frames: nothing comes before it. (2026-11-18)
+    hidden cuts 29.7 and 47.0. (2026-11-17) Ref2VA with a start frame kept breaking: 7 clips out
+    of 11 dropped their start image (5 out of 5 segments 1 started on a still, 2 out of 6
+    continuous segments), and i2v alone lost the sheet's face within 5 to 9 s. What held is key
+    images: Qwen Image 2.1 edits the previous key (with the sheet as appearance guide) into the
+    segment's final instant, and H3 renders from one key to the next (FL2VA); the join check went with Ref2VA continuous segments. Over 50 s (5 × 10
+    s, one click, no user step): one woman throughout, the same face and garden, joins 3.0 to 3.9
+    per channel, no cut; Gemma counted one figure on each of the 6 keys (2 s each). Two recipe
+    details matter. Without a sentence naming the spot the subject left, Qwen kept her there and
+    added a second one where she went (1 edit out of 2): the split writes it, the code adds that
+    every spot left shows only the setting. And the key must take the framing the segment's camera
+    motion ends on: with "medium shot" in every key the video pushed in mid-segment, then pulled
+    back to reach its key. Gemma's vision as a figure count found the doubled keys 9 out of 9
+    and the clean ones 27 out of 27; asked "is anyone drawn twice", it missed 2 out of 9 (one
+    standing, her copy seated). Without music in the screenplay, H3 renders the ambience only,
+    at −30 to −51 LUFS: the assembly brings each clip to −18 LUFS under a limiter. (2026-11-18)
 
 ## 8. Front end (for the port in step 4)
 

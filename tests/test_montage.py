@@ -91,25 +91,28 @@ def test_smooth_audio_matches_the_levels_of_a_continuous_take(client, settings, 
     assert abs(probe(path)["frames"] - 48) <= 1
 
 
-def test_level_gains_lift_a_quiet_take_to_the_floor_without_clipping():
-    """Ref2VA segments render 10 to 20 dB below an i2v clip: a take of them only is lifted
-    to FLOOR_DB, a louder take keeps its median, and no peak goes above PEAK_DB."""
-    from studio.pipelines.montage import FLOOR_DB, level_gains
-    assert level_gains([-55.0, -53.0, -58.0], [-35.0, -33.0, -38.0]) == [15.0, 13.0, 18.0]
-    assert level_gains([-55.0, -53.0], [-10.0, -33.0]) == [9.0, 13.0]  # 9: the peak stops at -1 dB
-    assert level_gains([-30.0, -38.0], [-5.0, -15.0]) == [-4.0, 4.0]   # median -34 > floor
-    assert level_gains([-80.0, -50.0], [-60.0, -30.0]) == [0.0, FLOOR_DB + 50.0]
+def test_level_gains_bring_every_clip_to_the_take_loudness():
+    """Every audible clip goes to TAKE_LUFS, a lift or a cut never beyond MAX_GAIN_DB, and a
+    silent clip is left as it is."""
+    from studio.pipelines.montage import MAX_GAIN_DB, TAKE_LUFS, level_gains
+    assert level_gains([-33.0, -17.0]) == [TAKE_LUFS + 33.0, TAKE_LUFS + 17.0]
+    assert level_gains([-60.0, -70.0]) == [MAX_GAIN_DB, 0.0]
 
 
-def test_smooth_audio_lifts_a_quiet_take(client, settings):
-    """Two clips at about -51 dB: the smoothed take is lifted by about 11 dB, to the floor."""
+def test_smooth_audio_lifts_a_quiet_take_to_the_take_loudness(client, settings):
+    """Two clips of a quiet ambience: the smoothed take reaches TAKE_LUFS, its peaks held at
+    -1 dBFS by the limiter, and the sound stays as long as the image."""
+    from studio.pipelines.montage import TAKE_LUFS, loudness, ffmpeg
+    import re as _re
     for name in ("a", "b"):
-        make_clip(settings.output_dir / "h3-r2v" / f"{name}.mp4", "red", gain_db=-30)
-    clips = ["outputs/h3-r2v/a.mp4", "outputs/h3-r2v/b.mp4"]
-    take = {smooth: settings.output_dir / run(client, "video-concat", {"clips": clips, "smooth_audio": smooth})
-            ["outputs"][0].removeprefix("outputs/") for smooth in (False, True)}
-    lift = level(take[True], 0.2, 0.6) - level(take[False], 0.2, 0.6)
-    assert abs(lift - 11) < 1.5, lift
+        make_clip(settings.output_dir / "h3-i2v" / f"{name}.mp4", "red", gain_db=-15)
+    clips = ["outputs/h3-i2v/a.mp4", "outputs/h3-i2v/b.mp4"]
+    path = settings.output_dir / run(client, "video-concat", {"clips": clips, "smooth_audio": True})["outputs"][0].removeprefix("outputs/")
+    lufs, seconds = loudness(path)
+    assert abs(lufs - TAKE_LUFS) < 1.5, lufs
+    assert abs(seconds - 2) < 0.1, seconds
+    out = ffmpeg("ffmpeg", "-v", "info", "-nostats", "-i", str(path), "-af", "volumedetect", "-f", "null", "-", capture_stderr=True)
+    assert float(_re.search(r"max_volume:\s*(-?[\d.]+) dB", out).group(1)) <= -0.9
 
 
 def test_concat_without_sound_when_a_clip_has_none(client, settings):
@@ -174,18 +177,3 @@ def test_frames_refuse_bad_offsets(client, settings):
         res = client.post("/api/jobs", json={"pipeline": "video-frames",
                                              "params": {"video": "outputs/x/a.mp4", "offsets": offsets}})
         assert res.status_code == 422
-
-
-def test_trim_start_drops_frames_and_as_much_sound(tmp_path):
-    """A Relay segment 1 on a still loses its first two frames and 2/24 s of sound, in place."""
-    from studio.pipelines.montage import trim_start
-    clip = tmp_path / "seg1.mp4"
-    make_clip(clip, "red", seconds=1)
-    before = probe(clip)
-    trim_start(clip, 2)
-    after = probe(clip)
-    assert (before["frames"], after["frames"]) == (24, 22) and after["audio"]
-    sound = float(subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=duration",
-                                  "-of", "csv=p=0", str(clip)], capture_output=True, text=True, check=True).stdout)
-    assert sound == pytest.approx(22 / 24, abs=0.03)
-    assert not list(tmp_path.glob("*.trim.mp4"))

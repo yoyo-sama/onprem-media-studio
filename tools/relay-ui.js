@@ -5,8 +5,10 @@
 // on a restored storyboard project with approved sheets: the total length and the maximum
 // per segment give the segment plan; the screenplay split fills the segments and only the
 // shared fields left empty, and submits no job; editing a shared field submits nothing;
-// "Generate the chain" sends one shot image then one H3 clip per segment, each prompt
-// carrying the shared look once and no default light or camera. The production board: one
+// "Generate the chain" sends one shot image, then for each segment a key image Qwen edits
+// from its start (its figures counted by Gemma's vision, drawn again when a subject shows
+// twice, the chain stopped after three tries) and one H3 clip from its start to that key,
+// each prompt carrying the shared look once and no default light or camera. The production board: one
 // tile per segment, its progress from the job events, a click goes to the segment and
 // submits nothing; after a regenerated segment the chain continues from the next one;
 // "Stop after this segment" ends the chain once the running segment is done. A long take
@@ -26,11 +28,6 @@ try { ({ chromium } = require("playwright")); }
 catch { console.error("ERROR (test could not run): Playwright is not installed (npm i -g playwright, NODE_PATH=$(npm root -g))."); process.exit(2); }
 const WEB = path.join(__dirname, "..", "web"), SHOTS = process.argv[2];
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
-// 64×36 VP8 clips of one color: red as the stub PNG (a true join), blue (a broken one).
-const RED_WEBM = "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAIBEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggHr7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiEBpAAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYjABdBPZejM6JyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAvrwgDgibCBQLqBJJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYjABdBPZejM6GfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDAuMjAwMDAwMDAwAB9DtnXH54EAo8KBAACAkAMAnQEqQAAkAABHCIWFiIWEiAICAnWqA/gD+gIHO3nizzMeXgD+/W7z/+OZNzDE/45t//FhPA4oyP/xUQAcU7trkbuPs4EAt4r3gQHxggGf8IED";
-const BLUE_WEBM = "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAIAEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggHq7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiEBpAAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYi72FjxYvSClpyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAvrwgDgibCBQLqBJJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYi72FjxYvSClmfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDAuMjAwMDAwMDAwAB9DtnXG54EAo8GBAACAUAMAnQEqQAAkAABHCIWFiIWEiAICAnWqA/gCBwjVZ5mPN9IA/v9NEv/8WFfxYV/FhX/xYV/8/M7txfzmABxTu2uRu4+zgQC3iveBAfGCAZ/wgQM=";
-// 64×36 VP8 at 24 fps: red for two frames, then blue (a clip that holds its image, then cuts).
-const CUT_WEBM = "GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAMtEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggEeTbuMU6uEHFO7a1OsggMG7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiEB8sAAAAAAAFlSua8GuAQAAAAAAADjXgQFzxYhRVBha6OujxpyBACK1nIN1bmSIgQCGhVZfVlA4g4EBI+ODhAJ7yGrgibCBQLqBJJqBAhJUw2f8c3OgY8CAZ8iaRaOHRU5DT0RFUkSHjUxhdmY2MC4xNi4xMDBzc9ZjwItjxYhRVBha6OujxmfIoUWjh0VOQ09ERVJEh5RMYXZjNjAuMzEuMTAyIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDAuNDU5MDAwMDAwAB9DtnVBYeeBAKPCgQAAgJADAJ0BKkAAJAAARwiFhYiFhIgCAgJ1qgP4A/oCBzt54s8zHl4A/v1u8//jmTcwxP+Obf/xYTwOKMj/8VEAo5aBACoA0QEAARAQABgAGFgv9AAIjAAAo5aBAFMA0QEAARAQABgAGFgv9AAIjAAAo8GBAH2AUAMAnQEqQAAkAABHCIWFiIWEiAICAnWqA/gCBwjVZ5mPN9IA/v9NEv/8WFfxYV/FhX/xYV/8/M7txfzmAKOWgQCnANEBAAEQEAAYABhYL/QACIwAAKOWgQDQANEBAAEQEAAYABhYL/QACIwAAKOWgQD6ANEBAAEQEAAYABhYL/QACIwAAKOWgQEkANEBAAEQEAAYABhYL/QACIwAAKOWgQFNANEBAAEQEAAYABhYL/QACIwAAKOWgQF3ANEBAAEQEAAYABhYL/QACIwAAKOVgQGhALEBAAEQEBRgAGFgv9AAIjAAHFO7a6K7j7OBALeK94EB8YIBn/CBA7uPs4F9t4r3gQHxggGf8IF3";
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css" };
 const server = http.createServer((req, res) => {
   const file = path.join(WEB, decodeURIComponent(new URL(req.url, "http://x").pathname));
@@ -52,8 +49,11 @@ const PROJECT = {
 const SPLIT = {
   framing: "Medium shots at eye level.", lighting: "Soft cool morning light with long shadows.",
   soundscape: "Birdsong, a light breeze and footsteps on gravel.", music: "none",
-  segments: ["SUBJECTREF1 walks along the gravel path; the camera tracks backward.", "SUBJECTREF1 stops by a flowering tree and turns.",
-             "SUBJECTREF1 looks toward the sun and smiles; slow push-in."],
+  segments: [
+    { action: "SUBJECTREF1 walks along the gravel path; the camera tracks backward.",
+      end: "SUBJECTREF1 is halfway down the path, medium shot; the spot where SUBJECTREF1 stood is now empty gravel." },
+    { action: "SUBJECTREF1 stops by a flowering tree and turns.", end: "SUBJECTREF1 stands by the flowering tree, facing the camera." },
+    { action: "SUBJECTREF1 looks toward the sun and smiles; slow push-in.", end: "SUBJECTREF1 smiles toward the sun, in a close-up." }],
 };
 
 (async () => {
@@ -65,8 +65,8 @@ const SPLIT = {
   const fails = [];
   const check = (ok, msg) => { if (!ok) fails.push(msg); };
   const jobs = [], chats = [], done = new Map(), held = [];
-  let n = 0, hold = false, sock = null, visionSheet = false, r2vCount = 0;
-  const broken = new Set(), cutAway = new Set();
+  // Gemma's answers to the figure count of the shot and key images, in order (1 once empty).
+  let n = 0, hold = false, sock = null, visionSheet = false, counts = [];
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.addInitScript(p => { if (!sessionStorage.getItem("seeded")) { localStorage.setItem("studioProject", p); sessionStorage.setItem("seeded", "1"); } },
     JSON.stringify(PROJECT));
@@ -76,9 +76,6 @@ const SPLIT = {
     if (p === "/api/jobs" && req.method() === "POST") {
       const body = JSON.parse(req.postData()), id = `job-${++n}`;
       jobs.push({ ...body, id });
-      // The second Ref2VA clip (segment 2 of the first chain) does not start on its image;
-      // the third (segment 3) starts on it and cuts away after two frames.
-      if (body.pipeline === "h3-r2v") { ++r2vCount; if (r2vCount === 2) broken.add(id); if (r2vCount === 3) cutAway.add(id); }
       const outputs = ["h3-i2v", "h3-r2v"].includes(body.pipeline) ? [`outputs/${id}.mp4`, `outputs/${id}.png`]
         : body.pipeline === "video-concat" ? [`outputs/${id}.mp4`]
         : body.pipeline === "video-frames" ? body.params.offsets.map(o => `outputs/${id}-${o}.png`) : [`outputs/${id}.png`];
@@ -90,6 +87,7 @@ const SPLIT = {
     if (p === "/api/llm/chat") {
       const body = JSON.parse(req.postData());
       chats.push(body);
+      if (/^Count the people/.test(body.system || "")) return json({ content: JSON.stringify({ count: counts.length ? counts.shift() : 1, note: "" }) });
       // Vision: the description of a long take's start image.
       if (body.images?.length) return json({ content: JSON.stringify({ sheet: visionSheet, subject: "a woman in a green wool coat", appearance: "auburn bob",
                                                                       materials: "", palette: "" }) });
@@ -105,19 +103,7 @@ const SPLIT = {
   await ctx.routeWebSocket("**/api/ws", ws => { sock = ws; });
   // A held job's progress or end, sent as the server's WebSocket does.
   const push = job => sock.send(JSON.stringify({ type: "job", job }));
-  await ctx.route(/\/(outputs|inputs)\//, r => {
-    const m = /\/(job-\d+)\.mp4$/.exec(new URL(r.request().url()).pathname);
-    if (m) {
-      // Byte ranges, as the server's static files: the join check seeks into the clip.
-      const v = Buffer.from(broken.has(m[1]) ? BLUE_WEBM : cutAway.has(m[1]) ? CUT_WEBM : RED_WEBM, "base64");
-      const range = /bytes=(\d+)-(\d*)/.exec(r.request().headers().range || "");
-      if (!range) return r.fulfill({ contentType: "video/webm", headers: { "Accept-Ranges": "bytes" }, body: v });
-      const a = +range[1], z = range[2] ? Math.min(+range[2], v.length - 1) : v.length - 1;
-      return r.fulfill({ status: 206, contentType: "video/webm", body: v.subarray(a, z + 1),
-        headers: { "Accept-Ranges": "bytes", "Content-Range": `bytes ${a}-${z}/${v.length}` } });
-    }
-    return r.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") });
-  });
+  await ctx.route(/\/(outputs|inputs)\//, r => r.fulfill({ contentType: "image/png", body: Buffer.from(PNG, "base64") }));
   const page = await ctx.newPage();
   // A chain that ends with every segment ready assembles the sequence: wait for that job.
   const assembled = async from => { for (let w = 0; w < 100 && !jobs.slice(from).some(j => j.pipeline === "video-concat"); w++) await page.waitForTimeout(50); };
@@ -165,7 +151,7 @@ const SPLIT = {
   // The plan already gave 3 empty cards: wait for the split's text in them.
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .relay-seg textarea")].map(a => a.value.trim()).filter(Boolean).length === 3);
   check(jobs.length === 0, `the split or a shared field submitted ${jobs.length} job(s)`);
-  check(chats.length === 1 && /exactly 3 segments/.test(chats[0].system), "the split did not ask Gemma for 3 segments");
+  check(chats.length === 1 && /exactly 3 segments/.test(chats[0].system) && /"end"/.test(chats[0].system), "the split did not ask Gemma for 3 segments and their ends");
   const look = await page.$$eval("#relayLook textarea", els => Object.fromEntries(els.map(e => [e.dataset.look, e.value])));
   check(look.lighting === "Warm candle light.", `the user's lighting was overwritten: "${look.lighting}"`);
   check(await page.$eval("#relayLook", el => el.open), "the shared fields the split filled are folded");
@@ -198,29 +184,43 @@ const SPLIT = {
     await page.setViewportSize({ width: 1440, height: 900 });
   }
 
-  // The chain: shot image, clip and transition frames for segments 1-2, then the last clip.
+  // The chain: the shot image, then for each segment its key image and its clip from its start
+  // to that key (with the transition frames of segments 1-2). Gemma counts two figures on
+  // segment 1's first key: that key is drawn again, with another seed.
+  counts = [1, 2];
+  const counted = () => chats.filter(c => /^Count the people/.test(c.system || "")).length;
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelectorAll("#relayList .seg-status").length === 3
     && [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 15000 });
   // The finished chain is assembled at once, by the same click.
   await page.waitForSelector("#relayPlayer video", { timeout: 5000 });
   const kinds = jobs.map(j => j.pipeline);
-  check(JSON.stringify(kinds) === JSON.stringify(["qwen-image-2.1", "h3-r2v", "video-frames", "h3-r2v", "video-frames", "h3-r2v", "video-concat"]),
-    `chain jobs: ${JSON.stringify(kinds)}`);
-  check(jobs[6]?.params.smooth_audio === true && jobs[6]?.params.clips.length === 3, `assembly at the end of the chain: ${JSON.stringify(jobs[6]?.params)}`);
+  check(JSON.stringify(kinds) === JSON.stringify(["qwen-image-2.1", "qwen-image-2.1", "qwen-image-2.1", "h3-i2v", "video-frames",
+    "qwen-image-2.1", "h3-i2v", "video-frames", "qwen-image-2.1", "h3-i2v", "video-concat"]), `chain jobs: ${JSON.stringify(kinds)}`);
+  check(counted() === 5, `figure counts: ${counted()} (5 expected: the shot, key 1 twice, keys 2 and 3)`);
+  check(jobs[10]?.params.smooth_audio === true && jobs[10]?.params.clips.length === 3, `assembly at the end of the chain: ${JSON.stringify(jobs[10]?.params)}`);
   check(await page.$eval('#studioNav [data-section="relay"]', b => b.classList.contains("done")), "the menu does not mark the assembled long take");
-  // Each segment is H3 Ref2VA on the sheets AND its start frame (the shot image, then the
-  // previous segment's transition frame): the canvas follows the start frame.
-  const clips = jobs.filter(j => j.pipeline === "h3-r2v");
-  const starts = [`outputs/${jobs[0].id}.png`, `outputs/${jobs[1].id}.png`, `outputs/${jobs[3].id}.png`];
+  const png = k => `outputs/${jobs[k]?.id}.png`;
+  // Each key is an edit of its segment's start with the subject's sheet, at the start's size.
+  for (const [k, from] of [[1, 0], [2, 0], [5, 2], [8, 5]]) {
+    const kp = jobs[k]?.params || {};
+    check(JSON.stringify(kp.images) === JSON.stringify([png(from), "outputs/char.png"]) && !("width" in kp),
+      `key image ${k}: ${JSON.stringify({ images: kp.images, w: kp.width })}`);
+    check(/^Edit <image1>\./.test(kp.prompt || "") && /Every spot a character has left now shows only the setting/.test(kp.prompt || "")
+      && /reference sheet in <image2> \(oval face, freckles/.test(kp.prompt || "") && (kp.prompt || "").includes("Warm candle light."),
+      `key image ${k} prompt: ${kp.prompt}`);
+  }
+  check(/the spot where the same character from <image1> stood is now empty gravel/.test(jobs[1]?.params.prompt || ""),
+    `key 1 does not follow the split's end: ${jobs[1]?.params.prompt}`);
+  check(jobs[2]?.params.seed === jobs[1]?.params.seed + 100 && jobs[2]?.params.prompt === jobs[1]?.params.prompt,
+    `the key drawn again: seeds ${jobs[1]?.params.seed} → ${jobs[2]?.params.seed}`);
+  // Each clip runs from its start to its key (FL2VA): the shot image, then the previous key.
+  const clips = jobs.filter(j => j.pipeline === "h3-i2v");
+  const ends = [[png(0), png(2)], [png(2), png(5)], [png(5), png(8)]];
   for (const [i, j] of clips.entries()) {
     const pr = j.params.prompt;
-    check(j.params.image === starts[i] && JSON.stringify(j.params.references) === JSON.stringify(["outputs/char.png", "outputs/loc.png"])
-      && !("aspect" in j.params), `segment ${i + 1} start and references: ${JSON.stringify(j.params)}`);
-    // Segment 1 drops its first two frames (Ref2VA blends the still in them); the others keep theirs.
-    check(i === 0 ? j.params.trim_start === 2 : !("trim_start" in j.params), `segment ${i + 1} trim_start: ${j.params.trim_start}`);
-    check(/<Subject 1> is the main character in <Picture 1>/.test(pr) && /<Subject 2> is the location as defined by <Picture 2>/.test(pr),
-      `segment ${i + 1} names the sheets: ${pr}`);
+    check(j.params.image === ends[i][0] && j.params.last_image === ends[i][1], `segment ${i + 1} images: ${j.params.image} → ${j.params.last_image}`);
+    check(/<Picture 2>/.test(pr) && /<Subject 1> is the main character/.test(pr), `segment ${i + 1} prompt: ${pr}`);
     check(j.params.duration === 10, `segment ${i + 1} duration ${j.params.duration}`);
     check(!/golden|steady framing/i.test(pr), `segment ${i + 1} prompt carries a default look`);
     check(pr.includes("Warm candle light.") && pr.includes(`Framing: ${SPLIT.framing}`), `segment ${i + 1} prompt lacks the shared look`);
@@ -228,11 +228,6 @@ const SPLIT = {
     check(pr.split("Warm candle light.").length === 2, `segment ${i + 1} repeats the lighting`);
   }
   check(/Warm candle light/.test(jobs[0].params.prompt), "the first shot image does not take the shared lighting");
-  // The join check: segment 2's clip does not start on its start frame, segment 3's cuts away
-  // from it after two frames; both cards say so, and nothing is submitted for them.
-  const warned = () => page.$$eval("#relayList .seg-warn", els => els.map(e => !e.hidden));
-  check(JSON.stringify(await warned()) === JSON.stringify([false, true, true]), `broken-join warnings after the chain: ${JSON.stringify(await warned())}`);
-  check(jobs.length === 7, `a broken join submitted ${jobs.length - 7} job(s)`);
 
   // ── Production board ──
   const tiles = () => page.$$eval("#relayBoard .relay-tile", ts => ts.map(t => t.className.replace("relay-tile ", "")));
@@ -256,14 +251,27 @@ const SPLIT = {
   await page.click('#relayList .relay-seg[data-seg="1"] .seg-regen');
   await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="2"] .seg-status')?.textContent === "To regenerate");
   check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-ready", "st-stale"]), `tiles after regenerating 2: ${JSON.stringify(await tiles())}`);
-  check(JSON.stringify(await warned()) === JSON.stringify([false, false, false]), `broken-join warnings after regenerating 2: ${JSON.stringify(await warned())}`);
   check((await page.textContent("#relayRunBtn")).trim() === "Continue the chain from segment 3", `run button: "${await page.textContent("#relayRunBtn")}"`);
   before = jobs.length;
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"));
   await assembled(before);
-  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-r2v", "video-concat"]),
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-i2v", "video-concat"]),
     `continuing from segment 3: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
+  // A key that still shows the subject twice after three tries stops on its segment: no clip,
+  // the card in error; regenerating it goes on.
+  counts = [2, 2, 2];
+  before = jobs.length;
+  await page.click('#relayList .relay-seg[data-seg="1"] .seg-regen');
+  await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "Error");
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "qwen-image-2.1", "qwen-image-2.1"]),
+    `a key doubled three times: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
+  before = jobs.length;
+  await page.click('#relayList .relay-seg[data-seg="1"] .seg-regen');
+  await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "Ready");
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-i2v", "video-frames"]),
+    `segment 2 regenerated after the stop: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
+
   // A cut: one H3 Ref2VA clip on the subject's sheet and the setting's sheet, no start
   // image; switching the link starts nothing and hides the end image.
   const seg3 = '#relayList .relay-seg[data-seg="2"]';
@@ -305,16 +313,16 @@ const SPLIT = {
   check(JSON.stringify(await tiles()) === JSON.stringify(["st-pending", "st-stale", "st-stale"]), `tiles while running: ${JSON.stringify(await tiles())}`);
   await page.click("#relayStopBtn");
   check((await page.textContent("#relayStopBtn")).trim() === "Stopping after this segment…", "the stop button does not say it is stopping");
-  // Segment 1 ends (shot image, clip, frames): the chain stops there.
+  // Segment 1 ends (shot image, key image, clip, frames): the chain stops there.
   done.set(first.id, first); push(first);
-  for (let k = 0; k < 2; k++) {
+  for (let k = 0; k < 3; k++) {
     for (let w = 0; w < 50 && !held.length; w++) await page.waitForTimeout(50);
     const j = held.shift();
     if (j) { done.set(j.id, j); push(j); }
   }
   await page.waitForFunction(() => document.getElementById("relayStopBtn").hidden);
   await page.waitForTimeout(200);
-  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-r2v", "video-frames"]),
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "qwen-image-2.1", "h3-i2v", "video-frames"]),
     `jobs of the stopped chain: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
   check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-stale", "st-stale"]), `tiles after the stop: ${JSON.stringify(await tiles())}`);
   check((await page.textContent("#relayRunBtn")).trim() === "Continue the chain from segment 2", `run button after the stop: "${await page.textContent("#relayRunBtn")}"`);
@@ -378,12 +386,13 @@ const SPLIT = {
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
   await assembled(before);
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v", "video-concat"]), `extending the long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
-  check(/^outputs\/job-\d+\.png$/.test(lt[1]?.params.image || ""), `segment 2 does not start on the last frame of segment 1: ${lt[1]?.params.image}`);
-  // The start picture is the subject's only reference: segment 2 sees it as well as its frame.
-  check(JSON.stringify(lt[1]?.params.references) === JSON.stringify([clip.image]) && !("aspect" in (lt[1]?.params || {})),
-    `segment 2 of a long take, references: ${JSON.stringify(lt[1]?.params.references)}`);
-  check(!("last_image" in (lt[1]?.params || {})), "segment 2 has an end image");
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "qwen-image-2.1", "h3-i2v", "video-concat"]),
+    `extending the long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  // Segment 1 ended on the user's end image: segment 2 starts on its last frame, and ends on a
+  // key edited from that frame with the start picture (the subject's only reference).
+  check(/^outputs\/job-\d+\.png$/.test(lt[2]?.params.image || ""), `segment 2 does not start on the last frame of segment 1: ${lt[2]?.params.image}`);
+  check(JSON.stringify(lt[1]?.params.images) === JSON.stringify([lt[2]?.params.image, clip.image]) && lt[2]?.params.last_image === `outputs/${lt[1]?.id}.png`,
+    `segment 2 of a long take, key and end: ${JSON.stringify({ key: lt[1]?.params.images, last: lt[2]?.params.last_image })}`);
   // Saved and resumed under its own pipeline.
   await page.click("#studioExitBtn");
   await page.waitForSelector("#resumeProjectBtn:not([hidden])", { timeout: 5000 });
@@ -421,14 +430,15 @@ const SPLIT = {
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-r2v"]), `long take from a sheet: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "qwen-image-2.1", "h3-i2v"]), `long take from a sheet: ${JSON.stringify(lt.map(j => j.pipeline))}`);
   const shot = lt[0]?.params || {};
   check(shot.images?.length === 1 && /^inputs\/up-\d+\.png$/.test(shot.images[0]) && shot.width === 768 && shot.height === 1344,
     `shot image from the sheet: ${JSON.stringify({ images: shot.images, w: shot.width, h: shot.height })}`);
   check(/character sheet/.test(shot.prompt) && /exactly one single instance/.test(shot.prompt) && /a woman in a green wool coat/.test(shot.prompt)
     && /garden path at dawn/.test(shot.prompt), `shot image prompt: ${shot.prompt}`);
-  check(lt[1]?.params.image === `outputs/${lt[0]?.id}.png` && lt[1]?.params.trim_start === 2,
-    `the clip does not start on the shot image, or keeps its first frames: ${JSON.stringify(lt[1]?.params)}`);
+  check(lt[2]?.params.image === `outputs/${lt[0]?.id}.png` && lt[2]?.params.last_image === `outputs/${lt[1]?.id}.png`
+    && JSON.stringify(lt[1]?.params.images) === JSON.stringify([`outputs/${lt[0]?.id}.png`, shot.images?.[0]]),
+    `the clip does not run from the shot image to its key: ${JSON.stringify(lt.map(j => j.params.image || j.params.images))}`);
   // A cut in a long take: Ref2VA on the start sheet and, as the setting, the previous
   // segment's transition frame (its last frame by default). The link starts nothing.
   await page.click("#relayAddBtn");
@@ -445,8 +455,9 @@ const SPLIT = {
   lt = jobs.slice(before);
   check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v", "video-concat"]), `cut in a long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
   const cut = lt[1]?.params || {}, framesJob = lt[0];
-  const seg1Clip = jobs.slice(0, before).filter(j => j.pipeline === "h3-r2v").pop();
-  check(JSON.stringify(cut.references) === JSON.stringify([shot.images?.[0], `outputs/${seg1Clip?.id}.png`]) && cut.aspect === "9:16",
+  // Segment 1 ended on its key: that key is its last transition frame.
+  const seg1Key = jobs.slice(0, before).filter(j => j.pipeline === "qwen-image-2.1").pop();
+  check(JSON.stringify(cut.references) === JSON.stringify([shot.images?.[0], `outputs/${seg1Key?.id}.png`]) && cut.aspect === "9:16",
     `cut in a long take, references: ${JSON.stringify({ refs: cut.references, aspect: cut.aspect })}`);
   check(/another path/.test(cut.prompt || "") && /<Subject 2> is the location as defined by <Picture 2>\./.test(cut.prompt || ""), `cut in a long take, prompt: ${cut.prompt}`);
   // Another transition frame of segment 1 (one where nobody is in view) becomes the cut's
@@ -472,9 +483,9 @@ const SPLIT = {
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]) && lt[0].params.image === shot.images?.[0]
-    && JSON.stringify(lt[0].params.references) === JSON.stringify([shot.images?.[0]]),
-    `long take from the image as it is: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.image]))}`);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-i2v"]) && lt[1]?.params.image === shot.images?.[0]
+    && JSON.stringify(lt[0]?.params.images) === JSON.stringify([shot.images?.[0], shot.images?.[0]]),
+    `long take from the image as it is: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.image || j.params.images]))}`);
 
   // A new long take holds its screenplay in its card: splitting it loses nothing, so nothing
   // is asked; a card rewritten by hand is asked about before it is replaced.

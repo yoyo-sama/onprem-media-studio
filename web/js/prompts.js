@@ -923,7 +923,8 @@ Rules:
 - "lighting": one English sentence of 8 to 25 words, the light of the whole sequence, the same in every segment.
 - "soundscape": one English sentence of 8 to 25 words, the natural sounds heard throughout the sequence.
 - "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.
-- Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
+- Each segment has an "action": ONE English paragraph of 20 to 45 words, what happens in that segment, then its own camera motion, one single movement. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
+- Each segment also has an "end": ONE English paragraph of 20 to 50 words, the final instant of that segment as one still picture, for an image editor that changes the picture the segment starts on. Say what is different at that instant: where each subject now is in the place, their pose, gaze and expression, then the shot size and camera angle at that instant, which are exactly where the segment's own camera motion ends (a push-in ends closer, a pull-back ends wider, a fixed camera keeps the shot). Each end differs visibly from the previous one. When a subject has moved, name the spot it left, which now shows only the setting. Never describe the light, the sounds or the appearance of the subjects.
 - A segment acts within the place already shown: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
 - The segments follow on from one another: segment k+1 starts exactly where segment k ended. Never restart the scene, never retell the whole scenario inside one segment, never jump elsewhere unless the scenario says so.
 - The recurring subjects are named by a marker, one bare word each. Copy each marker character for character wherever that subject acts:
@@ -932,7 +933,7 @@ ${legend}
 - Use ONLY positive phrasing (never "no", "without", "avoid").
 - Plain prose only: no field name, no heading, no numbering, no timestamp, no angle bracket, no square bracket.
 - Never write "masterpiece", "best quality", "8k" or "ultra detailed".
-Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": ["...", "..."]} with exactly ${n} segments, in order.`;
+Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": [{"action": "...", "end": "..."}, {"action": "...", "end": "..."}]} with exactly ${n} segments, in order.`;
 
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
   const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
@@ -1241,17 +1242,64 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   }
 
   // Splits a scenario into at most `max` segment texts (Gemma may return one more or one
-  // less than `n`: what it wrote is kept) and the shared look. Returns {segments, look};
-  // throws when no segment came back.
+  // less than `n`: what it wrote is kept), the final instant of each (`ends`, "" when
+  // Gemma gave none: the key image then follows the action) and the shared look. Returns
+  // {segments, ends, look}; throws when no segment came back. A segment given as a bare
+  // string is its action.
   const NO_MUSIC_RE = /^(none|n\/a|no music|silence)\.?$/i;
   async function composeScenario(llm, text, n, locDesc, max, subjects) {
     const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects)), text);
     const clean = v => h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(v))));
-    const segments = (Array.isArray(out.segments) ? out.segments : []).map(clean).filter(Boolean).slice(0, max);
-    if (!segments.length) throw new Error("no segment returned");
+    const given = v => v && typeof v === "object" && !Array.isArray(v) && "action" in v;
+    const pairs = (Array.isArray(out.segments) ? out.segments : [])
+      .map(v => (given(v) ? [clean(v.action), clean(v.end)] : [clean(v), ""])).filter(([a]) => a).slice(0, max);
+    if (!pairs.length) throw new Error("no segment returned");
     const music = clean(out.music);
-    return { segments, look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
-                               music: NO_MUSIC_RE.test(music) ? "" : music } };
+    return { segments: pairs.map(([a]) => a), ends: pairs.map(([, e]) => e),
+             look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
+                     music: NO_MUSIC_RE.test(music) ? "" : music } };
+  }
+
+  // Key image a Relay segment ends on: Qwen Image 2.1 edits the picture the segment starts
+  // on (<image1>) into its final instant (`end`, from the split; the action's last moment
+  // when there is none), with the subjects' sheets after it (<image2>, <image3>) as the
+  // appearance guides. The segment is then rendered from one key image to the next (FL2VA),
+  // so every join is exact and every key re-anchors the faces on the sheets. Without the
+  // sentence about the spot the subject left, Qwen kept her there and added a second one
+  // where she went, 1 edit out of 2 (GB10, 2026-11-18): the code always adds it.
+  // `subjects`: [{desc}] in sheet order; <Subject N> becomes the character of its sheet.
+  function relayKeyPrompt(end, action, subjects, lighting, styleId) {
+    const subs = (subjects || []).slice(0, 2), one = subs.length < 2;
+    const who = n => (one ? "the same character from <image1>" : `the same character from <image1> that <image${n + 1}> shows`);
+    const plain = v => String(v || "").replace(H3_TOKEN_RE, (_, n) => who(Number(n))).trim().replace(/[\s.!?…]+$/, "");
+    const cap = v => v.charAt(0).toUpperCase() + v.slice(1);
+    const what = plain(end) || (plain(action) ? "The final instant of this action: " + plain(action) : "");
+    let s = "Edit <image1>. Keep the place, the light, the camera height and the camera side of <image1>. "
+      + (what ? cap(what) + ". " : "")
+      + "Every spot a character has left now shows only the setting. "
+      + (one ? "The character appears only once: nobody else is in the picture. "
+             : "Each character appears only once: nobody else is in the picture. ");
+    subs.forEach((x, k) => {
+      const img = `<image${k + 2}>`, desc = plain(x.desc);
+      s += `The face, hair, body and outfit of ${one ? "the character" : `the character that ${img} shows`} are those of the reference sheet in ${img}`
+        + (desc ? ` (${desc})` : "") + `; ${img} is only the appearance guide, never copy its layout or its background. `;
+    });
+    const light = plain(lighting);
+    if (light) s += cap(light) + ". ";
+    s += "One single continuous picture in the visual style of <image1> that fills the frame, with no panels, borders, caption or text.";
+    const styleText = styleTextFor(styleId);
+    if (styleText) s += " " + styleText;
+    return s;
+  }
+
+  // Gemma's vision counts the figures of a key image: a key that shows a subject twice is
+  // drawn again (a different seed) before the segment is rendered. Returns the count, or
+  // null when the answer gives none.
+  const KEY_COUNT_SYSTEM = `Count the people, animals and characters visible in this image, including partly visible ones and reflections or ghost-like transparent figures. Answer JSON only: {"count": integer, "note": "one short sentence"}`;
+  async function countFigures(llm, base64) {
+    const out = await llm(KEY_COUNT_SYSTEM, "How many people, animals and characters are in this image?", [base64]);
+    const n = Number(out?.count ?? out?.people);
+    return Number.isInteger(n) && n >= 0 ? n : null;
   }
 
   const Prompts = {
@@ -1275,6 +1323,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage, describeStartImage,
     buildRelaySegmentPrompt, buildRelayCutPrompt, relaySubjectLegend, composeScenario,
+    relayKeyPrompt, KEY_COUNT_SYSTEM, countFigures,
   };
   if (typeof module === "object" && module.exports) module.exports = Prompts;
   else global.Prompts = Prompts;

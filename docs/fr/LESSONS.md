@@ -288,13 +288,24 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     instant » n'a rien changé (4 doublons sur 4, mêmes seeds) ; retirer le scénario du prompt, en
     gardant l'action du segment 1, a corrigé (0 sur 8). Le contrôle du raccord mesure aussi l'image
     à 0,2 s : sur de vrais clips, les bons raccords y lisent 4,9 à 7,0, les deux coupes cachées
-    29,7 et 47,0. (2026-11-17) Avec
-    une image fixe juste et unique, Ref2VA l'a encore lâchée : sur 5 segments 1 sur 5 (3
-    départs, 3 seeds), les images 0 et 1 fondent l'image fixe avec un fantôme ou la gardent,
-    l'image 2 coupe sur le plan que le clip tient ensuite. L'i2v depuis la même image l'a tenue
-    (2 sur 2) mais a perdu le visage de la planche (yeux verts au lieu de bruns) et sortait 3 à
-    8 LU plus fort. Le segment 1 reste en Ref2VA et retire ses deux premières images : rien ne
-    vient avant lui. (2026-11-18)
+    29,7 et 47,0. (2026-11-17) Le Ref2VA avec image de départ a continué de casser : 7 clips sur
+    11 ont lâché leur image de départ (5 segments 1 sur 5 partis d'une image fixe, 2 segments
+    continus sur 6), et l'i2v seul perdait le visage de la planche en 5 à 9 s. Ce qui a tenu, ce
+    sont les images clés : Qwen Image 2.1 retouche l'image clé précédente (avec la planche comme
+    guide d'apparence) en le dernier instant du segment, et H3 rend d'une image clé à la suivante
+    (FL2VA) ; le contrôle du raccord est parti avec les segments continus en Ref2VA. Sur 50 s (5 × 10 s, un clic, aucune étape pour l'utilisateur) : une seule femme de
+    bout en bout, le même visage et le même jardin, des raccords de 3,0 à 3,9 par canal, aucune
+    coupe ; Gemma a compté un personnage sur chacune des 6 images clés (2 s chacune). Deux détails
+    de la recette comptent. Sans une phrase qui nomme l'endroit que le sujet a quitté, Qwen l'y
+    gardait et en ajoutait une deuxième là où elle allait (1 retouche sur 2) : le découpage
+    l'écrit, le code ajoute que tout endroit quitté ne montre plus que le décor. Et l'image clé
+    doit prendre la valeur de plan où finit le mouvement de caméra du segment : avec « plan
+    moyen » sur toutes les images clés, la vidéo avançait en milieu de segment puis reculait pour
+    rejoindre son image clé. La vision de Gemma, en comptant les personnages, a trouvé les images
+    clés doublées 9 fois sur 9 et les bonnes 27 fois sur 27 ; à la question « quelqu'un est-il
+    dessiné deux fois », elle en a manqué 2 sur 9 (l'une debout, sa copie assise). Sans musique
+    dans le scénario, H3 ne rend que l'ambiance, entre −30 et −51 LUFS : l'assemblage amène chaque
+    clip à −18 LUFS sous un limiteur. (2026-11-18)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

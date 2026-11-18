@@ -247,21 +247,6 @@ def test_r2v_start_frame_goes_to_both_passes_and_patches_fastvideo(client, engin
     assert "<Picture 2>" in rejected(client, "h3-r2v", {"prompt": "<Picture 2>", "references": [sheet], "image": frame})
 
 
-def test_r2v_trim_start_drops_the_first_frames_of_the_clip(client, engines, monkeypatch):
-    """A Relay segment 1 on a still drops its first two frames; other clips are left as they are."""
-    from studio.pipelines import montage
-    trims = []
-    monkeypatch.setattr(h3_start_frame, "install", lambda: None)
-    monkeypatch.setattr(montage, "trim_start", lambda path, frames, check=None: trims.append((path.suffix, frames)))
-    sheet, frame = upload(client, 192, 108, "red"), upload(client, 1280, 736, "black")
-    run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "image": frame, "trim_start": 2})
-    assert trims == [(".mp4", 2)]
-    run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "image": frame})
-    assert trims == [(".mp4", 2)]
-    assert "between 0 and 8" in rejected(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "trim_start": 9})
-    assert "between 0 and 8" in rejected(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "trim_start": True})
-
-
 def test_start_frame_rows_take_the_time_of_the_target_frame_0():
     """Ref2VA layout [text | ref | start frame | audio | video]: the start frame's rows move
     to the target's frame-0 time and the target goes back by the slot it took."""

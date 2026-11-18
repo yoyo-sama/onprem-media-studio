@@ -1066,7 +1066,7 @@ function renderTimeline() {
 // `look` is written once and shared by every segment's prompt (camera, lighting,
 // soundscape, music); a segment holds only its action and its own camera motion.
 const newRelaySegment = (prompt = "", duration = RELAY_SEG_DEFAULT) => ({ prompt, duration, mode: "continue", status: "idle", ref: null,
-  seed: 0, prompt_used: null, start: null, transitions: null, transitionIdx: 0, endImage: null });
+  seed: 0, prompt_used: null, start: null, transitions: null, transitionIdx: 0, endImage: null, end: "", key: null });
 const RELAY_LOOK_KEYS = ["camera", "lighting", "sound", "music"];
 // The cards are the plan: a new Relay gets one empty card per planned segment, and the
 // total length of a given (or saved) chain is the sum of its cards.
@@ -1135,10 +1135,10 @@ async function composeRelay() {
   tx(btn, "Splitting…");
   try {
     log("req", "Relay: splitting the screenplay into {n} segments with {llm}…", { n, llm: LLM });
-    const { segments: list, look } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
+    const { segments: list, ends: finals, look } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
     // The end images stay with the segment of the same rank (a long take's key images).
     const ends = r.segments.map(seg => seg.endImage);
-    r.segments = list.map((prompt, i) => ({ ...newRelaySegment(prompt, durs[Math.min(i, n - 1)]), endImage: ends[i] || null }));
+    r.segments = list.map((prompt, i) => ({ ...newRelaySegment(prompt, durs[Math.min(i, n - 1)]), end: finals[i] || "", endImage: ends[i] || null }));
     syncRelayTotal();
     r.scenario = text;
     // The shared look fills only the fields left empty: what the user wrote stays.
@@ -1218,7 +1218,6 @@ function renderRelay() {
     el.className = "relay-seg";
     el.dataset.seg = String(i);
     el.innerHTML = `<div class="seg-head"><strong></strong><span class="seg-status"></span></div>
-      <p class="seg-warn" role="status" hidden>The clip does not start on its image (broken join): regenerate this segment.</p>
       <textarea spellcheck="false" placeholder="What happens in this segment, and its own camera motion."></textarea>
       <div class="seg-row seg-start-row" hidden>
         <button type="button" class="secondary-btn seg-start"></button>
@@ -1243,10 +1242,10 @@ function renderRelay() {
       </details>`;
     tx(el.querySelector("strong"), "Segment {n}/{total} · {from}–{to}", { n: i + 1, total: r.segments.length, from: clock(from), to: clock(at) });
     tx(el.querySelector(".seg-status"), statusWord(seg.status));
-    el.querySelector(".seg-warn").hidden = !(seg.status === "ready" && seg.joinGap > JOIN_BROKEN);
     const area = el.querySelector("textarea");
     area.value = seg.prompt;
-    area.addEventListener("change", () => { seg.prompt = area.value; updateRelayButtons(); save(); });
+    // An action rewritten by hand: its key image follows the new text, not the split's final instant.
+    area.addEventListener("change", () => { seg.prompt = area.value; seg.end = ""; updateRelayButtons(); save(); });
     area.addEventListener("input", () => { seg.prompt = area.value; updateRelayButtons(); });
     const dur = el.querySelector('input[type="number"]');
     dur.value = seg.duration;
@@ -1477,7 +1476,6 @@ function markStaleFrom(from) {
 async function renderSegment(i) {
   const s = d, r = s.relay, seg = r.segments[i], total = r.segments.length, began = Date.now();
   seg.status = "pending";
-  seg.joinGap = null;
   renderRelay();
   // A segment added after the end of a rendered chain: the previous one, rendered as the
   // last, has no transition frames yet; they are extracted now (a cut takes one as its setting).
@@ -1498,11 +1496,12 @@ async function renderSegment(i) {
     const text = [seg.prompt, look.lighting].map(x => x.trim().replace(/[\s.!?…]+$/, "")).filter(Boolean).join(". ");
     const prompt = P.relayStartFromSheetPrompt(r.scenario, text, subs[0].desc, s.style);
     const [width, height] = F.QWEN21_RATIOS[s.ratio] || F.QWEN21_RATIOS["16:9"];
-    const job = await tracked(seg, "image", sub => runJob("qwen-image-2.1",
-      { prompt, images: [s.startImage.ref], width, height, seed: F.seedPlus(s.seed, 401) },
-      { origin: origin(), label: ["Relay · shot image {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
-        sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed: F.seedPlus(s.seed, 401) }] }));
-    start = out(job, ".png");
+    start = await checkedImage(s, seg, i, total, subs.length || 1, (k, sub) => {
+      const seed = F.seedPlus(s.seed, 401 + KEY_RETRY * k);
+      return runJob("qwen-image-2.1", { prompt, images: [s.startImage.ref], width, height, seed },
+        { origin: origin(), label: ["Relay · shot image {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
+          sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed }] });
+    });
   } else if (isLongTake() && i === 0) start = s.startImage.ref;
   else if (i > 0 && prev && continuous(seg)) {
     log("req", "Relay, segment {n}/{total}: video (continuous link)…", { n: i + 1, total });
@@ -1512,34 +1511,33 @@ async function renderSegment(i) {
     // The shot image takes the shared light too, so the clip does not start in another one.
     const text = [seg.prompt, look.lighting].map(x => x.trim().replace(/[\s.!?…]+$/, "")).filter(Boolean).join(". ");
     const prompt = P.compileRelayKeyframePrompt(text, subs[0].desc, locDesc(), true, s.style);
-    const job = await tracked(seg, "image", sub => keyframeJob([subs[0].ref], prompt, F.seedPlus(s.seed, 401),
-      ["Relay · shot image {n}/{total}", { n: i + 1, total }], sub));
-    start = out(job, ".png");
+    start = await checkedImage(s, seg, i, total, 1, (k, sub) => keyframeJob([subs[0].ref], prompt,
+      F.seedPlus(s.seed, 401 + KEY_RETRY * k), ["Relay · shot image {n}/{total}", { n: i + 1, total }], sub));
   }
   if (!sameSession(s)) return;
   seg.start = { ref: start };
-  const last = seg.endImage?.ref || null;
-  // With the subjects' sheets, a segment starts on its frame AND sees the sheets (Ref2VA with a
-  // start frame): i2v sees only its first frame, so a face drifted segment after segment.
-  // An end image (FL2VA) stays i2v: Ref2VA takes no last frame.
-  const refs = last ? [] : relayRefs(settingSheet());
-  let job;
-  if (refs.length) {
-    seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
-    // Segment 1 starts on a still (a shot image, or the user's picture): Ref2VA blended it with
-    // the shot it then holds for two frames, and cut at frame 2, 5 clips out of 5 (GB10,
-    // 2026-11-16/17). Nothing comes before segment 1, so those two frames are dropped, and
-    // there is no join to check.
-    job = await relayR2vJob(s, seg, i, total, refs, start, i === 0 ? RELAY_FIRST_TRIM : 0);
-    // Ref2VA does not always hold its start frame (one join in three broke on the GB10):
-    // measured, and said on the card; nothing is rendered again on its own.
-    seg.joinGap = i === 0 ? null : await joinGap(start, out(job, ".mp4"));
-    if (seg.joinGap > JOIN_BROKEN) log("warn", "Relay, segment {n}/{total}: the clip does not start on its image (broken join). Regenerate this segment.", { n: i + 1, total });
-  } else {
-    seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
-    job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,
-      ["Relay · segment {n}/{total}", { n: i + 1, total }], last, sub));
+  // With the subjects' sheets, the segment ends on a key image Qwen edits from its start
+  // (relayKeyPrompt), and H3 renders from one image to the other (FL2VA): the join to the
+  // next segment is exact, and every key brings the faces back to the sheets. Ref2VA with a
+  // start frame dropped its start image in 7 clips out of 11, and i2v alone let a face drift
+  // within 5 to 9 s (GB10, 2026-11-16 to 18). An end image the user gave is kept as it is.
+  seg.key = null;
+  let last = seg.endImage?.ref || null;
+  if (!last && subs.length) {
+    log("req", "Relay, segment {n}/{total}: end image…", { n: i + 1, total });
+    const prompt = P.relayKeyPrompt(seg.end, seg.prompt, subs, look.lighting, s.style);
+    last = await checkedImage(s, seg, i, total, subs.length, (k, sub) => {
+      const seed = F.seedPlus(seg.seed, 701 + KEY_RETRY * k);
+      return runJob("qwen-image-2.1", { prompt, images: [start, ...subs.map(x => x.ref)], seed },
+        { origin: origin(), label: ["Relay · end image {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
+          sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed }] });
+    });
+    if (!sameSession(s)) return;
+    seg.key = { ref: last };
   }
+  seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
+  const job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,
+    ["Relay · segment {n}/{total}", { n: i + 1, total }], last, sub));
   if (!sameSession(s)) return;
   seg.ref = out(job, ".mp4");
   seg.transitions = null;
@@ -1566,15 +1564,32 @@ function relayRefs(setting) {
 // shot jumped to the place image's framing, GB10 2026-11-16).
 const settingSheet = () => (!isLongTake() && locVariant()?.ref ? { ref: locVariant().ref, desc: locDesc() } : null);
 
-// One Ref2VA clip of the Relay; `start`: the frame the clip starts on (a continuous segment),
-// or none (a cut); `trim`: frames dropped at its start (segment 1).
-const RELAY_FIRST_TRIM = 2;
-function relayR2vJob(s, seg, i, total, refs, start, trim = 0) {
+// A shot or key image of the Relay (`submit(k, onSubmitted)`, k = the try) whose figures
+// Gemma's vision counts: one that shows more figures than the segment has subjects (a
+// subject drawn twice, 1 Qwen edit in 2 on the GB10, 2026-11-18) is drawn again with
+// another seed, twice at most; then the chain stops on this segment, to regenerate. An
+// image Gemma cannot read is kept, and the log says so.
+const KEY_TRIES = 3, KEY_RETRY = 100;
+async function checkedImage(s, seg, i, total, subjects, submit) {
+  for (let k = 0; k < KEY_TRIES; k++) {
+    const job = await tracked(seg, "image", sub => submit(k, sub));
+    const ref = out(job, ".png");
+    if (!sameSession(s)) return ref;
+    let n = null;
+    try { n = await P.countFigures(F.llm, await blobToBase64(await F.imageBlob({ ref }))); } catch { /* unread: kept */ }
+    if (n === null) { log("warn", "Relay, segment {n}/{total}: the image could not be checked by {llm}: kept as it is.", { n: i + 1, total, llm: LLM }); return ref; }
+    if (n <= subjects) return ref;
+    log("warn", "Relay, segment {n}/{total}: the image shows {count} figures for {max} subject(s): drawn again.", { n: i + 1, total, count: n, max: subjects });
+  }
+  throw new Error(t("Relay, segment {n}: the image still shows a subject twice after {tries} tries. Regenerate this segment.", { n: i + 1, tries: KEY_TRIES }));
+}
+
+// A Ref2VA clip of the Relay (a cut: no start image).
+function relayR2vJob(s, seg, i, total, refs) {
   return tracked(seg, "video", sub => runJob("h3-r2v",
-    { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref),
-      ...(start ? { image: start } : { aspect: s.ratio }), ...(trim ? { trim_start: trim } : {}) },
+    { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref), aspect: s.ratio },
     { origin: origin(), label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
-      sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref.${start ? " + start" : ""} · ${seg.duration} s`, seed: seg.seed }] }));
+      sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref. · ${seg.duration} s`, seed: seg.seed }] }));
 }
 
 // A cut: H3 Ref2VA with no start image and no end image. Its setting is the setting's sheet,
@@ -1586,9 +1601,9 @@ async function renderCutSegment(s, seg, i, total, before, began) {
   const refs = relayRefs(settingSheet() || (frame ? { ref: frame, desc: "" } : null));
   log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });
   seg.start = null;
-  seg.joinGap = null;
+  seg.key = null;
   seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), s.relay.look, refs, s.style, h3Warn);
-  const job = await relayR2vJob(s, seg, i, total, refs, null);
+  const job = await relayR2vJob(s, seg, i, total, refs);
   if (!sameSession(s)) return;
   seg.ref = out(job, ".mp4");
   seg.transitions = null;
@@ -1602,61 +1617,17 @@ async function renderCutSegment(s, seg, i, total, before, began) {
   save();
 }
 
-// Mean gap per channel (0-255) between an image and a clip's frames, both drawn at 64×36 (the
-// start frame is stretched to the canvas, as FastVideo does): the larger of the first frame's
-// gap and the gap of the frame JOIN_LATER seconds in; null when the image or the first frame
-// cannot be read. On the GB10 a true join measured 5 to 9, a broken one 59 to 73; a clip that
-// held its start image for two frames then cut measured 7 at frame 0 and 44 just after.
-const JOIN_BROKEN = 25, JOIN_LATER = 0.2;
-async function joinGap(imageRef, clipRef) {
-  const W = 64, H = 36;
-  const draw = src => {
-    const c = Object.assign(document.createElement("canvas"), { width: W, height: H });
-    const g = c.getContext("2d", { willReadFrequently: true });
-    g.drawImage(src, 0, 0, W, H);
-    return g.getImageData(0, 0, W, H).data;
-  };
-  // After loadeddata or seeked a frame can still draw as nothing (transparent): a decoded
-  // frame is opaque, so the draw is tried again until it is.
-  const frame = async video => {
-    let b = draw(video);
-    for (let k = 0; k < 40 && !b[3]; k++) { await new Promise(r => setTimeout(r, 50)); b = draw(video); }
-    return b[3] ? b : null;
-  };
-  const gap = (a, b) => {
-    let sum = 0;
-    for (let k = 0; k < a.length; k += 4) sum += Math.abs(a[k] - b[k]) + Math.abs(a[k + 1] - b[k + 1]) + Math.abs(a[k + 2] - b[k + 2]);
-    return sum / (W * H * 3);
-  };
-  const wait = (video, event) => Promise.race([new Promise((ok, ko) => { video[`on${event}`] = ok; video.onerror = ko; }),
-    new Promise((_, ko) => setTimeout(ko, 15000))]);
-  try {
-    const img = new Image();
-    img.src = refURL(imageRef);
-    await img.decode();
-    const video = Object.assign(document.createElement("video"), { muted: true, preload: "auto", src: refURL(clipRef) });
-    await wait(video, "loadeddata");
-    const first = await frame(video);
-    if (!first) return null;
-    const a = draw(img), g0 = gap(a, first);
-    // A few frames in: a clip may hold its start image for a frame or two, then cut.
-    try {
-      video.currentTime = Math.min(JOIN_LATER, video.duration || JOIN_LATER);
-      await wait(video, "seeked");
-      const later = await frame(video);
-      return later ? Math.max(g0, gap(a, later)) : g0;
-    } catch { return g0; }
-  } catch { return null; }
-}
-
 // Candidates of a segment's transition: the clip's last frame (saved with it) and frames
 // a little earlier (a CPU job).
 async function extractTransitions(seg, i, total) {
   log("req", "Relay, segment {n}/{total}: transition frames…", { n: i + 1, total });
   const frames = await tracked(seg, "frames", sub => runJob("video-frames", { video: seg.ref, offsets: RELAY_TRANSITION_OFFSETS },
     { origin: "relay", label: ["Relay · transition frames"], sub: ["{n} image(s)", { n: RELAY_TRANSITION_OFFSETS.length }], onSubmitted: sub }));
-  // A segment saved before its last frame was kept has only the earlier candidates.
-  seg.transitions = [...(seg.lastFrame ? [{ ref: seg.lastFrame, offset: 0 }] : []),
+  // A segment saved before its last frame was kept has only the earlier candidates. A segment
+  // that ended on a key image (FL2VA) hands that image on: its last frame is the key, redrawn
+  // by the video.
+  const end = seg.key?.ref || seg.lastFrame;
+  seg.transitions = [...(end ? [{ ref: end, offset: 0 }] : []),
     ...RELAY_TRANSITION_OFFSETS.map((offset, k) => ({ ref: frames.outputs[k], offset }))].filter(x => x.ref);
   seg.transitionIdx = 0;
   relayLive.delete(seg);
