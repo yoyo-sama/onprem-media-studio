@@ -38,6 +38,7 @@ SILENT_LUFS = -69.0  # at or below this loudness a clip is left as it is (EBU R1
 TAKE_LUFS = -18.0
 LIMIT = 0.891       # -1 dBFS: the limiter after the lift keeps isolated clicks from clipping
 JOIN_FADE = 0.025   # seconds: a fade this short removes the click, not the sound
+LIFT_PASSES = 6     # extra lifts of a take the limiter kept below TAKE_LUFS
 
 
 def ffmpeg(*args: str, timeout: float = 900, check=None, capture_stderr: bool = False) -> str:
@@ -93,6 +94,22 @@ def loudness(path: Path) -> tuple[float, float]:
 def level_gains(levels: list[float]) -> list[float]:
     """Gain (dB) that brings each audible clip to TAKE_LUFS, clamped to MAX_GAIN_DB."""
     return [max(-MAX_GAIN_DB, min(MAX_GAIN_DB, TAKE_LUFS - v)) if v > SILENT_LUFS else 0.0 for v in levels]
+
+
+def lift_take(path: Path, check=None) -> None:
+    """The limiter takes back part of a large lift (an ambience full of footsteps went from
+    -33 to -23 LUFS instead of -18, GB10 2026-11-18): the joined sound is measured and lifted
+    again by what it lacks, under the same limiter, up to LIFT_PASSES times; the image is copied."""
+    for _ in range(LIFT_PASSES):
+        lufs, _ = loudness(path)
+        missing = TAKE_LUFS - lufs
+        if not -math.inf < lufs or missing < 0.5:
+            return
+        tmp = path.with_suffix(".lift.mp4")
+        ffmpeg("ffmpeg", "-v", "error", "-y", "-i", str(path), "-map", "0:v", "-map", "0:a", "-c:v", "copy",
+               "-af", f"volume={min(missing, MAX_GAIN_DB):.2f}dB,alimiter=limit={LIMIT}:level=0:latency=1",
+               "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(tmp), check=check)
+        tmp.replace(path)
 
 
 def video_refs(params: dict, key: str, files, low: int, high: int) -> list[str]:
@@ -172,6 +189,8 @@ class VideoConcat(Pipeline):
         ctx.progress(0.2, f"Joining {len(paths)} clips")
         ffmpeg(*args, check=ctx.check)
         ctx.check()
+        if smooth:
+            lift_take(out, ctx.check)
         common.tag_video(out, ctx, params)
         return [out]
 

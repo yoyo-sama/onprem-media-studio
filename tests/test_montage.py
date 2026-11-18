@@ -115,6 +115,25 @@ def test_smooth_audio_lifts_a_quiet_take_to_the_take_loudness(client, settings):
     assert float(_re.search(r"max_volume:\s*(-?[\d.]+) dB", out).group(1)) <= -0.9
 
 
+def test_smooth_audio_reaches_the_take_loudness_through_clicks(client, settings):
+    """A quiet ambience with clicks at full scale (footsteps): the limiter takes back part of
+    the lift, so the take is measured and lifted again until it reaches TAKE_LUFS."""
+    from studio.pipelines.montage import TAKE_LUFS, loudness
+    expr = "0.02*sin(2*PI*440*t)+if(lt(mod(t\\,0.25)\\,0.003)\\,0.99\\,0)"
+    for name in ("a", "b"):
+        path = settings.output_dir / "h3-i2v" / f"click-{name}.mp4"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=red:s=320x192:r=24:d=2",
+                        "-f", "lavfi", "-i", f"aevalsrc={expr}:d=2:s=48000", "-c:a", "aac", "-c:v", "libx264",
+                        "-pix_fmt", "yuv420p", "-shortest", str(path)], check=True)
+    clips = ["outputs/h3-i2v/click-a.mp4", "outputs/h3-i2v/click-b.mp4"]
+    path = settings.output_dir / run(client, "video-concat", {"clips": clips, "smooth_audio": True})["outputs"][0].removeprefix("outputs/")
+    lufs, seconds = loudness(path)
+    assert abs(lufs - TAKE_LUFS) < 1.5, lufs
+    assert abs(seconds - 4) < 0.15, seconds
+    assert abs(probe(path)["frames"] - 96) <= 1
+
+
 def test_concat_without_sound_when_a_clip_has_none(client, settings):
     make_clip(settings.output_dir / "x" / "a.mp4", "red")
     make_clip(settings.output_dir / "x" / "b.mp4", "blue", audio=False)
