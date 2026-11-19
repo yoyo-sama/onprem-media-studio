@@ -1275,11 +1275,11 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // `subjects`: [{desc}] in sheet order. `shot`: a RELAY_SHOTS key, said first: Qwen followed
   // a shot named with its camera distance ("Medium close-up: ... the camera close to the
   // face", 6 stills out of 6), not a description of where the body is cut ("framed from the
-  // waist up" left the keys full-body). A bare "Medium shot" came out knee-up (3 keys out of 3,
-  // GB10 2026-11-19): it is named waist-up, with where the frame ends and the camera distance.
+  // waist up" left the keys full-body). "Medium shot" comes out knee-up; saying where the frame
+  // ends ("the bottom edge of the frame at the waist") changed nothing (0 of 8, GB10 2026-11-19).
   const RELAY_SHOTS = {
     "full shot": "Full shot: {who} seen whole, head to feet, the camera a few metres away.",
-    "medium shot": "Waist-up medium shot: {who} seen from the waist up, the bottom edge of the frame at the waist, the camera about one metre away.",
+    "medium shot": "Medium shot: {who} seen from the waist up, the camera at a short distance.",
     "medium close-up": "Medium close-up: {whose} face and shoulders fill the frame, the camera close to the face at eye level.",
     "close-up": "Close-up: {whose} face fills the frame, the camera very close to the face.",
   };

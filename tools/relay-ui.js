@@ -216,7 +216,7 @@ const SPLIT = {
       `key image ${k} prompt: ${kp.prompt}`);
   }
   // The key opens on its shot size, named with the camera distance.
-  check(/^Waist-up medium shot: the character seen from the waist up, the bottom edge of the frame at the waist/.test(jobs[1]?.params.prompt || "") && /^Full shot: /.test(jobs[5]?.params.prompt || "")
+  check(/^Medium shot: the character seen from the waist up/.test(jobs[1]?.params.prompt || "") && /^Full shot: /.test(jobs[5]?.params.prompt || "")
     && /^Close-up: the character's face fills the frame/.test(jobs[8]?.params.prompt || ""),
     `key shot sizes: ${[1, 5, 8].map(k => (jobs[k]?.params.prompt || "").split(":")[0]).join(", ")}`);
   // Each split action is rewritten by Gemma's vision from the segment's start and key only

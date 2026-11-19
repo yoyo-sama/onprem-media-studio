@@ -289,10 +289,11 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     push-in between two full shots and the video swung back. The split now names each key's shot
     from a closed list, and the action is written from the two images and their shot sizes only.
     (2026-11-18) Through the UI over 50 s, the framing then progressed from key to key with no
-    swing back, one subject, exact joins, no ghost, at −18.2 LUFS. But a bare "Medium shot" came
-    out knee-up (3 keys out of 3), so it is now named "Waist-up medium shot" with where the frame
-    ends; and the limiter at 48 kHz let the lifted take reach +0.3 dBTP, so it now runs on
-    oversampled sound (−1.0 dBTP on the clicks test). (2026-11-19)
+    swing back, one subject, exact joins, no ghost, at −18.2 LUFS. "Medium shot" keys come out
+    knee-up (3 out of 3), and saying where the frame ends ("Waist-up medium shot ... the bottom
+    edge of the frame at the waist") changed nothing (0 of 8): kept as is. The limiter at 48 kHz
+    let the lifted take reach +0.3 dBTP, so it now runs on oversampled sound (−1.0 dBTP on the
+    clicks test). (2026-11-19)
 
 ## 8. Front end (for the port in step 4)
 
