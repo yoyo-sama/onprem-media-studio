@@ -147,6 +147,28 @@ abandonnée, pas rafistolée.
 Si l'étape 1 échoue, on essaie la méthode 2 avec les mêmes critères ; les RefMods sont essayés
 dans la méthode qui passe, pour alléger les références.
 
+## Plan d'intégration (une fois le son réglé)
+
+Le Relay de `main` rend déjà un segment continu en `h3-r2v` avec les planches plus une image de
+départ (`image`, placée à l'image 0 par `h3_start_frame.py`) ; c'est cette image de départ qui a
+cassé 7 fois sur 11. Le changement est un remplacement, pas une nouvelle fonction :
+
+- **Serveur** : chaque clip H3 garde ses latents finaux vidéo et son à côté de sa sortie.
+  `h3-r2v` prend `continue_from` (la sortie du clip précédent) au lieu d'`image` : ses 7 derniers
+  latents vidéo (et son, selon le test du son) deviennent des lignes de condition aux premières
+  positions de la cible, par un correctif de la préparation des latents (`h3_continue.py`, qui
+  remplace `h3_start_frame.py`). Un nouveau job `video-stitch` recolle les latents d'une chaîne
+  (chaque clip sans son recouvrement) et les décode d'un seul tenant avec les VAE de H3, puis
+  passe le niveau de la prise.
+- **Interface** : un segment continu envoie `continue_from` au lieu de son image de départ ; une
+  chaîne de segments continus est montée par `video-stitch` au lieu de `video-concat`. Le
+  contrôle des raccords (`joinGap`, « raccord cassé ») disparaît, comme les images de transition
+  des segments continus. Les coupes restent telles quelles. Le parcours reste brief → durée →
+  un clic.
+- **Tests** : tests unitaires de l'arithmétique des latents (recouvrement, grille, positions)
+  sans GPU ; le test d'interface du Relay vérifie la chaîne de jobs ; un rendu 50 s depuis
+  l'interface sur le GB10 la qualifie.
+
 ## Résultats
 
 ### Étape 1, continuation latente (GB10, 2026-11-19)

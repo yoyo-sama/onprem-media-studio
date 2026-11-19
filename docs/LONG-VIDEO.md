@@ -136,6 +136,25 @@ patched.
 If step 1 fails, method 2 is tried with the same criteria; RefMods are tried inside whichever
 method passes, to lighten the references.
 
+## Integration plan (once the sound is settled)
+
+The Relay on `main` already renders a continuous segment as `h3-r2v` with the sheets plus a
+start image (`image`, placed at frame 0 by `h3_start_frame.py`); that start image is what broke
+7 times in 11. The change is a swap, not a new feature:
+
+- **Server**: every H3 clip keeps its final video and audio latents next to its output. `h3-r2v`
+  takes `continue_from` (the previous clip's output) instead of `image`: its last 7 video
+  latents (and audio, depending on the sound test) become condition rows at the target's first
+  positions, in a forward patch on the latent preparation (`h3_continue.py`, replacing
+  `h3_start_frame.py`). A new job `video-stitch` joins the latents of a chain (each clip without
+  its overlap) and decodes them once with H3's VAEs, then the take loudness pass.
+- **Front end**: a continuous segment sends `continue_from` instead of its start frame; a chain
+  of continuous segments is assembled by `video-stitch` instead of `video-concat`. The join
+  check (`joinGap`, "broken join") goes, as do the transition frames of continuous segments.
+  Cuts stay as they are. The path stays brief → length → one click.
+- **Tests**: unit tests of the latent arithmetic (overlap, grid, positions) without a GPU; the
+  Relay UI test checks the job chain; a 50 s render through the UI on the GB10 qualifies it.
+
 ## Results
 
 ### Step 1, latent continuation (GB10, 2026-11-19)
