@@ -293,7 +293,12 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     knee-up (3 out of 3), and saying where the frame ends ("Waist-up medium shot ... the bottom
     edge of the frame at the waist") changed nothing (0 of 8): kept as is. The limiter at 48 kHz
     let the lifted take reach +0.3 dBTP, so it now runs on oversampled sound (−1.0 dBTP on the
-    clicks test). (2026-11-19)
+    clicks test). (2026-11-19) The next run drew both medium-shot keys full-body; Gemma, given
+    the planned sizes, wrote "push-in to a medium shot" between two full shots and the video
+    swung back again. Letting Gemma judge the sizes itself was worse (12 of 20 moves right
+    against 9 of 10: it calls knee-up "full shot" and reads a small change as full to medium).
+    So the medium shot is gone from the split's list: a "medium shot" is read as a full shot,
+    and the planned sizes stay in the motion call. (2026-11-19)
 
 ## 8. Front end (for the port in step 4)
 

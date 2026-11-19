@@ -215,15 +215,16 @@ const SPLIT = {
       && /Use <image1> only as the appearance guide for the character, oval face, freckles/.test(kp.prompt || "") && (kp.prompt || "").includes("Warm candle light."),
       `key image ${k} prompt: ${kp.prompt}`);
   }
-  // The key opens on its shot size, named with the camera distance.
-  check(/^Medium shot: the character seen from the waist up/.test(jobs[1]?.params.prompt || "") && /^Full shot: /.test(jobs[5]?.params.prompt || "")
+  // The key opens on its shot size, named with the camera distance; a medium shot is drawn
+  // as a full shot.
+  check(/^Full shot: the character seen whole/.test(jobs[1]?.params.prompt || "") && /^Full shot: /.test(jobs[5]?.params.prompt || "")
     && /^Close-up: the character's face fills the frame/.test(jobs[8]?.params.prompt || ""),
     `key shot sizes: ${[1, 5, 8].map(k => (jobs[k]?.params.prompt || "").split(":")[0]).join(", ")}`);
   // Each split action is rewritten by Gemma's vision from the segment's start and key only
   // (with their shot sizes, never the screenplay), and the clip and the card take that text.
   const motions = chats.filter(c => /^You write the action of one continuous/.test(c.system || ""));
   check(motions.length === 3 && motions.every(c => c.images?.length === 2 && /SUBJECTREF1 is oval face/.test(c.prompt) && !/flowering tree|gravel path/.test(c.prompt))
-    && /Image 1 is a medium shot; image 2 is a full shot\./.test(motions[1]?.prompt || "") && /^SUBJECTREF1 is [^.]*\. Image 2 is a medium shot\.$/.test(motions[0]?.prompt || ""),
+    && /Image 1 is a full shot; image 2 is a full shot\./.test(motions[1]?.prompt || "") && /^SUBJECTREF1 is [^.]*\. Image 2 is a full shot\.$/.test(motions[0]?.prompt || ""),
     `action from the keys: ${JSON.stringify(motions.map(c => c.prompt))}`);
   check(await page.inputValue('#relayList .relay-seg[data-seg="0"] textarea') === MOTION.replace("SUBJECTREF1", "<Subject 1>"),
     `card 1 after the chain: ${await page.inputValue('#relayList .relay-seg[data-seg="0"] textarea')}`);

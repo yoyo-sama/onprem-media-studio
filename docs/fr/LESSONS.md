@@ -325,7 +325,14 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     « Medium shot » sortent cadrées aux genoux (3 sur 3), et dire où le cadre s'arrête (« Waist-up
     medium shot ... the bottom edge of the frame at the waist ») n'a rien changé (0 sur 8) : laissé
     tel quel. Le limiteur à 48 kHz laissait la prise relevée atteindre +0,3 dBTP : il travaille
-    maintenant sur le son suréchantillonné (−1,0 dBTP au test des clics). (2026-11-19)
+    maintenant sur le son suréchantillonné (−1,0 dBTP au test des clics). (2026-11-19) Le rendu
+    suivant a dessiné les deux images clés en plan moyen en pied ; Gemma, qui recevait les valeurs
+    prévues, a écrit « push-in to a medium shot » entre deux plans en pied et la vidéo est revenue
+    en arrière. Laisser Gemma juger lui-même les valeurs de plan était pire (12 mouvements justes
+    sur 20 contre 9 sur 10 : il appelle « full shot » un cadrage aux genoux et lit un petit écart
+    comme un passage du plan en pied au plan moyen). Le plan moyen sort donc de la liste du
+    découpage : un « medium shot » est lu comme un plan en pied, et les valeurs prévues restent
+    dans l'appel du mouvement. (2026-11-19)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

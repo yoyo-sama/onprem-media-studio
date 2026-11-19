@@ -925,7 +925,7 @@ Rules:
 - "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.
 - Each segment has an "action": ONE English paragraph of 20 to 45 words, what happens in that segment, then its own camera motion, one single movement. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
 - Each segment also has an "end": ONE English paragraph of 20 to 50 words, the final instant of that segment as one still picture, for an image editor that changes the picture the segment starts on. Say what is different at that instant: where each subject now is in the place, their pose, gaze and expression, then the shot size and camera angle at that instant, which are exactly where the segment's own camera motion ends (a push-in ends closer, a pull-back ends wider, a fixed camera keeps the shot). Each end differs visibly from the previous one. When a subject has moved, name the spot it left, which now shows only the setting. Never describe the light, the sounds or the appearance of the subjects.
-- Each segment also has a "shot": the shot size of its end, EXACTLY ONE of "full shot", "medium shot", "medium close-up", "close-up". Vary it along the sequence as the scenario's camera does.
+- Each segment also has a "shot": the shot size of its end, EXACTLY ONE of "full shot", "medium close-up", "close-up". Vary it along the sequence as the scenario's camera does.
 - A segment acts within the place already shown: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
 - The segments follow on from one another: segment k+1 starts exactly where segment k ended. Never restart the scene, never retell the whole scenario inside one segment, never jump elsewhere unless the scenario says so.
 - The recurring subjects are named by a marker, one bare word each. Copy each marker character for character wherever that subject acts:
@@ -1252,7 +1252,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects)), text);
     const clean = v => h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(v))));
     const given = v => v && typeof v === "object" && !Array.isArray(v) && "action" in v;
-    const shot = v => { const k = String(v || "").trim().toLowerCase().replace(/[.\s]+$/, ""); return k in RELAY_SHOTS ? k : ""; };
+    const shot = v => { const k = String(v || "").trim().toLowerCase().replace(/[.\s]+$/, "").replace(/^medium shot$/, "full shot"); return k in RELAY_SHOTS ? k : ""; };
     const pairs = (Array.isArray(out.segments) ? out.segments : [])
       .map(v => (given(v) ? [clean(v.action), clean(v.end), shot(v.shot)] : [clean(v), "", ""])).filter(([a]) => a).slice(0, max);
     if (!pairs.length) throw new Error("no segment returned");
@@ -1275,11 +1275,12 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // `subjects`: [{desc}] in sheet order. `shot`: a RELAY_SHOTS key, said first: Qwen followed
   // a shot named with its camera distance ("Medium close-up: ... the camera close to the
   // face", 6 stills out of 6), not a description of where the body is cut ("framed from the
-  // waist up" left the keys full-body). "Medium shot" comes out knee-up; saying where the frame
-  // ends ("the bottom edge of the frame at the waist") changed nothing (0 of 8, GB10 2026-11-19).
+  // waist up" left the keys full-body). There is no medium shot: Qwen drew it full-body or
+  // knee-up from one run to the next, saying where the frame ends changed nothing (0 of 8), and
+  // a key wider than planned made Gemma write a push-in the video then undid (GB10 2026-11-19).
+  // A "medium shot" from the split is read as a full shot, which is what Qwen draws.
   const RELAY_SHOTS = {
     "full shot": "Full shot: {who} seen whole, head to feet, the camera a few metres away.",
-    "medium shot": "Medium shot: {who} seen from the waist up, the camera at a short distance.",
     "medium close-up": "Medium close-up: {whose} face and shoulders fill the frame, the camera close to the face at eye level.",
     "close-up": "Close-up: {whose} face fills the frame, the camera very close to the face.",
   };

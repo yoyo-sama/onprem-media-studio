@@ -194,7 +194,8 @@ ajoute une carte Import d'image reliée à elle.
   chaque image clé ramène les visages à leurs planches. Le découpage donne à chaque segment sa
   fin (`end` : où est chaque sujet, sa pose, la valeur de plan où finit son mouvement de caméra,
   et l'endroit qu'un sujet a quitté, qui ne montre plus que le décor) et son `shot` (plan
-  d'ensemble, plan taille, plan rapproché ou gros plan), qui ouvre la consigne de l'image clé avec
+  en pied, plan rapproché ou gros plan ; un plan taille est lu comme un plan en pied, ce que Qwen
+  dessine), qui ouvre la consigne de l'image clé avec
   sa distance de caméra. Une fois l'image clé dessinée, la vision de Gemma écrit l'action du
   segment d'après son départ et son image clé seulement, avec leurs valeurs de plan, jamais le
   scénario (`relayMotionFromKeys`) : la carte prend ce texte et la vidéo va droit d'une image à

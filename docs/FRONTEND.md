@@ -184,8 +184,8 @@ to it.
   `last_image`, FL2VA). The next segment starts on that key, so every join is exact and every key
   brings the faces back to the sheets. The split gives each segment its `end` (its final
   instant: where each subject is, pose, the shot size its camera motion ends on, and the spot a
-  subject left, now showing only the setting) and its `shot` (full shot, medium shot, medium
-  close-up or close-up), which opens the key's prompt with its camera distance. Once the key is
+  subject left, now showing only the setting) and its `shot` (full shot, medium
+  close-up or close-up; a medium shot is read as a full shot, which is what Qwen draws), which opens the key's prompt with its camera distance. Once the key is
   drawn, Gemma's vision writes the segment's action from its start and its key only, with their
   shot sizes, never the screenplay (`relayMotionFromKeys`): the card takes that text and the video
   goes straight from one image to the other. An action rewritten by hand drops `end` and `shot`:
