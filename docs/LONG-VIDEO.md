@@ -164,3 +164,22 @@ cut after decoding.
   landing at once (the expression changes).
 - Clip 2's ambience is about 12 LU quieter: generated so, not a decoding seam; the take's
   loudness pass handles it.
+
+### Step 2, a 47 s take (GB10, 2026-11-19)
+
+Five clips of the relay50 screenplay: clip 1 `h3-i2v`, clips 2 to 5 `h3-r2v` on OmniRef with
+the sheet and a 7-latent tail of the previous clip (video and audio), all latents stitched
+(72 + 4 × 65 = 332, on the grid) and decoded once: 1127 frames, 46.96 s (five 10.1 s clips
+minus four 0.92 s overlaps). About 35 min in all, against 50 min for relay50's 50 s.
+
+- Joins: 7.3, 10.1, 6.3, 10.6 (stop criterion: 10), against a median of 3.1 and a maximum of
+  9.6 inside the clips. The two larger ones fall where the new text starts a gesture (a turn,
+  a raised hand). No cut, no ghost: one continuous shot to the eye.
+- Identity: one woman throughout, the sheet's face, hair and outfit at 0, 25 and 47 s,
+  closing close-up included. relay50 at the same times had changed the outfit and showed part
+  of a second face at the edge of the frame.
+- Scene: one garden, progressing with the texts (shrub path, lupin path, a cherry tree); it
+  drifts no more than relay50's.
+- Sound: it fades out clip after clip (−32, −43, −46, −58, −59 LUFS); each clip continues the
+  previous one's audio tail, quieter. Untested remedy: carry the video tail only, let every
+  clip's sound start fresh, smooth the audio joins at assembly.

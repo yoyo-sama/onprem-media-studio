@@ -176,3 +176,24 @@ comme `h3_start_frame.py`) ; le recouvrement est retiré après décodage.
   segment qui s'applique d'un coup (l'expression change).
 - L'ambiance du clip 2 est environ 12 LU plus faible : générée ainsi, pas une couture de
   décodage ; le passage de niveau de la prise s'en charge.
+
+### Étape 2, une prise de 47 s (GB10, 2026-11-19)
+
+Cinq clips du scénario relay50 : clip 1 en `h3-i2v`, clips 2 à 5 en `h3-r2v` sur OmniRef avec
+la planche et une queue de 7 latents du clip précédent (vidéo et son), tous les latents recollés
+(72 + 4 × 65 = 332, sur la grille) et décodés d'un seul tenant : 1127 images, 46,96 s (cinq
+clips de 10,1 s moins quatre recouvrements de 0,92 s). Environ 35 min en tout, contre 50 min
+pour les 50 s de relay50.
+
+- Raccords : 7,3, 10,1, 6,3, 10,6 (critère d'arrêt : 10), contre une médiane de 3,1 et un
+  maximum de 9,6 à l'intérieur des clips. Les deux plus grands tombent là où le nouveau texte
+  lance un geste (un demi-tour, une main levée). Ni coupe ni fantôme : un seul plan continu à
+  l'œil.
+- Identité : une seule femme du début à la fin, visage, cheveux et tenue de la planche à 0, 25
+  et 47 s, gros plan final compris. relay50, aux mêmes instants, avait changé la tenue et
+  montrait une partie d'un second visage au bord du cadre.
+- Scène : un seul jardin, qui évolue avec les textes (allée d'arbustes, chemin de lupins, un
+  cerisier) ; il ne dérive pas plus que celui de relay50.
+- Son : il s'éteint de clip en clip (−32, −43, −46, −58, −59 LUFS) ; chaque clip reprend la fin
+  sonore du précédent, en plus faible. Remède non testé : ne transmettre que la queue vidéo,
+  laisser le son de chaque clip repartir à neuf, lisser les raccords sonores au montage.
