@@ -115,6 +115,15 @@ def test_smooth_audio_lifts_a_quiet_take_to_the_take_loudness(client, settings):
     assert float(_re.search(r"max_volume:\s*(-?[\d.]+) dB", out).group(1)) <= -0.9
 
 
+def true_peak(path):
+    """True peak (dBTP, EBU R128) of a clip's sound."""
+    from studio.pipelines.montage import ffmpeg
+    import re as _re
+    out = ffmpeg("ffmpeg", "-v", "info", "-nostats", "-i", str(path), "-af", "ebur128=peak=true:framelog=quiet",
+                 "-f", "null", "-", capture_stderr=True)
+    return float(_re.findall(r"Peak:\s*(-?[\d.]+|-inf) dBFS", out)[-1])
+
+
 def test_smooth_audio_reaches_the_take_loudness_through_clicks(client, settings):
     """A quiet ambience with clicks at full scale (footsteps): the limiter takes back part of
     the lift, so the take is measured and lifted again until it reaches TAKE_LUFS."""
@@ -132,6 +141,8 @@ def test_smooth_audio_reaches_the_take_loudness_through_clicks(client, settings)
     assert abs(lufs - TAKE_LUFS) < 1.5, lufs
     assert abs(seconds - 4) < 0.15, seconds
     assert abs(probe(path)["frames"] - 96) <= 1
+    peak = true_peak(path)
+    assert peak <= -0.9, peak
 
 
 def test_concat_without_sound_when_a_clip_has_none(client, settings):

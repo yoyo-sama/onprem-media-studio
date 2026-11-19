@@ -319,7 +319,13 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     menait la vidéo droit de l'une à l'autre, sauf quand Gemma avait aussi le scénario : il
     écrivait alors une avancée entre deux plans d'ensemble et la vidéo revenait en arrière. Le
     découpage nomme désormais le plan de chaque image clé dans une liste fermée, et l'action est
-    écrite d'après les deux images et leurs valeurs de plan seulement. (2026-11-18)
+    écrite d'après les deux images et leurs valeurs de plan seulement. (2026-11-18) Depuis
+    l'interface sur 50 s, le cadrage a alors progressé d'une image clé à l'autre sans retour en
+    arrière, un seul sujet, raccords exacts, aucun fantôme, à −18,2 LUFS. Mais un « Medium shot »
+    seul sortait cadré aux genoux (3 images clés sur 3) : il est désormais nommé « Waist-up medium
+    shot » avec l'endroit où le cadre s'arrête ; et le limiteur à 48 kHz laissait la prise relevée
+    atteindre +0,3 dBTP : il travaille maintenant sur le son suréchantillonné (−1,0 dBTP au test des
+    clics). (2026-11-19)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

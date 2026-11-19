@@ -208,7 +208,7 @@ ajoute une carte Import d'image reliée à elle.
   cette action (avec le scénario, Qwen en dessinait les moments côte à côte : le sujet deux fois
   sur 8 images sur 8). Un segment avec une image de fin donnée par l'utilisateur rend jusqu'à
   cette image, sans image clé. L'assemblage d'un plan-séquence amène le son de chaque clip à
-  −18 LUFS sous un limiteur à −1 dBFS (une prise d'ambiance seule sortait à −33 LUFS). LESSONS n°51.
+  −18 LUFS sous un limiteur de crête vraie à −1 dBTP (une prise d'ambiance seule sortait à −33 LUFS). LESSONS n°51.
 - Un segment ajouté après la fin d'une chaîne rendue fait d'abord extraire les images de
   transition du segment précédent (le dernier segment d'une chaîne n'en a pas).
 - La légende du Relay nomme tous les sujets du plan (la 1.4 perdait le personnage principal).

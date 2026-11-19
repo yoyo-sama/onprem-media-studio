@@ -197,7 +197,7 @@ to it.
   once, at that action's first instant (with the screenplay, Qwen drew its moments side by side:
   the subject twice in 8 stills out of 8). A segment with an end image the user gave renders to
   that image, with no key. Assembling a long take brings every clip's sound to −18 LUFS under a
-  limiter at −1 dBFS (an ambience-only take came out at −33 LUFS).
+  true-peak limiter at −1 dBTP (an ambience-only take came out at −33 LUFS).
   LESSONS #51.
 - A segment added after the end of a rendered chain gets the previous segment's transition
   frames extracted first (the last segment of a chain has none).

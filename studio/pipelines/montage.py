@@ -39,6 +39,9 @@ TAKE_LUFS = -18.0
 LIMIT = 0.891       # -1 dBFS: the limiter after the lift keeps isolated clicks from clipping
 JOIN_FADE = 0.025   # seconds: a fade this short removes the click, not the sound
 LIFT_PASSES = 6     # extra lifts of a take the limiter kept below TAKE_LUFS
+# The limiter runs on 4x oversampled sound so it also holds the peaks between samples
+# (true peak): at 48 kHz a lifted take came out at +0.3 dBTP (GB10 2026-11-19).
+LIMITER = f"aresample=192000,alimiter=limit={LIMIT}:level=0:latency=1,aresample=48000"
 
 
 def ffmpeg(*args: str, timeout: float = 900, check=None, capture_stderr: bool = False) -> str:
@@ -107,7 +110,7 @@ def lift_take(path: Path, check=None) -> None:
             return
         tmp = path.with_suffix(".lift.mp4")
         ffmpeg("ffmpeg", "-v", "error", "-y", "-i", str(path), "-map", "0:v", "-map", "0:a", "-c:v", "copy",
-               "-af", f"volume={min(missing, MAX_GAIN_DB):.2f}dB,alimiter=limit={LIMIT}:level=0:latency=1",
+               "-af", f"volume={min(missing, MAX_GAIN_DB):.2f}dB,{LIMITER}",
                "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(tmp), check=check)
         tmp.replace(path)
 
@@ -179,7 +182,7 @@ class VideoConcat(Pipeline):
         chain += "".join(f"[v{n}]" + (f"[a{n}]" if audio else "") for n in range(len(paths)))
         chain += f"concat=n={len(paths)}:v=1:a={int(audio)}[v]" + ("[a]" if audio and not smooth else "")
         if smooth:
-            chain += f"[joined];[joined]alimiter=limit={LIMIT}:level=0:latency=1[a]"
+            chain += f"[joined];[joined]{LIMITER}[a]"
         folder = ctx.output_dir / self.id
         folder.mkdir(parents=True, exist_ok=True)
         out = folder / f"{output_stem(ctx)}.mp4"
