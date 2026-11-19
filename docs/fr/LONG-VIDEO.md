@@ -146,3 +146,33 @@ abandonnée, pas rafistolée.
 
 Si l'étape 1 échoue, on essaie la méthode 2 avec les mêmes critères ; les RefMods sont essayés
 dans la méthode qui passe, pour alléger les références.
+
+## Résultats
+
+### Étape 1, continuation latente (GB10, 2026-11-19)
+
+Comment FastVideo dispose une requête H3 : une seule séquence [texte | lignes de condition |
+son cible | vidéo cible] sur une horloge commune à la vidéo et au son. Ref2VA donne à chaque
+référence une place d'horloge avant la cible ; les lignes de condition sont bruitées une fois à
+0,999 et jamais débruitées : la cible se débruite face à elles telles quelles. 243 images font
+72 latents vidéo (un latent couvre 1 ou 4 images selon un cycle 1, 4, 4, 4, 4) ; le son compte
+40 latents par seconde.
+
+Test : clip 1 = le `h3-i2v` actuel depuis une image de plan, ses latents finaux gardés. Clip 2
+= `h3-r2v` sur OmniRef avec la planche, plus les 7 derniers latents vidéo du clip 1 (22 images)
+et 37 latents son (0,93 s) ajoutés comme une condition de plus dont les positions sont
+réécrites sur les premiers latents de la cible (un correctif de la préparation des latents,
+comme `h3_start_frame.py`) ; le recouvrement est retiré après décodage.
+
+- Le clip 2 a continué le clip 1 : même marche, même caméra qui suit, aucun gel, texte du
+  segment 2 suivi, une seule femme avec l'identité de la planche, le même jardin, aucun clic.
+  Le clip 2 a pris 304 s (deux passes).
+- Décodés séparément, le raccord mesurait 15,2 (critère d'arrêt : 10) : le VAE de H3 est causal
+  dans le temps, et les mêmes latents se décodent autrement sans l'historique du clip précédent.
+- Recollés en latents (72 + 65 latents vidéo, toujours sur la grille ; latents son de même) et
+  décodés d'un seul tenant (96,6 s pour 464 images, pic de 57 Gio) : le raccord mesurait 7,3
+  (critère : 7), sans pic nulle part, contre des pas d'image à image de 2,8 en médiane et 8,2 au
+  plus dans le clip 1. Continu à l'œil ; le léger pas vient sans doute du texte du nouveau
+  segment qui s'applique d'un coup (l'expression change).
+- L'ambiance du clip 2 est environ 12 LU plus faible : générée ainsi, pas une couture de
+  décodage ; le passage de niveau de la prise s'en charge.

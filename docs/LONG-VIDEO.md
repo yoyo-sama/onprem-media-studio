@@ -135,3 +135,32 @@ patched.
 
 If step 1 fails, method 2 is tried with the same criteria; RefMods are tried inside whichever
 method passes, to lighten the references.
+
+## Results
+
+### Step 1, latent continuation (GB10, 2026-11-19)
+
+How FastVideo lays out an H3 request: one packed sequence [text | condition rows | target
+audio | target video] on one clock shared by video and audio. Ref2VA gives every reference a
+clock slot before the target; condition rows are noised once at 0.999 and never stepped, so the
+target is denoised against them as given. 243 frames are 72 video latents (a latent covers 1 or
+4 frames in a 1, 4, 4, 4, 4 cycle); audio is 40 latents per second.
+
+Test: clip 1 = today's `h3-i2v` from a shot image, its final latents kept. Clip 2 = `h3-r2v`
+on OmniRef with the sheet, plus clip 1's last 7 video latents (22 frames) and 37 audio latents
+(0.93 s) added as one more condition whose positions are rewritten to the target's first
+latents (a forward patch on the latent preparation, like `h3_start_frame.py`); the overlap is
+cut after decoding.
+
+- Clip 2 continued clip 1: the same walk and tracking camera, no freeze, segment 2's text
+  followed, one woman with the sheet's identity, the same garden, no click. Clip 2 took 304 s
+  (two passes).
+- Decoded separately, the join measured 15.2 (stop criterion: 10): H3's VAE is causal in time,
+  and the same latents decode differently without the previous clip's history.
+- Stitched in latent space (72 + 65 video latents, still on the latent grid; audio latents the
+  same way) and decoded once (96.6 s for 464 frames, 57 GiB peak): the join measured 7.3
+  (criterion: 7), with no spike anywhere, against frame-to-frame gaps of 2.8 median and 8.2 at
+  most inside clip 1. Continuous to the eye; the slight step is likely the new segment's text
+  landing at once (the expression changes).
+- Clip 2's ambience is about 12 LU quieter: generated so, not a decoding seam; the take's
+  loudness pass handles it.
