@@ -1539,9 +1539,10 @@ async function renderSegment(i) {
     // The split's action becomes what Gemma sees between the two images, so the video goes
     // straight from one to the other; a card rewritten by hand (no `end`) is rendered as it is.
     if (seg.end) {
+      const shotBefore = i > 0 && continuous(seg) && before?.key ? before.shot : "";
       try {
         const b64 = async ref => blobToBase64(await F.imageBlob({ ref }));
-        const action = await P.relayMotionFromKeys(F.llm, await b64(start), await b64(last), subs);
+        const action = await P.relayMotionFromKeys(F.llm, await b64(start), await b64(last), [shotBefore, seg.shot], subs);
         if (!sameSession(s)) return;
         if (action) {
           seg.prompt = action;

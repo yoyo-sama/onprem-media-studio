@@ -196,8 +196,8 @@ ajoute une carte Import d'image reliée à elle.
   et l'endroit qu'un sujet a quitté, qui ne montre plus que le décor) et son `shot` (plan
   d'ensemble, plan taille, plan rapproché ou gros plan), qui ouvre la consigne de l'image clé avec
   sa distance de caméra. Une fois l'image clé dessinée, la vision de Gemma écrit l'action du
-  segment d'après son départ et son image clé seulement, en jugeant lui-même leurs valeurs de
-  plan, jamais d'après le scénario ni les valeurs prévues (`relayMotionFromKeys`) : la carte prend ce texte et la vidéo va droit d'une image à
+  segment d'après son départ et son image clé seulement, avec leurs valeurs de plan, jamais le
+  scénario (`relayMotionFromKeys`) : la carte prend ce texte et la vidéo va droit d'une image à
   l'autre. Une action réécrite à la main perd `end` et `shot` : l'image clé suit l'action et la
   vidéo la rend telle quelle. La vision de Gemma compte les personnages de chaque
   image de plan et image clé (`countFigures`) : plus que le segment n'a de sujets (un sujet
