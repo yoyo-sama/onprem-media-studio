@@ -1314,16 +1314,16 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // The action of a segment once its two key images are drawn, written by Gemma's vision from
   // those two images only: the video then goes straight from one to the other. Given the
   // screenplay as well, Gemma followed it and wrote a push-in between two full shots, and the
-  // video pushed in, then swung back to its key (GB10, 2026-11-18). `shots`: the planned shot
-  // sizes of the two images ("" when unknown); `subjects`: [{desc}]. Returns the action with
-  // its <Subject N> markers, or "" when the answer gives none.
-  const KEY_MOTION_SYSTEM = `You write the action of one continuous video shot that starts exactly on image 1 and ends exactly on image 2. Describe only the continuous change from image 1 to image 2: how each character moves and changes pose, and the one camera movement that takes the framing of image 1 to the framing of image 2 (push-in, pull-back, pan, or a fixed camera). When both images have the same shot size, the camera keeps its distance: a fixed camera, or a tracking shot that follows at the same distance, never a push-in or a pull-back. Mention nothing that neither image shows. Name the characters by their markers, copied character for character. One English paragraph of 20 to 45 words, positive phrasing only, no light, no sound, no appearance. Answer ONLY with JSON: {"action": "..."}`;
-  async function relayMotionFromKeys(llm, first, last, shots, subjects) {
+  // video pushed in, then swung back to its key (GB10, 2026-11-18). Given the planned shot
+  // sizes, Gemma followed them when Qwen drew a key wider than planned ("push-in to a medium
+  // shot" between two full shots) and the video swung back again (GB10, 2026-11-19): Gemma
+  // judges the shot size of each image itself, written first in its answer. `subjects`:
+  // [{desc}]. Returns the action with its <Subject N> markers, or "" when the answer gives none.
+  const KEY_MOTION_SYSTEM = `You write the action of one continuous video shot that starts exactly on image 1 and ends exactly on image 2. Describe only the continuous change from image 1 to image 2: how each character moves and changes pose, and the one camera movement that takes the framing of image 1 to the framing of image 2 (push-in, pull-back, pan, or a fixed camera). First judge the shot size of each image from how much of the character's body is in the frame: "full shot" (head to feet), "medium shot" (head to waist or knees), "medium close-up" (head and shoulders), "close-up" (face). When both images have the same shot size, the camera keeps its distance: a fixed camera, or a tracking shot that follows at the same distance, never a push-in or a pull-back. Mention nothing that neither image shows. Name the characters by their markers, copied character for character. One English paragraph of 20 to 45 words, positive phrasing only, no light, no sound, no appearance. Answer ONLY with JSON: {"first_shot": "...", "last_shot": "...", "action": "..."}`;
+  async function relayMotionFromKeys(llm, first, last, subjects) {
     const subs = (subjects || []).slice(0, 2);
     const who = subs.map((x, k) => `${H3_TOKEN_STUB(k + 1)} is ${x.desc || (k ? "the second character" : "the character")}.`).join(" ");
-    const [a, b] = shots || [];
-    const sizes = a && b ? ` Image 1 is a ${a}; image 2 is a ${b}.` : b ? ` Image 2 is a ${b}.` : "";
-    const out = await llm(KEY_MOTION_SYSTEM, (who + sizes).trim() || "Write the action.", [first, last]);
+    const out = await llm(KEY_MOTION_SYSTEM, who || "Write the action.", [first, last]);
     return h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(out?.action))));
   }
 

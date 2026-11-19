@@ -186,8 +186,8 @@ to it.
   instant: where each subject is, pose, the shot size its camera motion ends on, and the spot a
   subject left, now showing only the setting) and its `shot` (full shot, medium shot, medium
   close-up or close-up), which opens the key's prompt with its camera distance. Once the key is
-  drawn, Gemma's vision writes the segment's action from its start and its key only, with their
-  shot sizes, never the screenplay (`relayMotionFromKeys`): the card takes that text and the video
+  drawn, Gemma's vision writes the segment's action from its start and its key only, judging
+  their shot sizes itself, never from the screenplay or the planned sizes (`relayMotionFromKeys`): the card takes that text and the video
   goes straight from one image to the other. An action rewritten by hand drops `end` and `shot`:
   the key follows the action and the video renders it as it is. Gemma's vision counts the figures of every shot and key image
   (`countFigures`): more than the segment has subjects (a subject drawn twice) and the image is

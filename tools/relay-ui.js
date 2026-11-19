@@ -223,7 +223,7 @@ const SPLIT = {
   // (with their shot sizes, never the screenplay), and the clip and the card take that text.
   const motions = chats.filter(c => /^You write the action of one continuous/.test(c.system || ""));
   check(motions.length === 3 && motions.every(c => c.images?.length === 2 && /SUBJECTREF1 is oval face/.test(c.prompt) && !/flowering tree|gravel path/.test(c.prompt))
-    && /Image 1 is a medium shot; image 2 is a full shot\./.test(motions[1]?.prompt || "") && /^SUBJECTREF1 is [^.]*\. Image 2 is a medium shot\.$/.test(motions[0]?.prompt || ""),
+    && motions.every(c => /^SUBJECTREF1 is [^.]*\.$/.test(c.prompt) && /First judge the shot size of each image/.test(c.system)),
     `action from the keys: ${JSON.stringify(motions.map(c => c.prompt))}`);
   check(await page.inputValue('#relayList .relay-seg[data-seg="0"] textarea') === MOTION.replace("SUBJECTREF1", "<Subject 1>"),
     `card 1 after the chain: ${await page.inputValue('#relayList .relay-seg[data-seg="0"] textarea')}`);

@@ -325,7 +325,11 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     « Medium shot » sortent cadrées aux genoux (3 sur 3), et dire où le cadre s'arrête (« Waist-up
     medium shot ... the bottom edge of the frame at the waist ») n'a rien changé (0 sur 8) : laissé
     tel quel. Le limiteur à 48 kHz laissait la prise relevée atteindre +0,3 dBTP : il travaille
-    maintenant sur le son suréchantillonné (−1,0 dBTP au test des clics). (2026-11-19)
+    maintenant sur le son suréchantillonné (−1,0 dBTP au test des clics). (2026-11-19) Le rendu
+    suivant a dessiné les deux images clés en plan moyen en pied ; Gemma, qui recevait les valeurs
+    prévues, a quand même écrit « push-in to a medium shot » entre deux plans en pied et la vidéo
+    est revenue en arrière. Gemma juge désormais lui-même la valeur de plan des deux images,
+    écrite en tête de sa réponse, et ne reçoit plus les valeurs prévues. (2026-11-19)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
