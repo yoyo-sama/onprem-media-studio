@@ -202,3 +202,18 @@ minus four 0.92 s overlaps). About 35 min in all, against 50 min for relay50's 5
 - Sound: it fades out clip after clip (−32, −43, −46, −58, −59 LUFS); each clip continues the
   previous one's audio tail, quieter. Untested remedy: carry the video tail only, let every
   clip's sound start fresh, smooth the audio joins at assembly.
+
+### Step 2b, the video tail only (GB10, 2026-11-20)
+
+The same take with clips 2 to 5 rendered again, the previous clip's 7 video latents as the only
+tail (no audio rows), 33 min in all:
+
+- Joins 7.7, 8.2, 7.3, 3.7, all under 10 and under the 99th percentile of the frame-to-frame
+  gaps inside the clips (10.2). One woman, the sheet's identity to the closing close-up, the
+  same garden.
+- Each clip's sound starts fresh and follows the action (footsteps at a walking cadence while
+  she walks, near silence when she stands, birdsong at the end), with no fade from clip to clip.
+  But H3's Ref2VA ambience stays very quiet on 3 clips in 5 (−49, −53, −51 LUFS; stop
+  criterion −45), as measured on 2026-11-16. Each clip's own sound brought to −18 LUFS at
+  assembly (`smooth_audio`) gives an even take at −18.1 LUFS with no click; the lift raises the
+  room noise of the quiet clips. One stitched audio decode stayed uneven and quieter.

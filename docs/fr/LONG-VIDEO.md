@@ -219,3 +219,19 @@ pour les 50 s de relay50.
 - Son : il s'éteint de clip en clip (−32, −43, −46, −58, −59 LUFS) ; chaque clip reprend la fin
   sonore du précédent, en plus faible. Remède non testé : ne transmettre que la queue vidéo,
   laisser le son de chaque clip repartir à neuf, lisser les raccords sonores au montage.
+
+### Étape 2b, la queue vidéo seule (GB10, 2026-11-20)
+
+La même prise avec les clips 2 à 5 refaits, les 7 latents vidéo du clip précédent comme seule
+queue (aucune ligne de son), 33 min en tout :
+
+- Raccords 7,7, 8,2, 7,3, 3,7, tous sous 10 et sous le 99e centile des pas d'image à image
+  dans les clips (10,2). Une seule femme, l'identité de la planche jusqu'au gros plan final, le
+  même jardin.
+- Le son de chaque clip repart à neuf et suit l'action (pas à cadence de marche quand elle
+  marche, presque rien quand elle s'arrête, des oiseaux à la fin), sans s'éteindre d'un clip à
+  l'autre. Mais l'ambiance Ref2VA de H3 reste très faible sur 3 clips sur 5 (−49, −53, −51 LUFS ;
+  critère d'arrêt −45), comme mesuré le 2026-11-16. Le son propre de chaque clip ramené à
+  −18 LUFS au montage (`smooth_audio`) donne une prise égale à −18,1 LUFS sans clic ; le
+  relèvement fait monter le bruit de fond des clips faibles. Un seul décodage du son recollé
+  restait inégal et plus faible.
