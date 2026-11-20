@@ -36,9 +36,10 @@ SILENT_LUFS = -69.0  # at or below this loudness a clip is left as it is (EBU R1
 # -17 LUFS (with music) to -51 LUFS (ambience only: a 50 s take measured -33 LUFS with one
 # nearly mute segment, GB10 2026-11-18), and H3 Ref2VA renders 10 to 20 dB lower again.
 TAKE_LUFS = -18.0
-# -1.5 dBFS: the limiter after the lift keeps isolated clicks from clipping, with room for the
-# AAC encoding that follows it (a take limited at -1 dBFS measured +0.2 dBTP, GB10 2026-11-20).
-LIMIT = 0.841
+# -2 dBFS: the limiter after the lift keeps isolated clicks from clipping, with room for the
+# AAC encoding that follows it (a take limited at -1 dBFS measured +0.2 dBTP, at -1.5 dBFS
+# -0.9 dBTP, GB10 2026-11-20).
+LIMIT = 0.794
 JOIN_FADE = 0.025   # seconds: a fade this short removes the click, not the sound
 LIFT_PASSES = 6     # extra lifts of a take the limiter kept below TAKE_LUFS
 # The limiter runs on 4x oversampled sound so it also holds the peaks between samples

@@ -154,9 +154,9 @@ The swap the plan announced, with the video tail only (step 2b). The path stays 
   its first 7) and decoded once by the OmniRef video VAE into a file-backed buffer, so a long
   take's frames go to the disk rather than to memory; any other clip is a cut, taken as its MP4.
   The sound is each clip's own, cut where its image is (22 frames into a continuing clip),
-  brought to -18 LUFS, with a 25 ms fade at each join and a true-peak limiter at -1.5 dBFS
-  (`montage.assemble`, the levelling of PR #43, its limit lowered by 0.5 dB because the take
-  measured +0.2 dBTP after AAC).
+  brought to -18 LUFS, with a 25 ms fade at each join and a true-peak limiter at -2 dBFS
+  (`montage.assemble`, the levelling of PR #43, its limit lowered by 1 dB because takes
+  measured +0.2 then -0.9 dBTP after AAC).
 - **Front end.** A continuous segment with the subjects' sheets sends `continue_from` (the
   previous segment's clip) and no start image; it extracts no transition frames for it, and its
   card offers none to choose. The join check (`joinGap`, "broken join") is gone. A continuous
@@ -230,3 +230,22 @@ tail (no audio rows), 33 min in all:
   criterion −45), as measured on 2026-11-16. Each clip's own sound brought to −18 LUFS at
   assembly (`smooth_audio`) gives an even take at −18.1 LUFS with no click; the lift raises the
   room noise of the quiet clips. One stitched audio decode stayed uneven and quieter.
+
+### Step 3, the app itself (GB10, 2026-11-20)
+
+PR #44 (ac35711) built on promaxgb10-95c7, the same take sent through the HTTP API as the Relay
+sends it: segment 1 `h3-r2v` with its start image and the sheet (take50a's was i2v), segments 2
+to 5 `continue_from` the clip before, then `video-stitch`. 31.4 min in all: about 290 to 320 s
+per clip, 224 s for the stitch (1127 frames, 332 latents decoded once in 214 s). Each clip kept
+12.7 MB of latents.
+
+- No job error, links `[true, true, true, true]`, 1127 frames (243 + 4 × 221), 46.98 s.
+- Joins 6.7, 13.2, 14.0, 11.4: three above the stop criterion of 10. This take moves more than
+  take50a inside its clips too (frame-to-frame gaps: median 3.4, 99th percentile 11.2, max
+  18.3, against 3.1, 10.2, 13.9), and the high joins fall where the picture moves fast after the
+  join as well (5 to 11 on the next frames). To the eye every join is continuous: no cut, no
+  ghost, no freeze, the gesture goes on.
+- One woman in all 24 frames sampled every 2 s, the sheet's identity to the closing close-up;
+  one garden progressing with the texts, no jump of place at a join.
+- Sound −18.1 LUFS (clips −50 to −57 LUFS before levelling), no click at the joins, true peak
+  −0.9 dBTP: 0.1 dB above the criterion. The limiter goes to −2 dBFS.

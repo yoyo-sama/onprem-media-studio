@@ -168,8 +168,8 @@ brief → durée → un clic.
   qu'en mémoire ; tout autre clip est une coupe, pris tel qu'en son MP4. Le son est celui de
   chaque clip, coupé là où l'est son image (22 images après le début d'un clip qui continue),
   porté à -18 LUFS, avec un fondu de 25 ms à chaque raccord et un limiteur de crête vraie à
-  -1,5 dBFS (`montage.assemble`, le nivellement de la PR #43, sa limite baissée de 0,5 dB parce
-  que la prise mesurait +0,2 dBTP après l'AAC).
+  -2 dBFS (`montage.assemble`, le nivellement de la PR #43, sa limite baissée de 1 dB parce que
+  les prises mesuraient +0,2 puis -0,9 dBTP après l'AAC).
 - **Interface.** Un segment continu qui a les planches des sujets envoie `continue_from` (le
   clip du segment précédent) et aucune image de départ ; il ne fait extraire aucune image de
   transition pour lui, et sa carte n'en propose aucune. Le contrôle des raccords (`joinGap`,
@@ -249,3 +249,23 @@ queue (aucune ligne de son), 33 min en tout :
   −18 LUFS au montage (`smooth_audio`) donne une prise égale à −18,1 LUFS sans clic ; le
   relèvement fait monter le bruit de fond des clips faibles. Un seul décodage du son recollé
   restait inégal et plus faible.
+
+### Étape 3, l'application elle-même (GB10, 2026-11-20)
+
+La PR #44 (ac35711) construite sur promaxgb10-95c7, la même prise envoyée par l'API HTTP comme
+le Relay l'envoie : le segment 1 en `h3-r2v` avec son image de départ et la planche (celui de
+take50a était en i2v), les segments 2 à 5 en `continue_from` du clip précédent, puis
+`video-stitch`. 31,4 min en tout : 290 à 320 s environ par clip, 224 s pour l'assemblage
+(1127 images, 332 latents décodés d'un seul tenant en 214 s). Chaque clip a gardé 12,7 Mo de
+latents.
+
+- Aucune erreur de job, liens `[true, true, true, true]`, 1127 images (243 + 4 × 221), 46,98 s.
+- Raccords à 6,7, 13,2, 14,0 et 11,4 : trois au-dessus du critère d'arrêt de 10. Cette prise
+  bouge plus que take50a à l'intérieur même de ses clips (écarts d'une image à l'autre :
+  médiane 3,4, 99e centile 11,2, maximum 18,3, contre 3,1, 10,2 et 13,9), et les raccords élevés
+  tombent là où l'image bouge vite aussi après le raccord (5 à 11 sur les images suivantes). À
+  l'œil chaque raccord est continu : ni coupe, ni fantôme, ni arrêt sur image, le geste continue.
+- Une seule femme sur les 24 images prises toutes les 2 s, l'identité de la planche jusqu'au
+  gros plan final ; un seul jardin qui avance avec les textes, aucun saut de lieu à un raccord.
+- Son à -18,1 LUFS (clips entre -50 et -57 LUFS avant nivellement), aucun clic aux raccords,
+  crête vraie à -0,9 dBTP : 0,1 dB au-dessus du critère. Le limiteur passe à -2 dBFS.
