@@ -217,7 +217,7 @@ The owner's standing rules are in [AGENTS.md](../AGENTS.md); the 49 technical le
 | #28, #29 | 2026-11-09 | `scripts/docker-install.sh` and `.env.example`; `updater_stale` |
 | #30 | 2026-11-09 | H3 progress per denoising step |
 | #31 → #33 | 2026-11-10 | README install as numbered steps; licences of MOSS-Image, its turbo LoRA and Gemma 4 |
-| **#34 (open)** | 2026-11-10 | Docs for the public repository: no token to clone or update; `STUDIO_GIT_TOKEN` kept for a private fork. Waiting for the owner's go to merge. Until it merges, README and `.env.example` on `main` still describe a private repository. |
+| #34 | 2026-11-20 | Docs for the public repository: no token to clone or update; `STUDIO_GIT_TOKEN` kept for a private fork |
 
 ## 9. Open items
 
