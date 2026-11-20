@@ -73,7 +73,7 @@ Un rôle est un fichier Markdown : un en-tête entre deux lignes `---`, puis ses
 id: director
 name: Director
 when: A story told in several shots: a script or scene to storyboard, a short film, a trailer…
-tools: storyboard, reference_video, video_from_image, image_sequence
+tools: storyboard, reference_video, video_from_image, long_take
 ---
 You are a storyboard artist and director of photography…
 ```
@@ -140,7 +140,7 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 | `character_sheet`, `location_sheet` | Description, type de sujet, style ; une photo du sujet (planche sujet seulement) | `krea2-t2i` 1920×1088 avec les gabarits de planche de la 1.4 ; avec une photo, `qwen-image-2.1` la transforme en planche à cinq vues à la même taille (une colonne à gauche de deux portraits tête et épaules, face au-dessus du profil, puis le corps entier de face, de profil et de dos, chaque vue une fois, dans le style de l'image ; méthode adaptée de H3 Character Sheet Designer, MIT ; `charsheetFromPhotoPrompt`, pas encore qualifié). Quand Gemma omet la photo alors que le message de l'utilisateur porte une seule image, cette image sert de photo (avec un avertissement sur la carte). Le menu du sujet du réalisateur a la même action : « 📷 Planche depuis une photo » |
 | `video_from_text` | Prompt, durée, ratio | `h3-t2v` |
 | `video_from_image` | Prompt, première image, dernière image facultative, durée | `h3-i2v` (I2VA ou FL2VA) |
-| `image_sequence` | Prompt, 2 à 6 images clés, durée des segments | la séquence multi-images (segments H3, puis `video-concat`) |
+| `long_take` | Scénario au format H3 (un segment minuté de 10 s par temps du récit), 0 à 6 images (image de départ, puis images de fin) | le plan-séquence du Studio : « 🎞 Ouvrir le plan-séquence » passe dans le Studio et ouvre le Relay sur ses segments, sans rien générer ; la chaîne se lance de là (elle remplace depuis le 2026-11-20 `image_sequence`, qui rendait des paires d'images clés sans le plan-séquence) |
 | `join_videos` | Clips | `video-concat` |
 | `campaign` | Brief, variantes, durée, style | la campagne complète (affiches, miniatures, image sociale, teaser) |
 | `storyboard` | Brief et réglages | le réalisateur : « Lancer le Réalisateur » passe au Studio, remplit le formulaire et y lance la revue étape par étape, comme le fait Générer dans le formulaire |

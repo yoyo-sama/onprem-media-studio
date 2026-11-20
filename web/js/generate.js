@@ -1,10 +1,10 @@
 // The Studio's simple flows as functions of their settings: text and image to image or
-// video, the multi-image sequence and the campaign. The Studio form and the
+// video and the campaign. The Studio form and the
 // assistant's cards both call them, so a card submits exactly what the form would.
 // Each returns the promise of its jobs; nothing here reads the form.
 
 import { L, t } from "./i18n.js";
-import { currentJobTag, log, runJob, withJobTag } from "./ui.js";
+import { runJob } from "./ui.js";
 import * as F from "./form.js";
 
 const P = F.P;
@@ -54,37 +54,6 @@ export function runPlain(wf, { specs, origin, ratio, count = 1, duration = 5, lo
       info = `${last ? "FL2VA" : "I2VA"} · ${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`;
     }
     return runJob(wf.engine, params, { origin, label: spec.label, sub: ["{info} · seed {seed}", { info, seed: s }] });
-  });
-}
-
-// ── Multi-image sequence ──────────────────────────────────────────────────────
-// Aspect of a sequence: its first image's, so every segment renders at one size.
-export async function seqAspect(img) {
-  const bmp = await createImageBitmap(await F.imageBlob(img));
-  const gcd = (a, b) => (b ? gcd(b, a % b) : a);
-  const g = gcd(bmp.width, bmp.height), w = bmp.width / g, h = bmp.height / g;
-  bmp.close();
-  return w <= 9999 && h <= 9999 && w / h >= 0.25 && w / h <= 4 ? `${w}:${h}` : undefined;
-}
-
-// Each pair of images (`refs`, file references) becomes an H3 segment from the first to
-// the last frame; `durs[i]` is the length of the segment starting on image i. The
-// segments are then joined. Resolves with the assembly job.
-export function runSequence({ refs, durs, text, loras = [], aspect, seed, origin = "sequence" }) {
-  const n = refs.length - 1, tag = currentJobTag();
-  log("req", "Sequence: {n} segment(s) from first to last frame…", { n });
-  const clips = refs.slice(0, -1).map((ref, i) => runJob("h3-i2v", {
-    prompt: F.capH3(`${P.h3Alignment(true, durs[i])}\n\n${text}`), duration: durs[i], seed: F.seedPlus(seed, i), loras,
-    image: ref, last_image: refs[i + 1], ...(aspect ? { aspect } : {}),
-  }, { origin, label: ["Sequence · segment {k}/{n}", { k: i + 1, n }],
-       sub: ["{info} · seed {seed}", { info: `FL2VA · ${durs[i]} s`, seed: F.seedPlus(seed, i) }] }));
-  return Promise.all(clips).then(async jobs => {
-    const videos = jobs.map(j => j.outputs.find(o => o.endsWith(".mp4")));
-    // Submitted later: under the caller's tag, as the segments were.
-    const job = await withJobTag(tag, () => runJob("video-concat", { clips: videos, smooth_audio: true }, { origin, label: ["Sequence · assembly"],
-      sub: ["{n} segment(s)", { n }] }));
-    log("ok", "Sequence assembled.");
-    return job;
   });
 }
 

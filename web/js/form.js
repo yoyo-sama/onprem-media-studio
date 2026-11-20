@@ -50,7 +50,7 @@ export const PIPELINES = [
   { id: "image2image", label: L("Image editing (Image2Image)"), controls: ["image", "markets"] },
   { id: "text2video", label: L("Video from a text (Text2Video)"), controls: ["duration", "ratio"] },
   { id: "image2video", label: L("Video from an image (Image2Video)"), controls: ["duration", "image"] },
-  { id: "sequence", label: L("Long take from images (Relay)"), scenario: ["storyboard"], controls: ["seq"] },
+  { id: "sequence", label: L("Long take (Relay)"), scenario: ["storyboard"], controls: ["seq"] },
   { id: "storyboard", label: L("Storyboard + animatic (sheets, shots, cuts)"), scenario: ["storyboard"],
     controls: ["shots", "duration", "hold", "ratio", "style", "sheetTemplate"] },
   { id: "reference2video", label: L("Consistent character + setting (MiniMax H3)"), scenario: ["storyboard"],

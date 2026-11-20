@@ -168,6 +168,72 @@ The swap the plan announced, with the video tail only (step 2b). The path stays 
   replaced), and the latent-preparation patch on stand-in FastVideo modules. `tools/relay-ui.js`
   checks the job chain. A 50 s render through the UI on the GB10 qualifies it.
 
+## Screenplay files, text start and the assistant (2026-11-20)
+
+Three additions asked by the owner on 2026-11-20, all on the same path (brief → length → one
+click), not yet rendered on the GB10.
+
+- **Screenplay file.** A screenplay in the H3 layout the owner already used by hand for
+  relay50 (`subject_definitions:`, `summary:`, `retention_analysis:`, `camera_direction:`,
+  `lighting:`, `detailed_description:` holding `[Shot N]` lines and
+  `Segment N (00:00.000–00:10.000) – Title` lines each followed by its action,
+  `overall_soundscape:`, `non_diegetic_music:`) is read as written by `parseScreenplay`
+  (`web/js/prompts.js`): no Gemma. One card per segment, its length from the timestamps
+  (brought into 5 to 15 s; none given: the maximum per segment), the first segment of a later
+  shot a cut, the shot's own line after the action of its first segment; camera_direction →
+  Framing, lighting → Lighting, overall_soundscape → Soundscape, non_diegetic_music → Music
+  (N/A, None: no music). Two shared fields were added for it: **Subjects**
+  (`subject_definitions`) and **Identity to keep** (`retention_analysis`), written word for
+  word after the lines the app writes from the references (with no reference, they are the
+  whole field). Empty, every prompt is the one sent before. Timestamps and the field lines are
+  optional: a file of `[Shot N]` lines alone gives one segment per shot. A file in plain prose
+  is the screenplay Gemma splits, as before. The import is in the form (📄 Import a screenplay
+  puts the file in the brief; auto enrichment never rewrites such a brief) and in the Relay (📄
+  Import, or ✨ Split on a pasted one). The summary and the first shot's line describe the take
+  for the shot image composed from a start sheet.
+- **A described scene rather than a subject.** A screenplay in that layout that names no
+  `<Subject N>` describes a scene: its start picture (or, with none, segment 1's last frame) is
+  sent as the location reference (`<Subject 1> is the location as defined by <Picture 1>`), not
+  as the main character. The owner's rule (2026-11-20): with no reference image, a start
+  picture is the first frame, and the scene starts from it and respects it; with no picture at
+  all, the video model creates the opening scene. So segment 1 of a described scene starts on
+  its picture with H3 image to video (`h3-i2v`, the picture as `<Picture 1>` and as the
+  location), and the segments after it continue it with the picture as their location
+  reference. Ref2VA with a start frame, tried first, kept an empty garden for 2 frames, then
+  cut to another framing with the woman the screenplay describes already in view. A sheet always
+  holds a subject, and a plain prose screenplay keeps the start picture as the main character,
+  as before.
+- **No start image.** Segment 1 is H3 text to video (`h3-t2v`) with the same six-field block
+  without reference (`buildRelayTextPrompt`: no `<Picture N>`, no task tag), at the format its
+  card shows. H3 keeps its last frame and latents like any clip: the last frame becomes the
+  long take's start picture for the segments after it, which continue it with `continue_from`
+  as a long take from a photo does. Regenerating segment 1 replaces that frame.
+- **The assistant.** Its `image_sequence` card rendered key-image pairs one by one and joined
+  them with `video-concat`: it never used the long take. It is replaced by `long_take`
+  (screenplay in the layout above, 0 to 6 images): "🎞 Open the long take" switches to the
+  Studio and opens the Relay on its segments, rendering nothing; the chain starts there. The
+  Canvas will get it later.
+
+GB10 renders (promaxgb10-95c7, 2026-11-20):
+- The owner's garden file with no image, 5 × 10 s: segment 1 from text 617 s, continuations
+  441/300/305/310 s, stitch 245 s; 47 s at 1280×736, -18.4 LUFS. One woman with the same face,
+  hair and outfit throughout, the five actions in order, no cut found (ffmpeg scene detection
+  at 0.15).
+- A described scene (a woman described in words, an empty garden from Krea 2 as start
+  picture), 4 × 10 s, segment 1 started on the picture: 37.8 s, -18.1 LUFS, the garden and the
+  woman held across the three joins, but a cut at 0.08 s (see above; the fountain also changed
+  shape in segment 3). Segment 1 now starts on the picture in i2v instead.
+- Segment 1 alone, starting on a first frame in i2v (10 s each, same text and seed for b, c, d):
+  a) the empty garden: 647 s, frame 0 is the picture, no cut, the woman really enters from the
+  left and the garden holds; b) no picture, H3 text to video (the take above): clean, stable
+  face, little walking; c) a MOSS-Image frame (77 s) then i2v (693 s): frame kept, but the face
+  aged within 2 s and the background changed; d) a Qwen Image 2.1 frame (108 s, 1344×768: Qwen
+  needs multiples of 32) then i2v (470 s): the most natural frame and the steadiest face. One
+  render per case: a trend, not a qualification. Kept: text to video when there is no picture
+  (no extra step); a user who wants to see the opening first can make it with Qwen and start
+  from it.
+- Still to render: the same file with a start image.
+
 ## Results
 
 ### Step 1, latent continuation (GB10, 2026-11-19)

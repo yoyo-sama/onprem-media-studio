@@ -183,6 +183,74 @@ brief → durée → un clic.
   modules FastVideo de substitution. `tools/relay-ui.js` vérifie la chaîne de jobs. Un rendu de
   50 s depuis l'interface sur le GB10 la qualifie.
 
+## Fichiers de scénario, départ sur texte et assistant (2026-11-20)
+
+Trois ajouts demandés par le propriétaire le 2026-11-20, tous sur le même parcours (brief →
+durée → un clic), pas encore rendus sur le GB10.
+
+- **Fichier de scénario.** Un scénario au format H3 que le propriétaire utilisait déjà à la main
+  pour relay50 (`subject_definitions:`, `summary:`, `retention_analysis:`, `camera_direction:`,
+  `lighting:`, `detailed_description:` qui contient des lignes `[Shot N]` et des lignes
+  `Segment N (00:00.000–00:10.000) – Titre` suivies chacune de son action,
+  `overall_soundscape:`, `non_diegetic_music:`) est lu tel qu'il est écrit par
+  `parseScreenplay` (`web/js/prompts.js`) : sans Gemma. Une carte par segment, sa durée tirée des
+  horodatages (ramenée entre 5 et 15 s ; sans horodatage : le maximum par segment), le premier
+  segment d'un plan suivant en coupe, la ligne du plan après l'action de son premier segment ;
+  camera_direction → Cadrage, lighting → Lumière, overall_soundscape → Ambiance sonore,
+  non_diegetic_music → Musique (N/A, None : pas de musique). Deux champs communs ont été ajoutés
+  pour cela : **Sujets** (`subject_definitions`) et **Identité à garder**
+  (`retention_analysis`), écrits mot pour mot après les lignes que l'app écrit à partir des
+  références (sans référence, ce sont le champ entier). Vides, chaque prompt est celui envoyé
+  avant. Horodatages et lignes de champ sont facultatifs : un fichier fait des seules lignes
+  `[Shot N]` donne un segment par plan. Un fichier en prose libre est le scénario que Gemma
+  découpe, comme avant. L'import est dans le formulaire (📄 Importer un scénario met le fichier
+  dans le brief ; l'enrichissement automatique ne réécrit jamais un tel brief) et dans le Relay
+  (📄 Importer, ou ✨ Découper sur un scénario collé). Le résumé et la ligne du premier plan
+  décrivent la prise pour l'image de plan composée à partir d'une planche de départ.
+- **Une scène décrite plutôt qu'un sujet.** Un scénario à ce format qui ne nomme aucun
+  `<Subject N>` décrit une scène : son image de départ (ou, sans image, la dernière image du
+  segment 1) est envoyée comme référence du lieu (`<Subject 1> is the location as defined by
+  <Picture 1>`), pas comme personnage principal. La règle du propriétaire (2026-11-20) : sans
+  image de référence, une image de départ est la première image, et la scène part d'elle et la
+  respecte ; sans aucune image, le modèle vidéo crée la scène de départ. Le segment 1 d'une scène
+  décrite démarre donc sur son image en image vers vidéo H3 (`h3-i2v`, l'image en `<Picture 1>`
+  et comme lieu), et les segments suivants le continuent avec l'image comme référence de lieu.
+  Le Ref2VA avec image de départ, essayé d'abord, gardait un jardin vide 2 images, puis coupait
+  vers un autre cadrage où la femme décrite par le scénario était déjà là. Une planche contient
+  toujours un sujet, et un scénario en prose libre garde l'image de départ comme personnage
+  principal, comme avant.
+- **Sans image de départ.** Le segment 1 est du texte vers vidéo H3 (`h3-t2v`) avec le même bloc
+  à six champs sans référence (`buildRelayTextPrompt` : pas de `<Picture N>`, pas d'étiquette de
+  tâche), au format que montre sa carte. H3 garde sa dernière image et ses latents comme pour
+  tout clip : la dernière image devient l'image de départ du plan-séquence pour les segments
+  suivants, qui le continuent avec `continue_from` comme le fait un plan-séquence à partir d'une
+  photo. Régénérer le segment 1 remplace cette image.
+- **L'assistant.** Sa carte `image_sequence` rendait des paires d'images clés une à une et les
+  joignait avec `video-concat` : elle n'utilisait jamais le plan-séquence. Elle est remplacée par
+  `long_take` (scénario au format ci-dessus, 0 à 6 images) : « 🎞 Ouvrir le plan-séquence »
+  passe dans le Studio et ouvre le Relay sur ses segments, sans rien générer ; la chaîne se lance
+  de là. Le Canvas l'aura plus tard.
+
+Rendus sur le GB10 (promaxgb10-95c7, 2026-11-20) :
+- Le fichier jardin du propriétaire sans image, 5 × 10 s : segment 1 à partir du texte 617 s,
+  continuations 441/300/305/310 s, assemblage 245 s ; 47 s en 1280×736, -18,4 LUFS. Une seule
+  femme, même visage, mêmes cheveux et même tenue du début à la fin, les cinq actions dans
+  l'ordre, aucune coupe trouvée (détection de scène ffmpeg à 0,15).
+- Une scène décrite (une femme décrite en mots, un jardin vide de Krea 2 comme image de
+  départ), 4 × 10 s, segment 1 démarré sur l'image : 37,8 s, -18,1 LUFS, le jardin et la femme
+  tiennent aux trois raccords, mais une coupe à 0,08 s (voir plus haut ; la fontaine change
+  aussi de forme au segment 3). Le segment 1 démarre désormais sur l'image en i2v.
+- Segment 1 seul, démarré sur une première image en i2v (10 s chacun, même texte et même graine
+  pour b, c, d) : a) le jardin vide : 647 s, l'image 0 est l'image de départ, aucune coupe, la
+  femme entre vraiment par la gauche et le jardin tient ; b) sans image, texte vers vidéo H3 (la
+  prise ci-dessus) : propre, visage stable, peu de marche ; c) une image MOSS-Image (77 s) puis
+  i2v (693 s) : image tenue, mais le visage vieillit en 2 s et le fond change ; d) une image Qwen
+  Image 2.1 (108 s, 1344×768 : Qwen exige des multiples de 32) puis i2v (470 s) : l'image la plus
+  naturelle et le visage le plus stable. Un rendu par cas : une tendance, pas une qualification.
+  Retenu : le texte vers vidéo quand il n'y a pas d'image (aucune étape de plus) ; qui veut voir
+  l'ouverture d'abord peut la faire avec Qwen et partir d'elle.
+- Reste à rendre : le même fichier avec une image de départ.
+
 ## Résultats
 
 ### Étape 1, continuation latente (GB10, 2026-11-19)

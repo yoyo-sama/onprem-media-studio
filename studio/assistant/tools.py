@@ -48,6 +48,17 @@ DURATION = _int("Clip length in seconds", MIN_SECONDS, MAX_SECONDS, 5)
 RATIO = _enum("Aspect ratio", RATIOS, "16:9")
 STYLE = _enum("Style preset added to the prompt", STYLES, "none")
 
+# The layout the Studio reads a long take's screenplay in (web/js/prompts.js parseScreenplay),
+# the same one a user imports from a file.
+SCREENPLAY_HELP = (
+    "The whole long take in English, in this exact layout, one field name per line followed by its text: "
+    "subject_definitions: (<Subject 1> is …: who the main subject is and what about them must stay the same), "
+    "summary: (one sentence), retention_analysis: (what must not change across segments), camera_direction: "
+    "(shot size and camera height, the same for the whole take), lighting:, detailed_description: then one "
+    "line per segment, 'Segment 1 (00:00.000–00:10.000) – title', followed on the next lines by that segment's "
+    "action and its own camera movement, 10 s each, each segment going on from where the previous one ended, "
+    "the subject always written <Subject 1>; overall_soundscape:, non_diegetic_music: (N/A when none)")
+
 # name → (description, properties, required). The order is the order the model sees.
 SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
     "ask_choices": (
@@ -107,12 +118,15 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
          "last_image": _str(IMAGE_ID + " for the last frame (optional)"),
          "duration": DURATION},
         ["prompt", "image"]),
-    "image_sequence": (
-        "Card: a clip through 2 to 6 key images, one H3 segment per pair (first and last frame), joined.",
-        {"prompt": _str("Motion prompt in English, shared by every segment"),
-         "images": _ids("Key images in order, " + IMAGE_ID, 2, 6),
-         "duration": _int("Length of each segment in seconds", MIN_SECONDS, MAX_SECONDS, 5)},
-        ["prompt", "images"]),
+    "long_take": (
+        "Card: a long take (plan-séquence): one continuous video of 10 s segments chained by MiniMax H3, up to "
+        "150 s, keeping the subject and the place; it starts on an image (a photo or a character sheet) or on the "
+        "text alone. Opens the Studio's long take on its segments; the user reads them and starts the chain.",
+        {"screenplay": _str(SCREENPLAY_HELP),
+         "images": _ids("Optional. The start image (a photo or a character sheet of the main subject), then images "
+                        "where segments must end, in order, " + IMAGE_ID + "; none: the first segment is made "
+                        "from the text", 0, 6)},
+        ["screenplay"]),
     "join_videos": (
         "Card: join clips end to end with hard cuts.",
         {"clips": _ids("Clips in order, ids of videos from the reference table", 2, 32)},
@@ -170,7 +184,9 @@ ENGINE_NOTES = {
                        "shot; the length snaps to the engine's frame grid.",
     "video_from_image": "video_from_image: MiniMax H3 from a first image, optionally to a last image, 5 to 15 s, "
                         "native sound. Each clip also leaves its last frame as an image.",
-    "image_sequence": "image_sequence: 2 to 6 key images, one H3 segment per pair, joined.",
+    "long_take": "long_take: a long continuous video (up to 150 s) as chained 10 s H3 segments that keep the "
+                 "subject and the place, from a start image or from the text alone; the screenplay gives one "
+                 "timed segment per 10 s.",
     "join_videos": "join_videos: clips end to end, hard cuts.",
     "campaign": "campaign: posters, thumbnails and a social image (Krea 2) plus a 9:16 H3 teaser from one brief.",
     "storyboard": "storyboard: opens the step-by-step director (sheets, shot images with Qwen Image 2.1, H3 cuts); "

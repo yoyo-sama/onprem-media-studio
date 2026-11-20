@@ -118,9 +118,19 @@ def test_normalize_flags_unknown_images_and_refuses_bad_calls():
     with pytest.raises(T.ToolError, match="unknown tool"):
         T.normalize("paint", {}, lambda r: True)
     with pytest.raises(T.ToolError, match="at least 2"):
-        T.normalize("image_sequence", {"prompt": "x", "images": ["A1"]}, lambda r: True)
+        T.normalize("join_videos", {"clips": ["C1#1"]}, lambda r: True)
     with pytest.raises(T.ToolError, match="not JSON"):
         T.normalize("create_image", "{oops", lambda r: True)
+
+
+def test_long_take_needs_only_its_screenplay():
+    """No image: the first segment is text to video; images, when given, are the start image then end images."""
+    args, warnings = T.normalize("long_take", {"screenplay": "summary:\nA walk."}, lambda r: True)
+    assert args == {"screenplay": "summary:\nA walk."} and not warnings
+    args, _ = T.normalize("long_take", {"screenplay": "x", "images": ["A1", "A2"]}, lambda r: True)
+    assert args["images"] == ["A1", "A2"]
+    assert "detailed_description:" in T.SCHEMAS["long_take"][1]["screenplay"]["description"]
+    assert "image_sequence" not in T.SCHEMAS
 
 
 def test_tool_specs_are_openai_functions():

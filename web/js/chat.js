@@ -61,8 +61,10 @@ const CARD_UI = {
                      enrich: () => "h3_t2v", wf: () => "h3_t2v" },
   video_from_image: { title: L("Video from an image"), text: "prompt", images: ["image", "last_image"], fields: ["duration"],
                       form: true, enrich: () => "h3_i2v", wf: () => "h3_i2v" },
-  image_sequence: { title: L("Multi-image sequence"), text: "prompt", images: ["images"], fields: ["duration"], form: true,
-                    enrich: () => "h3_sequence", wf: () => "h3_sequence" },
+  // The long take opens in the Studio (the Relay), where the user reads its segments and
+  // starts the chain: the card renders nothing itself.
+  long_take: { title: L("Long take"), text: "screenplay", images: ["images"], form: true, director: true,
+               launch: L("🎞 Open the long take"), wf: () => "h3_sequence" },
   join_videos: { title: L("Joined clips"), images: ["clips"] },
   campaign: { title: L("Campaign"), text: "brief", fields: ["variants", "duration", "style"], form: true,
               enrich: () => "campaign" },
@@ -319,8 +321,11 @@ function renderCard(card, live = false) {
       g.disabled = blocked || !(a.references || []).some(id => mediaOf(id) !== "audio");
       actions.appendChild(g);
     }
-    const b = button("🎬 Launch the director", "Switches to the Studio and starts the step-by-step review with this brief",
-      () => openInStudio(card, true), ui.video ? "secondary-btn" : "primary-btn");
+    const b = ui.launch
+      ? button(ui.launch, "Switches to the Studio and opens the long take on its segments, without rendering anything",
+        () => openInStudio(card, true), "primary-btn")
+      : button("🎬 Launch the director", "Switches to the Studio and starts the step-by-step review with this brief",
+        () => openInStudio(card, true), ui.video ? "secondary-btn" : "primary-btn");
     b.disabled = blocked;
     const o = button("Open in the Studio", "Fills the Studio form without starting anything", () => openInStudio(card));
     o.disabled = b.disabled;
@@ -514,11 +519,10 @@ function need(id) {
 // The job promises of a card, submitted through the Studio's own flows, tagged with the
 // card's id so its progress shows on it.
 async function submitCard(card, a) {
-  const aspect = card.tool === "image_sequence" ? await G.seqAspect({ ref: need(a.images[0]) }) : undefined;
   const prompt = card.tool === "reference_video" ? await r2vCardPrompt(a) : undefined;
-  return withJobTag(card.id, () => startCard(card, a, aspect, prompt));
+  return withJobTag(card.id, () => startCard(card, a, prompt));
 }
-function startCard(card, a, aspect, prompt) {
+function startCard(card, a, prompt) {
   const seed = Math.floor(Math.random() * 2 ** 31);
   const label = what => ["{id} · {what}", { id: card.id, what: t(what) }];
   const title = CARD_UI[card.tool].title, loras = cardLorasParam(card, a), opts = { origin: ORIGIN, seed, loras };
@@ -549,10 +553,6 @@ function startCard(card, a, aspect, prompt) {
     case "video_from_image":
       return G.runPlain(F.workflow("h3_i2v"), { ...opts, specs: [{ prompt: a.prompt, label: label(title) }], duration: a.duration,
         image: need(a.image), last: a.last_image ? need(a.last_image) : null });
-    case "image_sequence": {
-      const refs = a.images.map(need);
-      return [G.runSequence({ ...opts, refs, durs: refs.map(() => a.duration), text: a.prompt, aspect })];
-    }
     case "join_videos":
       return [runJob("video-concat", { clips: a.clips.map(need) }, { origin: ORIGIN, label: label(title), sub: ["{n} clip(s)", { n: a.clips.length }] })];
     case "campaign":

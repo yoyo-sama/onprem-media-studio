@@ -41,6 +41,7 @@ const CARDS = [
   card("C10", "reference_video", { brief: "A1 rides a motorcycle along a jungle track, an elephant charging behind him.",
                                   references: ["A1"], kinds: ["character"], music: "A slow romantic piano score", duration: 5, ratio: "16:9" }),
   card("C11", "create_image", { prompt: 'A cafe chalkboard reading "Menu du jour"', engine: "krea2", ratio: "16:9", count: 1, style: "none" }),
+  card("C12", "long_take", { screenplay: "summary:\nA walk.\n\ndetailed_description:\nSegment 1 (00:00–00:10) – Start\nA woman walks along a garden path.\nSegment 2 (00:10–00:20) – End\nShe stops by a tree and smiles.\n\nnon_diegetic_music:\nN/A" }),
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
@@ -508,6 +509,18 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   const j11 = jobs[before11];
   check(jobs.length === before11 + 1 && j11.pipeline === "moss-image" && j11.params.mode === "quality" && j11.params.width === 1280
     && j11.params.prompt === 'A cafe chalkboard reading "Menu du jour"', "MOSS card job: " + JSON.stringify(j11));
+  // The long take card opens the Studio's long take on its segments (no image: text to
+  // video first) and renders nothing: the chain starts from the Relay.
+  const before12 = jobs.length;
+  await page.click('.chat-card[data-card="C12"] .primary-btn');
+  const lt12 = await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 2 && !document.getElementById("studioRelay").hidden,
+    null, { timeout: 10000 }).then(() => true, () => false);
+  check(lt12 && await page.evaluate(() => document.body.dataset.mode) === "studio" && await page.inputValue("#pipelineSelect") === "sequence",
+    "the long take card did not open the long take");
+  check(await page.inputValue('#relayList .relay-seg[data-seg="1"] textarea') === "She stops by a tree and smiles.", "the long take card's segments");
+  check(jobs.length === before12 && cardPosts.some(([id, b]) => id === "C12" && b.status === "launched"), "the long take card submitted a job or was not reported");
+  await page.click("#studioExitBtn");
+  await page.click('.rail-mode[data-mode="assistant"]');
   // A reload opens on the welcome; the conversation stays in the list.
   await page.reload({ waitUntil: "load" });
   await page.waitForTimeout(600);

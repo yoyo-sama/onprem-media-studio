@@ -547,11 +547,6 @@ export const DICT = {
     es: "Vídeo largo (plano secuencia)",
     de: "Langes Video (Plansequenz)",
   },
-  "One continuous video made of chained segments, from a photo or a character sheet.": {
-    fr: "Une vidéo continue faite de segments enchaînés, à partir d'une photo ou d'une planche personnage.",
-    es: "Un vídeo continuo hecho de segmentos encadenados, a partir de una foto o de una ficha de personaje.",
-    de: "Ein durchgehendes Video aus verketteten Segmenten, aus einem Foto oder einem Character Sheet.",
-  },
   "Director / Storyboard artist": {
     fr: "Réalisateur / Storyboard artist",
     es: "Director / Artista de storyboard",
@@ -2157,26 +2152,6 @@ export const DICT = {
     es: "Seleccionar",
     de: "Auswählen",
   },
-  "Sequence assembled.": {
-    fr: "Séquence assemblée.",
-    es: "Secuencia ensamblada.",
-    de: "Sequenz zusammengesetzt.",
-  },
-  "Sequence · assembly": {
-    fr: "Séquence · assemblage",
-    es: "Secuencia · ensamblaje",
-    de: "Sequenz · Zusammensetzen",
-  },
-  "Sequence · segment {k}/{n}": {
-    fr: "Séquence · segment {k}/{n}",
-    es: "Secuencia · segmento {k}/{n}",
-    de: "Sequenz · Segment {k}/{n}",
-  },
-  "Sequence: {n} segment(s) from first to last frame…": {
-    fr: "Séquence : {n} segment(s) de la première à la dernière image…",
-    es: "Secuencia: {n} segmento(s) de la primera a la última imagen…",
-    de: "Sequenz: {n} Segment(e) vom ersten bis zum letzten Bild…",
-  },
   "Session state": {
     fr: "État de la session",
     es: "Estado de la sesión",
@@ -2941,11 +2916,6 @@ export const DICT = {
     fr: "{n} remplacée(s)",
     es: "{n} reemplazada(s)",
     de: "{n} ersetzt",
-  },
-  "{n} segment(s)": {
-    fr: "{n} segment(s)",
-    es: "{n} segmento(s)",
-    de: "{n} Segment(e)",
   },
   "{n} segment(s), {asked} s asked, {real} s rendered (H3 frame grid).": {
     fr: "{n} segment(s), {asked} s demandées, {real} s rendues (grille d'images H3).",
@@ -3937,11 +3907,6 @@ export const DICT = {
     es: "Máx. por segmento (s)",
     de: "Max. pro Segment (s)",
   },
-  "Shared by every segment: framing, lighting, soundscape, music": {
-    fr: "Commun à tous les segments : cadrage, lumière, ambiance sonore, musique",
-    es: "Común a todos los segmentos: encuadre, luz, ambiente sonoro, música",
-    de: "Für alle Segmente gleich: Bildausschnitt, Licht, Klangkulisse, Musik",
-  },
   "Soundscape": {
     fr: "Ambiance sonore",
     es: "Ambiente sonoro",
@@ -3956,11 +3921,6 @@ export const DICT = {
     fr: "Les sons naturels entendus tout du long.",
     es: "Los sonidos naturales que se oyen de principio a fin.",
     de: "Die natürlichen Geräusche, die durchgehend zu hören sind.",
-  },
-  "Gemma writes one action per segment and fills the shared fields left empty. Nothing renders: read and fix each segment before starting the chain.": {
-    fr: "Gemma écrit une action par segment et remplit les champs communs laissés vides. Rien ne part en rendu : relis et corrige chaque segment avant de lancer la chaîne.",
-    es: "Gemma escribe una acción por segmento y rellena los campos comunes que estén vacíos. Nada se renderiza: lee y corrige cada segmento antes de lanzar la cadena.",
-    de: "Gemma schreibt eine Handlung pro Segment und füllt die leeren gemeinsamen Felder. Nichts wird gerendert: Lies und korrigiere jedes Segment, bevor du die Kette startest.",
   },
   "10 s is the longest render qualified on the GB10.": {
     fr: "10 s est le plus long rendu qualifié sur le GB10.",
@@ -4042,30 +4002,15 @@ export const DICT = {
     es: "⏹ Detener tras este segmento",
     de: "⏹ Nach diesem Segment anhalten",
   },
-  "Add a start image to the long take (file or gallery).": {
-    fr: "Ajoute une image de départ au plan-séquence (fichier ou galerie).",
-    es: "Añade una imagen inicial al plano secuencia (archivo o galería).",
-    de: "Füge der Plansequenz ein Startbild hinzu (Datei oder Galerie).",
-  },
   "Long take open: read the segments, then generate the chain.": {
     fr: "Plan-séquence ouvert : relis les segments, puis génère la chaîne.",
     es: "Plano secuencia abierto: relee los segmentos y luego genera la cadena.",
     de: "Plansequenz geöffnet: Lies die Segmente, dann generiere die Kette.",
   },
-  "Long take from images (Relay)": {
-    fr: "Plan-séquence à partir d'images (Relay)",
-    es: "Plano secuencia a partir de imágenes (Relay)",
-    de: "Plansequenz aus Bildern (Relay)",
-  },
   "MiniMax H3 · chained segments": {
     fr: "MiniMax H3 · segments enchaînés",
     es: "MiniMax H3 · segmentos encadenados",
     de: "MiniMax H3 · verkettete Segmente",
-  },
-  "1 to 6 images: the long take starts on the first, and each next image is where a segment ends. The brief is its screenplay. Nothing renders yet: the long take opens on its segments.": {
-    fr: "1 à 6 images : le plan-séquence part de la première, et chaque image suivante est la fin d'un segment. Le brief est son scénario. Rien ne part encore en rendu : le plan-séquence s'ouvre sur ses segments.",
-    es: "De 1 a 6 imágenes: el plano secuencia parte de la primera, y cada imagen siguiente es el final de un segmento. El brief es su guion. Todavía no se renderiza nada: el plano secuencia se abre sobre sus segmentos.",
-    de: "1 bis 6 Bilder: Die Plansequenz beginnt mit dem ersten, und jedes weitere Bild ist das Ende eines Segments. Das Briefing ist ihr Drehbuch. Noch wird nichts gerendert: Die Plansequenz öffnet sich mit ihren Segmenten.",
   },
   "Long take from images": {
     fr: "Plan-séquence à partir d'images",
@@ -4131,5 +4076,125 @@ export const DICT = {
     fr: "Relay · image de plan {n}/{total}",
     es: "Relay · imagen del plano {n}/{total}",
     de: "Relay · Einstellungsbild {n}/{total}",
+  },
+  "One continuous video made of chained segments, from a photo, a character sheet or text alone.": {
+    fr: "Une vidéo continue faite de segments enchaînés, à partir d'une photo, d'une planche personnage ou du texte seul.",
+    es: "Un vídeo continuo hecho de segmentos encadenados, a partir de una foto, de una ficha de personaje o solo del texto.",
+    de: "Ein durchgehendes Video aus verketteten Segmenten, aus einem Foto, einem Character Sheet oder nur aus Text.",
+  },
+  "Long take": {
+    fr: "Plan-séquence",
+    es: "Plano secuencia",
+    de: "Plansequenz",
+  },
+  "Switches to the Studio and opens the long take on its segments, without rendering anything": {
+    fr: "Passe dans le Studio et ouvre le plan-séquence sur ses segments, sans rien générer",
+    es: "Pasa al Studio y abre el plano secuencia en sus segmentos, sin generar nada",
+    de: "Wechselt ins Studio und öffnet die Plansequenz mit ihren Segmenten, ohne etwas zu rendern",
+  },
+  "🎞 Open the long take": {
+    fr: "🎞 Ouvrir le plan-séquence",
+    es: "🎞 Abrir el plano secuencia",
+    de: "🎞 Plansequenz öffnen",
+  },
+  "Relay: {n} segment length(s) brought into H3's 5 to 15 s.": {
+    fr: "Relay : {n} durée(s) de segment ramenée(s) dans les 5 à 15 s de H3.",
+    es: "Relay: {n} duración(es) de segmento ajustada(s) a los 5 a 15 s de H3.",
+    de: "Relay: {n} Segmentlänge(n) auf die 5 bis 15 s von H3 gebracht.",
+  },
+  "No start image: segment 1 is generated from its text, and its last frame keeps the subject for the next segments.": {
+    fr: "Pas d'image de départ : le segment 1 est généré à partir de son texte, et sa dernière image garde le sujet pour les segments suivants.",
+    es: "Sin imagen de inicio: el segmento 1 se genera a partir de su texto, y su última imagen mantiene el sujeto en los segmentos siguientes.",
+    de: "Kein Startbild: Segment 1 wird aus seinem Text erzeugt, und sein letztes Bild hält das Motiv für die folgenden Segmente.",
+  },
+  "Relay, segment {n}/{total}: video from the text…": {
+    fr: "Relay, segment {n}/{total} : vidéo à partir du texte…",
+    es: "Relay, segmento {n}/{total}: vídeo a partir del texto…",
+    de: "Relay, Segment {n}/{total}: Video aus dem Text…",
+  },
+  "Relay: screenplay read as written: {n} segment(s), {fields} shared field(s).": {
+    fr: "Relay : scénario lu tel qu'il est écrit : {n} segment(s), {fields} champ(s) commun(s).",
+    es: "Relay: guion leído tal como está escrito: {n} segmento(s), {fields} campo(s) común(es).",
+    de: "Relay: Drehbuch so gelesen, wie es geschrieben ist: {n} Segment(e), {fields} gemeinsame(s) Feld(er).",
+  },
+  "Relay: the screenplay has {n} segments, the long take holds {max}: the first {max} were kept.": {
+    fr: "Relay : le scénario a {n} segments, le plan-séquence en contient {max} : les {max} premiers sont gardés.",
+    es: "Relay: el guion tiene {n} segmentos, el plano secuencia admite {max}: se conservan los {max} primeros.",
+    de: "Relay: Das Drehbuch hat {n} Segmente, die Plansequenz fasst {max}: Die ersten {max} wurden behalten.",
+  },
+  "Screenplay {name} imported.": {
+    fr: "Scénario {name} importé.",
+    es: "Guion {name} importado.",
+    de: "Drehbuch {name} importiert.",
+  },
+  "Video format": {
+    fr: "Format de la vidéo",
+    es: "Formato del vídeo",
+    de: "Videoformat",
+  },
+  "0 to 6 images: the long take starts on the first, and each next image is where a segment ends. With none, its first segment is generated from the text. The brief is its screenplay. Nothing renders yet: the long take opens on its segments.": {
+    fr: "0 à 6 images : le plan-séquence commence sur la première, et chaque image suivante est la fin d'un segment. Sans image, son premier segment est généré à partir du texte. Le brief est son scénario. Rien n'est encore généré : le plan-séquence s'ouvre sur ses segments.",
+    es: "0 a 6 imágenes: el plano secuencia empieza en la primera, y cada imagen siguiente es donde termina un segmento. Sin imagen, su primer segmento se genera a partir del texto. El brief es su guion. Aún no se genera nada: el plano secuencia se abre en sus segmentos.",
+    de: "0 bis 6 Bilder: Die Plansequenz beginnt mit dem ersten, und jedes weitere Bild ist das Ende eines Segments. Ohne Bild wird ihr erstes Segment aus dem Text erzeugt. Das Briefing ist ihr Drehbuch. Noch wird nichts gerendert: Die Plansequenz öffnet sich mit ihren Segmenten.",
+  },
+  "Gemma writes one action per segment and fills the shared fields left empty; a screenplay in the H3 layout (Segment lines with their timestamps) is split as written, without Gemma. Nothing renders: read and fix each segment before starting the chain.": {
+    fr: "Gemma écrit une action par segment et remplit les champs communs restés vides ; un scénario au format H3 (lignes Segment avec leurs horodatages) est découpé tel qu'il est écrit, sans Gemma. Rien n'est généré : relis et corrige chaque segment avant de lancer la chaîne.",
+    es: "Gemma escribe una acción por segmento y rellena los campos comunes vacíos; un guion en el formato H3 (líneas Segment con sus marcas de tiempo) se divide tal como está escrito, sin Gemma. No se genera nada: lee y corrige cada segmento antes de lanzar la cadena.",
+    de: "Gemma schreibt eine Aktion pro Segment und füllt die leeren gemeinsamen Felder; ein Drehbuch im H3-Format (Segment-Zeilen mit Zeitstempeln) wird so aufgeteilt, wie es geschrieben ist, ohne Gemma. Nichts wird gerendert: Lies und korrigiere jedes Segment, bevor du die Kette startest.",
+  },
+  "Identity to keep": {
+    fr: "Identité à garder",
+    es: "Identidad que conservar",
+    de: "Zu bewahrende Identität",
+  },
+  "Puts a screenplay file (.txt, .md) in the brief. Written in the H3 layout (summary:, camera_direction:, lighting:, detailed_description: with one Segment line per segment…), it gives the segments and the shared fields as written.": {
+    fr: "Met un fichier de scénario (.txt, .md) dans le brief. Écrit au format H3 (summary:, camera_direction:, lighting:, detailed_description: avec une ligne Segment par segment…), il donne les segments et les champs communs tels qu'ils sont écrits.",
+    es: "Pone un archivo de guion (.txt, .md) en el brief. Escrito en el formato H3 (summary:, camera_direction:, lighting:, detailed_description: con una línea Segment por segmento…), da los segmentos y los campos comunes tal como están escritos.",
+    de: "Setzt eine Drehbuchdatei (.txt, .md) ins Briefing. Im H3-Format geschrieben (summary:, camera_direction:, lighting:, detailed_description: mit einer Segment-Zeile pro Segment…), liefert sie die Segmente und die gemeinsamen Felder so, wie sie geschrieben sind.",
+  },
+  "Reads a screenplay file (.txt, .md) into the screenplay and splits it. Nothing renders.": {
+    fr: "Lit un fichier de scénario (.txt, .md) dans le scénario et le découpe. Rien n'est généré.",
+    es: "Lee un archivo de guion (.txt, .md) en el guion y lo divide. No se genera nada.",
+    de: "Liest eine Drehbuchdatei (.txt, .md) ins Drehbuch und teilt sie auf. Nichts wird gerendert.",
+  },
+  "Shared by every segment: subjects, framing, lighting, soundscape, music": {
+    fr: "Commun à tous les segments : sujets, cadrage, lumière, ambiance sonore, musique",
+    es: "Común a todos los segmentos: sujetos, encuadre, luz, ambiente sonoro, música",
+    de: "Für alle Segmente gleich: Motive, Bildausschnitt, Licht, Klangkulisse, Musik",
+  },
+  "Subjects": {
+    fr: "Sujets",
+    es: "Sujetos",
+    de: "Motive",
+  },
+  "What must not change from one segment to the next: face, hair, outfit…": {
+    fr: "Ce qui ne doit pas changer d'un segment à l'autre : visage, cheveux, tenue…",
+    es: "Lo que no debe cambiar de un segmento a otro: cara, pelo, ropa…",
+    de: "Was sich von einem Segment zum nächsten nicht ändern darf: Gesicht, Haare, Kleidung…",
+  },
+  "Who the subjects are, as H3 reads them: <Subject 1> is… With a start image or sheets, added after the definitions the app writes.": {
+    fr: "Qui sont les sujets, tels que H3 les lit : <Subject 1> is… Avec une image de départ ou des planches, ajouté après les définitions que l'app écrit.",
+    es: "Quiénes son los sujetos, tal como los lee H3: <Subject 1> is… Con una imagen de inicio o fichas, se añade tras las definiciones que escribe la app.",
+    de: "Wer die Motive sind, wie H3 sie liest: <Subject 1> is… Mit Startbild oder Sheets nach den Definitionen angefügt, die die App schreibt.",
+  },
+  "📄 Import a screenplay": {
+    fr: "📄 Importer un scénario",
+    es: "📄 Importar un guion",
+    de: "📄 Drehbuch importieren",
+  },
+  "Screenplay imported into the brief.": {
+    fr: "Scénario importé dans le brief.",
+    es: "Guion importado en el brief.",
+    de: "Drehbuch ins Briefing importiert.",
+  },
+  "Screenplay {name} imported: Gemma splits it once the long take is open.": {
+    fr: "Scénario {name} importé : Gemma le découpe une fois le plan-séquence ouvert.",
+    es: "Guion {name} importado: Gemma lo divide una vez abierto el plano secuencia.",
+    de: "Drehbuch {name} importiert: Gemma teilt es auf, sobald die Plansequenz offen ist.",
+  },
+  "Screenplay {name} imported: {n} segment(s), opened as written.": {
+    fr: "Scénario {name} importé : {n} segment(s), ouvert(s) tel(s) qu'écrit(s).",
+    es: "Guion {name} importado: {n} segmento(s), abierto(s) tal como está(n) escrito(s).",
+    de: "Drehbuch {name} importiert: {n} Segment(e), so geöffnet, wie geschrieben.",
   },
 };

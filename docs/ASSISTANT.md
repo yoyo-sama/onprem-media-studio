@@ -70,7 +70,7 @@ A role is a Markdown file: a header between `---` lines, then its instructions.
 id: director
 name: Director
 when: A story told in several shots: a script or scene to storyboard, a short film, a trailer…
-tools: storyboard, reference_video, video_from_image, image_sequence
+tools: storyboard, reference_video, video_from_image, long_take
 ---
 You are a storyboard artist and director of photography…
 ```
@@ -136,7 +136,7 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 | `character_sheet`, `location_sheet` | Description, subject type, style; a photo of the subject (subject sheet only) | `krea2-t2i` 1920×1088 with the 1.4 sheet templates; with a photo, `qwen-image-2.1` edits it into a five-view sheet at the same size (a left column of two head-and-shoulders portraits, front above side, then the full body from the front, the side and the back, each view once, in the image's own style; method adapted from H3 Character Sheet Designer, MIT; `charsheetFromPhotoPrompt`, not qualified yet). When Gemma leaves the photo out while the user's message carries one image, that image is the photo (with a warning on the card). The director's subject menu has the same action: "📷 Sheet from a photo" |
 | `video_from_text` | Prompt, length, ratio | `h3-t2v` |
 | `video_from_image` | Prompt, first image, optional last image, length | `h3-i2v` (I2VA or FL2VA) |
-| `image_sequence` | Prompt, 2 to 6 key images, segment length | the multi-image sequence (H3 segments, then `video-concat`) |
+| `long_take` | Screenplay in the H3 layout (one timed 10 s segment per beat), 0 to 6 images (start image, then end images) | the Studio's long take: "🎞 Open the long take" switches to the Studio and opens the Relay on its segments, rendering nothing; the chain starts there (it replaced `image_sequence` on 2026-11-20, which rendered key-image pairs without the long take) |
 | `join_videos` | Clips | `video-concat` |
 | `campaign` | Brief, variants, length, style | the full campaign (posters, thumbnails, social image, teaser) |
 | `storyboard` | Brief and settings | the director: "Launch the director" switches to the Studio, fills the form and starts the step-by-step review there, as the form's Generate does |

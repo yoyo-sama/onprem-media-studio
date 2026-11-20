@@ -3,7 +3,8 @@
 // (Qwen Image 2.1) → cuts (MiniMax H3 image to video) → animatic;
 // the Relay builds a long take out of chained segments. Reference to video stops after
 // the sheets: one H3 Ref2VA job. A long take from images (the "sequence" pipeline) opens
-// the Relay alone, on its start image: no sheet, no approval.
+// the Relay alone, on its start image (or on text alone: its first segment is H3 text to
+// video): no sheet, no approval.
 //
 // Rules carried over from 1.4 (docs/LESSONS.md): nothing renders without a click; a
 // prompt the user edited is sent verbatim and never compiled over; the anchoring
@@ -260,24 +261,29 @@ function enterSession(s) {
 // A first image that is a reference sheet (several views of one subject) is never the
 // first frame: segment 1 starts on a shot image Qwen composes from it (`startImage.sheet`,
 // which the first segment's card can switch).
+// With no image at all, segment 1 is H3 text to video (`startImage` null) and its last frame
+// becomes the subject's reference for the segments after it.
+// A brief written in the H3 screenplay layout (an imported file, P.parseScreenplay) gives the
+// segments, their lengths and the shared fields at once, word for word.
 export async function startLongTake(seed, items) {
-  if (!items.length) throw new Error(t("Add a start image to the long take (file or gallery)."));
-  const text = F.brief();
+  const text = F.brief(), play = P.parseScreenplay(text);
   const refs = await Promise.all(items.map(F.imageRef));
-  const { sheet, desc } = await F.describeStart(items[0]);
-  const durs = (items.length > 1 ? items.slice(0, -1) : items).map(it => F.clampDuration(it.dur, RELAY_SEG_DEFAULT));
+  const { sheet, desc } = items.length ? await F.describeStart(items[0]) : { sheet: false, desc: "" };
+  const durs = (items.length > 1 ? items.slice(0, -1) : items.length ? items : [{}]).map(it => F.clampDuration(it.dur, RELAY_SEG_DEFAULT));
+  const endImage = i => (refs[i + 1] ? { ref: refs[i + 1], name: items[i + 1].name } : null);
   const s = {
     pipeline: "sequence", wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value, style: "none", sheetTemplate: "auto",
-    loras: F.formLoras(), startImage: { ref: refs[0], sheet },
-    chars: [newChar({ kind: "other", subject: desc || "" }, [imported({ ref: refs[0] })])], charIdx: 0,
+    loras: F.formLoras(), startImage: refs.length ? { ref: refs[0], sheet } : null,
+    chars: [newChar({ kind: "other", subject: desc || "" }, refs.length ? [imported({ ref: refs[0] })] : [])], charIdx: 0,
     locFields: {}, locVariants: [], locActive: 0, validated: true,
     shots: [], keyframes: null, cutPlan: null, cuts: null, order: null, animatic: null,
     relay: newRelay({ scenario: text, total: durs.reduce((a, b) => a + b, 0), segMax: Math.max(...durs),
-      segments: durs.map((duration, i) => ({ prompt: text, duration,
-        endImage: refs[i + 1] ? { ref: refs[i + 1], name: items[i + 1].name } : null })) }),
+      segments: durs.map((duration, i) => ({ prompt: text, duration, endImage: endImage(i) })) }),
   };
+  if (play) applyScreenplay(s.relay, play, s.relay.segments.map(seg => seg.endImage));
   enterSession(s);
   if (sheet) log("ok", "The start image is a reference sheet: segment 1 starts on a shot image composed from it, the sheet itself is never animated.");
+  if (!refs.length) log("ok", "No start image: segment 1 is generated from its text, and its last frame keeps the subject for the next segments.");
   showRelayComposer();
   renderRelay();
 }
@@ -1067,7 +1073,7 @@ function renderTimeline() {
 // soundscape, music); a segment holds only its action and its own camera motion.
 const newRelaySegment = (prompt = "", duration = RELAY_SEG_DEFAULT) => ({ prompt, duration, mode: "continue", status: "idle", ref: null,
   seed: 0, prompt_used: null, start: null, transitions: null, transitionIdx: 0, endImage: null });
-const RELAY_LOOK_KEYS = ["camera", "lighting", "sound", "music"];
+const RELAY_LOOK_KEYS = ["subjects", "retention", "camera", "lighting", "sound", "music"];
 // The cards are the plan: a new Relay gets one empty card per planned segment, and the
 // total length of a given (or saved) chain is the sum of its cards.
 function newRelay(p = {}) {
@@ -1114,6 +1120,7 @@ const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min
 function updateRelayButtons() {
   const r = d?.relay, unlocked = isLongTake() || (anchorsReady() && !!d?.validated), busy = relayBusy();
   $("relayComposeBtn").disabled = !r || busy || !$("relayScenario").value.trim();
+  $("relayImportBtn").disabled = !r || busy;
   document.querySelectorAll("#relayLook textarea").forEach(el => { el.disabled = !r || busy; });
   $("relayRunBtn").disabled = !unlocked || !relayReady() || busy;
   const from = relayResumeFrom();
@@ -1138,6 +1145,16 @@ async function composeRelay() {
   // itself (a long take opens with it in every card).
   if (r.segments.some(seg => seg.ref || (seg.prompt.trim() && seg.prompt.trim() !== text))
       && !confirm(t("Replace the current segments with the split screenplay?"))) return;
+  // A screenplay in the H3 layout is split as written: no Gemma.
+  const play = P.parseScreenplay(text);
+  if (play) {
+    r.scenario = text;
+    applyScreenplay(r, play, r.segments.map(seg => seg.endImage));
+    showRelayComposer();
+    renderRelay();
+    save();
+    return;
+  }
   const btn = $("relayComposeBtn");
   btn.disabled = true;
   tx(btn, "Splitting…");
@@ -1162,6 +1179,23 @@ async function composeRelay() {
   showRelayComposer();
   renderRelay();
   save();
+}
+
+// A screenplay in the H3 layout becomes the chain as written: one card per segment, its
+// length from its timestamps (5 to 15 s), the first segment of a later shot a cut, and the
+// shared fields the file gives (they replace the ones shown). Nothing renders.
+function applyScreenplay(r, play, ends = []) {
+  const list = play.segments.slice(0, RELAY_MAX_SEGMENTS);
+  r.segments = list.map((seg, i) => ({ ...newRelaySegment(seg.prompt, F.clampDuration(seg.duration || r.segMax, r.segMax)),
+    mode: i > 0 ? seg.mode : "continue", endImage: ends[i] || null }));
+  for (const k of play.given) r.look[k] = play.look[k];
+  r.segMax = F.clampDuration(Math.max(...r.segments.map(seg => seg.duration)), r.segMax);
+  r.total = clampTotal(r.segments.reduce((sum, seg) => sum + seg.duration, 0));
+  log("ok", "Relay: screenplay read as written: {n} segment(s), {fields} shared field(s).", { n: r.segments.length, fields: play.given.length });
+  if (play.segments.length > list.length)
+    log("warn", "Relay: the screenplay has {n} segments, the long take holds {max}: the first {max} were kept.", { n: play.segments.length, max: RELAY_MAX_SEGMENTS });
+  const off = list.filter((seg, i) => seg.duration !== r.segments[i].duration).length;
+  if (off) log("warn", "Relay: {n} segment length(s) brought into H3's 5 to 15 s.", { n: off });
 }
 
 // Composer and shared fields from the session (on open, restore and after a split).
@@ -1229,7 +1263,7 @@ function renderRelay() {
       <textarea spellcheck="false" placeholder="What happens in this segment, and its own camera motion."></textarea>
       <div class="seg-row seg-start-row" hidden>
         <button type="button" class="secondary-btn seg-start"></button>
-        <label class="seg-start-ratio">Shot image format<select>${Object.keys(F.QWEN21_RATIOS).map(k => `<option data-raw>${k}</option>`).join("")}</select></label>
+        <label class="seg-start-ratio"><span>Shot image format</span><select>${Object.keys(F.QWEN21_RATIOS).map(k => `<option data-raw>${k}</option>`).join("")}</select></label>
       </div>
       <div class="seg-row">
         <label>Length (s)<input type="number" min="5" max="15"></label>
@@ -1309,6 +1343,12 @@ function renderStartChoice(row, seg, busy) {
   const st = d.startImage, stale = () => { if (seg.status === "ready") seg.status = "stale"; };
   row.hidden = false;
   const btn = row.querySelector(".seg-start");
+  // No start image: the first segment is text to video, at the format chosen here.
+  if (!st) {
+    btn.hidden = true;
+    tx(row.querySelector(".seg-start-ratio span"), "Video format");
+    return startFormat(row, busy, stale, true);
+  }
   tx(btn, st.sheet ? "🧍 Start: a shot composed from the sheet" : "🖼 Start: the image as it is");
   txAttr(btn, "title", st.sheet
     ? "The start image is a reference sheet: Qwen Image 2.1 composes the first frame from its character. Click if it is one single picture."
@@ -1316,8 +1356,11 @@ function renderStartChoice(row, seg, busy) {
   btn.classList.toggle("active", !!st.sheet);
   btn.disabled = busy;
   btn.addEventListener("click", () => { st.sheet = !st.sheet; stale(); renderRelay(); save(); });
+  startFormat(row, busy, stale, !!st.sheet);
+}
+function startFormat(row, busy, stale, shown) {
   const lab = row.querySelector(".seg-start-ratio"), sel = lab.querySelector("select");
-  lab.hidden = !st.sheet;
+  lab.hidden = !shown;
   sel.value = F.QWEN21_RATIOS[d.ratio] ? d.ratio : "16:9";
   sel.disabled = busy;
   sel.addEventListener("change", () => { d.ratio = sel.value; stale(); renderRelay(); save(); });
@@ -1489,6 +1532,7 @@ async function renderSegment(i) {
   if (latentLink(i)) return renderLatentSegment(s, seg, i, total, before, began);
   // A cut: H3 Ref2VA on the subjects' sheets and the setting, with no start image.
   if (i > 0 && !continuous(seg)) return renderCutSegment(s, seg, i, total, before, began);
+  if (isLongTake() && i === 0 && !s.startImage) return renderTextSegment(s, seg, i, total, began);
   await ensureTransitions(before, i - 1, total);
   if (!sameSession(s)) return;
   const prev = before ? transitionOf(before) : null;
@@ -1501,7 +1545,9 @@ async function renderSegment(i) {
   if (isLongTake() && i === 0 && s.startImage.sheet) {
     log("req", "Relay, segment {n}/{total}: shot image from the sheet…", { n: i + 1, total });
     const text = [seg.prompt, look.lighting].map(x => x.trim().replace(/[\s.!?…]+$/, "")).filter(Boolean).join(". ");
-    const prompt = P.relayStartFromSheetPrompt(r.scenario, text, subs[0].desc, s.style);
+    // A screenplay in the H3 layout is described by its summary and first shot, not its fields.
+    const scene = P.parseScreenplay(r.scenario)?.scene ?? r.scenario;
+    const prompt = P.relayStartFromSheetPrompt(scene, text, subs[0].desc, s.style);
     const [width, height] = F.QWEN21_RATIOS[s.ratio] || F.QWEN21_RATIOS["16:9"];
     const job = await tracked(seg, "image", sub => runJob("qwen-image-2.1",
       { prompt, images: [s.startImage.ref], width, height, seed: F.seedPlus(s.seed, 401) },
@@ -1526,14 +1572,20 @@ async function renderSegment(i) {
   const last = seg.endImage?.ref || null;
   // With the subjects' sheets, a segment starts on its frame AND sees the sheets (Ref2VA with a
   // start frame): i2v sees only its first frame, so a face drifted segment after segment.
-  // An end image (FL2VA) stays i2v: Ref2VA takes no last frame.
-  const refs = last ? [] : relayRefs(settingSheet());
+  // An end image (FL2VA) stays i2v: Ref2VA takes no last frame. So does a described scene's
+  // start picture, the place: Ref2VA kept it 2 frames, then cut to the people the screenplay
+  // describes (GB10 2026-11-20); i2v starts on it and keeps it. Its segments after it see it
+  // as the location.
+  const place = isLongTake() && i === 0 && !s.startImage.sheet && describedScene();
+  const refs = last || place ? [] : relayRefs(settingSheet());
   let job;
   if (refs.length) {
     seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
     job = await relayR2vJob(s, seg, i, total, refs, { image: start });
   } else {
-    seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
+    seg.prompt_used = place
+      ? P.buildRelaySegmentPrompt(seg.prompt.trim(), look, [], subs[0].desc?.trim() || "the place in this picture", seg.duration, !!last, s.style, h3Warn)
+      : P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
     job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,
       ["Relay · segment {n}/{total}", { n: i + 1, total }], last, sub));
   }
@@ -1550,6 +1602,24 @@ async function renderLatentSegment(s, seg, i, total, before, began) {
   seg.start = null;
   seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), s.relay.look, refs, s.style, h3Warn);
   const job = await relayR2vJob(s, seg, i, total, refs, { continue_from: before.ref });
+  await segmentDone(s, seg, i, total, job, began);
+}
+
+// The first segment of a long take with no start image: H3 text to video at the long take's
+// format. Its last frame becomes the subject's reference, as a long take's start picture is,
+// so the segments after it continue it in latent space with that frame in view.
+async function renderTextSegment(s, seg, i, total, began) {
+  log("req", "Relay, segment {n}/{total}: video from the text…", { n: i + 1, total });
+  seg.start = null;
+  seg.prompt_used = P.buildRelayTextPrompt(seg.prompt.trim(), s.relay.look, s.style, h3Warn);
+  const aspect = F.QWEN21_RATIOS[s.ratio] ? s.ratio : "16:9";
+  const job = await tracked(seg, "video", sub => runJob("h3-t2v",
+    { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], aspect },
+    { origin: origin(), label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
+      sub: ["{info} · seed {seed}", { info: `T2VA · ${aspect} · ${seg.duration} s`, seed: seg.seed }] }));
+  if (!sameSession(s)) return;
+  const frame = out(job, ".png");
+  if (frame) { s.chars[0].variants = [imported({ ref: frame })]; s.chars[0].active = 0; }
   await segmentDone(s, seg, i, total, job, began);
 }
 
@@ -1572,10 +1642,19 @@ async function segmentDone(s, seg, i, total, job, began) {
 // The Relay's H3 Ref2VA references: the sheets of the first two subjects with one (the first
 // is the main character, a further human one a character, a non-human one a reference), then
 // the setting, if any.
+// A long take whose screenplay is in the H3 layout and names no <Subject N> describes a
+// scene, not a subject: its start picture (or, with none, segment 1's last frame) is that
+// scene's reference, the location. A sheet always holds a subject; a screenplay in plain
+// prose keeps the start picture as the main character, as before.
 function relayRefs(setting) {
-  return [...relaySubjects().map((x, k) => ({ kind: k === 0 || x.kind === "human" ? "character" : "reference", desc: x.desc, ref: x.ref })),
+  const scene = describedScene();
+  return [...relaySubjects().map((x, k) => ({ kind: k === 0 ? (scene ? "environment" : "character") : x.kind === "human" ? "character" : "reference",
+    desc: x.desc, ref: x.ref })),
     ...(setting ? [{ kind: "environment", ...setting }] : [])];
 }
+const describedScene = () => isLongTake() && !d.startImage?.sheet && !!P.parseScreenplay(d.relay.scenario) && !namesSubjects();
+const namesSubjects = () => [...d.relay.segments.map(seg => seg.prompt), d.relay.look.subjects, d.relay.look.retention]
+  .some(x => new RegExp(P.H3_TOKEN_RE.source, "i").test(x || ""));
 // The setting's sheet (the director's Relay; a long take has none). A continuous segment takes
 // no other image of the place: one framed unlike its start frame wins over that frame (the
 // shot jumped to the place image's framing, GB10 2026-11-16).
@@ -1912,6 +1991,22 @@ export function initDirector(h) {
   $("relayStopBtn").addEventListener("click", () => { relayStop = true; updateRelayButtons(); });
   $("relayAssembleBtn").addEventListener("click", assembleRelay);
   $("relayComposeBtn").addEventListener("click", composeRelay);
+  // A screenplay file: read into the screenplay, then split as the button would (asked first
+  // when segments would be lost). Nothing renders.
+  $("relayImportBtn").addEventListener("click", () => $("relayImportFile").click());
+  $("relayImportFile").addEventListener("change", async () => {
+    const file = $("relayImportFile").files[0];
+    $("relayImportFile").value = "";
+    if (!file || !d?.relay) return;
+    const was = $("relayScenario").value;
+    $("relayScenario").value = (await file.text()).trim();
+    if (!$("relayScenario").value) { $("relayScenario").value = was; return; }
+    log("ok", "Screenplay {name} imported.", { name: file.name });
+    await composeRelay();
+    // Declined: the screenplay shown is still the session's.
+    if (d?.relay && d.relay.scenario !== $("relayScenario").value) $("relayScenario").value = was;
+    updateRelayButtons();
+  });
   $("relayScenario").addEventListener("input", updateRelayButtons);
   $("relayScenario").addEventListener("change", () => { if (d?.relay) { d.relay.scenario = $("relayScenario").value; save(); } });
   $("relayTotal").addEventListener("change", () => {

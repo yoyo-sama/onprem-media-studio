@@ -186,7 +186,6 @@ async function showInterrupted() {
 let jobTag = null;
 const submitHandlers = new Set();
 export const onJobSubmitted = fn => submitHandlers.add(fn);
-export const currentJobTag = () => jobTag;
 export function withJobTag(tag, fn) {
   const before = jobTag;
   jobTag = tag;

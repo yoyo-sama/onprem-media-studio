@@ -48,6 +48,48 @@ const PROJECT = {
   shots: [], keyframes: null, cuts: null, order: null, animatic: null,
   relay: { scenario: "", segments: [{ prompt: "", duration: 5 }] },
 };
+// A screenplay file in the H3 layout (the owner's, 2026-11-20), shortened to three segments.
+const SCREENPLAY = `subject_definitions:
+<Subject 1> is an adult woman with auburn hair. Same outfit throughout.
+
+summary:
+A cinematic video of the woman walking through a garden.
+
+retention_analysis:
+Preserve the same facial identity and clothing across all segments.
+
+camera_direction:
+16:9 cinematic medium shots.
+
+lighting:
+Soft natural morning sunlight.
+
+detailed_description:
+[Shot 1] Photorealistic garden, gentle camera movement.
+
+Segment 1 (00:00.000–00:10.000) – Introduction
+<Subject 1> stands facing the camera. She blinks
+naturally and slowly begins walking.
+Segment 2 (00:10.000–00:22.000) – Walking
+<Subject 1> continues walking along the garden path.
+Segment 3 (00:22.000–00:30.000) – Closing
+<Subject 1> looks toward the camera and smiles.
+
+overall_soundscape:
+Birdsong and soft footsteps.
+
+non_diegetic_music:
+N/A`;
+// A described scene: no <Subject N> anywhere.
+const SCENE = `summary:
+A misty pine forest at dawn.
+
+detailed_description:
+[Shot 1] A misty pine forest at dawn, wide shot.
+Segment 1 (00:00–00:10) – The deer
+A young deer steps out of the fog.
+Segment 2 (00:10–00:20) – The stream
+The deer walks toward a stream.`;
 const SPLIT = {
   framing: "Medium shots at eye level.", lighting: "Soft cool morning light with long shadows.",
   soundscape: "Birdsong, a light breeze and footsteps on gravel.", music: "none",
@@ -74,7 +116,7 @@ const SPLIT = {
     if (p === "/api/jobs" && req.method() === "POST") {
       const body = JSON.parse(req.postData()), id = `job-${++n}`;
       jobs.push({ ...body, id });
-      const outputs = ["h3-i2v", "h3-r2v"].includes(body.pipeline) ? [`outputs/${id}.mp4`, `outputs/${id}.png`]
+      const outputs = ["h3-t2v", "h3-i2v", "h3-r2v"].includes(body.pipeline) ? [`outputs/${id}.mp4`, `outputs/${id}.png`]
         : ["video-concat", "video-stitch"].includes(body.pipeline) ? [`outputs/${id}.mp4`]
         : body.pipeline === "video-frames" ? body.params.offsets.map(o => `outputs/${id}-${o}.png`) : [`outputs/${id}.png`];
       if (hold) held.push({ id, status: "done", progress: 1, outputs });
@@ -464,6 +506,82 @@ const SPLIT = {
   check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]) && lt[0].params.image === shot.images?.[0]
     && JSON.stringify(lt[0].params.references) === JSON.stringify([shot.images?.[0]]),
     `long take from the image as it is: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.image]))}`);
+
+  // ── Long take with no start image, from an imported screenplay file ──
+  // The file goes into the brief (no job, no Gemma); the long take opens on its three
+  // segments and shared fields as written; segment 1 is H3 text to video, the next ones
+  // continue it with its last frame as the subject's reference.
+  await page.click("#studioExitBtn");
+  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.reload({ waitUntil: "load" });
+  await page.click('.usecase[data-pipeline="sequence"]');
+  before = jobs.length;
+  let chatsBefore = chats.length;
+  await page.setInputFiles("#seqImportFile", { name: "garden.txt", mimeType: "text/plain", buffer: Buffer.from(SCREENPLAY) });
+  await page.waitForFunction(() => /detailed_description/.test(document.getElementById("brief").value));
+  await page.click("#generateBtn");
+  await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 3);
+  check(jobs.length === before && chats.length === chatsBefore, `opening an imported screenplay: ${jobs.length - before} job(s), ${chats.length - chatsBefore} Gemma call(s)`);
+  const cards = await page.$$eval("#relayList .relay-seg textarea", els => els.map(e => e.value));
+  check(cards[0] === "<Subject 1> stands facing the camera. She blinks naturally and slowly begins walking. Photorealistic garden, gentle camera movement."
+    && cards[2] === "<Subject 1> looks toward the camera and smiles.", `imported segments: ${JSON.stringify(cards)}`);
+  const lens = await page.$$eval('#relayList .relay-seg input[type="number"]', els => els.map(e => e.value));
+  check(JSON.stringify(lens) === JSON.stringify(["10", "12", "8"]), `imported lengths: ${JSON.stringify(lens)}`);
+  const imported = await page.$$eval("#relayLook textarea", els => Object.fromEntries(els.map(e => [e.dataset.look, e.value])));
+  check(imported.subjects === "<Subject 1> is an adult woman with auburn hair. Same outfit throughout." && imported.camera === "16:9 cinematic medium shots."
+    && imported.lighting === "Soft natural morning sunlight." && imported.sound === "Birdsong and soft footsteps." && imported.music === ""
+    && imported.retention === "Preserve the same facial identity and clothing across all segments.", `imported shared fields: ${JSON.stringify(imported)}`);
+  check(await page.isHidden("#relayList .seg-start") && await page.isVisible("#relayList .seg-start-ratio"),
+    "a long take with no start image does not offer its video format alone");
+  await page.selectOption("#relayList .seg-start-ratio select", "9:16");
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
+  await assembled(before);
+  lt = jobs.slice(before);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-t2v", "h3-r2v", "h3-r2v", "video-stitch"]), `long take from text: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  const t2v = lt[0]?.params || {};
+  check(t2v.aspect === "9:16" && t2v.duration === 10 && !("image" in t2v) && !/<Picture/.test(t2v.prompt || "")
+    && /subject_definitions:\n<Subject 1> is an adult woman with auburn hair/.test(t2v.prompt || "") && !/\[reference generation\]/.test(t2v.prompt || "")
+    && /retention_analysis:\nPreserve the same facial identity/.test(t2v.prompt || ""), `segment 1 from text: ${JSON.stringify(t2v)}`);
+  const after1 = lt[1]?.params || {};
+  check(after1.continue_from === `outputs/${lt[0]?.id}.mp4` && JSON.stringify(after1.references) === JSON.stringify([`outputs/${lt[0]?.id}.png`])
+    && after1.duration === 12 && /<Subject 1> is the main character in <Picture 1>\.\n<Subject 1> is an adult woman/.test(after1.prompt || ""),
+    `segment 2 after text: ${JSON.stringify(after1)}`);
+  check(lt[2]?.params.continue_from === `outputs/${lt[1]?.id}.mp4`, "segment 3 does not continue segment 2");
+
+  // A described scene (no <Subject N>), from a picture: segment 1 starts on the picture and
+  // keeps it (i2v: Ref2VA cut away from an empty place after 2 frames), the segments after it
+  // see it as the scene's reference, the location.
+  visionSheet = false;
+  await page.click("#studioExitBtn");
+  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.reload({ waitUntil: "load" });
+  await page.click('.usecase[data-pipeline="sequence"]');
+  await page.setInputFiles("#seqFiles", [{ name: "forest.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.fill("#brief", SCENE);
+  await page.click("#generateBtn");
+  await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 2);
+  before = jobs.length;
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
+  await assembled(before);
+  lt = jobs.slice(before);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-i2v", "h3-r2v", "video-stitch"])
+    && /<Subject 1> is the location as defined by <Picture 1>/.test(lt[1]?.params.prompt || "") && !/main character/.test(lt[1]?.params.prompt || ""),
+    `described scene: ${JSON.stringify(lt.map(j => j.pipeline))} ${lt[1]?.params.prompt}`);
+  check(/^For the target video, at 0\.00 seconds into the target video, <Picture 1> \(from \[Shot 1\]\) is fully referenced\./.test(lt[0]?.params.prompt || "")
+    && /<Subject 1> is the location as defined by <Picture 1>/.test(lt[0]?.params.prompt || "") && !/main character/.test(lt[0]?.params.prompt || "")
+    && !!lt[0]?.params.image && lt[1]?.params.references?.[0] === lt[0]?.params.image
+    && lt[1]?.params.continue_from === `outputs/${lt[0]?.id}.mp4`,
+    `described scene, segment 1 does not start on its picture: ${JSON.stringify(lt.map(j => ({ ...j.params, prompt: undefined })))}`);
+
+  // The Relay's own import splits the file as written, without Gemma.
+  chatsBefore = chats.length;
+  await page.setInputFiles("#relayImportFile", { name: "garden.txt", mimeType: "text/plain", buffer: Buffer.from(SCREENPLAY) });
+  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 3);
+  check(chats.length === chatsBefore && dialogs > 0, `the Relay import: ${chats.length - chatsBefore} Gemma call(s), confirmation asked: ${dialogs > 0}`);
 
   // A new long take holds its screenplay in its card: splitting it loses nothing, so nothing
   // is asked; a card rewritten by hand is asked about before it is replaced.
