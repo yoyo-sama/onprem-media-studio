@@ -156,8 +156,11 @@ const SPLIT = {
   page.on("dialog", d => { dialogs++; d.accept(); });
 
   await page.goto(base + "index.html#studio", { waitUntil: "load" });
-  await page.click('.usecase[data-scenario="storyboard"]');
-  await page.selectOption("#pipelineSelect", "storyboard");
+  await page.click('.usecase[data-pipeline="storyboard"]');
+  check(await page.inputValue("#pipelineSelect") === "storyboard" && await page.isHidden("#pipelineWrap"), "the trailer card shows a Pipeline menu");
+  await page.click('.usecase[data-pipeline="campaign"]');
+  check(await page.inputValue("#pipelineSelect") === "campaign" && await page.isHidden("#pipelineWrap"), "the short ad card shows a Pipeline menu");
+  await page.click('.usecase[data-pipeline="storyboard"]');
   await page.waitForSelector("#resumeProjectBtn:not([hidden])", { timeout: 5000 });
   await page.click("#resumeProjectBtn");
   await page.waitForSelector('#studioNav [data-section="relay"]:not([disabled])', { timeout: 5000 });
@@ -365,8 +368,7 @@ const SPLIT = {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => { localStorage.removeItem("studioProject"); });
   await page.reload({ waitUntil: "load" });
-  await page.click('.usecase[data-scenario="storyboard"]');
-  await page.selectOption("#pipelineSelect", "sequence");
+  await page.click('.usecase[data-pipeline="sequence"]');
   check(await page.isHidden("#resumeProjectBtn"), "a resume button shows with no saved long take");
   check(await page.isVisible("#imageInputWrap") && (await page.textContent("#imageInputLabel")).trim() === "First frame (optional)"
     && await page.isVisible("#refExtrasWrap") && (await page.textContent("#refExtrasTitle")).trim() === "References (optional)"
@@ -434,8 +436,7 @@ const SPLIT = {
   await page.click("#studioExitBtn");
   await page.evaluate(() => { localStorage.removeItem("studioProject"); });
   await page.reload({ waitUntil: "load" });
-  await page.click('.usecase[data-scenario="storyboard"]');
-  await page.selectOption("#pipelineSelect", "sequence");
+  await page.click('.usecase[data-pipeline="sequence"]');
   await page.setInputFiles("#refImagesInput", [{ name: "sheet.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") },
                                                { name: "racket.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
   await page.waitForFunction(() => document.querySelectorAll("#refSubjects .rs-role").length === 2);

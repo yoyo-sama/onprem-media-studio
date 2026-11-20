@@ -44,6 +44,13 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
   jobs its button stands for: "Generate the chain" renders the Relay's segments and, when every
   one is ready, assembles the sequence (two segments or more; a chain stopped or broken is not
   assembled).
+- **A goal card with its own pipeline shows no Pipeline menu** (2026-11-20). "Long video
+  (long take)", "Short ad / campaign" and "Narrative trailer" open their pipeline alone
+  (`sequence`, `campaign`, `storyboard`: `own` in `PIPELINES`), with no menu to choose; the
+  other cards share the general pipelines (Text2Image, Image2Image, Text2Video, Image2Video,
+  reference to video) in the menu. "→ Use as input" from such a card opens the general card
+  (`usePipeline`). Since the trailer shows only the storyboard, reference to video is listed with
+  the general pipelines.
 - **One main action per step, in view, and the rest folded** (2026-11-16). The form reads top
   to bottom: the brief on its full width, the pipeline's own settings, what it takes besides the
   brief (input image or first frame, extra references, sheets from the assistant), the
