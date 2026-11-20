@@ -140,7 +140,12 @@ async function runStudio(page, s) {
   // through the general card's menu.
   const card = `.usecase[data-pipeline="${s.pipeline}"]`;
   await page.click(await page.$(card) ? card : '.usecase[data-pipeline="text2image"]');
-  if (await page.isVisible("#pipelineSelect")) await page.selectOption("#pipelineSelect", s.pipeline);
+  // The storyboard has no card any more (only the assistant's storyboard card opens it):
+  // select it as that card does, its pipeline alone in the menu.
+  if (s.pipeline === "storyboard" && !(await page.$(card)))
+    await page.evaluate(() => { const sel = document.querySelector("#pipelineSelect");
+      sel.replaceChildren(new Option("storyboard", "storyboard")); sel.value = "storyboard"; sel.dispatchEvent(new Event("change")); });
+  else if (await page.isVisible("#pipelineSelect")) await page.selectOption("#pipelineSelect", s.pipeline);
   // A pipeline with one engine shows no engine menu: that engine is the one in use.
   if (await page.isVisible("#modelSelect")) await page.selectOption("#modelSelect", s.model);
   else if (await page.inputValue("#modelSelect") !== s.model) throw new Error(`${s.pipeline}: engine ${await page.inputValue("#modelSelect")}, expected ${s.model}`);

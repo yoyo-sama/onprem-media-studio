@@ -16,10 +16,13 @@
 // vision; its first segment runs from image 1 to image 2 (FL2VA), a segment added after
 // the end continues it, and it resumes as saved.
 // The shared fields are folded while empty and open once filled; a chain that ends with
-// every segment ready assembles the sequence, a stopped one does not; the "Long video" goal
-// card opens the long take, whose screenplay is split without a question while its cards
-// only hold that screenplay.
-// With a folder, screenshots of the Relay at 1440 and 390 px, light and dark.
+// every segment ready assembles the sequence, a stopped one does not; the "Narrative video"
+// goal card opens the long take (no trailer card any more), whose screenplay is split without
+// a question while its cards only hold that screenplay, a new scene of the split opening with
+// a cut; the sheet buttons under References submit one job each and add the sheet with its
+// role, a character photo's sheet taking the photo's place.
+// With a folder, screenshots of the Relay at 1440 and 390 px, light and dark, and of the goal
+// cards and the long take's references in French.
 // Exit 0 = all green, 1 = a check failed, 2 = the test could not run.
 "use strict";
 const fs = require("fs"), path = require("path"), http = require("http");
@@ -136,6 +139,8 @@ const SPLIT = {
     if (p === "/api/loras") return json({ h3: [], krea2: [], qwen21: [], moss: [] });
     if (p === "/api/instructions") return json({});
     if (p === "/api/roles" || p === "/api/chats") return json([]);
+    if (p.startsWith("/api/gallery/facets")) return json({ pipelines: [], origins: [], tags: [] });
+    if (p.startsWith("/api/gallery/dates")) return json({ periods: [] });
     if (p.startsWith("/api/gallery/")) return json({ items: [], next: null, counts: { image: 0, video: 0 } });
     return json({ detail: "x" }, 404);
   });
@@ -156,11 +161,13 @@ const SPLIT = {
   page.on("dialog", d => { dialogs++; d.accept(); });
 
   await page.goto(base + "index.html#studio", { waitUntil: "load" });
-  await page.click('.usecase[data-pipeline="storyboard"]');
-  check(await page.inputValue("#pipelineSelect") === "storyboard" && await page.isHidden("#pipelineWrap"), "the trailer card shows a Pipeline menu");
+  // The trailer card is folded into the narrative video's: no card opens the storyboard,
+  // and a saved storyboard project resumes from the narrative video card.
+  check(!(await page.$('.usecase[data-pipeline="storyboard"]')), "the trailer card is still there");
   await page.click('.usecase[data-pipeline="campaign"]');
   check(await page.inputValue("#pipelineSelect") === "campaign" && await page.isHidden("#pipelineWrap"), "the short ad card shows a Pipeline menu");
-  await page.click('.usecase[data-pipeline="storyboard"]');
+  await page.click('.usecase[data-pipeline="sequence"]');
+  check(await page.inputValue("#pipelineSelect") === "sequence" && await page.isHidden("#pipelineWrap"), "the narrative video card shows a Pipeline menu");
   await page.waitForSelector("#resumeProjectBtn:not([hidden])", { timeout: 5000 });
   await page.click("#resumeProjectBtn");
   await page.waitForSelector('#studioNav [data-section="relay"]:not([disabled])', { timeout: 5000 });
@@ -617,15 +624,65 @@ const SPLIT = {
   await page.fill("#relayTotal", "30");
   await page.dispatchEvent("#relayTotal", "change");
   dialogs = 0; before = jobs.length;
+  // Gemma says segment 3 starts a new scene (bad numbers are dropped): it opens with a cut.
+  SPLIT.cuts = [3, 1, 9, "x"];
   await page.click("#relayComposeBtn");
   await page.waitForFunction(() => /gravel path/.test(document.querySelector("#relayList .relay-seg textarea")?.value || ""));
   check(dialogs === 0, "splitting a long take that only holds its screenplay asked for a confirmation");
+  const links = await page.$$eval("#relayList .relay-seg .seg-link", els => els.map(e => e.hidden ? "-" : e.textContent));
+  check(/🔗/.test(links[1]) && /🎞/.test(links[2]), `a new scene in the split is not a cut: ${JSON.stringify(links)}`);
   await page.fill('#relayList .relay-seg[data-seg="1"] textarea', "She sits on a bench.");
   await page.dispatchEvent('#relayList .relay-seg[data-seg="1"] textarea', "change");
   await page.click("#relayComposeBtn");
   await page.waitForFunction(() => /flowering tree/.test(document.querySelector('#relayList .relay-seg[data-seg="1"] textarea')?.value || ""));
   check(dialogs === 1, `replacing a rewritten segment asked ${dialogs} time(s)`);
   check(jobs.length === before, "splitting the screenplay submitted a job");
+
+  // Sheets under the references: one click, one job, the sheet joins the list with its role;
+  // a character photo's sheet takes the photo's place. Writing the brief or adding a photo
+  // submits nothing.
+  await page.click("#studioExitBtn");
+  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.reload({ waitUntil: "load" });
+  await page.click('.usecase[data-pipeline="sequence"]');
+  before = jobs.length;
+  await page.fill("#brief", "A fox runs through a snowy birch forest at dawn.");
+  const rows = () => page.$$eval("#refSubjects .ref-subject", els => els.map(e => ({
+    name: e.querySelector(".rs-name").textContent, role: e.querySelector(".rs-role")?.value, sheet: !!e.querySelector(".rs-sheet") })));
+  await page.click("#seqCharSheetBtn");
+  await page.waitForFunction(() => document.querySelectorAll("#refSubjects .ref-subject").length === 1, null, { timeout: 10000 });
+  await page.waitForFunction(() => !document.querySelector("#seqCharSheetBtn").disabled);
+  await page.click("#seqSetSheetBtn");
+  await page.waitForFunction(() => document.querySelectorAll("#refSubjects .ref-subject").length === 2, null, { timeout: 10000 });
+  await page.waitForFunction(() => !document.querySelector("#seqSetSheetBtn").disabled);
+  let sj = jobs.slice(before), r = await rows();
+  check(JSON.stringify(sj.map(j => j.pipeline)) === JSON.stringify(["krea2-t2i", "krea2-t2i"]) && sj.every(j => j.params.count === 1),
+    `sheets from the brief: ${JSON.stringify(sj.map(j => j.pipeline))}`);
+  check(r[0]?.role === "character" && r[0]?.name === `${sj[0]?.id}.png` && !r[0]?.sheet
+    && r[1]?.role === "setting" && r[1]?.name === `${sj[1]?.id}.png` && !r[1]?.sheet, `sheets in the references: ${JSON.stringify(r)}`);
+  before = jobs.length;
+  await page.setInputFiles("#refImagesInput", { name: "fox.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  r = await rows();
+  check(jobs.length === before && r.length === 3 && r[2]?.role === "character" && r[2]?.sheet,
+    `a character photo: ${jobs.length - before} job(s), rows ${JSON.stringify(r)}`);
+  await page.click("#refSubjects .ref-subject:nth-child(3) .rs-sheet");
+  await page.waitForFunction(() => /^job-/.test(document.querySelector("#refSubjects .ref-subject:nth-child(3) .rs-name")?.textContent || ""), null, { timeout: 10000 });
+  sj = jobs.slice(before); r = await rows();
+  check(sj.length === 1 && sj[0].pipeline === "qwen-image-2.1" && sj[0].params.images?.length === 1 && sj[0].params.count === 1,
+    `sheet from a photo: ${JSON.stringify(sj.map(j => ({ pipeline: j.pipeline, images: j.params.images })))}`);
+  check(r.length === 3 && r[2]?.name === `${sj[0]?.id}.png` && r[2]?.role === "character" && !r[2]?.sheet,
+    `the photo's sheet does not take its place: ${JSON.stringify(r)}`);
+  if (SHOTS) {
+    await page.selectOption("#langSelect", "fr");
+    await page.setInputFiles("#refImagesInput", { name: "lea.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+    for (const [w, h] of [[1440, 900], [390, 844]])
+      for (const theme of ["light", "dark"]) {
+        await page.setViewportSize({ width: w, height: h });
+        await page.evaluate(t => document.documentElement.setAttribute("data-theme", t), theme);
+        await page.locator(".usecases").screenshot({ path: path.join(SHOTS, `cards-${w}-${theme}.png`) });
+        await page.locator("#refExtrasWrap").screenshot({ path: path.join(SHOTS, `sheets-${w}-${theme}.png`) });
+      }
+  }
 
   check(!errs.length, `page errors: ${errs.join(" | ")}`);
   await browser.close();

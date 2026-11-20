@@ -892,7 +892,7 @@ Answer ONLY with JSON: {"prompt": "..."}`;
   // once (camera, lighting, sounds, music) and one action per segment; the H3 structure
   // is assembled at render time, subjects arrive as bare stand-ins.
   const H3_SCENARIO_SYSTEM = (n, legend) => `You are a shot-list writer for the MiniMax H3 video model.
-Split the user's scenario into exactly ${n} consecutive video segments of one single continuous sequence, in chronological order. Each segment is rendered on its own, a few seconds long, so it holds one simple action.
+Split the user's scenario into exactly ${n} consecutive video segments, in chronological order: one continuous shot, or several shots when the scenario has several scenes. Each segment is rendered on its own, a few seconds long, so it holds one simple action.
 Also write, once, the look that every segment shares, so that no segment repeats it.
 Rules:
 - "framing": one English sentence of 5 to 20 words, the framing of the whole sequence: shot size, camera height and lens. Never a camera movement: each segment gives its own.
@@ -902,13 +902,14 @@ Rules:
 - Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
 - A segment acts within the place already shown: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
 - The segments follow on from one another: segment k+1 starts exactly where segment k ended. Never restart the scene, never retell the whole scenario inside one segment, never jump elsewhere unless the scenario says so.
+- A new shot: when the scenario itself moves to another place, another moment or another shot, the segment where that happens starts a new shot. List the numbers of those segments, counting from 1, in "cuts"; segment 1 is never listed. A scenario that is one continuous scene has "cuts": [].
 - The recurring subjects are named by a marker, one bare word each. Copy each marker character for character wherever that subject acts:
 ${legend}
 - Write the marker instead of a proper name, and instead of a bare pronoun whenever the sentence would otherwise be ambiguous.
 - Use ONLY positive phrasing (never "no", "without", "avoid").
 - Plain prose only: no field name, no heading, no numbering, no timestamp, no angle bracket, no square bracket.
 - Never write "masterpiece", "best quality", "8k" or "ultra detailed".
-Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": ["...", "..."]} with exactly ${n} segments, in order.`;
+Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": ["...", "..."], "cuts": []} with exactly ${n} segments, in order.`;
 
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
   const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
@@ -1227,8 +1228,11 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const segments = (Array.isArray(out.segments) ? out.segments : []).map(clean).filter(Boolean).slice(0, max);
     if (!segments.length) throw new Error("no segment returned");
     const music = clean(out.music);
-    return { segments, look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
-                               music: NO_MUSIC_RE.test(music) ? "" : music } };
+    // "cuts": 1-based numbers of the segments that start a new shot (never the first).
+    const cuts = [...new Set((Array.isArray(out.cuts) ? out.cuts : []).map(Number)
+      .filter(k => Number.isInteger(k) && k >= 2 && k <= segments.length).map(k => k - 1))].sort((a, b) => a - b);
+    return { segments, cuts, look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
+                                     music: NO_MUSIC_RE.test(music) ? "" : music } };
   }
 
   // A screenplay written in the H3 layout (a file the user imports, or pasted as the brief):

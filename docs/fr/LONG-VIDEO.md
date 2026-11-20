@@ -274,6 +274,32 @@ qui ne nomme aucun `<Subject N>`) fait toujours de la première image son lieu q
 référence n'est donnée. La carte `long_take` de l'assistant prend `first_frame`, `references`
 et `kinds` de la même façon. Pas encore rendu sur le GB10.
 
+## Une seule carte de vidéo narrative : coupes et planches (2026-11-20, nuit)
+
+Le propriétaire a trouvé redondantes la carte « Bande-annonce narrative » (le storyboard) et la
+carte « Vidéo longue », et a choisi de les regrouper selon ce plan :
+
+1. Une seule carte, **« Vidéo narrative (plan-séquence) »**, ouvre le plan-séquence. Un scénario
+   écrit en prose qui passe à un autre lieu, un autre moment ou un autre plan reçoit là une
+   coupe 🎞 : le découpage de Gemma (`H3_SCENARIO_SYSTEM`) répond maintenant `"cuts"`, les
+   numéros (à partir de 1) des segments qui ouvrent un nouveau plan ; `composeScenario` garde les
+   nombres entiers de 2 au nombre de segments et le Relay passe ces segments en `cut` (un job
+   `h3-r2v` sur les planches, comme toute coupe). Un fichier de scénario garde sa propre mise en
+   forme, lue sans Gemma.
+2. **Des planches en un clic** sous Références : « ✨ Planche personnage depuis le brief » (champs
+   personnage de Gemma, puis un job Krea 2 avec le prompt de planche personnage), « ✨ Planche
+   décor depuis le brief » (champs de lieu, un job Krea 2), et « ✨ Planche » sur une photo de
+   personnage (un appel de vision pour ses champs, puis un job Qwen Image 2.1 sur la photo avec
+   le prompt à cinq vues ; la planche remplace la photo). Chaque planche rejoint les références
+   avec son rôle. Aucune étape de validation : on redessine une planche d'un nouveau clic, on la
+   retire avec ✕.
+3. Les images fixes par plan et l'animatique du storyboard quittent la carte : l'histoire est
+   rendue directement en segments enchaînés ou coupés.
+4. Ensuite : une histoire en trois scènes avec coupes rendue sur le GB10, ses images inspectées.
+5. Si ce rendu est bon, le pipeline storyboard disparaît (code, carte storyboard de l'assistant,
+   docs). D'ici là, il s'ouvre depuis la carte storyboard de l'assistant, et un projet storyboard
+   enregistré se reprend depuis la carte narrative.
+
 ## Résultats
 
 ### Étape 1, continuation latente (GB10, 2026-11-19)

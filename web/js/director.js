@@ -293,6 +293,36 @@ export async function startLongTake(seed, { first = null, refs = [] } = {}) {
   renderRelay();
 }
 
+// A sheet for a long take's references, made from the form before the long take opens:
+// one click, one job, no approval step. "char": the brief's main subject (Krea 2), or the
+// subject of a photo, which Gemma's vision describes and Qwen Image 2.1 draws in five
+// views; "setting": the brief's place (Krea 2). Returns the sheet's image.
+const SUBJECT_FROM_PHOTO = "The scene is the attached photo: describe the main subject it shows, exactly as it looks there.";
+export async function longTakeSheet(kind, photo = null) {
+  const text = F.brief(), seed = F.formSeed();
+  if (!photo && !text) throw new Error(t("Describe the scene in the brief before generating."));
+  const meta = (label, info) => ({ origin: "relay", label: [label], sub: ["{info} · seed {seed}", { info, seed }] });
+  let job;
+  if (kind === "setting") {
+    log("req", "Setting sheet: the place of the brief with {llm}…", { llm: LLM });
+    const fields = await P.locationSheetFromBrief(F.llm, text, promptLog);
+    job = await runJob("krea2-t2i", { prompt: P.locsheetPromptFrom(P.locDescFromFields(fields), "none"), ...P.SHEET_SIZE, count: 1, seed },
+      meta("Setting sheet", "Krea 2"));
+  } else if (photo) {
+    log("req", "Subject sheet from a photo: {name} (Qwen Image 2.1)…", { name: photo.name });
+    const fields = await fieldsFromSheet(photo, P.characterSheetFromBrief, SUBJECT_FROM_PHOTO);
+    const prompt = P.charsheetFromPhotoPrompt(P.charDescFromFields(fields), P.charKindOf(fields), "none");
+    job = await runJob("qwen-image-2.1", { prompt, images: [await F.imageRef(photo)], ...P.SHEET_SIZE, count: 1, seed },
+      meta("Subject sheet", "Qwen Image 2.1"));
+  } else {
+    log("req", "Subject sheet: the main subject of the brief with {llm}…", { llm: LLM });
+    const fields = await P.characterSheetFromBrief(F.llm, text, promptLog);
+    job = await runJob("krea2-t2i", { prompt: P.charsheetPromptFrom(P.charDescFromFields(fields), P.charKindOf(fields), "auto", "none"),
+      ...P.SHEET_SIZE, count: 1, seed }, meta("Subject sheet", "Krea 2"));
+  }
+  return out(job, ".png");
+}
+
 export async function startStoryboard(seed) {
   const { s, text } = await openSession("storyboard", seed);
   s.n = Math.min(16, Math.max(4, parseInt($("shotCount").value, 10) || 6));
@@ -1166,10 +1196,13 @@ async function composeRelay() {
   tx(btn, "Splitting…");
   try {
     log("req", "Relay: splitting the screenplay into {n} segments with {llm}…", { n, llm: LLM });
-    const { segments: list, look } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
-    // The end images stay with the segment of the same rank (a long take's key images).
+    const { segments: list, look, cuts } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
+    // The end images stay with the segment of the same rank (a long take's key images). A
+    // segment that starts a new scene is a cut (🎞): Ref2VA from the references.
     const ends = r.segments.map(seg => seg.endImage);
-    r.segments = list.map((prompt, i) => ({ ...newRelaySegment(prompt, durs[Math.min(i, n - 1)]), endImage: ends[i] || null }));
+    r.segments = list.map((prompt, i) => ({ ...newRelaySegment(prompt, durs[Math.min(i, n - 1)]),
+      ...(cuts.includes(i) ? { mode: "cut" } : {}), endImage: ends[i] || null }));
+    if (cuts.length) log("ok", "Relay: {n} new shot(s) found in the screenplay: their segments start with a cut (🎞).", { n: cuts.length });
     syncRelayTotal();
     r.scenario = text;
     // The shared look fills only the fields left empty: what the user wrote stays.

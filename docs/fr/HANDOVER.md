@@ -249,6 +249,10 @@ Rien ci-dessous n'a été demandé pour maintenant ; chaque point attend le prop
 - Plan-séquence avec un champ Première image et une liste Références avec rôles (2026-11-20 au
   soir, [LONG-VIDEO.md](LONG-VIDEO.md) § Première image et références) : pas encore rendu sur un
   GB10.
+- Une seule carte « Vidéo narrative » (2026-11-20 dans la nuit, [LONG-VIDEO.md](LONG-VIDEO.md)
+  § Une seule carte de vidéo narrative) : une histoire en trois scènes avec les coupes du
+  découpage de Gemma, et les planches en un clic, à rendre sur promaxgb10-95c7 ; le pipeline
+  storyboard n'est retiré que si ce rendu est bon.
 - Planche personnage depuis une photo (Qwen Image 2.1, PR #9 ; prompt à cinq vues adapté de H3
   Character Sheet Designer depuis le 2026-11-13) : jamais qualifiée.
 - Les poids de l'upscaler SPAN ne sont pas encore téléchargés sur promaxgb10-95c7

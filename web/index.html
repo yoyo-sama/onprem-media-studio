@@ -212,14 +212,9 @@
             <span>Posters, thumbnails and a video teaser from a single brief.</span>
             <small>Social media / Marketing</small>
           </button>
-          <button type="button" class="usecase" data-scenario="storyboard" data-pipeline="storyboard" aria-pressed="false">
-            <strong>Narrative trailer (several shots)</strong>
-            <span>You approve the character and setting sheets first, then each shot.</span>
-            <small>Director / Storyboard artist</small>
-          </button>
           <button type="button" class="usecase" data-scenario="storyboard" data-pipeline="sequence" aria-pressed="false">
-            <strong>Long video (long take)</strong>
-            <span>One continuous video made of chained segments, from a photo, a character sheet or text alone.</span>
+            <strong>Narrative video (long take)</strong>
+            <span>A story in one continuous take or in several shots, from your text, a photo or a sheet of the characters.</span>
             <small>Director / Videographer</small>
           </button>
           <button type="button" class="usecase" data-scenario="localization" data-pipeline="image2image" aria-pressed="false">
@@ -325,6 +320,10 @@
                 </label>
                 <p class="hint r2v-only">Each image gets a subject number, each clip and sound its own label, used automatically in the prompt. A clip is sent silent: to use its sound, add the sound itself.</p>
                 <div class="ref-subjects" id="refSubjects"></div>
+                <div class="seq-only seq-sheet-row" hidden>
+                  <button type="button" class="secondary-btn" id="seqCharSheetBtn" title="Gemma describes the main subject of the brief, Krea 2 draws its sheet: one job, added to the references as a character">✨ Subject sheet from the brief</button>
+                  <button type="button" class="secondary-btn" id="seqSetSheetBtn" title="Gemma describes the place of the brief, Krea 2 draws its sheet: one job, added to the references as the setting">✨ Setting sheet from the brief</button>
+                </div>
               </div>
             </div>
             <label id="skipSheetsWrap" class="check-row" hidden>

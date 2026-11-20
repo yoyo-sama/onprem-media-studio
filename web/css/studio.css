@@ -514,6 +514,11 @@ textarea:disabled, input:disabled, select:disabled { opacity: .45; cursor: not-a
 /* A long take's first frame: the whole row, its hint in plain text under the field. */
 .generate-bar #imageInputWrap:has(> .seq-only:not([hidden])) { flex: 1 1 100%; }
 label > .hint { text-transform: none; letter-spacing: normal; font-weight: 400; }
+.seq-sheet-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ref-subject .rs-sheet { flex: none; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-light);
+  background: transparent; color: var(--text-2); font: inherit; font-size: 12px; cursor: pointer; }
+.ref-subject .rs-sheet:hover:not(:disabled) { color: var(--highlight); background: var(--selected); }
+.ref-subject .rs-sheet:disabled { opacity: .5; cursor: default; }
 /* Gallery: "→ First frame" and "→ Reference" only where the form takes both (a long take,
    Image2Image with references); a long take's input image is called its first frame. */
 body:not([data-gallery-use="first"]) .first-use, body[data-mode="assistant"] .first-use,
@@ -955,6 +960,17 @@ body:not([data-gallery-use]) .ref-use, body[data-mode="assistant"] .ref-use { di
 
 .ref-subject.ref-removable { grid-template-columns: auto 1fr auto; }
 .ref-subject.ref-removable:has(> .rs-role) { grid-template-columns: auto 1fr auto auto; }
+.ref-subject.ref-removable:has(> .rs-sheet) { grid-template-columns: auto 1fr auto auto auto; }
+/* Phone: the name keeps its line, the role (and "✨ Sheet") go under it. */
+@media (max-width: 767px) {
+  .ref-subject.ref-removable:has(> .rs-role) { grid-template-columns: auto 1fr auto; grid-template-areas: "tag name x" "role role role"; }
+  .ref-subject.ref-removable:has(> .rs-sheet) { grid-template-areas: "tag name x" "role role sheet"; }
+  .ref-subject:has(> .rs-role) > .rs-tag { grid-area: tag; }
+  .ref-subject:has(> .rs-role) > .rs-name { grid-area: name; }
+  .ref-subject:has(> .rs-role) > .rs-role { grid-area: role; max-width: none; }
+  .ref-subject:has(> .rs-role) > .rs-sheet { grid-area: sheet; }
+  .ref-subject:has(> .rs-role) > .rs-x { grid-area: x; }
+}
 .ref-subject .rs-role { font-size: 12px; padding: 3px 6px; max-width: 16em; }
 .ref-subject.ref-ignored .rs-tag { color: var(--text-2); }
 .ref-subject.ref-ignored .rs-name { text-decoration: line-through; }

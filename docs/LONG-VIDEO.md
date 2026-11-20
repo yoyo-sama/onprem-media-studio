@@ -255,6 +255,30 @@ image is. A described scene (a screenplay that names no `<Subject N>`) still mak
 frame its location when no reference is given. The assistant's `long_take` card takes
 `first_frame`, `references` and `kinds` the same way. Not rendered on the GB10 yet.
 
+## One narrative video card: cuts and sheets (2026-11-20, night)
+
+The owner found the "Narrative trailer" card (the storyboard) and the "Long video" card
+redundant and chose to merge them along this plan:
+
+1. One card, **"Narrative video (long take)"**, opens the long take. A screenplay written as
+   prose that moves to another place, moment or shot gets a 🎞 cut there: Gemma's split
+   (`H3_SCENARIO_SYSTEM`) now answers `"cuts"`, the 1-based numbers of the segments that start a
+   new shot; `composeScenario` keeps whole numbers from 2 to the segment count and the Relay
+   sets those segments to `cut` (one `h3-r2v` job on the sheets, as a cut always was). A
+   screenplay file keeps its own layout, read without Gemma.
+2. **Sheets in one click** under References: "✨ Subject sheet from the brief" (Gemma's
+   character fields, then one Krea 2 job with the character sheet prompt), "✨ Setting sheet
+   from the brief" (location fields, one Krea 2 job), and "✨ Sheet" on a character photo (a
+   vision call for its fields, then one Qwen Image 2.1 job on the photo with the five-view
+   prompt; the sheet replaces the photo). Each sheet joins the references with its role. No
+   approval step: a sheet is redrawn by clicking again, or removed with ✕.
+3. The per-shot still images and the animatic of the storyboard leave the card: the story is
+   rendered directly as chained or cut segments.
+4. Next: a three-scene story with cuts rendered on the GB10, its frames inspected.
+5. If that render is good, the storyboard pipeline goes (code, the assistant's storyboard card,
+   docs). Until then it opens from the assistant's storyboard card, and a saved storyboard
+   project resumes from the narrative card.
+
 ## Results
 
 ### Step 1, latent continuation (GB10, 2026-11-19)
