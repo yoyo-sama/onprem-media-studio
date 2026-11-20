@@ -235,6 +235,9 @@ Nothing below was asked to be done now; each waits for the owner.
   starting in i2v, and a file with a start image, are not rendered yet.
 - Long take with a First frame field and a References list with roles (2026-11-20 evening,
   [LONG-VIDEO.md](LONG-VIDEO.md) § First frame and references): not rendered on a GB10 yet.
+- One "Narrative video" card (2026-11-20 night, [LONG-VIDEO.md](LONG-VIDEO.md) § One narrative
+  video card): a three-scene story with cuts from Gemma's split, and the one-click sheets, to be
+  rendered on promaxgb10-95c7; the storyboard pipeline is removed only if that render is good.
 - Character sheet from a photo (Qwen Image 2.1, PR #9; five-view prompt adapted from H3 Character
   Sheet Designer since 2026-11-13): never qualified.
 - The SPAN upscaler weights are not yet downloaded on promaxgb10-95c7 (automatic on first use).

@@ -537,16 +537,6 @@ export const DICT = {
     es: "Director / Videógrafo",
     de: "Regisseur / Videograf",
   },
-  "Long video (long take)": {
-    fr: "Vidéo longue (plan-séquence)",
-    es: "Vídeo largo (plano secuencia)",
-    de: "Langes Video (Plansequenz)",
-  },
-  "Director / Storyboard artist": {
-    fr: "Réalisateur / Storyboard artist",
-    es: "Director / Artista de storyboard",
-    de: "Regisseur / Storyboard-Artist",
-  },
   "Director mode": {
     fr: "Mode Réalisateur",
     es: "Modo Director",
@@ -2742,11 +2732,6 @@ export const DICT = {
     es: "Plano general",
     de: "Totale",
   },
-  "You approve the character and setting sheets first, then each shot.": {
-    fr: "Tu valides d'abord les planches personnage et décor, puis chaque plan.",
-    es: "Primero apruebas las láminas de personaje y decorado, y luego cada plano.",
-    de: "Du gibst zuerst die Figuren- und Schauplatzbögen frei, dann jede Einstellung.",
-  },
   "Your instruction (replaces the original).": {
     fr: "Ta consigne (remplace celle d'origine).",
     es: "Tu instrucción (reemplaza la original).",
@@ -3972,11 +3957,6 @@ export const DICT = {
     es: "Relay: {n} segmento(s) escrito(s) conservado(s) más allá del plan: elimínalos (✕ en las opciones avanzadas) para una toma más corta.",
     de: "Relay: {n} geschriebene(s) Segment(e) über den Plan hinaus behalten: entferne sie (✕ unter den erweiterten Optionen) für eine kürzere Einstellung.",
   },
-  "One continuous video made of chained segments, from a photo, a character sheet or text alone.": {
-    fr: "Une vidéo continue faite de segments enchaînés, à partir d'une photo, d'une planche personnage ou du texte seul.",
-    es: "Un vídeo continuo hecho de segmentos encadenados, a partir de una foto, de una ficha de personaje o solo del texto.",
-    de: "Ein durchgehendes Video aus verketteten Segmenten, aus einem Foto, einem Character Sheet oder nur aus Text.",
-  },
   "Long take": {
     fr: "Plan-séquence",
     es: "Plano secuencia",
@@ -4151,5 +4131,70 @@ export const DICT = {
     fr: "Ajoute cette image aux références",
     es: "Añade esta imagen a las referencias",
     de: "Fügt dieses Bild zu den Referenzen hinzu",
+  },
+  "Narrative video (long take)": {
+    fr: "Vidéo narrative (plan-séquence)",
+    es: "Vídeo narrativo (plano secuencia)",
+    de: "Erzählvideo (Plansequenz)",
+  },
+  "A story in one continuous take or in several shots, from your text, a photo or a sheet of the characters.": {
+    fr: "Une histoire en un seul plan continu ou en plusieurs plans, à partir de ton texte, d'une photo ou d'une planche des personnages.",
+    es: "Una historia en un solo plano continuo o en varios planos, a partir de tu texto, una foto o una hoja de los personajes.",
+    de: "Eine Geschichte in einer durchgehenden Einstellung oder in mehreren Einstellungen, aus deinem Text, einem Foto oder einem Blatt der Figuren.",
+  },
+  "✨ Subject sheet from the brief": {
+    fr: "✨ Planche personnage depuis le brief",
+    es: "✨ Hoja de personaje desde el brief",
+    de: "✨ Figurenblatt aus dem Brief",
+  },
+  "✨ Setting sheet from the brief": {
+    fr: "✨ Planche décor depuis le brief",
+    es: "✨ Hoja de escenario desde el brief",
+    de: "✨ Kulissenblatt aus dem Brief",
+  },
+  "Gemma describes the main subject of the brief, Krea 2 draws its sheet: one job, added to the references as a character": {
+    fr: "Gemma décrit le sujet principal du brief, Krea 2 dessine sa planche : un job, ajoutée aux références comme personnage",
+    es: "Gemma describe el sujeto principal del brief y Krea 2 dibuja su hoja: un trabajo, añadida a las referencias como personaje",
+    de: "Gemma beschreibt das Hauptmotiv des Briefs, Krea 2 zeichnet sein Blatt: ein Auftrag, als Figur zu den Referenzen hinzugefügt",
+  },
+  "Gemma describes the place of the brief, Krea 2 draws its sheet: one job, added to the references as the setting": {
+    fr: "Gemma décrit le lieu du brief, Krea 2 dessine sa planche : un job, ajoutée aux références comme décor",
+    es: "Gemma describe el lugar del brief y Krea 2 dibuja su hoja: un trabajo, añadida a las referencias como escenario",
+    de: "Gemma beschreibt den Ort des Briefs, Krea 2 zeichnet sein Blatt: ein Auftrag, als Kulisse zu den Referenzen hinzugefügt",
+  },
+  "✨ Sheet": {
+    fr: "✨ Planche",
+    es: "✨ Hoja",
+    de: "✨ Blatt",
+  },
+  "Draws a five-view sheet of this photo's subject (Qwen Image 2.1, one job); the sheet takes the photo's place": {
+    fr: "Dessine une planche à cinq vues du sujet de cette photo (Qwen Image 2.1, un job) ; la planche prend la place de la photo",
+    es: "Dibuja una hoja de cinco vistas del sujeto de esta foto (Qwen Image 2.1, un trabajo); la hoja ocupa el lugar de la foto",
+    de: "Zeichnet ein Blatt mit fünf Ansichten des Motivs dieses Fotos (Qwen Image 2.1, ein Auftrag); das Blatt ersetzt das Foto",
+  },
+  "Setting sheet: the place of the brief with {llm}…": {
+    fr: "Planche décor : le lieu du brief avec {llm}…",
+    es: "Hoja de escenario: el lugar del brief con {llm}…",
+    de: "Kulissenblatt: der Ort des Briefs mit {llm}…",
+  },
+  "Subject sheet: the main subject of the brief with {llm}…": {
+    fr: "Planche personnage : le sujet principal du brief avec {llm}…",
+    es: "Hoja de personaje: el sujeto principal del brief con {llm}…",
+    de: "Figurenblatt: das Hauptmotiv des Briefs mit {llm}…",
+  },
+  "Setting sheet added to the references.": {
+    fr: "Planche décor ajoutée aux références.",
+    es: "Hoja de escenario añadida a las referencias.",
+    de: "Kulissenblatt zu den Referenzen hinzugefügt.",
+  },
+  "Subject sheet added to the references.": {
+    fr: "Planche personnage ajoutée aux références.",
+    es: "Hoja de personaje añadida a las referencias.",
+    de: "Figurenblatt zu den Referenzen hinzugefügt.",
+  },
+  "Relay: {n} new shot(s) found in the screenplay: their segments start with a cut (🎞).": {
+    fr: "Relay : {n} nouveau(x) plan(s) trouvé(s) dans le scénario : leurs segments commencent par une coupe (🎞).",
+    es: "Relay: {n} plano(s) nuevo(s) en el guion: sus segmentos empiezan con un corte (🎞).",
+    de: "Relay: {n} neue Einstellung(en) im Drehbuch gefunden: ihre Segmente beginnen mit einem Schnitt (🎞).",
   },
 };

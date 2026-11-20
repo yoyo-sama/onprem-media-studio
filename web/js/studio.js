@@ -261,6 +261,31 @@ const SUBJECT_KINDS = { character: L("character"), environment: L("setting"), re
 const r2vPlan = () => F.r2vPlan($("skipSheetsToggle").checked);
 const plannedSubjects = () => r2vPlan().entries.filter(e => SUBJECT_KINDS[e.kind]).map(e => e.kind);
 
+// A long take's sheets, from the brief or from a character photo: one click, one job; the
+// sheet joins the references (a photo's sheet takes the photo's place). No approval step.
+let sheetBusy = false;
+async function makeSheet(kind, photo = null) {
+  if (sheetBusy) return;
+  sheetBusy = true;
+  const btns = [$("seqCharSheetBtn"), $("seqSetSheetBtn")];
+  btns.forEach(b => { b.disabled = true; });
+  renderRefs();
+  try {
+    const ref = await D.longTakeSheet(kind, photo);
+    const list = F.refList("seq");
+    const item = { name: ref.split("/").pop(), ref, kind: kind === "setting" ? "setting" : "character", sheet: true };
+    const at = photo ? list.indexOf(photo) : -1;
+    if (at >= 0) list.splice(at, 1, item);
+    else if (list.length < F.REF_CAPS.seq) list.push(item);
+    else notice(false, "At most {max} images here: the extra ones were ignored.", { max: F.REF_CAPS.seq });
+    log("ok", kind === "setting" ? "Setting sheet added to the references." : "Subject sheet added to the references.");
+  } catch (err) { warn(err); } finally {
+    sheetBusy = false;
+    btns.forEach(b => { b.disabled = false; });
+    renderRefs();
+  }
+}
+
 function renderRefs() {
   const ctx = F.refCtx(), plan = ctx === "r2v" ? r2vPlan() : null;
   $("refImagesInput").accept = ctx === "r2v" ? "image/*,video/*,audio/*" : "image/*";
@@ -295,6 +320,15 @@ function renderRefs() {
       txAttr(role, "aria-label", "Role of this reference in the clip");
       role.addEventListener("change", () => { img.kind = role.value; renderRefs(); });
       row.appendChild(role);
+    }
+    // A long take's character photo can become its sheet (five views), in its place.
+    if (ctx === "seq" && F.itemRole(img) === "character" && !img.sheet) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "rs-sheet"; b.textContent = "✨ Sheet";
+      txAttr(b, "title", "Draws a five-view sheet of this photo's subject (Qwen Image 2.1, one job); the sheet takes the photo's place");
+      b.disabled = sheetBusy;
+      b.addEventListener("click", () => makeSheet("char", img));
+      row.appendChild(b);
     }
     row.appendChild(x);
     return row;
@@ -650,8 +684,11 @@ function initialMode() {
 const inAssistant = () => document.body.dataset.mode === "assistant";
 
 // ── Project buttons (resume, cancel) ──────────────────────────────────────────
+// A storyboard project (the trailer card, folded into the narrative video's) resumes from
+// the narrative video card.
 function updateResumeButton() {
-  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && F.currentPipeline() === D.savedPipeline());
+  const saved = D.savedPipeline(), here = F.currentPipeline();
+  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && (here === saved || (saved === "storyboard" && here === "sequence")));
   updateCancelButton();
 }
 function updateCancelButton() {
@@ -974,6 +1011,8 @@ function initForm() {
   $("sheetTemplateSelect").addEventListener("change", () => D.setTemplate($("sheetTemplateSelect").value));
   $("skipSheetsToggle").addEventListener("change", () => { renderRefs(); refreshGenerateLabel(); });
   $("assetChipClear").addEventListener("click", clearSelectedAsset);
+  $("seqCharSheetBtn").addEventListener("click", () => makeSheet("char"));
+  $("seqSetSheetBtn").addEventListener("click", () => makeSheet("setting"));
   $("imageInput").addEventListener("change", () => { if ($("imageInput").files[0]) clearSelectedAsset(); });
   // A screenplay file becomes the brief (Undo puts the old one back); nothing starts.
   $("seqImportBtn").addEventListener("click", () => $("seqImportFile").click());
