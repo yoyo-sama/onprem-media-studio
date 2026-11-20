@@ -15,8 +15,8 @@ is made again on the next view).
 The "Inputs" button shows instead the images and clips sent to renders (`STUDIO_DATA_DIR/inputs/`,
 uploads named by their content hash), newest first, in the same Images and Videos tabs. They are
 listed straight from the folder, not indexed, and read-only: no search, filter, tag, favourite,
-trash or renaming, and no details panel in the lightbox. "→ Use as input" and "➕ Sequence" work
-as on an output. Sounds are not shown.
+trash or renaming, and no details panel in the lightbox. "→ Use as input" (or "→ First frame" and
+"→ Reference" where the form takes both) works as on an output. Sounds are not shown.
 
 ### Rules kept from 1.4
 

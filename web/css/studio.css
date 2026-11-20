@@ -514,6 +514,11 @@ textarea:disabled, input:disabled, select:disabled { opacity: .45; cursor: not-a
 /* A long take's first frame: the whole row, its hint in plain text under the field. */
 .generate-bar #imageInputWrap:has(> .seq-only:not([hidden])) { flex: 1 1 100%; }
 label > .hint { text-transform: none; letter-spacing: normal; font-weight: 400; }
+/* Gallery: "→ First frame" and "→ Reference" only where the form takes both (a long take,
+   Image2Image with references); a long take's input image is called its first frame. */
+body:not([data-gallery-use="first"]) .first-use, body[data-mode="assistant"] .first-use,
+body[data-gallery-use="first"]:not([data-mode="assistant"]) .input-use,
+body:not([data-gallery-use]) .ref-use, body[data-mode="assistant"] .ref-use { display: none !important; }
 .generate-bar .check-row { flex: 1 1 100%; }
 .generate-bar > .hint { flex: 1 1 100%; margin: -4px 0 0; }
 /* What a pipeline takes besides the brief (images of a long take, references), before the button. */

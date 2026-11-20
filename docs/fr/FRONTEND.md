@@ -68,8 +68,13 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
 - **Le brief n'appartient qu'à l'utilisateur.** Les exemples sont des placeholders, jamais des
   valeurs ; un brief vide ne lance rien.
 - **« → Utiliser en entrée » suit le pipeline affiché** (images et vidéos, carte de la galerie
-  ou visionneuse). Séquence : l'image rejoint la séquence. Pipeline à image d'entrée
-  (Image2Image, Image2Video) : elle devient l'entrée. Vidéo depuis des références : l'image ou la
+  ou visionneuse). Pipeline à image d'entrée (Image2Image, Image2Video) : elle devient
+  l'entrée. Là où le formulaire prend à la fois une image d'entrée et des références (le
+  plan-séquence, Image2Image sur Qwen Image 2.1), une carte d'image et la visionneuse proposent
+  le choix : « → Première image » (le nom de l'image d'entrée du plan-séquence, qui y remplace
+  « → Utiliser en entrée ») ou « → Utiliser en entrée », et « → Référence », qui ajoute l'image à
+  la liste des références (CSS sur `body[data-gallery-use]`, posé par `updateModelLabel` ; masqué
+  en mode assistant). Vidéo depuis des références : l'image ou la
   vidéo rejoint la liste des références ; storyboard Qwen 2.1 : l'image. Text2Video ouvre
   Image2Video avec l'image, tout autre pipeline Image2Image. Une vidéo que le pipeline ne prend
   pas est refusée avec un message. Le formulaire ne quitte jamais un pipeline qui peut prendre
@@ -167,7 +172,7 @@ ajoute une carte Import d'image reliée à elle.
   (`continue_from`) avec les références (ou, sans elles, la première image ou la dernière image
   du segment 1 comme sujet). Une référence de lieu est le décor de chaque segment. Les images de
   fin ne sont plus dans le formulaire : chaque carte de segment prend la sienne (🎯 Image de fin,
-  FL2VA). « → Utiliser en entrée » dans la galerie en fait la première image. Le brief est le
+  FL2VA). Dans la galerie, « → Première image » et « → Référence » envoient une image dans l'un ou l'autre champ. Le brief est le
   scénario et le premier texte de chaque segment (découper ce scénario ne demande rien : une
   carte qui ne contient que le scénario ne perd rien). La carte d'objectif « Vidéo longue
   (plan-séquence) » ouvre ce pipeline en un clic. À partir du segment 2, un lien peut être
