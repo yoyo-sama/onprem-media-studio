@@ -16,8 +16,8 @@ Le bouton « Entrées » affiche à la place les images et vidéos envoyées aux
 (`STUDIO_DATA_DIR/inputs/`, fichiers téléversés nommés par l'empreinte de leur contenu), les plus
 récentes d'abord, dans les mêmes onglets Images et Vidéos. Elles sont lues directement dans le
 dossier, sans index, et en lecture seule : ni recherche, ni filtre, ni tag, ni favori, ni corbeille,
-ni renommage, et pas de panneau de détails dans la visionneuse. « → Utiliser en entrée » et
-« ➕ Séquence » marchent comme sur une sortie. Les sons ne sont pas affichés.
+ni renommage, et pas de panneau de détails dans la visionneuse. « → Utiliser en entrée » (ou « → Première
+image » et « → Référence » là où le formulaire prend les deux) marche comme sur une sortie. Les sons ne sont pas affichés.
 
 ### Règles reprises de la 1.4
 

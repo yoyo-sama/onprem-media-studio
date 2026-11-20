@@ -4132,4 +4132,24 @@ export const DICT = {
     es: "{llm} describe las imágenes… {time}",
     de: "{llm} beschreibt die Bilder… {time}",
   },
+  "→ First frame": {
+    fr: "→ Première image",
+    es: "→ Primer fotograma",
+    de: "→ Erstes Bild",
+  },
+  "→ Reference": {
+    fr: "→ Référence",
+    es: "→ Referencia",
+    de: "→ Referenz",
+  },
+  "The video starts on this image": {
+    fr: "La vidéo commence sur cette image",
+    es: "El vídeo empieza en esta imagen",
+    de: "Das Video beginnt mit diesem Bild",
+  },
+  "Adds this image to the references": {
+    fr: "Ajoute cette image aux références",
+    es: "Añade esta imagen a las referencias",
+    de: "Fügt dieses Bild zu den Referenzen hinzu",
+  },
 };

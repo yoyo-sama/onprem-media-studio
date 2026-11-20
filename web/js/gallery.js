@@ -228,7 +228,11 @@ function cardFor(a) {
   if (trashed) actions.append(button("Restore", null, () => restore([card._asset])));
   else {
     actions.append(button(video ? "▶ Play" : "⤢ Enlarge", null, () => openLightbox(card._asset)));
-    actions.append(button("→ Use as input", null, () => hooks.useAsInput?.(card._asset)));
+    actions.append(button("→ Use as input", null, () => hooks.useAsInput?.(card._asset), "input-use"));
+    // Where the form takes both an input image and references (a long take, Image2Image
+    // on Qwen Image 2.1), the image goes to the one chosen: first frame or reference.
+    if (!video) actions.append(button("→ First frame", "The video starts on this image", () => hooks.useAsInput?.(card._asset), "first-use"),
+      button("→ Reference", "Adds this image to the references", () => hooks.useAsRef?.(card._asset), "ref-use"));
     if (!a.input) {
       actions.append(button("★", "Favourite", () => setFavs([card._asset], !card._asset.fav), "fav-btn"));
       actions.append(button("🗑", "Delete from the gallery", () => remove([card._asset])));
@@ -485,6 +489,7 @@ function renderMeta() {
   set("lbLoras", a.loras?.length ? stackLabel(a.loras) : null);
   set("lbDims", a.w && a.h ? `${a.w} × ${a.h} px` : null);
   $("lbDurT").hidden = $("lbDur").hidden = !video;
+  $("lbFirst").hidden = $("lbRef").hidden = video;
   set("lbDur", video && a.duration != null ? `${+a.duration.toFixed(2)} s` : null);
   set("lbWeight", a.size != null ? t("{n} MB", { n: new Intl.NumberFormat(LANG, { maximumFractionDigits: a.size < 1048576 ? 3 : 1 }).format(a.size / 1048576) }) : null);
   set("lbDate", a.ts ? new Intl.DateTimeFormat(LANG, { dateStyle: "long", timeStyle: "medium" }).format(a.ts) : null);
@@ -562,6 +567,13 @@ function initLightbox() {
     closeLightbox();
     hooks.useAsInput?.(a);
   });
+  $("lbRef").addEventListener("click", () => {
+    const a = lbAsset;
+    if (!a) return;
+    closeLightbox();
+    hooks.useAsRef?.(a);
+  });
+  $("lbFirst").addEventListener("click", () => $("lbUse").click());
   $("lbUpscale").addEventListener("click", () => { if (lbAsset) upscale(lbAsset); });
   $("lbReuse").addEventListener("click", () => {
     const a = lbAsset;

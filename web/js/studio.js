@@ -107,7 +107,11 @@ function updateModelLabel() {
   $("refExtrasWrap").hidden = !ctx;
   for (const [cls, on] of [[".r2v-only", ctx === "r2v"], [".sb-only", ctx === "sb"], [".i2i-only", ctx === "i2i"], [".seq-only", ctx === "seq"]])
     document.querySelectorAll(`#refExtrasWrap ${cls}, #imageInputWrap ${cls}`).forEach(el => { el.hidden = !on; });
-  // A long take's input image is its first frame, and its list is its references.
+  // A long take's input image is its first frame, and its list is its references. Where the
+  // form takes both, the gallery offers both (CSS on body[data-gallery-use]).
+  const both = { seq: "first", i2i: "both" }[ctx];
+  if (both) document.body.dataset.galleryUse = both;
+  else delete document.body.dataset.galleryUse;
   tx($("imageInputLabel"), ctx === "seq" ? "First frame (optional)" : "Input image");
   tx($("refExtrasTitle"), ctx === "seq" ? "References (optional)" : "Extra references");
   if (ctx === "r2v") tx($("refCapLabel"), "Extra references: up to 7 images, 3 clips and 3 sounds");
@@ -182,16 +186,19 @@ function clearSelectedAsset() { selectedAsset = null; $("assetChip").hidden = tr
 function useAsInput(a) {
   const video = a.type === "video", ctx = F.refCtx();
   if (!video && F.hasControl("image")) setSelectedAsset(a);
-  else if (ctx && (!video || ctx === "r2v")) {
-    const before = F.refList().length;
-    addRefs([{ name: a.filename, ref: a.ref }]);
-    if (F.refList().length > before) notice(true, "{name} added ({n}/{max}).", { name: a.filename, n: F.refList().length, max: refMax() });
-  } else if (video) notice(false, "This pipeline takes no clip: a clip is a reference of “Consistent character + setting”.");
+  else if (ctx && (!video || ctx === "r2v")) useAsRef(a);
+  else if (video) notice(false, "This pipeline takes no clip: a clip is a reference of “Consistent character + setting”.");
   else {
     $("pipelineSelect").value = F.currentPipeline() === "text2video" ? "image2video" : "image2image";
     updateModelOptions();
     setSelectedAsset(a);
   }
+}
+
+function useAsRef(a) {
+  const before = F.refList().length;
+  addRefs([{ name: a.filename, ref: a.ref }]);
+  if (F.refList().length > before) notice(true, "{name} added ({n}/{max}).", { name: a.filename, n: F.refList().length, max: refMax() });
 }
 
 async function inputImageRef() {
@@ -1053,6 +1060,7 @@ function boot() {
     // From the assistant, a gallery image goes to the chat; from the Studio, to the form.
     useAsInput: a => (!inAssistant() ? useAsInput(a)
       : a.type === "video" ? notice(false, "A clip cannot be attached to a message: attach an image.") : attachAsset(a)),
+    useAsRef: a => { if (!inAssistant() && F.refCtx()) useAsRef(a); },
     reusePrompt: a => {
       if (inAssistant()) { chatReusePrompt(a.prompt); return; }
       const before = brief.value;

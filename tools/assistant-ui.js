@@ -420,8 +420,8 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(pS.includes("\n<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n")
     && pS.includes("summary:\n[reference generation + audio reference] "), "Studio r2v: prompt: " + pS);
   // "→ Use as input" from the gallery goes to the pipeline on screen: in reference to
-  // video an image or a clip joins the references and reaches the job; in the sequence,
-  // the sequence; with an input image field, the input; Text2Video opens Image2Video,
+  // video an image or a clip joins the references and reaches the job; in a long take,
+  // the card offers first frame or reference; with an input image field, the input; Text2Video opens Image2Video,
   // Text2Image opens Image2Image; a clip elsewhere is refused. No job but Generate.
   const useBtn = '.output-panel #galleryBlock .asset-actions button:has-text("→ Utiliser en entrée")';
   const galleryTab = type => page.$eval(type === "video" ? "#tabVideos" : "#tabImages", b => b.click());
@@ -447,10 +447,26 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(await page.inputValue("#pipelineSelect") === "text2image" && await page.isHidden("#assetChip"), "a clip changed Text2Image");
   await galleryTab("image");
   await page.waitForTimeout(400);
+  // In a long take an image card offers "→ First frame" and "→ Reference" instead.
   await page.selectOption("#pipelineSelect", "sequence");
-  await use();
-  check(await page.inputValue("#pipelineSelect") === "sequence" && await page.isVisible("#assetChip"), "Use as input in the long take is not its first frame");
+  const card0 = ".output-panel #galleryBlock .asset:first-child .asset-actions";
+  const shown = () => page.$$eval(`${card0} button`, bs => bs.filter(b => b.offsetParent).map(b => b.textContent));
+  const seqBtns = await shown();
+  check(seqBtns.includes("→ Première image") && seqBtns.includes("→ Référence") && !seqBtns.includes("→ Utiliser en entrée"),
+    "long take gallery buttons: " + JSON.stringify(seqBtns));
+  await page.$eval(`${card0} button:first-child`, b => b.click());
+  await page.waitForSelector("#lbFirst", { state: "visible" });
+  check(await page.isVisible("#lbRef") && await page.isHidden("#lbUse"), "the lightbox of a long take does not offer first frame and reference");
+  await page.click("#lightboxClose");
+  await page.$eval(`${card0} button.first-use`, b => b.click());
+  check(await page.inputValue("#pipelineSelect") === "sequence" && await page.isVisible("#assetChip"), "→ First frame in the long take is not its first frame");
   await page.click("#assetChipClear");
+  const refs0 = (await page.$$("#refSubjects .ref-subject")).length;
+  await page.$eval(`${card0} button.ref-use`, b => b.click());
+  check((await page.$$("#refSubjects .ref-subject")).length === refs0 + 1 && await page.isHidden("#assetChip"), "→ Reference did not add a reference");
+  await page.$eval("#refSubjects .ref-subject:last-child .rs-x", b => b.click());
+  await page.selectOption("#pipelineSelect", "text2image");
+  check(!(await shown()).includes("→ Référence") && (await shown()).includes("→ Utiliser en entrée"), "Text2Image shows → Reference: " + JSON.stringify(await shown()));
   await page.selectOption("#pipelineSelect", "text2video");
   await use();
   check(await page.inputValue("#pipelineSelect") === "image2video" && await page.isVisible("#assetChip"), "Use as input in t2v did not open i2v");

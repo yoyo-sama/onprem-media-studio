@@ -68,8 +68,12 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
 - **The brief belongs to the user.** Examples are placeholders, never values; an empty brief
   starts nothing.
 - **"→ Use as input" follows the pipeline on screen** (images and clips, gallery card or
-  lightbox). Sequence: the image joins the sequence. A pipeline with an input image (Image2Image,
-  Image2Video): it becomes the input. Reference to video: the image or clip joins the reference
+  lightbox). A pipeline with an input image (Image2Image, Image2Video): it becomes the input.
+  Where the form takes both an input image and references (the long take, Image2Image on Qwen
+  Image 2.1), an image card and the lightbox show the choice instead: "→ First frame" (the long
+  take's name for its input image, which replaces "→ Use as input" there) or "→ Use as input",
+  and "→ Reference", which adds the image to the reference list (CSS on
+  `body[data-gallery-use]`, set by `updateModelLabel`; hidden in assistant mode). Reference to video: the image or clip joins the reference
   list; Qwen 2.1 storyboard: the image does. Text2Video opens Image2Video with the image, any
   other pipeline Image2Image. A clip that the pipeline cannot take is refused with a message.
   The form is never left for another pipeline when the one shown can take the item, and no job
@@ -160,8 +164,8 @@ to it.
   card shows), else `h3-t2v`; the segments after it continue it (`continue_from`) with the
   references (or, with none, the first frame or segment 1's last frame as the subject). A
   setting reference is the location of every segment. End images are no longer listed in the
-  form: each segment card takes its own (🎯 End image, FL2VA). "→ Use as input" in the gallery
-  makes the image the first frame. The brief is the screenplay and the first text of every
+  form: each segment card takes its own (🎯 End image, FL2VA). In the gallery, "→ First frame"
+  and "→ Reference" send an image to one field or the other. The brief is the screenplay and the first text of every
   segment (splitting that screenplay asks nothing: a card that only holds the screenplay loses
   nothing). The goal card "Long video (long take)" opens this pipeline in one click. From
   segment 2 on, a link can be "🎞 Cut (new shot from the references)", as in the director's
