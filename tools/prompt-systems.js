@@ -136,8 +136,11 @@ const SCENARIOS = [
 ];
 
 async function runStudio(page, s) {
-  await page.click(`.usecase[data-scenario="${s.scenario}"]`);
-  await page.selectOption("#pipelineSelect", s.pipeline);
+  // A goal card with its own pipeline opens it with no Pipeline menu; the others go
+  // through the general card's menu.
+  const card = `.usecase[data-pipeline="${s.pipeline}"]`;
+  await page.click(await page.$(card) ? card : '.usecase[data-pipeline="text2image"]');
+  if (await page.isVisible("#pipelineSelect")) await page.selectOption("#pipelineSelect", s.pipeline);
   // A pipeline with one engine shows no engine menu: that engine is the one in use.
   if (await page.isVisible("#modelSelect")) await page.selectOption("#modelSelect", s.model);
   else if (await page.inputValue("#modelSelect") !== s.model) throw new Error(`${s.pipeline}: engine ${await page.inputValue("#modelSelect")}, expected ${s.model}`);

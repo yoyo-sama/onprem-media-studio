@@ -312,6 +312,7 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   // "Regenerate the video" and starts one new job with the next seed.
   await page.click('.rail-mode[data-mode="studio"]');
   if (await page.isVisible("#studioExitBtn")) await page.click("#studioExitBtn");
+  await page.click('.usecase[data-pipeline="text2image"]');
   await page.fill("#brief", "A detective walks through a dark forest");
   await page.selectOption("#pipelineSelect", "reference2video");
   await page.click("#generateBtn");
@@ -447,8 +448,10 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(await page.inputValue("#pipelineSelect") === "text2image" && await page.isHidden("#assetChip"), "a clip changed Text2Image");
   await galleryTab("image");
   await page.waitForTimeout(400);
-  // In a long take an image card offers "→ First frame" and "→ Reference" instead.
-  await page.selectOption("#pipelineSelect", "sequence");
+  // In a long take an image card offers "→ First frame" and "→ Reference" instead. Its
+  // goal card opens it alone: no Pipeline menu.
+  await page.$eval('.usecase[data-pipeline="sequence"]', b => b.click());
+  check(await page.inputValue("#pipelineSelect") === "sequence" && await page.isHidden("#pipelineWrap"), "the long take card shows a Pipeline menu");
   const card0 = ".output-panel #galleryBlock .asset:first-child .asset-actions";
   const shown = () => page.$$eval(`${card0} button`, bs => bs.filter(b => b.offsetParent).map(b => b.textContent));
   const seqBtns = await shown();
@@ -465,7 +468,8 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   await page.$eval(`${card0} button.ref-use`, b => b.click());
   check((await page.$$("#refSubjects .ref-subject")).length === refs0 + 1 && await page.isHidden("#assetChip"), "→ Reference did not add a reference");
   await page.$eval("#refSubjects .ref-subject:last-child .rs-x", b => b.click());
-  await page.selectOption("#pipelineSelect", "text2image");
+  await page.$eval('.usecase[data-pipeline="text2image"]', b => b.click());
+  check(await page.isVisible("#pipelineWrap"), "the general card has no Pipeline menu");
   check(!(await shown()).includes("→ Référence") && (await shown()).includes("→ Utiliser en entrée"), "Text2Image shows → Reference: " + JSON.stringify(await shown()));
   await page.selectOption("#pipelineSelect", "text2video");
   await use();

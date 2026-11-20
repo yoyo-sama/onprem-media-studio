@@ -58,12 +58,11 @@ function refreshGenerateLabel() {
 
 function selectScenario(scenario, pipeline = SCENARIOS[scenario].pipeline) {
   activeScenario = scenario;
-  refreshPipelineOptions();
-  if ([...$("pipelineSelect").options].some(o => o.value === pipeline) && F.currentPipeline() !== pipeline) {
-    $("pipelineSelect").value = pipeline;
-    updateModelOptions();
-  }
+  refreshPipelineOptions(pipeline);
 }
+// Opens a general pipeline (Image2Image, Image2Video…) from wherever the form is, a goal
+// card with its own pipeline included.
+const usePipeline = p => selectScenario(p === "image2image" ? "localization" : "campaign", p);
 
 // ── Pipeline and engine menus ─────────────────────────────────────────────────
 const CONTROL_WRAPS = {
@@ -72,10 +71,13 @@ const CONTROL_WRAPS = {
   sheetTemplate: "sheetTemplateWrap", skipSheets: "skipSheetsWrap",
 };
 
-function refreshPipelineOptions() {
-  const list = F.PIPELINES.filter(p => !p.scenario || p.scenario.includes(activeScenario));
-  const prev = F.currentPipeline();
-  fillSelect($("pipelineSelect"), list.map(p => [p.id, p.label]), prev);
+// A goal card with its own pipeline (long take, ad campaign, trailer) shows it alone and
+// leaves the Pipeline menu out; the other cards share the general pipelines.
+function refreshPipelineOptions(pipeline = F.currentPipeline()) {
+  const own = F.pipelineDef(pipeline)?.own ? F.pipelineDef(pipeline) : null;
+  const list = own ? [own] : F.PIPELINES.filter(p => !p.own && (!p.scenario || p.scenario.includes(activeScenario)));
+  fillSelect($("pipelineSelect"), list.map(p => [p.id, p.label]), pipeline);
+  $("pipelineWrap").hidden = list.length < 2;
   updateModelOptions();
 }
 
@@ -172,10 +174,7 @@ function setSelectedAsset(a) {
   tx($("assetChipName"), "Gallery: {name}", { name: a.filename });
   $("assetChip").hidden = false;
   $("imageInput").value = "";
-  if (!["image2image", "image2video", "sequence"].includes(F.currentPipeline())) {
-    $("pipelineSelect").value = "image2image";
-    updateModelOptions();
-  }
+  if (!["image2image", "image2video", "sequence"].includes(F.currentPipeline())) usePipeline("image2image");
   log("req", "{name} chosen as the input image.", { name: a.filename });
 }
 function clearSelectedAsset() { selectedAsset = null; $("assetChip").hidden = true; }
@@ -189,8 +188,7 @@ function useAsInput(a) {
   else if (ctx && (!video || ctx === "r2v")) useAsRef(a);
   else if (video) notice(false, "This pipeline takes no clip: a clip is a reference of “Consistent character + setting”.");
   else {
-    $("pipelineSelect").value = F.currentPipeline() === "text2video" ? "image2video" : "image2image";
-    updateModelOptions();
+    usePipeline(F.currentPipeline() === "text2video" ? "image2video" : "image2image");
     setSelectedAsset(a);
   }
 }

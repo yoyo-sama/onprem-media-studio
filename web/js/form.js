@@ -41,7 +41,9 @@ export const WORKFLOWS = [
   { id: "campaign", pipeline: "campaign", label: L("Krea 2 + MiniMax H3"), engines: ["krea2-t2i", "h3-t2v"] },
 ];
 
-// `scenario`: the goal cards a pipeline is offered under (none = all).
+// `scenario`: the goal cards a pipeline is offered under (none = all). `own`: the pipeline
+// of one goal card (long take, ad campaign, trailer); that card shows it alone, with no
+// Pipeline menu, and the other cards do not list it.
 // Controls: duration, shots, hold, variants, ratio, style, image, markets, seq,
 // sheetTemplate, skipSheets. The extra references and the LoRA stack follow the engine
 // (refCtx, WORKFLOWS[].loras).
@@ -50,12 +52,12 @@ export const PIPELINES = [
   { id: "image2image", label: L("Image editing (Image2Image)"), controls: ["image", "markets"] },
   { id: "text2video", label: L("Video from a text (Text2Video)"), controls: ["duration", "ratio"] },
   { id: "image2video", label: L("Video from an image (Image2Video)"), controls: ["duration", "image"] },
-  { id: "sequence", label: L("Long take (Relay)"), scenario: ["storyboard"], controls: ["seq", "image"] },
-  { id: "storyboard", label: L("Storyboard + animatic (sheets, shots, cuts)"), scenario: ["storyboard"],
+  { id: "sequence", label: L("Long take (Relay)"), scenario: ["storyboard"], own: true, controls: ["seq", "image"] },
+  { id: "storyboard", label: L("Storyboard + animatic (sheets, shots, cuts)"), scenario: ["storyboard"], own: true,
     controls: ["shots", "duration", "hold", "ratio", "style", "sheetTemplate"] },
-  { id: "reference2video", label: L("Consistent character + setting (MiniMax H3)"), scenario: ["storyboard"],
+  { id: "reference2video", label: L("Consistent character + setting (MiniMax H3)"),
     controls: ["duration", "ratio", "sheetTemplate", "skipSheets", "style"] },
-  { id: "campaign", label: L("Full campaign (posters + thumbnails + teaser)"), scenario: ["campaign"],
+  { id: "campaign", label: L("Full campaign (posters + thumbnails + teaser)"), scenario: ["campaign"], own: true,
     controls: ["duration", "variants", "style"] },
 ];
 

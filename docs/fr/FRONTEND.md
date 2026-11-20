@@ -43,6 +43,14 @@ Les règles de la 1.4 restent valables ; [LESSONS.md](LESSONS.md) en donne les r
   Un clic peut lancer, à la suite, les jobs que son bouton annonce : « Générer la chaîne » rend
   les segments du Relay et, quand tous sont prêts, assemble la séquence (deux segments ou plus ;
   une chaîne arrêtée ou cassée n'est pas assemblée).
+- **Une carte d'objectif qui a son propre pipeline n'affiche pas le menu Pipeline**
+  (2026-11-20). « Vidéo longue (plan-séquence) », « Pub courte / campagne » et « Bande-annonce
+  narrative » ouvrent leur pipeline seul (`sequence`, `campaign`, `storyboard` : `own` dans
+  `PIPELINES`), sans menu à choisir ; les autres cartes partagent les pipelines généraux
+  (Text2Image, Image2Image, Text2Video, Image2Video, référence vers vidéo) dans le menu.
+  « → Utiliser en entrée » depuis une telle carte ouvre la carte générale (`usePipeline`). Comme
+  la bande-annonce n'affiche plus que le storyboard, la référence vers vidéo est rangée avec les
+  pipelines généraux.
 - **Une action principale par étape, toujours visible, et le reste replié** (2026-11-16). Le
   formulaire se lit de haut en bas : le brief sur toute la largeur, les réglages propres au
   pipeline, ce qu'il prend en plus du brief (image d'entrée ou première image,
