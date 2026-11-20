@@ -1343,9 +1343,8 @@ function renderStartChoice(row, seg, busy) {
   const st = d.startImage, stale = () => { if (seg.status === "ready") seg.status = "stale"; };
   row.hidden = false;
   const btn = row.querySelector(".seg-start");
-  // No start image: the first segment is text to video, at the format chosen here. A
-  // described scene's picture is only the place's reference: no start choice either.
-  if (!st || (!st.sheet && describedScene())) {
+  // No start image: the first segment is text to video, at the format chosen here.
+  if (!st) {
     btn.hidden = true;
     tx(row.querySelector(".seg-start-ratio span"), "Video format");
     return startFormat(row, busy, stale, true);
@@ -1541,15 +1540,6 @@ async function renderSegment(i) {
   if (i > 0 && continuous(seg) && !prev)
     throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
   const subs = relaySubjects(), look = r.look;
-  // A described scene: its start picture is the place, seen as a reference only. Started on,
-  // an empty place cut after 2 frames to the people the screenplay describes (GB10 2026-11-20).
-  if (isLongTake() && i === 0 && !s.startImage.sheet && !seg.endImage?.ref && describedScene()) {
-    const refs = relayRefs(null);
-    log("req", "Relay, segment {n}/{total}: video from the references…", { n: i + 1, total });
-    seg.start = null;
-    seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
-    return segmentDone(s, seg, i, total, await relayR2vJob(s, seg, i, total, refs), began);
-  }
   let start;
   // From a sheet, segment 1 starts on a shot composed from its character.
   if (isLongTake() && i === 0 && s.startImage.sheet) {
@@ -1582,14 +1572,20 @@ async function renderSegment(i) {
   const last = seg.endImage?.ref || null;
   // With the subjects' sheets, a segment starts on its frame AND sees the sheets (Ref2VA with a
   // start frame): i2v sees only its first frame, so a face drifted segment after segment.
-  // An end image (FL2VA) stays i2v: Ref2VA takes no last frame.
-  const refs = last ? [] : relayRefs(settingSheet());
+  // An end image (FL2VA) stays i2v: Ref2VA takes no last frame. So does a described scene's
+  // start picture, the place: Ref2VA kept it 2 frames, then cut to the people the screenplay
+  // describes (GB10 2026-11-20); i2v starts on it and keeps it. Its segments after it see it
+  // as the location.
+  const place = isLongTake() && i === 0 && !s.startImage.sheet && describedScene();
+  const refs = last || place ? [] : relayRefs(settingSheet());
   let job;
   if (refs.length) {
     seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
     job = await relayR2vJob(s, seg, i, total, refs, { image: start });
   } else {
-    seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
+    seg.prompt_used = place
+      ? P.buildRelaySegmentPrompt(seg.prompt.trim(), look, [], subs[0].desc?.trim() || "the place in this picture", seg.duration, !!last, s.style, h3Warn)
+      : P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
     job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,
       ["Relay · segment {n}/{total}", { n: i + 1, total }], last, sub));
   }
@@ -1648,7 +1644,7 @@ async function segmentDone(s, seg, i, total, job, began) {
 // the setting, if any.
 // A long take whose screenplay is in the H3 layout and names no <Subject N> describes a
 // scene, not a subject: its start picture (or, with none, segment 1's last frame) is that
-// scene's reference, the location, never its first frame. A sheet always holds a subject; a screenplay in plain
+// scene's reference, the location. A sheet always holds a subject; a screenplay in plain
 // prose keeps the start picture as the main character, as before.
 function relayRefs(setting) {
   const scene = describedScene();

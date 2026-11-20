@@ -1947,11 +1947,6 @@ export const DICT = {
     es: "Relay, segmento {n}/{total}: vídeo en continuidad con el segmento anterior…",
     de: "Relay, Segment {n}/{total}: Video als Fortsetzung des vorherigen Segments…",
   },
-  "Relay, segment {n}/{total}: video from the references…": {
-    fr: "Relay, segment {n}/{total} : vidéo à partir des références…",
-    es: "Relay, segmento {n}/{total}: vídeo a partir de las referencias…",
-    de: "Relay, Segment {n}/{total}: Video aus den Referenzen…",
-  },
   "Relay, segment {n}/{total}: video from the references (cut)…": {
     fr: "Relay, segment {n}/{total} : vidéo à partir des références (coupe)…",
     es: "Relay, segmento {n}/{total}: vídeo a partir de las referencias (corte)…",

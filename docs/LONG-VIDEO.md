@@ -194,11 +194,15 @@ click), not yet rendered on the GB10.
 - **A described scene rather than a subject.** A screenplay in that layout that names no
   `<Subject N>` describes a scene: its start picture (or, with none, segment 1's last frame) is
   sent as the location reference (`<Subject 1> is the location as defined by <Picture 1>`), not
-  as the main character. That picture is never segment 1's first frame: segment 1 is H3 Ref2VA
-  on it with no start image, at the long take's format. Started on an empty garden, the first
-  GB10 take showed it for 2 frames, then cut to another framing with the woman the screenplay
-  describes already in view (2026-11-20). A sheet always holds a subject, and a plain prose
-  screenplay keeps the start picture as the main character, as before.
+  as the main character. The owner's rule (2026-11-20): with no reference image, a start
+  picture is the first frame, and the scene starts from it and respects it; with no picture at
+  all, the video model creates the opening scene. So segment 1 of a described scene starts on
+  its picture with H3 image to video (`h3-i2v`, the picture as `<Picture 1>` and as the
+  location), and the segments after it continue it with the picture as their location
+  reference. Ref2VA with a start frame, tried first, kept an empty garden for 2 frames, then
+  cut to another framing with the woman the screenplay describes already in view. A sheet always
+  holds a subject, and a plain prose screenplay keeps the start picture as the main character,
+  as before.
 - **No start image.** Segment 1 is H3 text to video (`h3-t2v`) with the same six-field block
   without reference (`buildRelayTextPrompt`: no `<Picture N>`, no task tag), at the format its
   card shows. H3 keeps its last frame and latents like any clip: the last frame becomes the
@@ -218,8 +222,10 @@ GB10 renders (promaxgb10-95c7, 2026-11-20):
 - A described scene (a woman described in words, an empty garden from Krea 2 as start
   picture), 4 × 10 s, segment 1 started on the picture: 37.8 s, -18.1 LUFS, the garden and the
   woman held across the three joins, but a cut at 0.08 s (see above; the fountain also changed
-  shape in segment 3). Segment 1 has since been taken off the picture.
-- Still to render: the same file with a start image.
+  shape in segment 3). Segment 1 now starts on the picture in i2v instead.
+- Still to render: that i2v start, the same file with a start image, and an opening frame made
+  by an image engine (MOSS-Image or Qwen Image 2.1) from the screenplay when there is no
+  picture, to compare with H3 text to video.
 
 ## Results
 
