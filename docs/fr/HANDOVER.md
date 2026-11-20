@@ -229,7 +229,7 @@ techniques dans [LESSONS.md](LESSONS.md). Les plus souvent en jeu :
 | #28, #29 | 2026-11-09 | `scripts/docker-install.sh` et `.env.example` ; `updater_stale` |
 | #30 | 2026-11-09 | Avancement de H3 à chaque étape de débruitage |
 | #31 → #33 | 2026-11-10 | Installation du README en étapes numérotées ; licences de MOSS-Image, de sa LoRA turbo et de Gemma 4 |
-| **#34 (ouverte)** | 2026-11-10 | Docs pour le dépôt public : aucun jeton pour cloner ni mettre à jour ; `STUDIO_GIT_TOKEN` gardé pour un fork privé. Attend le feu vert du propriétaire. Tant qu'elle n'est pas fusionnée, le README et `.env.example` de `main` décrivent encore un dépôt privé. |
+| #34 | 2026-11-20 | Docs pour le dépôt public : aucun jeton pour cloner ni mettre à jour ; `STUDIO_GIT_TOKEN` gardé pour un fork privé |
 
 ## 9. Points ouverts
 
