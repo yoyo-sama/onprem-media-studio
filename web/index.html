@@ -281,13 +281,22 @@
               <span class="lora-caption" id="loraCaption">LoRA (up to 4, each with its strength)</span>
               <div id="loraStack"></div>
             </div>
+            <div class="form-stack gb-block" id="seqWrap" hidden>
+              <h3 class="section-title">Long take</h3>
+              <p class="hint">The brief is its screenplay, or import one. Two kinds of images, both optional: the first frame, where the video starts, and references, who or what must stay the same. With neither, the first segment is generated from the text. Nothing renders yet: the long take opens on its segments, where each one can also take an end image.</p>
+              <div class="composer-row">
+                <button type="button" class="secondary-btn" id="seqImportBtn" title="Puts a screenplay file (.txt, .md) in the brief. Written in the H3 layout (summary:, camera_direction:, lighting:, detailed_description: with one Segment line per segment…), it gives the segments and the shared fields as written.">📄 Import a screenplay</button>
+                <input type="file" id="seqImportFile" accept=".txt,.md,text/plain,text/markdown" hidden>
+              </div>
+            </div>
             <label class="gb-field gb-wide" id="imageInputWrap" hidden>
-              Input image
+              <span id="imageInputLabel">Input image</span>
               <input type="file" id="imageInput" accept="image/*">
               <span class="input-chip" id="assetChip" hidden>
                 <span id="assetChipName" data-raw></span>
                 <button type="button" id="assetChipClear" title="Remove the selected asset">✕</button>
               </span>
+              <span class="hint seq-only" hidden>The video starts on this exact image and keeps it (scene, framing, light). A character sheet is not a first frame: put it in the references.</span>
             </label>
             <label class="gb-field gb-wide" id="lastImageWrap" hidden>
               Last frame (optional, FL2VA)
@@ -298,25 +307,15 @@
               <div class="market-chips" id="marketChips"></div>
               <p class="hint">One job per selected market, with the prompt adapted to it. None selected: the prompt as it is.</p>
             </div>
-            <div class="form-stack gb-block" id="seqWrap" hidden>
-              <h3 class="section-title">Long take from images</h3>
-              <p class="hint">0 to 6 images: the long take starts on the first, and each next image is where a segment ends. With none, its first segment is generated from the text. The brief is its screenplay. Nothing renders yet: the long take opens on its segments.</p>
-              <div class="composer-row">
-                <button type="button" class="secondary-btn" id="seqImportBtn" title="Puts a screenplay file (.txt, .md) in the brief. Written in the H3 layout (summary:, camera_direction:, lighting:, detailed_description: with one Segment line per segment…), it gives the segments and the shared fields as written.">📄 Import a screenplay</button>
-                <input type="file" id="seqImportFile" accept=".txt,.md,text/plain,text/markdown" hidden>
-              </div>
-              <input type="file" id="seqFiles" accept="image/*" multiple>
-              <div class="seq-list" id="seqList"></div>
-              <div class="hint" id="seqSummary"></div>
-            </div>
             <div class="form-stack gb-block" id="givenSheetsWrap" hidden>
               <h3 class="section-title">Sheets from the assistant</h3>
               <p class="hint">The director keeps these sheets and draws only the missing ones.</p>
               <div class="ref-subjects" id="givenSheets"></div>
             </div>
             <div class="form-stack gb-block" id="refExtrasWrap" hidden>
-              <h3 class="section-title">Extra references</h3>
+              <h3 class="section-title" id="refExtrasTitle">Extra references</h3>
               <p class="hint r2v-only">In addition to the character and setting sheets. None required.</p>
+              <p class="hint seq-only" hidden>Who or what must stay the same from one segment to the next: a photo or a sheet of a character, an object, a setting. Each one gets its role; they are never shown as they are. With no first frame, the first segment is made from them.</p>
               <p class="hint sb-only" hidden>Added to every Qwen Image 2.1 shot image, after the sheets: &lt;image3&gt;, &lt;image4&gt;… (one rank further in a two-subject shot). Name them in the shot's action.</p>
               <p class="hint i2i-only" hidden>Qwen Image 2.1 takes up to 10 images in all. The input image is &lt;image1&gt;; your references are &lt;image2&gt;, &lt;image3&gt;… in the order of the list below. Cite them in your instruction, for example: “put the character of &lt;image1&gt; in the setting of &lt;image2&gt;”. The result keeps the input image's size; each reference makes the render longer.</p>
               <div class="form-stack" id="refDropZone">

@@ -92,11 +92,6 @@ export const DICT = {
     es: "Añadir una etiqueta (Intro)",
     de: "Tag hinzufügen (Enter)",
   },
-  "Add to the multi-image sequence": {
-    fr: "Ajouter à la séquence multi-images",
-    es: "Añadir a la secuencia de varias imágenes",
-    de: "Zur Mehrbild-Sequenz hinzufügen",
-  },
   "Added to every Qwen Image 2.1 shot image, after the sheets: <image3>, <image4>… (one rank further in a two-subject shot). Name them in the shot's action.": {
     fr: "Ajoutées à chaque image de plan Qwen Image 2.1, après les planches : <image3>, <image4>… (un rang plus loin dans un plan à deux sujets). Nomme-les dans l'action du plan.",
     es: "Se añaden a cada imagen de plano de Qwen Image 2.1, después de las láminas: <image3>, <image4>… (un puesto más allá en un plano con dos sujetos). Nómbralas en la acción del plano.",
@@ -696,11 +691,6 @@ export const DICT = {
     fr: "Brief vide : décris ce que tu veux avant de générer.",
     es: "Brief vacío: describe lo que quieres antes de generar.",
     de: "Leeres Briefing: Beschreibe, was du willst, bevor du generierst.",
-  },
-  "end": {
-    fr: "fin",
-    es: "fin",
-    de: "Ende",
   },
   "End image": {
     fr: "Image de fin",
@@ -1532,16 +1522,6 @@ export const DICT = {
     es: "Mañana",
     de: "Morgen",
   },
-  "Move down": {
-    fr: "Descendre",
-    es: "Bajar",
-    de: "Nach unten",
-  },
-  "Move up": {
-    fr: "Monter",
-    es: "Subir",
-    de: "Nach oben",
-  },
   "Multi-image sequence": {
     fr: "Séquence multi-images",
     es: "Secuencia de varias imágenes",
@@ -2007,11 +1987,6 @@ export const DICT = {
     es: "Relay: {n} segmentos escritos: léelos antes de lanzar la cadena.",
     de: "Relay: {n} Segmente geschrieben: Lies sie, bevor du die Kette startest.",
   },
-  "Remove": {
-    fr: "Retirer",
-    es: "Quitar",
-    de: "Entfernen",
-  },
   "Remove the selected asset": {
     fr: "Retirer l'asset choisi",
     es: "Quitar el asset elegido",
@@ -2141,11 +2116,6 @@ export const DICT = {
     fr: "seed {seed} · {real} s rendues · {status}",
     es: "semilla {seed} · {real} s renderizados · {status}",
     de: "Seed {seed} · {real} s gerendert · {status}",
-  },
-  "Segment length (s)": {
-    fr: "Durée du segment (s)",
-    es: "Duración del segmento (s)",
-    de: "Segmentlänge (s)",
   },
   "Select": {
     fr: "Sélectionner",
@@ -2487,11 +2457,6 @@ export const DICT = {
     es: "El lienzo guardado no se ha podido leer: el lienzo empieza vacío.",
     de: "Die gespeicherte Leinwand war unlesbar: Die Leinwand startet leer.",
   },
-  "The sequence holds at most {max} images.": {
-    fr: "La séquence contient {max} images au plus.",
-    es: "La secuencia admite {max} imágenes como máximo.",
-    de: "Die Sequenz fasst höchstens {max} Bilder.",
-  },
   "The server did not come back: check the service on the machine.": {
     fr: "Le serveur n'est pas revenu : vérifie le service sur la machine.",
     es: "El servidor no ha vuelto: comprueba el servicio en la máquina.",
@@ -2827,11 +2792,6 @@ export const DICT = {
     es: "{name} añadida ({n}/{max}).",
     de: "{name} hinzugefügt ({n}/{max}).",
   },
-  "{name} added to the sequence ({n}/{max}).": {
-    fr: "{name} ajoutée à la séquence ({n}/{max}).",
-    es: "{name} añadida a la secuencia ({n}/{max}).",
-    de: "{name} zur Sequenz hinzugefügt ({n}/{max}).",
-  },
   "{name} added.": {
     fr: "{name} ajoutée.",
     es: "{name} añadida.",
@@ -2916,11 +2876,6 @@ export const DICT = {
     fr: "{n} remplacée(s)",
     es: "{n} reemplazada(s)",
     de: "{n} ersetzt",
-  },
-  "{n} segment(s), {asked} s asked, {real} s rendered (H3 frame grid).": {
-    fr: "{n} segment(s), {asked} s demandées, {real} s rendues (grille d'images H3).",
-    es: "{n} segmento(s), {asked} s pedidos, {real} s renderizados (rejilla de fotogramas de H3).",
-    de: "{n} Segment(e), {asked} s angefragt, {real} s gerendert (H3-Bildraster).",
   },
   "{n} selected": {
     fr: "{n} sélectionné(s)",
@@ -3096,11 +3051,6 @@ export const DICT = {
     fr: "✨ Découper le scénario",
     es: "✨ Dividir el guion",
     de: "✨ Drehbuch aufteilen",
-  },
-  "➕ Sequence": {
-    fr: "➕ Séquence",
-    es: "➕ Secuencia",
-    de: "➕ Sequenz",
   },
   "⤢ Enlarge": {
     fr: "⤢ Agrandir",
@@ -3296,11 +3246,6 @@ export const DICT = {
     fr: "Clips assemblés",
     es: "Clips unidos",
     de: "Verbundene Clips",
-  },
-  "Key images": {
-    fr: "Images clés",
-    es: "Imágenes clave",
-    de: "Schlüsselbilder",
   },
   "Localisation": {
     fr: "Localisation",
@@ -4012,70 +3957,20 @@ export const DICT = {
     es: "MiniMax H3 · segmentos encadenados",
     de: "MiniMax H3 · verkettete Segmente",
   },
-  "Long take from images": {
-    fr: "Plan-séquence à partir d'images",
-    es: "Plano secuencia a partir de imágenes",
-    de: "Plansequenz aus Bildern",
-  },
   "Open the long take": {
     fr: "Ouvrir le plan-séquence",
     es: "Abrir el plano secuencia",
     de: "Plansequenz öffnen",
-  },
-  "{llm} is describing the start image… {time}": {
-    fr: "{llm} décrit l'image de départ… {time}",
-    es: "{llm} está describiendo la imagen inicial… {time}",
-    de: "{llm} beschreibt das Startbild… {time}",
-  },
-  "🧍 Start: a shot composed from the sheet": {
-    fr: "🧍 Départ : un plan composé à partir de la planche",
-    es: "🧍 Inicio: un plano compuesto a partir de la hoja",
-    de: "🧍 Start: ein aus dem Sheet komponiertes Bild",
-  },
-  "🖼 Start: the image as it is": {
-    fr: "🖼 Départ : l'image telle quelle",
-    es: "🖼 Inicio: la imagen tal cual",
-    de: "🖼 Start: das Bild, wie es ist",
-  },
-  "The start image is a reference sheet: Qwen Image 2.1 composes the first frame from its character. Click if it is one single picture.": {
-    fr: "L'image de départ est une planche de référence : Qwen Image 2.1 compose la première image à partir de son personnage. Clique si c'est une image unique.",
-    es: "La imagen inicial es una hoja de referencia: Qwen Image 2.1 compone el primer fotograma a partir de su personaje. Haz clic si es una sola imagen.",
-    de: "Das Startbild ist ein Referenz-Sheet: Qwen Image 2.1 komponiert das erste Bild aus seiner Figur. Klicke, wenn es ein einzelnes Bild ist.",
-  },
-  "The start image is the first frame of the video. Click if it is a reference sheet (several views of the character).": {
-    fr: "L'image de départ est la première image de la vidéo. Clique si c'est une planche de référence (plusieurs vues du personnage).",
-    es: "La imagen inicial es el primer fotograma del vídeo. Haz clic si es una hoja de referencia (varias vistas del personaje).",
-    de: "Das Startbild ist das erste Bild des Videos. Klicke, wenn es ein Referenz-Sheet ist (mehrere Ansichten der Figur).",
-  },
-  "Shot image format": {
-    fr: "Format de l'image de plan",
-    es: "Formato de la imagen del plano",
-    de: "Format des Einstellungsbilds",
   },
   "{n} segment(s) still to write": {
     fr: "{n} segment(s) encore à écrire",
     es: "{n} segmento(s) aún por escribir",
     de: "{n} Segment(e) noch zu schreiben",
   },
-  "The start image is a reference sheet: segment 1 starts on a shot image composed from it, the sheet itself is never animated.": {
-    fr: "L'image de départ est une planche de référence : le segment 1 démarre sur une image de plan composée à partir d'elle, la planche elle-même n'est jamais animée.",
-    es: "La imagen inicial es una hoja de referencia: el segmento 1 empieza en una imagen de plano compuesta a partir de ella, la hoja nunca se anima.",
-    de: "Das Startbild ist ein Referenz-Sheet: Segment 1 beginnt mit einem daraus komponierten Einstellungsbild, das Sheet selbst wird nie animiert.",
-  },
-  "Relay, segment {n}/{total}: shot image from the sheet…": {
-    fr: "Relay, segment {n}/{total} : image de plan à partir de la planche…",
-    es: "Relay, segmento {n}/{total}: imagen del plano a partir de la hoja…",
-    de: "Relay, Segment {n}/{total}: Einstellungsbild aus dem Sheet…",
-  },
   "Relay: {n} written segment(s) kept beyond the plan: remove them (✕ under the advanced options) for a shorter take.": {
     fr: "Relay : {n} segment(s) écrit(s) gardé(s) au-delà du plan : supprime-les (✕ dans les options avancées) pour un plan plus court.",
     es: "Relay: {n} segmento(s) escrito(s) conservado(s) más allá del plan: elimínalos (✕ en las opciones avanzadas) para una toma más corta.",
     de: "Relay: {n} geschriebene(s) Segment(e) über den Plan hinaus behalten: entferne sie (✕ unter den erweiterten Optionen) für eine kürzere Einstellung.",
-  },
-  "Relay · shot image {n}/{total}": {
-    fr: "Relay · image de plan {n}/{total}",
-    es: "Relay · imagen del plano {n}/{total}",
-    de: "Relay · Einstellungsbild {n}/{total}",
   },
   "One continuous video made of chained segments, from a photo, a character sheet or text alone.": {
     fr: "Une vidéo continue faite de segments enchaînés, à partir d'une photo, d'une planche personnage ou du texte seul.",
@@ -4131,11 +4026,6 @@ export const DICT = {
     fr: "Format de la vidéo",
     es: "Formato del vídeo",
     de: "Videoformat",
-  },
-  "0 to 6 images: the long take starts on the first, and each next image is where a segment ends. With none, its first segment is generated from the text. The brief is its screenplay. Nothing renders yet: the long take opens on its segments.": {
-    fr: "0 à 6 images : le plan-séquence commence sur la première, et chaque image suivante est la fin d'un segment. Sans image, son premier segment est généré à partir du texte. Le brief est son scénario. Rien n'est encore généré : le plan-séquence s'ouvre sur ses segments.",
-    es: "0 a 6 imágenes: el plano secuencia empieza en la primera, y cada imagen siguiente es donde termina un segmento. Sin imagen, su primer segmento se genera a partir del texto. El brief es su guion. Aún no se genera nada: el plano secuencia se abre en sus segmentos.",
-    de: "0 bis 6 Bilder: Die Plansequenz beginnt mit dem ersten, und jedes weitere Bild ist das Ende eines Segments. Ohne Bild wird ihr erstes Segment aus dem Text erzeugt. Das Briefing ist ihr Drehbuch. Noch wird nichts gerendert: Die Plansequenz öffnet sich mit ihren Segmenten.",
   },
   "Gemma writes one action per segment and fills the shared fields left empty; a screenplay in the H3 layout (Segment lines with their timestamps) is split as written, without Gemma. Nothing renders: read and fix each segment before starting the chain.": {
     fr: "Gemma écrit une action par segment et remplit les champs communs restés vides ; un scénario au format H3 (lignes Segment avec leurs horodatages) est découpé tel qu'il est écrit, sans Gemma. Rien n'est généré : relis et corrige chaque segment avant de lancer la chaîne.",
@@ -4196,5 +4086,50 @@ export const DICT = {
     fr: "Scénario {name} importé : {n} segment(s), ouvert(s) tel(s) qu'écrit(s).",
     es: "Guion {name} importado: {n} segmento(s), abierto(s) tal como está(n) escrito(s).",
     de: "Drehbuch {name} importiert: {n} Segment(e), so geöffnet, wie geschrieben.",
+  },
+  "First frame": {
+    fr: "Première image",
+    es: "Primer fotograma",
+    de: "Erstes Bild",
+  },
+  "First frame (optional)": {
+    fr: "Première image (facultative)",
+    es: "Primer fotograma (opcional)",
+    de: "Erstes Bild (optional)",
+  },
+  "No first frame: segment 1 is made from the references.": {
+    fr: "Pas de première image : le segment 1 est fait à partir des références.",
+    es: "Sin primer fotograma: el segmento 1 se hace a partir de las referencias.",
+    de: "Kein erstes Bild: Segment 1 entsteht aus den Referenzen.",
+  },
+  "The brief is its screenplay, or import one. Two kinds of images, both optional: the first frame, where the video starts, and references, who or what must stay the same. With neither, the first segment is generated from the text. Nothing renders yet: the long take opens on its segments, where each one can also take an end image.": {
+    fr: "Le brief est son scénario, ou importe-en un. Deux sortes d'images, toutes deux facultatives : la première image, où la vidéo commence, et les références, qui ou ce qui doit rester identique. Sans l'une ni l'autre, le premier segment est généré à partir du texte. Rien n'est encore généré : le plan-séquence s'ouvre sur ses segments, où chacun peut aussi prendre une image de fin.",
+    es: "El brief es su guion, o importa uno. Dos tipos de imágenes, ambas opcionales: el primer fotograma, donde empieza el vídeo, y las referencias, quién o qué debe permanecer igual. Sin ninguna de las dos, el primer segmento se genera a partir del texto. Aún no se genera nada: el plano secuencia se abre en sus segmentos, donde cada uno también puede llevar una imagen final.",
+    de: "Das Briefing ist ihr Drehbuch, oder importiere eines. Zwei Arten von Bildern, beide optional: das erste Bild, mit dem das Video beginnt, und Referenzen, wer oder was gleich bleiben muss. Ohne beide wird das erste Segment aus dem Text erzeugt. Noch wird nichts gerendert: Die Plansequenz öffnet sich mit ihren Segmenten, und jedes kann auch ein Endbild bekommen.",
+  },
+  "The video starts on this exact image and keeps it (scene, framing, light). A character sheet is not a first frame: put it in the references.": {
+    fr: "La vidéo commence exactement sur cette image et la respecte (scène, cadrage, lumière). Une planche personnage n'est pas une première image : mets-la dans les références.",
+    es: "El vídeo empieza exactamente en esta imagen y la respeta (escena, encuadre, luz). Una ficha de personaje no es un primer fotograma: ponla en las referencias.",
+    de: "Das Video beginnt genau mit diesem Bild und bleibt ihm treu (Szene, Bildausschnitt, Licht). Ein Character Sheet ist kein erstes Bild: Leg es zu den Referenzen.",
+  },
+  "Who or what must stay the same from one segment to the next: a photo or a sheet of a character, an object, a setting. Each one gets its role; they are never shown as they are. With no first frame, the first segment is made from them.": {
+    fr: "Qui ou ce qui doit rester identique d'un segment à l'autre : une photo ou une planche d'un personnage, un objet, un lieu. Chacune reçoit son rôle ; elles ne sont jamais montrées telles quelles. Sans première image, le premier segment est fait à partir d'elles.",
+    es: "Quién o qué debe permanecer igual de un segmento a otro: una foto o una ficha de un personaje, un objeto, un lugar. Cada una recibe su papel; nunca se muestran tal cual. Sin primer fotograma, el primer segmento se hace a partir de ellas.",
+    de: "Wer oder was von einem Segment zum nächsten gleich bleiben muss: ein Foto oder ein Sheet einer Figur, ein Objekt, ein Ort. Jede bekommt ihre Rolle; sie werden nie so gezeigt, wie sie sind. Ohne erstes Bild entsteht das erste Segment aus ihnen.",
+  },
+  "Reference images (at most {max})": {
+    fr: "Images de référence (au plus {max})",
+    es: "Imágenes de referencia (como máximo {max})",
+    de: "Referenzbilder (höchstens {max})",
+  },
+  "References (optional)": {
+    fr: "Références (facultatives)",
+    es: "Referencias (opcionales)",
+    de: "Referenzen (optional)",
+  },
+  "{llm} is describing the images… {time}": {
+    fr: "{llm} décrit les images… {time}",
+    es: "{llm} describe las imágenes… {time}",
+    de: "{llm} beschreibt die Bilder… {time}",
   },
 };

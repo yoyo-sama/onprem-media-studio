@@ -63,7 +63,7 @@ const CARD_UI = {
                       form: true, enrich: () => "h3_i2v", wf: () => "h3_i2v" },
   // The long take opens in the Studio (the Relay), where the user reads its segments and
   // starts the chain: the card renders nothing itself.
-  long_take: { title: L("Long take"), text: "screenplay", images: ["images"], form: true, director: true,
+  long_take: { title: L("Long take"), text: "screenplay", images: ["first_frame", "references"], form: true, director: true,
                launch: L("🎞 Open the long take"), wf: () => "h3_sequence" },
   join_videos: { title: L("Joined clips"), images: ["clips"] },
   campaign: { title: L("Campaign"), text: "brief", fields: ["variants", "duration", "style"], form: true,
@@ -100,7 +100,7 @@ function kindOf(a, i) {
 // H3 labels of a card's references, in their order (P.h3AssignRefs).
 const refLabels = a => P.h3AssignRefs((a.references || []).map((id, i) => ({ media: mediaOf(id), kind: REF_KINDS[kindOf(a, i)][0] })));
 const IMAGE_LABELS = {
-  image: L("Image"), references: L("References"), last_image: L("Last frame"), images: L("Key images"), clips: L("Clips"),
+  image: L("Image"), references: L("References"), last_image: L("Last frame"), first_frame: L("First frame"), clips: L("Clips"),
   subject_sheets: L("Subject sheets"), setting_sheet: L("Setting sheet"), photo: L("Photo"),
 };
 const FIELDS = {

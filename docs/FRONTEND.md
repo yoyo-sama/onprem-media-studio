@@ -46,7 +46,7 @@ The rules of 1.4 still hold; [LESSONS.md](LESSONS.md) gives the reasons.
   assembled).
 - **One main action per step, in view, and the rest folded** (2026-11-16). The form reads top
   to bottom: the brief on its full width, the pipeline's own settings, what it takes besides the
-  brief (input image, images of a long take, extra references, sheets from the assistant), the
+  brief (input image or first frame, extra references, sheets from the assistant), the
   "Advanced options" (seed, hold on the last shot, sheet layout, enrichment), then Generate:
   nothing to fill sits under the button. The Engine menu shows only when the pipeline has more
   than one engine (Text2Image). What skipping the sheets does is said once the box is ticked.
@@ -147,23 +147,29 @@ to it.
   log; the next click clears it.
 - In the director, a reference-to-video clip plays under its button once rendered, and the
   button becomes "Regenerate the video": a new job on the same sheets, with the next seed.
-- The multi-image sequence of 1.4 became the long take from images (pipeline `sequence`,
-  workflow `h3_sequence`): 0 to 6 images, then "Open the long take" opens the director on the
-  Relay alone, with no sheet and no approval, and submits nothing. Gemma's vision describes the
-  first image (the subject of every segment) and says whether it is a reference sheet: a sheet is
-  never a first frame, segment 1 then starts on a Qwen Image 2.1 shot image composed from it, and
-  its card switches between "the image as it is" and "a shot composed from the sheet", with the
-  shot image's format (LESSONS #51); segment k ends on image k+1 (FL2VA) and each
-  segment starts on the previous one's last frame, as it is (1.4 started each pair on the key
-  image itself); one image gives one segment to add to. The brief is the screenplay and the first
-  text of every segment, so "Generate the chain" right away renders what 1.4's sequence did
-  (splitting that screenplay asks nothing: a card that only holds the screenplay loses nothing).
-  The goal card "Long video (long take)" opens this pipeline in one click. From
+- The multi-image sequence of 1.4 became the long take (pipeline `sequence`, workflow
+  `h3_sequence`). Since 2026-11-20 (evening) its form asks for two kinds of images, each in its
+  own field, both optional: **First frame** (the input image field, one image: the video starts
+  on it exactly and keeps it, so a sheet never goes there) and **References** (the reference
+  list, up to 7, each with its role: character, setting or object; who or what must stay the
+  same; a photo or a sheet, never shown as a frame). With neither, segment 1 is made from the
+  text. "Open the long take" opens the director on the Relay alone, with no sheet and no
+  approval, and submits nothing; Gemma's vision describes the images (the first frame and each
+  reference), with no sheet-or-photo guess any more. Segment 1 is then `h3-i2v` on the first
+  frame when there is one, else `h3-r2v` on the references (no start image, at the format its
+  card shows), else `h3-t2v`; the segments after it continue it (`continue_from`) with the
+  references (or, with none, the first frame or segment 1's last frame as the subject). A
+  setting reference is the location of every segment. End images are no longer listed in the
+  form: each segment card takes its own (🎯 End image, FL2VA). "→ Use as input" in the gallery
+  makes the image the first frame. The brief is the screenplay and the first text of every
+  segment (splitting that screenplay asks nothing: a card that only holds the screenplay loses
+  nothing). The goal card "Long video (long take)" opens this pipeline in one click. From
   segment 2 on, a link can be "🎞 Cut (new shot from the references)", as in the director's
   Relay (below); the form's H3 LoRA stack goes to every segment; the
   project is saved and resumed like a storyboard (one project at a time), under its own
-  pipeline. The assistant's `long_take` card opens this long take (no render of its own). ✨
-  uses the H3 video instruction, as 1.4's sequence did with LTX.
+  pipeline. The assistant's `long_take` card opens this long take (no render of its own), with
+  its `first_frame` and its `references` and their `kinds`. ✨ uses the H3 video instruction,
+  as 1.4's sequence did with LTX.
 - Since 2026-11-20 a long take also starts with **no image**, imports a **screenplay file**, and
   opens from the assistant (docs/LONG-VIDEO.md § Screenplay files, text start and the
   assistant). With no image, segment 1 is H3 text to video (`h3-t2v`, `buildRelayTextPrompt`,
@@ -191,8 +197,8 @@ to it.
   clip: `h3-r2v` gets the same subjects' sheets, the setting's sheet in the director's Relay
   only, and `continue_from` (the previous segment's clip), whose last second becomes its context
   (docs/LONG-VIDEO.md); it has no start image, extracts no transition frames for it and offers
-  none to choose. Segment 1 of a long take with a sheet is `h3-r2v` with `image`, its start
-  frame (the shot image or the start picture). A continuous segment without sheets, or with an
+  none to choose. Segment 1 of a long take with references and no first frame is `h3-r2v` on
+  them, with no start image. A continuous segment without sheets, or with an
   end image (FL2VA), stays `h3-i2v` on the previous segment's transition frame, which takes no
   references. The chain ends with `video-stitch`, which decodes the continuing clips in one go
   and levels the take's sound to -18 LUFS. LESSONS #51, #52.
@@ -238,7 +244,7 @@ to it.
 | `node tools/prompt-systems.js` | Runs both pages headless with `/api` stubbed: for each engine and ✨ button (and automatic enrichment), the instruction Gemma receives has the 1.4 sha256 (or is the replaced one, for its engine only), the call count and user content are right, the text comes back into the field | Node, Playwright and its Chromium (`NODE_PATH=$(npm root -g)`) |
 | `node tools/assistant-ui.js` | The assistant mode headless with `/api` stubbed and a scripted reply: the page opens on the assistant; no job from switching modes, the library, typing, sending or editing a card; one job per Generate, with the card's settings, its progress shown on the card from the job events, reported back; "Open in the Studio" switches to the Studio, fills the form and submits nothing; "Launch the director" switches to the Studio and starts the director, whose Generate button names Gemma's work and its time until the first step is ready; that step opens the studio without drawing a sheet, and a sheet's own click sends it with the first step's seed; a card's LoRA chips submit nothing and its Generate sends the ones turned on; the director's menu marks the ready sheets, and approving them opens the next step without a job | Node, Playwright and its Chromium |
 | `node tools/lora-ui.js` | The LoRA stack headless with `/api` stubbed: in the Studio it shows for the workflows that take LoRAs only, takes up to 4 files (each once) with strengths clamped to -2…2, submits nothing while edited, Generate sends the rows on screen, another engine sends none and coming back finds the stack; the Models panel uploads into the chosen folder; a Canvas saved with the old `lora` property comes back as a one-row stack and its Generate sends the stack; a pipeline with one engine shows no engine menu, and the seed sits under the advanced options | Node, Playwright and its Chromium |
-| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera; the production board shows each segment's state and the progress sent by the job events, a tile click focuses its segment without a job, the chain continues from the first segment not ready, and "Stop after this segment" ends it there; the long take from two images opens the Relay alone without a job (one vision call), renders image 1 → image 2 as one FL2VA clip, a segment added after the end continues segment 1's clip (`continue_from`), and the project resumes under its pipeline; the cards follow the plan (empty cards added and removed, written ones kept, the chain waits for empty ones); a long take from a reference sheet renders a Qwen shot image from the sheet then the clip on it, every segment with a sheet is one `h3-r2v` job with the sheets (the setting's sheet in the director's Relay), segment 1 with its start frame and the continuous ones with `continue_from` the previous clip and no transition frames, the take is one `video-stitch` job, a cut in the director's Relay or in a long take is one `h3-r2v` job on the sheets and the setting (sheet, or the previous segment's transition frame, extracted first when there is no setting sheet) with no start image, another transition frame chosen becomes its setting, and switching its start, a link or a transition frame submits nothing; the empty shared fields are folded and open once filled, a chain that ends with every segment ready assembles the sequence (a stopped one does not), the "Long video" goal card opens the long take, and splitting a long take that only holds its screenplay asks nothing; a screenplay file imported in the form opens with no start image on its segments, lengths and shared fields without a job or a Gemma call, and its chain is `h3-t2v` then `h3-r2v` clips continuing it on segment 1's last frame; a screenplay that names no subject makes the start picture the location; the Relay's import splits a file without Gemma | Node, Playwright and its Chromium |
+| `node tools/relay-ui.js` | The director's Relay headless with `/api` stubbed, on a restored project with approved sheets: the total length and the maximum per segment give the plan (25 s at 10 s → 8 + 8 + 9), the screenplay split fills the segments and only the shared fields left empty and submits nothing, the segment headers show their place in the sequence, and the chain sends a shot image then one H3 clip per segment whose prompt carries the shared look once and no default light or camera; the production board shows each segment's state and the progress sent by the job events, a tile click focuses its segment without a job, the chain continues from the first segment not ready, and "Stop after this segment" ends it there; the long take form shows a First frame field and a References list with a role per image; a long take from a first frame opens the Relay alone without a job (one vision call), with no video format to choose, and renders the first frame → the segment's end image as one FL2VA clip, a segment added after the end continues segment 1's clip (`continue_from`), and the project resumes under its pipeline; the cards follow the plan (empty cards added and removed, written ones kept, the chain waits for empty ones); a long take from two references (character, object) renders segment 1 as one `h3-r2v` on both at the format its card shows, a setting reference is the location of every segment, every segment with a sheet is one `h3-r2v` job with the sheets (the setting's sheet in the director's Relay), segment 1 with its start frame and the continuous ones with `continue_from` the previous clip and no transition frames, the take is one `video-stitch` job, a cut in the director's Relay or in a long take is one `h3-r2v` job on the sheets and the setting (sheet, or the previous segment's transition frame, extracted first when there is no setting sheet) with no start image, another transition frame chosen becomes its setting, and switching its start, a link or a transition frame submits nothing; the empty shared fields are folded and open once filled, a chain that ends with every segment ready assembles the sequence (a stopped one does not), the "Long video" goal card opens the long take, and splitting a long take that only holds its screenplay asks nothing; a screenplay file imported in the form opens with no start image on its segments, lengths and shared fields without a job or a Gemma call, and its chain is `h3-t2v` then `h3-r2v` clips continuing it on segment 1's last frame; a screenplay that names no subject makes the start picture the location; the Relay's import splits a file without Gemma | Node, Playwright and its Chromium |
 
 Changing a prompt compiler or an instruction makes `parity-prompts.js` and `prompt-systems.js` fail; if the change is wanted,
 update the reference in the same commit and say why.

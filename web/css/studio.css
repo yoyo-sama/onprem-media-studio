@@ -511,6 +511,9 @@ textarea:disabled, input:disabled, select:disabled { opacity: .45; cursor: not-a
 .generate-bar .tpl-field { flex: 1 1 100%; }
 .generate-bar .gb-wide { flex: 0 1 240px; }
 .generate-bar #marketsWrap { flex: 1 1 100%; }
+/* A long take's first frame: the whole row, its hint in plain text under the field. */
+.generate-bar #imageInputWrap:has(> .seq-only:not([hidden])) { flex: 1 1 100%; }
+label > .hint { text-transform: none; letter-spacing: normal; font-weight: 400; }
 .generate-bar .check-row { flex: 1 1 100%; }
 .generate-bar > .hint { flex: 1 1 100%; margin: -4px 0 0; }
 /* What a pipeline takes besides the brief (images of a long take, references), before the button. */

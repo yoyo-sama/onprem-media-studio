@@ -255,7 +255,11 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     segments, OmniRef still let go of its start frame once in three continuous segments (first
     frame 60 away from the image, against 5 to 7 for a true join): the card measures the gap
     between the start image and the clip's first frame and says "broken join, regenerate"; nothing
-    is rendered again on its own. (2026-11-16)
+    is rendered again on its own. (2026-11-16) The sheet-or-photo guess and the Qwen shot
+    composed from a sheet were then removed: the long take's form asks for the first frame and
+    the references in separate fields, each reference with its role, so the user says what an
+    image is and a sheet goes to the references (docs/LONG-VIDEO.md § First frame and
+    references). (2026-11-20)
 52. **A long take continues its latents, it does not restart from an image.** Every way of
     starting a segment on an image broke somewhere: a start frame in Ref2VA let go of it 7 times
     in 11, key images planned by Qwen missed their shot size about once in 5 and a key image
