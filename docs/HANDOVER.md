@@ -72,6 +72,7 @@ commit of its qualified render.
 | `upscale-2x` | Image or video ×2 from the gallery | SPAN 2xNomosUni (`span-2x-nomosuni`) through spandrel | CC BY 4.0 (credited in `NOTICE`) | gb10-demo, 2026-11-06 |
 | (LLM) | Prompt enrichment and the assistant chat | Gemma 4 26B-A4B Q4_0 (`gemma4-26b-a4b`) | Apache-2.0 | 2026-11-07 (ADR 0001 amendment) |
 | `video-concat`, `image-grid`, `video-frames` | Montage on the CPU worker (ffmpeg, Pillow) | none | — | — |
+| `video-stitch` | A Relay take: continuing clips decoded once from their latents, cuts as they are, sound at -18 LUFS | the OmniRef video VAE (`fasth3-omniref-nvfp4`) | as H3 | by script on promaxgb10-95c7, 2026-11-20; through the UI pending |
 
 **Dropped, and why** (do not bring them back without the owner asking):
 

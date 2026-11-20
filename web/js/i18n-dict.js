@@ -1937,20 +1937,20 @@ export const DICT = {
     es: "Relay · fotogramas de transición",
     de: "Relay · Übergangsbilder",
   },
+  "Relay · sequence": {
+    fr: "Relay · séquence",
+    es: "Relay · secuencia",
+    de: "Relay · Sequenz",
+  },
   "Relay · segment {n}/{total}": {
     fr: "Relay · segment {n}/{total}",
     es: "Relay · segmento {n}/{total}",
     de: "Relay · Segment {n}/{total}",
   },
-  "Relay, segment {n}/{total}: the clip does not start on its image (broken join). Regenerate this segment.": {
-    fr: "Relay, segment {n}/{total} : le clip ne repart pas de son image (raccord cassé). Régénère ce segment.",
-    es: "Relay, segmento {n}/{total}: el clip no empieza en su imagen (raccord roto). Regenera este segmento.",
-    de: "Relay, Segment {n}/{total}: Der Clip beginnt nicht mit seinem Bild (Anschluss gebrochen). Generiere dieses Segment neu.",
-  },
-  "The clip does not start on its image (broken join): regenerate this segment.": {
-    fr: "Le clip ne repart pas de son image (raccord cassé) : régénère ce segment.",
-    es: "El clip no empieza en su imagen (raccord roto): regenera este segmento.",
-    de: "Der Clip beginnt nicht mit seinem Bild (Anschluss gebrochen): Generiere dieses Segment neu.",
+  "Relay, segment {n}/{total}: video continuing the previous segment…": {
+    fr: "Relay, segment {n}/{total} : vidéo dans la continuité du segment précédent…",
+    es: "Relay, segmento {n}/{total}: vídeo en continuidad con el segmento anterior…",
+    de: "Relay, Segment {n}/{total}: Video als Fortsetzung des vorherigen Segments…",
   },
   "Relay, segment {n}/{total}: video from the references (cut)…": {
     fr: "Relay, segment {n}/{total} : vidéo à partir des références (coupe)…",
@@ -3202,10 +3202,10 @@ export const DICT = {
     es: "🔓 Desbloquear",
     de: "🔓 Entsperren",
   },
-  "🔗 Continuous (exact frame)": {
-    fr: "🔗 Continu (frame exacte)",
-    es: "🔗 Continuo (fotograma exacto)",
-    de: "🔗 Durchgehend (exaktes Bild)",
+  "🔗 Continuous": {
+    fr: "🔗 Continu",
+    es: "🔗 Continuo",
+    de: "🔗 Durchgehend",
   },
   "🗑 Delete": {
     fr: "🗑 Supprimer",
@@ -3907,10 +3907,10 @@ export const DICT = {
     es: "Un vídeo largo hecho de segmentos cortos renderizados uno tras otro: los sujetos y el estilo se dan una sola vez, cada segmento lleva una acción.",
     de: "Ein langes Video aus kurzen Segmenten, die nacheinander gerendert werden: Motive und Look werden einmal angegeben, jedes Segment trägt eine Handlung.",
   },
-  "The segment picks up the previous one's last frame exactly, and keeps the subjects' sheets in view so they stay the same. Click for a cut.": {
-    fr: "Le segment reprend exactement la dernière image du précédent, et garde sous les yeux les planches des sujets pour qu'ils restent les mêmes. Clique pour une coupe.",
-    es: "El segmento retoma exactamente el último fotograma del anterior y mantiene a la vista las fichas de los sujetos para que sigan siendo los mismos. Haz clic para un corte.",
-    de: "Das Segment übernimmt exakt das letzte Bild des vorherigen und behält die Sheets der Motive im Blick, damit sie gleich bleiben. Klicke für einen Schnitt.",
+  "The segment carries on from the previous one, movement included (its last second is carried over), and keeps the subjects' sheets in view so they stay the same. Click for a cut.": {
+    fr: "Le segment prend la suite du précédent, mouvement compris (sa dernière seconde est reprise), et garde sous les yeux les planches des sujets pour qu'ils restent les mêmes. Clique pour une coupe.",
+    es: "El segmento continúa el anterior, movimiento incluido (se retoma su último segundo), y mantiene a la vista las fichas de los sujetos para que sigan siendo los mismos. Haz clic para un corte.",
+    de: "Das Segment setzt das vorherige fort, samt Bewegung (seine letzte Sekunde wird übernommen), und behält die Sheets der Motive im Blick, damit sie gleich bleiben. Klicke für einen Schnitt.",
   },
   "A deliberate cut: a new shot rendered from the references (the subjects' sheets and the setting, or else the previous segment's transition image: choose one where nobody is in view), so a subject who left the frame comes back as itself. Click for a continuous segment.": {
     fr: "Une coupe voulue : un nouveau plan rendu à partir des références (les planches des sujets et le décor, ou à défaut l'image de transition du segment précédent : choisis-en une où personne n'est dans le champ), si bien qu'un sujet sorti du champ revient identique. Clique pour un segment continu.",

@@ -1101,6 +1101,14 @@ const relaySubjects = () => d.chars.filter(c => activeVariant(c)?.ref).slice(0, 
 const relayBusy = () => !!d?.relay?.segments.some(seg => seg.status === "pending");
 const relayReady = () => !!d?.relay?.segments.length && d.relay.segments.every(seg => seg.prompt.trim());
 const continuous = seg => seg.mode === "continue";
+// A continuous segment with the subjects' sheets continues the clip before it in latent space
+// (h3-r2v continue_from: the previous clip's last second as context, docs/LONG-VIDEO.md); it
+// needs no start image. Without sheets, or with an end image (FL2VA), a continuous segment still
+// starts on the previous segment's transition frame (i2v).
+const latentLink = i => {
+  const seg = d?.relay?.segments[i];
+  return i > 0 && !!seg && continuous(seg) && !seg.endImage && relayRefs(settingSheet()).length > 0;
+};
 const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min(seg.transitionIdx || 0, seg.transitions.length - 1)] : null);
 
 function updateRelayButtons() {
@@ -1218,7 +1226,6 @@ function renderRelay() {
     el.className = "relay-seg";
     el.dataset.seg = String(i);
     el.innerHTML = `<div class="seg-head"><strong></strong><span class="seg-status"></span></div>
-      <p class="seg-warn" role="status" hidden>The clip does not start on its image (broken join): regenerate this segment.</p>
       <textarea spellcheck="false" placeholder="What happens in this segment, and its own camera motion."></textarea>
       <div class="seg-row seg-start-row" hidden>
         <button type="button" class="secondary-btn seg-start"></button>
@@ -1243,7 +1250,6 @@ function renderRelay() {
       </details>`;
     tx(el.querySelector("strong"), "Segment {n}/{total} · {from}–{to}", { n: i + 1, total: r.segments.length, from: clock(from), to: clock(at) });
     tx(el.querySelector(".seg-status"), statusWord(seg.status));
-    el.querySelector(".seg-warn").hidden = !(seg.status === "ready" && seg.joinGap > JOIN_BROKEN);
     const area = el.querySelector("textarea");
     area.value = seg.prompt;
     area.addEventListener("change", () => { seg.prompt = area.value; updateRelayButtons(); save(); });
@@ -1256,9 +1262,9 @@ function renderRelay() {
     if (i === 0) link.hidden = true;
     if (isLongTake() && i === 0) renderStartChoice(el.querySelector(".seg-start-row"), seg, busy);
     else if (i > 0) {
-      tx(link, continuous(seg) ? "🔗 Continuous (exact frame)" : "🎞 Cut (new shot from the references)");
+      tx(link, continuous(seg) ? "🔗 Continuous" : "🎞 Cut (new shot from the references)");
       txAttr(link, "title", continuous(seg)
-        ? "The segment picks up the previous one's last frame exactly, and keeps the subjects' sheets in view so they stay the same. Click for a cut."
+        ? "The segment carries on from the previous one, movement included (its last second is carried over), and keeps the subjects' sheets in view so they stay the same. Click for a cut."
         : "A deliberate cut: a new shot rendered from the references (the subjects' sheets and the setting, or else the previous segment's transition image: choose one where nobody is in view), so a subject who left the frame comes back as itself. Click for a continuous segment.");
       link.classList.toggle("active", continuous(seg));
       link.disabled = busy;
@@ -1362,7 +1368,7 @@ function renderBoard() {
     b.className = `relay-tile st-${seg.status}`;
     b.style.flexGrow = String(seg.duration);
     b.innerHTML = `<span class="tile-thumb"></span><span class="tile-cap"></span><span class="tile-bar"><i></i></span>`;
-    const thumb = seg.start?.ref || (i > 0 && seg.mode === "continue" ? transitionOf(segs[i - 1])?.ref : null);
+    const thumb = seg.start?.ref || (i > 0 && seg.mode === "continue" ? transitionOf(segs[i - 1])?.ref || segs[i - 1].lastFrame : null);
     if (thumb) { const img = document.createElement("img"); img.alt = ""; img.src = refURL(thumb); b.firstChild.appendChild(img); }
     b.querySelector(".tile-cap").textContent = `${i + 1} · ${clock(from)}`;
     const pct = live ? Math.round(live.progress * 100) : seg.status === "ready" ? 100 : 0;
@@ -1435,7 +1441,8 @@ async function setEndImage(i, file) {
 }
 
 function renderTransitions(wrap, i, seg, busy) {
-  if (!seg.transitions?.length || i >= d.relay.segments.length - 1) return;
+  // A latent link takes no frame of the clip before it: nothing to choose.
+  if (!seg.transitions?.length || i >= d.relay.segments.length - 1 || latentLink(i + 1)) return;
   wrap.hidden = false;
   const lbl = document.createElement("span");
   lbl.className = "transitions-lbl";
@@ -1477,12 +1484,12 @@ function markStaleFrom(from) {
 async function renderSegment(i) {
   const s = d, r = s.relay, seg = r.segments[i], total = r.segments.length, began = Date.now();
   seg.status = "pending";
-  seg.joinGap = null;
   renderRelay();
-  // A segment added after the end of a rendered chain: the previous one, rendered as the
-  // last, has no transition frames yet; they are extracted now (a cut takes one as its setting).
   const before = i > 0 ? r.segments[i - 1] : null;
-  if (before?.ref && !before.transitions?.length) await extractTransitions(before, i - 1, total);
+  if (latentLink(i)) return renderLatentSegment(s, seg, i, total, before, began);
+  // A cut: H3 Ref2VA on the subjects' sheets and the setting, with no start image.
+  if (i > 0 && !continuous(seg)) return renderCutSegment(s, seg, i, total, before, began);
+  await ensureTransitions(before, i - 1, total);
   if (!sameSession(s)) return;
   const prev = before ? transitionOf(before) : null;
   // 🔗 without a transition frame: refused rather than a silent cut.
@@ -1490,8 +1497,6 @@ async function renderSegment(i) {
     throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
   const subs = relaySubjects(), look = r.look;
   let start;
-  // A cut: H3 Ref2VA on the subjects' sheets and the setting, with no start image.
-  if (i > 0 && !continuous(seg)) return renderCutSegment(s, seg, i, total, before, began);
   // From a sheet, segment 1 starts on a shot composed from its character.
   if (isLongTake() && i === 0 && s.startImage.sheet) {
     log("req", "Relay, segment {n}/{total}: shot image from the sheet…", { n: i + 1, total });
@@ -1526,23 +1531,37 @@ async function renderSegment(i) {
   let job;
   if (refs.length) {
     seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
-    job = await relayR2vJob(s, seg, i, total, refs, start);
-    // Ref2VA does not always hold its start frame (one join in three broke on the GB10):
-    // measured, and said on the card; nothing is rendered again on its own.
-    seg.joinGap = await joinGap(start, out(job, ".mp4"));
-    if (seg.joinGap > JOIN_BROKEN) log("warn", "Relay, segment {n}/{total}: the clip does not start on its image (broken join). Regenerate this segment.", { n: i + 1, total });
+    job = await relayR2vJob(s, seg, i, total, refs, { image: start });
   } else {
     seg.prompt_used = P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
     job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,
       ["Relay · segment {n}/{total}", { n: i + 1, total }], last, sub));
   }
+  await segmentDone(s, seg, i, total, job, began);
+}
+
+// A continuous segment with sheets: H3 Ref2VA on the subjects' sheets (and the setting's),
+// continuing the previous clip in latent space. No start image, no join to check: the clip
+// carries on from the previous one's last second, and the take is decoded in one go.
+async function renderLatentSegment(s, seg, i, total, before, began) {
+  if (!before?.ref) throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
+  const refs = relayRefs(settingSheet());
+  log("req", "Relay, segment {n}/{total}: video continuing the previous segment…", { n: i + 1, total });
+  seg.start = null;
+  seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), s.relay.look, refs, s.style, h3Warn);
+  const job = await relayR2vJob(s, seg, i, total, refs, { continue_from: before.ref });
+  await segmentDone(s, seg, i, total, job, began);
+}
+
+// A rendered segment: its clip and last frame, then the transition frames the next segment
+// starts on, unless it continues this one in latent space. Ready only once they are there.
+async function segmentDone(s, seg, i, total, job, began) {
   if (!sameSession(s)) return;
   seg.ref = out(job, ".mp4");
   seg.transitions = null;
   seg.lastFrame = out(job, ".png");
-  if (i < total - 1) await extractTransitions(seg, i, total);
+  if (i < total - 1 && !latentLink(i + 1)) await extractTransitions(seg, i, total);
   if (!sameSession(s)) return;
-  // Ready only once its transition frames are there: the next segment starts on them.
   seg.status = "ready";
   seg.renderSec = Math.round((Date.now() - began) / 1000);
   relayLive.delete(seg);
@@ -1562,14 +1581,15 @@ function relayRefs(setting) {
 // shot jumped to the place image's framing, GB10 2026-11-16).
 const settingSheet = () => (!isLongTake() && locVariant()?.ref ? { ref: locVariant().ref, desc: locDesc() } : null);
 
-// One Ref2VA clip of the Relay; `start`: the frame the clip starts on (a continuous segment),
-// or none (a cut).
-function relayR2vJob(s, seg, i, total, refs, start) {
+// One Ref2VA clip of the Relay; `from`: { image } the frame the first segment of a long take
+// starts on, { continue_from } the clip a continuous segment continues, or none (a cut).
+function relayR2vJob(s, seg, i, total, refs, from = null) {
+  const how = from?.continue_from ? " + continuation" : from?.image ? " + start" : "";
   return tracked(seg, "video", sub => runJob("h3-r2v",
     { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref),
-      ...(start ? { image: start } : { aspect: s.ratio }) },
+      ...(from?.image ? { image: from.image } : from?.continue_from ? { continue_from: from.continue_from } : { aspect: s.ratio }) },
     { origin: origin(), label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
-      sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref.${start ? " + start" : ""} · ${seg.duration} s`, seed: seg.seed }] }));
+      sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref.${how} · ${seg.duration} s`, seed: seg.seed }] }));
 }
 
 // A cut: H3 Ref2VA with no start image and no end image. Its setting is the setting's sheet,
@@ -1577,55 +1597,21 @@ function relayR2vJob(s, seg, i, total, refs, start) {
 // chosen). A subject still visible in that frame is drifted already and wins over its sheet
 // (GB10, 2026-11-15): the user picks a frame where nobody is in view.
 async function renderCutSegment(s, seg, i, total, before, began) {
+  if (!settingSheet()) await ensureTransitions(before, i - 1, total);
+  if (!sameSession(s)) return;
   const frame = before?.ref ? transitionOf(before)?.ref || before.lastFrame : null;
   const refs = relayRefs(settingSheet() || (frame ? { ref: frame, desc: "" } : null));
   log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });
   seg.start = null;
-  seg.joinGap = null;
   seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), s.relay.look, refs, s.style, h3Warn);
-  const job = await relayR2vJob(s, seg, i, total, refs, null);
-  if (!sameSession(s)) return;
-  seg.ref = out(job, ".mp4");
-  seg.transitions = null;
-  seg.lastFrame = out(job, ".png");
-  if (i < total - 1) await extractTransitions(seg, i, total);
-  if (!sameSession(s)) return;
-  seg.status = "ready";
-  seg.renderSec = Math.round((Date.now() - began) / 1000);
-  relayLive.delete(seg);
-  renderRelay();
-  save();
+  const job = await relayR2vJob(s, seg, i, total, refs);
+  await segmentDone(s, seg, i, total, job, began);
 }
 
-// Mean gap per channel (0-255) between an image and a clip's first frame, both drawn at
-// 64×36 (the start frame is stretched to the canvas, as FastVideo does); null when either
-// cannot be read. On the GB10 a true join measured 5 to 9, a broken one 59 to 73.
-const JOIN_BROKEN = 25;
-async function joinGap(imageRef, clipRef) {
-  const W = 64, H = 36;
-  const draw = src => {
-    const c = Object.assign(document.createElement("canvas"), { width: W, height: H });
-    const g = c.getContext("2d", { willReadFrequently: true });
-    g.drawImage(src, 0, 0, W, H);
-    return g.getImageData(0, 0, W, H).data;
-  };
-  try {
-    const img = new Image();
-    img.src = refURL(imageRef);
-    await img.decode();
-    const video = Object.assign(document.createElement("video"), { muted: true, preload: "auto", src: refURL(clipRef) });
-    await Promise.race([new Promise((ok, ko) => { video.onloadeddata = ok; video.onerror = ko; }),
-      new Promise((_, ko) => setTimeout(ko, 15000))]);
-    // After loadeddata the first frame can still draw as nothing (transparent): a decoded
-    // frame is opaque, so the draw is tried again until it is.
-    let b = draw(video);
-    for (let k = 0; k < 40 && !b[3]; k++) { await new Promise(r => setTimeout(r, 50)); b = draw(video); }
-    if (!b[3]) return null;
-    const a = draw(img);
-    let sum = 0;
-    for (let k = 0; k < a.length; k += 4) sum += Math.abs(a[k] - b[k]) + Math.abs(a[k + 1] - b[k + 1]) + Math.abs(a[k + 2] - b[k + 2]);
-    return sum / (W * H * 3);
-  } catch { return null; }
+// A segment rendered last, or followed by a latent link, has no transition frames: they are
+// extracted when a segment after it needs one (a continuous start frame, a cut's setting).
+async function ensureTransitions(before, i, total) {
+  if (before?.ref && !before.transitions?.length) await extractTransitions(before, i, total);
 }
 
 // Candidates of a segment's transition: the clip's last frame (saved with it) and frames
@@ -1714,7 +1700,11 @@ async function assembleRelay() {
   $("relayAssembleBtn").disabled = true;
   try {
     log("req", "Relay: assembling the sequence…");
-    const ref = await concat(r.segments.map(seg => seg.ref), "Relay · sequence", true);
+    // video-stitch: the segments joined by latent continuation are decoded in one go (their
+    // joins carry on), the others are cuts; the sound of every clip, at one loudness.
+    const refs = r.segments.map(seg => seg.ref);
+    const ref = out(await runJob("video-stitch", { clips: refs }, { origin: origin(), label: ["Relay · sequence"],
+      sub: ["{n} clip(s)", { n: refs.length }] }), ".mp4");
     if (!sameSession(s)) return;
     r.video = { ref };
     player($("relayPlayer"), ref);

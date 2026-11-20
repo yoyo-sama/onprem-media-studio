@@ -7,10 +7,14 @@ Three engines:
   become conditioning rows);
 - `h3-r2v`: references to video (FastH3 OmniRef): images, silent clips and
   sounds, in one ordered list, and optionally a start frame (`image`, the
-  continuous segments of the Relay: `h3_start_frame`); the two passes of the
-  workflow validated on the GB10 in ComfyUI: 8 steps at about 0.3 MP, latent
-  upscale to about 0.9 MP, then 3 refine steps at denoise 0.4. `preview` stops
-  after the first pass.
+  first segment of a long take: `h3_start_frame`) or the clip it continues
+  (`continue_from`, the continuous segments of the Relay: `h3_continue`); the
+  two passes of the workflow validated on the GB10 in ComfyUI: 8 steps at
+  about 0.3 MP, latent upscale to about 0.9 MP, then 3 refine steps at denoise
+  0.4. `preview` stops after the first pass.
+
+One more GPU job, `video-stitch`, assembles a Relay take: the clips joined by
+latent continuation are put end to end as latents and decoded once.
 
 Rules carried over from 1.4 (LESSONS.md § 6):
 - the prompt arrives already compiled in the H3 grammar (`web/js/h3.js`) and
@@ -25,7 +29,9 @@ FastVideo constrains H3 to clips of 5 to 15 seconds (1.4 allowed shorter
 cuts): a shorter duration is refused with a clear message.
 
 Every clip is written as an MP4 with its audio, plus the last frame as a
-lossless PNG, which a Relay segment uses as the first image of the next one.
+lossless PNG, which a Relay segment uses as the first image of the next one,
+and its final video latents (`h3_continue`), which a continuous segment and
+video-stitch read.
 """
 
 import json
@@ -36,7 +42,7 @@ from pathlib import Path
 
 from .. import loras as lora_files
 from ..files import media_kind
-from . import Pipeline, common, h3_lora, register
+from . import Pipeline, common, h3_continue, h3_lora, montage, register
 
 FPS = 24
 MIN_SECONDS, MAX_SECONDS = 5, 15
@@ -100,6 +106,13 @@ def upscale_target(width: int, height: int, megapixels: float = FINAL_MEGAPIXELS
     w = round(round(target_w / MULTIPLE) * MULTIPLE / VAE_DOWNSAMPLE) * VAE_DOWNSAMPLE
     h = round(round(target_h / MULTIPLE) * MULTIPLE / VAE_DOWNSAMPLE) * VAE_DOWNSAMPLE
     return w, h, scale
+
+
+def upscale_scale(width: int, height: int, final: tuple[int, int]) -> float:
+    """The upscaler's factor for a given final size (a clip that continues another one
+    renders at that clip's size, which upscale_target may not give)."""
+    return (final[0] / (width // VAE_DOWNSAMPLE * VAE_DOWNSAMPLE)
+            + final[1] / (height // VAE_DOWNSAMPLE * VAE_DOWNSAMPLE)) / 2
 
 
 def node_sigma(index: int, shift: float, steps: int = 32, grid_max: float = 0.999) -> float:
@@ -211,13 +224,25 @@ def _video_path(ctx) -> Path:
     return folder / f"{time.strftime('%Y%m%d-%H%M%S')}-{ctx.job.id}.mp4"
 
 
+def _keeper(path: Path, params: dict, continues: str | None = None):
+    """Keeps the clip's final video latents next to its MP4 (Engine.generate's `keep`)."""
+    def keep(batch, fastvideo_args):
+        h3_continue.save(path, h3_continue.final_latents(batch, fastvideo_args), params["width"],
+                         params["height"], continues)
+    return keep
+
+
 def _outputs(result, path: Path, ctx, params: dict) -> list[Path]:
     """The MP4 FastVideo wrote, tagged with the job's metadata, and the clip's
-    last frame as a PNG named after it (hidden from the gallery's default view)."""
+    last frame as a PNG named after it (hidden from the gallery's default view).
+    The latents kept under the requested name follow the MP4 if FastVideo named it otherwise."""
     from PIL import Image
     video = Path(result.video_path) if result.video_path else path
     if not video.is_file():
         raise RuntimeError("FastVideo reported success but wrote no video (LESSONS.md #1)")
+    kept = h3_continue.latents_path(path)
+    if video != path and kept.is_file():
+        kept.replace(h3_continue.latents_path(video))
     if not result.frames:
         raise RuntimeError("FastVideo returned no frames")
     common.tag_video(video, ctx, params)
@@ -281,7 +306,7 @@ class H3TextToVideo(Pipeline):
         result = engine.generate(ctx, prompt=params["prompt"], width=params["width"], height=params["height"],
                                  frames=params["frames"], steps=contract(model_dir)["num_inference_steps"],
                                  seed=params["seed"], output=path, pil_image=pil_image, last_image=last_image,
-                                 progress=_steps(ctx, 0.1, 0.9, what))
+                                 progress=_steps(ctx, 0.1, 0.9, what), keep=_keeper(path, params))
         print(f"render: {self.id} {params['width']}×{params['height']}, {params['frames']} frames "
               f"in {time.time() - began:.1f} s", flush=True)
         return _outputs(result, path, ctx, params)
@@ -320,19 +345,34 @@ class H3ReferenceToVideo(Pipeline):
     models = [OMNIREF, UPSCALER]
 
     def validate(self, params, files):
-        out = _common(params, files, {"references", "image", "aspect", "preview"})
+        out = _common(params, files, {"references", "image", "continue_from", "aspect", "preview"})
         out["references"] = _references(params, files)
         # A start frame is frame 0 of the clip, not a reference: <Picture N> are the references.
         # FastVideo stretches it to the canvas, so the canvas follows it unless an aspect is sent.
         first = None
+        if params.get("continue_from") is not None:
+            if params.get("image") is not None or "aspect" in params or params.get("preview"):
+                raise ValueError("continue_from takes neither a start image, an aspect nor a preview: "
+                                 "the clip continues the other one, at its size")
+            ref = params["continue_from"]
+            if not isinstance(ref, str) or media_kind(ref) != "video":
+                raise ValueError("continue_from must be the reference of an H3 clip")
+            meta = h3_continue.read_meta(files.resolve(ref))
+            if meta is None:
+                raise ValueError(f"{ref} kept no latents (rendered before latent continuation, or not by "
+                                 "MiniMax H3): render that segment again to continue from it")
+            out["continue_from"] = ref
+            width, height = meta["width"], meta["height"]
+            g = math.gcd(width, height)
+            out["aspect"] = "%d:%d" % (width // g, height // g)
+            out["pass1_width"], out["pass1_height"] = size_for((width, height), PASS1_MEGAPIXELS)
+            out["width"], out["height"], out["preview"] = width, height, False
+            self._cited(out)
+            return out
         if params.get("image") is not None:
             out["image"] = common.image_ref(params["image"], "image", files)
             first = common.image_size(files.resolve(out["image"]))
-        for kind, label in REFERENCE_LABELS.items():
-            sent = sum(media_kind(r) == kind for r in out["references"])
-            wrong = sorted(n for n in _cited_pictures(out["prompt"], label) if not 1 <= n <= sent)
-            if wrong:
-                raise ValueError(f"The prompt cites <{label} {wrong[0]}> but only {sent} {kind} reference(s) were sent")
+        self._cited(out)
         if "aspect" in params or first is None:
             aspect = parse_aspect(params.get("aspect", "16:9"))
         else:
@@ -349,8 +389,21 @@ class H3ReferenceToVideo(Pipeline):
             out["width"], out["height"] = out["pass1_width"], out["pass1_height"]
         return out
 
+    @staticmethod
+    def _cited(out: dict) -> None:
+        for kind, label in REFERENCE_LABELS.items():
+            sent = sum(media_kind(r) == kind for r in out["references"])
+            wrong = sorted(n for n in _cited_pictures(out["prompt"], label) if not 1 <= n <= sent)
+            if wrong:
+                raise ValueError(f"The prompt cites <{label} {wrong[0]}> but only {sent} {kind} reference(s) were sent")
+
     def run(self, params, models, ctx):
-        return self._render(models, params, ctx)
+        if "continue_from" not in params:
+            return self._render(models, params, ctx)
+        h3_continue.install()
+        tail = h3_continue.load_tail(ctx.files.resolve(params["continue_from"]))
+        with h3_continue.tail(tail, params["seed"]):
+            return self._render(models, params, ctx)
 
     def _render(self, models, params, ctx):
         model_dir = models[OMNIREF]
@@ -371,7 +424,8 @@ class H3ReferenceToVideo(Pipeline):
         refs = [_reference(ctx.files.resolve(r)) for r in params["references"]]
         w1, h1, preview = params["pass1_width"], params["pass1_height"], params["preview"]
         what = (f"{params['width']}×{params['height']}, {params['frames']} frames, {len(refs)} reference(s)"
-                + (", start frame" if start is not None else ""))
+                + (", start frame" if start is not None else "")
+                + (", continuing a clip" if "continue_from" in params else ""))
         marks = [time.time()]
         path = _video_path(ctx)
         pass1 = f"Pass 1: {w1}×{h1}, {params['frames']} frames"
@@ -389,7 +443,7 @@ class H3ReferenceToVideo(Pipeline):
 
         ctx.progress(0.5, f"Latent upscale to {params['width']}×{params['height']}")
         latents, audio = refine_inputs(first.samples, first.audio, model_dir, models[UPSCALER] / UPSCALER_FILE,
-                                       terms, (w1, h1), params["seed"])
+                                       terms, (w1, h1), params["seed"], (params["width"], params["height"]))
         indices = pdd_indices(REFINE_SIGMAS, terms["video_scheduler_shift"], terms["pdd_steps"], terms["grid_max_t"])
         marks.append(time.time())
         ctx.progress(0.6, f"Pass 2: {len(indices) - 1} refine steps at {params['width']}×{params['height']}")
@@ -397,7 +451,8 @@ class H3ReferenceToVideo(Pipeline):
             second = engine.generate(ctx, prompt=params["prompt"], width=params["width"], height=params["height"],
                                      frames=params["frames"], steps=len(indices) - 1, seed=params["seed"],
                                      output=path, references=refs, pil_image=start, latents=latents, audio_latents=audio,
-                                     progress=_steps(ctx, 0.6, 0.9, f"Pass 2 at {params['width']}×{params['height']}"))
+                                     progress=_steps(ctx, 0.6, 0.9, f"Pass 2 at {params['width']}×{params['height']}"),
+                                     keep=_keeper(path, params, params.get("continue_from")))
         marks.append(time.time())
         # Each pass includes FastVideo's text and reference encoding; pass 2 also the VAE
         # decoding and the MP4 (the first pass ends on latents).
@@ -413,7 +468,8 @@ def _stats(model_dir: Path, component: str):
     return torch.tensor(cfg["latents_mean"]), torch.tensor(cfg["latents_std"])
 
 
-def refine_inputs(video, audio, model_dir: Path, upscaler_file: Path, terms: dict, pass1_size, seed: int):
+def refine_inputs(video, audio, model_dir: Path, upscaler_file: Path, terms: dict, pass1_size, seed: int,
+                  final: tuple[int, int] | None = None):
     """Latents for the refine pass, from the first pass's (denormalised) output.
 
     The video latents are normalised (DiT space), enlarged by the latent
@@ -423,6 +479,7 @@ def refine_inputs(video, audio, model_dir: Path, upscaler_file: Path, terms: dic
     same is done here (fed DiT-space latents, it renders pink mush). Noise:
     x = (1 − σ)·latent + σ·ε, as a ComfyUI sampler does at denoise < 1; the
     audio latents are noised the same way at the audio sigma of that node.
+    `final` sets the size (a clip continuing another one), else upscale_target does.
     FastVideo multiplies the injected rows by the node's sigma (it expects unit
     noise there), so x/σ is what is injected.
     """
@@ -434,6 +491,8 @@ def refine_inputs(video, audio, model_dir: Path, upscaler_file: Path, terms: dic
     vmean, vstd = vmean.view(view_v), vstd.view(view_v)
     video = (video.float() - vmean) / vstd
     width, height, scale = upscale_target(*pass1_size)
+    if final is not None:
+        width, height, scale = *final, upscale_scale(*pass1_size, final)
     device = common.device()
     model = h3_upscaler.load(upscaler_file, device)
     try:
@@ -456,6 +515,121 @@ def refine_inputs(video, audio, model_dir: Path, upscaler_file: Path, terms: dic
     return ((1 - sv) * video + sv * noise_v) / sv, ((1 - sa) * audio + sa * noise_a) / sa
 
 
+class VideoStitch(Pipeline):
+    """A Relay take: its clips end to end. A run of clips joined by latent continuation (each one
+    rendered with continue_from the clip before it in the list) is put together as latents, each
+    continuing clip without its first TAIL_LATENTS latents (they redo the end of the clip before),
+    and decoded once by the OmniRef video VAE (h3_continue); any other clip is a cut and is taken
+    as its MP4. The sound is each clip's own, cut where its image is, brought to one loudness with
+    a 25 ms fade at each join (montage.assemble): one decode of a take's sound faded with the
+    take on the GB10, and an audio tail as condition faded it too."""
+
+    id = "video-stitch"
+    models = [OMNIREF]
+
+    def validate(self, params, files):
+        common.check_keys(params, {"clips"}, "a montage has no prompt.")
+        clips = montage.video_refs(params, "clips", files, 2, montage.MAX_CLIPS)
+        metas = [h3_continue.read_meta(files.resolve(ref)) for ref in clips]
+        linked = h3_continue.links(clips, metas)
+        for run in h3_continue.runs(linked):
+            if len(run) > 1 and len({(metas[k]["width"], metas[k]["height"]) for k in run}) > 1:
+                raise ValueError(f"{clips[run[0]]} and the clips continuing it differ in size")
+        return {"clips": clips, "links": linked}
+
+    def run(self, params, models, ctx):
+        import shutil
+        clips, groups = params["clips"], h3_continue.runs(params["links"])
+        paths = [ctx.files.resolve(ref) for ref in clips]
+        folder = ctx.output_dir / self.id
+        folder.mkdir(parents=True, exist_ok=True)
+        stem = montage.output_stem(ctx)
+        work = folder / f".{stem}"
+        work.mkdir()
+        stitched = sum(len(g) for g in groups if len(g) > 1)
+        ctx.progress(0.02, f"{len(clips)} clips: {stitched} joined by latent continuation, "
+                           f"{len(groups) - 1} cut(s)")
+        videos, sounds = [], []
+        try:
+            for n, group in enumerate(groups):
+                if len(group) == 1:
+                    videos.append(paths[group[0]])
+                    frames = [montage.probe(paths[group[0]])["frames"]]
+                else:
+                    metas = [h3_continue.read_meta(paths[k]) for k in group]
+                    frames = [h3_continue.frames_of(m["latents"]) for m in metas]
+                    videos.append(self._decode_run([paths[k] for k in group], metas, work / f"run{n}", ctx, models))
+                for j, k in enumerate(group):
+                    start = h3_continue.TAIL_FRAMES / FPS if j else 0.0
+                    sounds.append((paths[k], start, frames[j] / FPS - start))
+            out = folder / f"{stem}.mp4"
+            ctx.progress(0.9, "Joining the sound of the clips")
+            montage.assemble(videos, sounds, out, True, ctx)
+        finally:
+            shutil.rmtree(work, ignore_errors=True)
+        common.tag_video(out, ctx, params)
+        return [out]
+
+    @staticmethod
+    def _engine(ctx, models):
+        """The resident OmniRef generator, whatever its LoRAs (the VAE is the same), else a new one."""
+        for key in list(common.POOL.resident):
+            if key[0] == "h3" and key[1].ref2va:
+                return common.load(key, None, alone=True)
+        return _engine(ctx, models[OMNIREF], True, [])
+
+    def _decode_run(self, paths: list[Path], metas: list[dict], base: Path, ctx, models) -> Path:
+        import torch
+        from safetensors.torch import load_file
+        common.free_llm(self.id)
+        engine = self._engine(ctx, models)
+        parts = [load_file(str(h3_continue.latents_path(p)))["video"].float() for p in paths]
+        count = h3_continue.stitched_latents([int(x.shape[2]) for x in parts])
+        latents = torch.cat([parts[0]] + [x[:, :, h3_continue.TAIL_LATENTS:] for x in parts[1:]], dim=2)
+        frames = h3_continue.frames_of(count)
+        ctx.progress(0.1, f"Decoding {len(paths)} clips at once: {frames} frames at "
+                          f"{metas[0]['width']}×{metas[0]['height']}")
+        began = time.time()
+        buffer = base.with_suffix(".f32")
+        try:
+            pixels = engine.decode(latents, buffer)
+            ctx.check()
+            ctx.progress(0.6, f"Encoding {frames} frames")
+            video = base.with_suffix(".mp4")
+            _encode(pixels, video, ctx)
+        finally:
+            pixels = None
+            buffer.unlink(missing_ok=True)
+        print(f"render: {self.id} {len(paths)} clips, {count} latents, {frames} frames decoded once "
+              f"in {time.time() - began:.1f} s", flush=True)
+        return video
+
+
+def _encode(pixels, path: Path, ctx, chunk: int = 24) -> None:
+    """Float [0, 1] frames (1, 3, F, H, W) to an MP4 at 24 fps, near lossless (the take is encoded
+    again when its sound is added), quantised as FastVideo's video decoding stage does."""
+    import subprocess
+    import torch
+    _, _, count, height, width = pixels.shape
+    args = ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{width}x{height}",
+            "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-crf", "12", "-preset", "medium",
+            "-pix_fmt", "yuv420p", str(path)]
+    with subprocess.Popen(args, stdin=subprocess.PIPE, stderr=subprocess.PIPE) as proc:
+        try:
+            for t in range(0, count, chunk):
+                ctx.check()
+                block = pixels[0, :, t:t + chunk].mul(255).clamp_(0, 255).to(torch.uint8)
+                proc.stdin.write(block.permute(1, 2, 3, 0).contiguous().numpy().tobytes())
+            proc.stdin.close()
+            err = proc.stderr.read()
+        except BaseException:
+            proc.kill()
+            raise
+    if proc.returncode:
+        raise RuntimeError(f"ffmpeg failed: {err.decode(errors='replace')[-400:]}")
+
+
 register(H3TextToVideo())
 register(H3ImageToVideo())
 register(H3ReferenceToVideo())
+register(VideoStitch())

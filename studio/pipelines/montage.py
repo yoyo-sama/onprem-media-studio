@@ -2,8 +2,8 @@
 
 - `video-concat` joins clips with hard cuts, sound included: the storyboard
   animatic, the Relay sequence and the multi-image sequence. For one continuous
-  take (`smooth_audio`), every clip's sound is brought to a common level first,
-  never below the level of an ordinary H3 clip.
+  take (`smooth_audio`), every clip's sound is brought to one loudness first
+  (TAKE_LUFS), under a limiter.
 - `image-grid` lays shot images out as one contact sheet.
 - `video-frames` saves frames counted back from the end of a clip: the
   candidate transition images of a Relay segment.
@@ -31,13 +31,20 @@ MAX_GRID = 16
 MAX_FRAME_OFFSET = 48  # two seconds at 24 fps
 FPS = 24  # every H3 clip
 MAX_GAIN_DB = 24.0  # level matching never lifts or cuts a clip by more
-SILENT_DB = -70.0   # below this mean level a clip is left as it is
-# The quietest common level of a continuous take: a typical h3-i2v clip's mean. H3 Ref2VA
-# renders its sound 10 to 20 dB lower (-48 to -59 dB on the GB10, 2026-11-16), from its
-# first pass on, so a take of Ref2VA segments only was nearly inaudible.
-FLOOR_DB = -40.0
-PEAK_DB = -1.0      # a lift never takes a clip's peak above this
+SILENT_LUFS = -69.0  # at or below this loudness a clip is left as it is (EBU R128 gates at -70)
+# Loudness of a continuous take: every clip is brought to it. H3 clips come out anywhere from
+# -17 LUFS (with music) to -51 LUFS (ambience only: a 50 s take measured -33 LUFS with one
+# nearly mute segment, GB10 2026-11-18), and H3 Ref2VA renders 10 to 20 dB lower again.
+TAKE_LUFS = -18.0
+# -2 dBFS: the limiter after the lift keeps isolated clicks from clipping, with room for the
+# AAC encoding that follows it (a take limited at -1 dBFS measured +0.2 dBTP, at -1.5 dBFS
+# -0.9 dBTP, GB10 2026-11-20).
+LIMIT = 0.794
 JOIN_FADE = 0.025   # seconds: a fade this short removes the click, not the sound
+LIFT_PASSES = 6     # extra lifts of a take the limiter kept below TAKE_LUFS
+# The limiter runs on 4x oversampled sound so it also holds the peaks between samples
+# (true peak): at 48 kHz a lifted take came out at +0.3 dBTP (GB10 2026-11-19).
+LIMITER = f"aresample=192000,alimiter=limit={LIMIT}:level=0:latency=1,aresample=48000"
 
 
 def ffmpeg(*args: str, timeout: float = 900, check=None, capture_stderr: bool = False) -> str:
@@ -79,30 +86,36 @@ def probe(path: Path) -> dict:
             "audio": any(s.get("codec_type") == "audio" for s in out.get("streams", []))}
 
 
-def audio_level(path: Path) -> tuple[float, float, float]:
-    """Mean level (dB), length (s) and peak (dB) of a clip's sound."""
-    out = ffmpeg("ffmpeg", "-v", "info", "-nostats", "-i", str(path), "-map", "0:a:0", "-af", "volumedetect",
+def loudness(path: Path) -> tuple[float, float]:
+    """Integrated loudness (LUFS, EBU R128) and length (s) of a clip's sound."""
+    out = ffmpeg("ffmpeg", "-v", "info", "-nostats", "-i", str(path), "-map", "0:a:0", "-af", "ebur128=framelog=quiet",
                  "-f", "null", "-", capture_stderr=True)
-    mean = re.search(r"mean_volume:\s*(-?[\d.]+|-inf) dB", out)
-    peak = re.search(r"max_volume:\s*(-?[\d.]+|-inf) dB", out)
+    found = re.findall(r"\bI:\s*(-?[\d.]+|-inf) LUFS", out)
     length = json.loads(ffmpeg("ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries",
                                "stream=duration:format=duration", "-of", "json", str(path)))
     seconds = float(length.get("streams", [{}])[0].get("duration") or length["format"]["duration"])
-    db = lambda m: float(m.group(1)) if m and m.group(1) != "-inf" else -math.inf
-    return db(mean), seconds, db(peak)
+    return (float(found[-1]) if found and found[-1] != "-inf" else -math.inf), seconds
 
 
-def level_gains(levels: list[float], peaks: list[float] | None = None) -> list[float]:
-    """Gain (dB) that brings each clip to the median level of the audible ones, or to
-    FLOOR_DB when that median is quieter, clamped, and never lifting a peak above PEAK_DB."""
-    audible = sorted(v for v in levels if v > SILENT_DB)
-    if not audible:
-        return [0.0] * len(levels)
-    median = audible[len(audible) // 2] if len(audible) % 2 else (audible[len(audible) // 2 - 1] + audible[len(audible) // 2]) / 2
-    target = max(median, FLOOR_DB)
-    peaks = peaks or [-math.inf] * len(levels)
-    return [max(-MAX_GAIN_DB, min(MAX_GAIN_DB, target - v, max(0.0, PEAK_DB - p))) if v > SILENT_DB else 0.0
-            for v, p in zip(levels, peaks)]
+def level_gains(levels: list[float]) -> list[float]:
+    """Gain (dB) that brings each audible clip to TAKE_LUFS, clamped to MAX_GAIN_DB."""
+    return [max(-MAX_GAIN_DB, min(MAX_GAIN_DB, TAKE_LUFS - v)) if v > SILENT_LUFS else 0.0 for v in levels]
+
+
+def lift_take(path: Path, check=None) -> None:
+    """The limiter takes back part of a large lift (an ambience full of footsteps went from
+    -33 to -23 LUFS instead of -18, GB10 2026-11-18): the joined sound is measured and lifted
+    again by what it lacks, under the same limiter, up to LIFT_PASSES times; the image is copied."""
+    for _ in range(LIFT_PASSES):
+        lufs, _ = loudness(path)
+        missing = TAKE_LUFS - lufs
+        if not -math.inf < lufs or missing < 0.5:
+            return
+        tmp = path.with_suffix(".lift.mp4")
+        ffmpeg("ffmpeg", "-v", "error", "-y", "-i", str(path), "-map", "0:v", "-map", "0:a", "-c:v", "copy",
+               "-af", f"volume={min(missing, MAX_GAIN_DB):.2f}dB,{LIMITER}",
+               "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(tmp), check=check)
+        tmp.replace(path)
 
 
 def video_refs(params: dict, key: str, files, low: int, high: int) -> list[str]:
@@ -126,11 +139,11 @@ class VideoConcat(Pipeline):
     every clip has some, else the result is silent and the job says so.
 
     `smooth_audio` is for the clips of one continuous take, each of which rendered
-    its own sound: every clip's sound is brought to the median level of the clips
-    (a Relay join jumped by 7 dB on the GB10), or up to FLOOR_DB when they are all
-    quieter (H3 Ref2VA segments), and gets a 25 ms fade at each join,
-    against the click. Sound and image stay in step: a real crossfade would need
-    sound beyond each clip's end, which a clip does not have."""
+    its own sound: every clip's sound is brought to TAKE_LUFS (a Relay join jumped
+    by 7 dB on the GB10, and a take of ambience only was barely audible), gets a
+    25 ms fade at each join, against the click, and the joined sound goes through a
+    limiter at -1 dBFS, so a lift never clips. Sound and image stay in step: a real
+    crossfade would need sound beyond each clip's end, which a clip does not have."""
 
     id = "video-concat"
     models = []
@@ -153,8 +166,8 @@ class VideoConcat(Pipeline):
         smooth = audio and params.get("smooth_audio", False)
         if smooth:
             ctx.progress(0.1, "Matching the sound level of the clips")
-            levels = [audio_level(p) for p in paths]
-            gains = level_gains([v for v, _, _ in levels], [p for _, _, p in levels])
+            levels = [loudness(p) for p in paths]
+            gains = level_gains([v for v, _ in levels])
         args, chain = ["ffmpeg", "-v", "error", "-y"], ""
         for n, path in enumerate(paths):
             args += ["-i", str(path)]
@@ -170,7 +183,9 @@ class VideoConcat(Pipeline):
                         chain += f",afade=t=out:st={max(0.0, levels[n][1] - JOIN_FADE):.3f}:d={JOIN_FADE}"
                 chain += f"[a{n}];"
         chain += "".join(f"[v{n}]" + (f"[a{n}]" if audio else "") for n in range(len(paths)))
-        chain += f"concat=n={len(paths)}:v=1:a={int(audio)}[v]" + ("[a]" if audio else "")
+        chain += f"concat=n={len(paths)}:v=1:a={int(audio)}[v]" + ("[a]" if audio and not smooth else "")
+        if smooth:
+            chain += f"[joined];[joined]{LIMITER}[a]"
         folder = ctx.output_dir / self.id
         folder.mkdir(parents=True, exist_ok=True)
         out = folder / f"{output_stem(ctx)}.mp4"
@@ -180,8 +195,54 @@ class VideoConcat(Pipeline):
         ctx.progress(0.2, f"Joining {len(paths)} clips")
         ffmpeg(*args, check=ctx.check)
         ctx.check()
+        if smooth:
+            lift_take(out, ctx.check)
         common.tag_video(out, ctx, params)
         return [out]
+
+
+def assemble(videos: list[Path], sounds: list[tuple[Path, float, float]], out: Path, smooth: bool, ctx) -> None:
+    """One take for video-stitch: `videos` end to end, and as its sound each (clip, start, seconds)
+    cut out of a clip's own sound and put end to end, padded with silence where a clip's sound is
+    shorter, so that the sound stays in step with the image (a stitched run is one video for the
+    sounds of several clips). Silent when a clip has none; `smooth` levels the sounds as
+    video-concat does."""
+    info = [probe(p) for p in videos]
+    width, height = info[0]["width"], info[0]["height"]
+    audio = all(probe(p)["audio"] for p, _, _ in sounds)
+    if not audio:
+        ctx.progress(0.92, "A clip has no sound: the take is silent")
+    smooth = audio and smooth
+    gains = level_gains([loudness(p)[0] for p, _, _ in sounds]) if smooth else [0.0] * len(sounds)
+    args, chain = ["ffmpeg", "-v", "error", "-y"], ""
+    for n, path in enumerate(videos):
+        args += ["-i", str(path)]
+        chain += (f"[{n}:v]scale={width}:{height}:force_original_aspect_ratio=decrease,"
+                  f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={FPS}[v{n}];")
+    chain += "".join(f"[v{n}]" for n in range(len(videos))) + f"concat=n={len(videos)}:v=1:a=0[v]"
+    if audio:
+        chain += ";"
+        for k, (path, start, seconds) in enumerate(sounds):
+            n = len(videos) + k
+            args += ["-i", str(path)]
+            chain += (f"[{n}:a]atrim=start={start:.4f},asetpts=PTS-STARTPTS,aresample=48000,"
+                      f"aformat=channel_layouts=stereo,apad,atrim=end={seconds:.4f}")
+            if smooth:
+                chain += f",volume={gains[k]:.2f}dB"
+                if k:
+                    chain += f",afade=t=in:d={JOIN_FADE}"
+                if k < len(sounds) - 1:
+                    chain += f",afade=t=out:st={max(0.0, seconds - JOIN_FADE):.4f}:d={JOIN_FADE}"
+            chain += f"[a{k}];"
+        chain += "".join(f"[a{k}]" for k in range(len(sounds))) + f"concat=n={len(sounds)}:v=0:a=1"
+        chain += f"[joined];[joined]{LIMITER}[a]" if smooth else "[a]"
+    args += ["-filter_complex", chain, "-map", "[v]"] + (["-map", "[a]", "-c:a", "aac", "-b:a", "192k"] if audio else [])
+    args += ["-c:v", "libx264", "-crf", "18", "-preset", "medium", "-pix_fmt", "yuv420p",
+             "-movflags", "+faststart", str(out)]
+    ffmpeg(*args, check=ctx.check)
+    ctx.check()
+    if smooth:
+        lift_take(out, ctx.check)
 
 
 class ImageGrid(Pipeline):

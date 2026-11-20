@@ -282,6 +282,19 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     une fois sur trois segments continus (première image à 60 de l'image, contre 5 à 7 pour un
     vrai raccord) : la carte mesure l'écart entre l'image de départ et la première image du clip
     et affiche « raccord cassé, régénère » ; rien ne se relance tout seul. (2026-11-16)
+52. **Un plan-séquence continue ses latents, il ne repart pas d'une image.** Toutes les façons
+    de faire partir un segment d'une image ont cassé quelque part : une image de départ en
+    Ref2VA a été lâchée 7 fois sur 11, les images clés prévues par Qwen ont manqué leur valeur de
+    plan environ une fois sur 5 et une image clé différente de son texte faisait balancer ou
+    couper H3. Reprendre les 7 derniers latents vidéo du clip précédent (22 images) comme lignes
+    de condition au temps des premières images de la cible, avec les planches en références, a
+    tenu le mouvement, l'identité, le décor et la lumière ; décodé à part, chaque clip
+    redémarrait le VAE causal sans historique et le raccord sautait (écart 15,2), recollé en
+    latents et décodé d'un seul tenant il était à 7,3, comme à l'intérieur d'un clip. Reprendre
+    aussi les latents du son l'éteignait clip après clip (-32 à -59 LUFS) : seule la vidéo est
+    reprise, et le son propre à chaque clip est porté à -18 LUFS. Sur 47 s, l'identité a mieux
+    tenu que la chaîne i2v, en moins de temps (33 min contre 50 min pour 50 s).
+    docs/fr/LONG-VIDEO.md. (2026-11-20)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

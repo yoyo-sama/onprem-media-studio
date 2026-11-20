@@ -15,7 +15,7 @@ import { stackLabel } from "./lora-stack.js";
 export const ENGINE_LABELS = {
   "krea2-t2i": "Krea 2", "qwen-edit-2509": "Qwen Edit 2509", "qwen-image-2.1": "Qwen Image 2.1", "moss-image": "MOSS-Image",
   "h3-t2v": L("MiniMax H3 · text to video"), "h3-i2v": L("MiniMax H3 · image to video"),
-  "h3-r2v": L("MiniMax H3 · references"), "video-concat": L("Montage"), "image-grid": L("Contact sheet"),
+  "h3-r2v": L("MiniMax H3 · references"), "video-concat": L("Montage"), "video-stitch": L("Montage"), "image-grid": L("Contact sheet"),
   "video-frames": L("Clip frames"), "upscale-2x": L("Upscale ×2"),
 };
 export const ORIGIN_LABELS = {

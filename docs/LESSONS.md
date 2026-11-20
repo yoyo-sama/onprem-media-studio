@@ -256,6 +256,17 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     frame 60 away from the image, against 5 to 7 for a true join): the card measures the gap
     between the start image and the clip's first frame and says "broken join, regenerate"; nothing
     is rendered again on its own. (2026-11-16)
+52. **A long take continues its latents, it does not restart from an image.** Every way of
+    starting a segment on an image broke somewhere: a start frame in Ref2VA let go of it 7 times
+    in 11, key images planned by Qwen missed their shot size about once in 5 and a key image
+    unlike its text made H3 swing or cut. Carrying the previous clip's last 7 video latents
+    (22 frames) as condition rows at the time of the target's first frames, with the sheets as
+    references, held motion, identity, scene and light; decoded apart, each clip restarted the
+    causal VAE without history and the join jumped (gap 15.2), stitched as latents and decoded
+    once it was 7.3, as inside a clip. Carrying the audio latents too faded the sound out clip
+    after clip (-32 to -59 LUFS): only the video is carried, and each clip's own sound is
+    levelled to -18 LUFS. Over 47 s the identity held better than the i2v chain, in less time
+    (33 min against 50 min for 50 s). docs/LONG-VIDEO.md. (2026-11-20)
 
 ## 8. Front end (for the port in step 4)
 
