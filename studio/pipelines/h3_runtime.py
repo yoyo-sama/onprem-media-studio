@@ -224,6 +224,9 @@ def _read_weights_whole() -> None:
 # time (its engine loads alone, on the one GPU lane), and FastVideo runs it in a thread of
 # its own, hence a module-level slot rather than a thread-local one.
 _progress = None
+# The running request's latent keeper, (batch, fastvideo_args) called once at its final video
+# decoding (not at a pass that ends on latents): set by Engine.generate like _progress.
+_keep = None
 
 
 def _tell(stage: str, done: int, total: int) -> None:
@@ -263,6 +266,8 @@ def report_stages() -> None:
     def decode_forward(stage, batch, fastvideo_args):
         if fastvideo_args.output_type != "latent":
             _tell("decode", 0, 1)
+            if _keep is not None:
+                _keep(batch, fastvideo_args)
         return decode(stage, batch, fastvideo_args)
 
     denoise_forward.reports = decode_forward.reports = True
@@ -334,10 +339,11 @@ class Engine:
 
     def generate(self, ctx, *, prompt: str, width: int, height: int, frames: int, steps: int, seed: int,
                  output: Path, save: bool = True, pil_image=None, last_image=None, references=None,
-                 latents=None, audio_latents=None, progress=None):
+                 latents=None, audio_latents=None, progress=None, keep=None):
         """One FastVideo request; a cancelled job interrupts it and raises Cancelled.
-        `progress(stage, done, total)` hears its denoising steps and decoding (report_stages)."""
-        global _progress
+        `progress(stage, done, total)` hears its denoising steps and decoding (report_stages);
+        `keep(batch, fastvideo_args)` is handed the batch when its video decoding starts."""
+        global _progress, _keep
         from fastvideo.api import GenerationRequest, InputConfig, OutputConfig, SamplingConfig
         request = GenerationRequest(
             prompt=prompt,
@@ -358,12 +364,43 @@ class Engine:
 
         watcher = threading.Thread(target=watch, name="h3-cancel", daemon=True)
         watcher.start()
-        _progress = progress
+        _progress, _keep = progress, keep
         try:
             return self.generator.generate(request)
         except RuntimeError:
             ctx.check()  # an interrupted run raises RuntimeError: report it as cancelled
             raise
         finally:
-            _progress = None
+            _progress = _keep = None
             done.set()
+
+    def video_vae(self):
+        """The video VAE of this generator's H3 pipeline (its video decoding stage's)."""
+        from fastvideo.pipelines.basic.minimax_h3.stages.minimax_h3_decoding import MiniMaxH3VideoDecodingStage
+        worker = getattr(self.generator.executor, "driver_worker", None)
+        pipeline = getattr(getattr(worker, "worker", None), "pipeline", None)
+        for stage in getattr(pipeline, "stages", None) or []:
+            if isinstance(stage, MiniMaxH3VideoDecodingStage) and stage.vae is not None:
+                return stage.vae
+        raise RuntimeError("The H3 generator has no video VAE to decode with")
+
+    def decode(self, latents, buffer: Path):
+        """Decode DiT-normalised video latents (1, C, T, h, w) as FastVideo's video decoding stage
+        does, into float32 [0, 1] pixels (1, 3, F, H, W) streamed to a file-backed buffer: a long
+        take's frames (tens of GB) go to the page cache and the disk, not to pinned memory."""
+        import torch
+        vae = self.video_vae()
+        device = torch.device("cuda")
+        # The NVFP4 decoder packs its linears on the device at its first decode.
+        from fastvideo.models.vaes.minimax_h3_nvfp4_decoder import freeze_nvfp4_linears_on_device
+        freeze_nvfp4_linears_on_device(vae)
+        with torch.no_grad():
+            z = vae.denormalize_latents(latents.to(device=device, dtype=torch.float32))
+            shape = tuple(vae.decoded_pixel_shape(z.shape))
+            count = 1
+            for n in shape:
+                count *= n
+            output = torch.from_file(str(buffer), shared=True, size=count, dtype=torch.float32).view(shape)
+            with torch.autocast(device_type="cuda", dtype=getattr(vae, "decode_autocast_dtype", torch.float16)):
+                vae.decode_to_pixels(z, output)
+        return output

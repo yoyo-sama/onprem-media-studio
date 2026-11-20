@@ -75,6 +75,7 @@ commit Hugging Face de son rendu qualifié.
 | `upscale-2x` | Image ou vidéo ×2 depuis la galerie | SPAN 2xNomosUni (`span-2x-nomosuni`) via spandrel | CC BY 4.0 (crédité dans `NOTICE`) | gb10-demo, 2026-11-06 |
 | (LLM) | Enrichissement des prompts et chat de l'assistant | Gemma 4 26B-A4B Q4_0 (`gemma4-26b-a4b`) | Apache-2.0 | 2026-11-07 (amendement de l'ADR 0001) |
 | `video-concat`, `image-grid`, `video-frames` | Montage sur le fil CPU (ffmpeg, Pillow) | aucun | — | — |
+| `video-stitch` | Une prise du Relay : clips qui se continuent décodés d'un seul tenant depuis leurs latents, coupes telles quelles, son à -18 LUFS | le VAE vidéo d'OmniRef (`fasth3-omniref-nvfp4`) | comme H3 | par script sur promaxgb10-95c7, 2026-11-20 ; par l'interface à faire |
 
 **Abandonnés, et pourquoi** (ne pas les réintroduire sans demande du propriétaire) :
 

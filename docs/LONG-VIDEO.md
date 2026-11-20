@@ -136,24 +136,37 @@ patched.
 If step 1 fails, method 2 is tried with the same criteria; RefMods are tried inside whichever
 method passes, to lighten the references.
 
-## Integration plan (once the sound is settled)
+## Integration (PR #44, 2026-11-20)
 
-The Relay on `main` already renders a continuous segment as `h3-r2v` with the sheets plus a
-start image (`image`, placed at frame 0 by `h3_start_frame.py`); that start image is what broke
-7 times in 11. The change is a swap, not a new feature:
+The swap the plan announced, with the video tail only (step 2b). The path stays brief → length
+→ one click.
 
-- **Server**: every H3 clip keeps its final video and audio latents next to its output. `h3-r2v`
-  takes `continue_from` (the previous clip's output) instead of `image`: its last 7 video
-  latents (and audio, depending on the sound test) become condition rows at the target's first
-  positions, in a forward patch on the latent preparation (`h3_continue.py`, replacing
-  `h3_start_frame.py`). A new job `video-stitch` joins the latents of a chain (each clip without
-  its overlap) and decodes them once with H3's VAEs, then the take loudness pass.
-- **Front end**: a continuous segment sends `continue_from` instead of its start frame; a chain
-  of continuous segments is assembled by `video-stitch` instead of `video-concat`. The join
-  check (`joinGap`, "broken join") goes, as do the transition frames of continuous segments.
-  Cuts stay as they are. The path stays brief → length → one click.
-- **Tests**: unit tests of the latent arithmetic (overlap, grid, positions) without a GPU; the
-  Relay UI test checks the job chain; a 50 s render through the UI on the GB10 qualifies it.
+- **Server.** Every H3 clip (`h3-t2v`, `h3-i2v`, `h3-r2v` but its preview) keeps its final video
+  latents next to its MP4: `<stem>.latents.safetensors`, DiT-normalised, float16, with the canvas
+  size, the latent count and the clip it continues in its metadata (about 25 MB for 10 s).
+  `h3-r2v` takes `continue_from`, the reference of the clip it continues, instead of `image`: the
+  canvas is that clip's, the upscaler aims at its size, and FastVideo's latent preparation is
+  wrapped (`studio/pipelines/h3_continue.py`) to add its last 7 video latents as a silent video
+  reference whose rows take the time of the target's first 7 latent frames. No sound is carried
+  over. `h3_start_frame.py` stays for the first segment of a long take (a start image with the
+  sheets). A new GPU job, `video-stitch`, assembles a take: the clips each rendered with
+  `continue_from` the clip before them in the list are put end to end as latents (each without
+  its first 7) and decoded once by the OmniRef video VAE into a file-backed buffer, so a long
+  take's frames go to the disk rather than to memory; any other clip is a cut, taken as its MP4.
+  The sound is each clip's own, cut where its image is (22 frames into a continuing clip),
+  brought to -18 LUFS, with a 25 ms fade at each join and a true-peak limiter at -1.5 dBFS
+  (`montage.assemble`, the levelling of PR #43, its limit lowered by 0.5 dB because the take
+  measured +0.2 dBTP after AAC).
+- **Front end.** A continuous segment with the subjects' sheets sends `continue_from` (the
+  previous segment's clip) and no start image; it extracts no transition frames for it, and its
+  card offers none to choose. The join check (`joinGap`, "broken join") is gone. A continuous
+  segment without sheets, or with an end image (FL2VA), still starts on the previous segment's
+  transition frame (i2v); cuts are unchanged and extract the previous segment's frames only when
+  they need one as their setting. The chain, and "Assemble", end with `video-stitch`.
+- **Tests.** `tests/test_h3_continue.py`: the latent arithmetic, the metadata, the parameters of a
+  continuing clip, the stitched take's sound in step with its image (real ffmpeg, the decoding
+  replaced), and the latent-preparation patch on stand-in FastVideo modules. `tools/relay-ui.js`
+  checks the job chain. A 50 s render through the UI on the GB10 qualifies it.
 
 ## Results
 

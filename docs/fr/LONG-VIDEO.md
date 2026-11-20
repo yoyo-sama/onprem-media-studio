@@ -147,27 +147,41 @@ abandonnée, pas rafistolée.
 Si l'étape 1 échoue, on essaie la méthode 2 avec les mêmes critères ; les RefMods sont essayés
 dans la méthode qui passe, pour alléger les références.
 
-## Plan d'intégration (une fois le son réglé)
+## Intégration (PR #44, 2026-11-20)
 
-Le Relay de `main` rend déjà un segment continu en `h3-r2v` avec les planches plus une image de
-départ (`image`, placée à l'image 0 par `h3_start_frame.py`) ; c'est cette image de départ qui a
-cassé 7 fois sur 11. Le changement est un remplacement, pas une nouvelle fonction :
+Le remplacement annoncé par le plan, avec la seule queue vidéo (étape 2b). Le parcours reste
+brief → durée → un clic.
 
-- **Serveur** : chaque clip H3 garde ses latents finaux vidéo et son à côté de sa sortie.
-  `h3-r2v` prend `continue_from` (la sortie du clip précédent) au lieu d'`image` : ses 7 derniers
-  latents vidéo (et son, selon le test du son) deviennent des lignes de condition aux premières
-  positions de la cible, par un correctif de la préparation des latents (`h3_continue.py`, qui
-  remplace `h3_start_frame.py`). Un nouveau job `video-stitch` recolle les latents d'une chaîne
-  (chaque clip sans son recouvrement) et les décode d'un seul tenant avec les VAE de H3, puis
-  passe le niveau de la prise.
-- **Interface** : un segment continu envoie `continue_from` au lieu de son image de départ ; une
-  chaîne de segments continus est montée par `video-stitch` au lieu de `video-concat`. Le
-  contrôle des raccords (`joinGap`, « raccord cassé ») disparaît, comme les images de transition
-  des segments continus. Les coupes restent telles quelles. Le parcours reste brief → durée →
-  un clic.
-- **Tests** : tests unitaires de l'arithmétique des latents (recouvrement, grille, positions)
-  sans GPU ; le test d'interface du Relay vérifie la chaîne de jobs ; un rendu 50 s depuis
-  l'interface sur le GB10 la qualifie.
+- **Serveur.** Chaque clip H3 (`h3-t2v`, `h3-i2v`, `h3-r2v` sauf son aperçu) garde ses latents
+  vidéo finaux à côté de son MP4 : `<nom>.latents.safetensors`, normalisés pour le DiT, en
+  float16, avec dans leurs métadonnées la taille du cadre, le nombre de latents et le clip qu'il
+  continue (environ 25 Mo pour 10 s). `h3-r2v` prend `continue_from`, la référence du clip qu'il
+  continue, au lieu d'`image` : le cadre est celui de ce clip, l'upscaler vise sa taille, et la
+  préparation des latents de FastVideo est enveloppée (`studio/pipelines/h3_continue.py`) pour
+  ajouter ses 7 derniers latents vidéo comme une référence vidéo muette dont les lignes prennent
+  le temps des 7 premières images latentes de la cible. Aucun son n'est repris.
+  `h3_start_frame.py` reste pour le premier segment d'un plan-séquence (une image de départ avec
+  les planches). Un nouveau job GPU, `video-stitch`, assemble une prise : les clips rendus chacun
+  avec `continue_from` le clip qui les précède dans la liste sont mis bout à bout en latents
+  (chacun sans ses 7 premiers) et décodés d'un seul tenant par le VAE vidéo d'OmniRef dans un
+  tampon adossé à un fichier, si bien que les images d'une longue prise vont sur le disque plutôt
+  qu'en mémoire ; tout autre clip est une coupe, pris tel qu'en son MP4. Le son est celui de
+  chaque clip, coupé là où l'est son image (22 images après le début d'un clip qui continue),
+  porté à -18 LUFS, avec un fondu de 25 ms à chaque raccord et un limiteur de crête vraie à
+  -1,5 dBFS (`montage.assemble`, le nivellement de la PR #43, sa limite baissée de 0,5 dB parce
+  que la prise mesurait +0,2 dBTP après l'AAC).
+- **Interface.** Un segment continu qui a les planches des sujets envoie `continue_from` (le
+  clip du segment précédent) et aucune image de départ ; il ne fait extraire aucune image de
+  transition pour lui, et sa carte n'en propose aucune. Le contrôle des raccords (`joinGap`,
+  « raccord cassé ») disparaît. Un segment continu sans planche, ou avec une image de fin
+  (FL2VA), part toujours de l'image de transition du segment précédent (i2v) ; les coupes ne
+  changent pas et n'extraient les images du segment précédent que lorsqu'il leur en faut une
+  comme décor. La chaîne, et « Assembler », se terminent par `video-stitch`.
+- **Tests.** `tests/test_h3_continue.py` : l'arithmétique des latents, les métadonnées, les
+  paramètres d'un clip qui en continue un autre, le son de la prise assemblée en phase avec son
+  image (vrai ffmpeg, décodage remplacé), et le correctif de la préparation des latents sur des
+  modules FastVideo de substitution. `tools/relay-ui.js` vérifie la chaîne de jobs. Un rendu de
+  50 s depuis l'interface sur le GB10 la qualifie.
 
 ## Résultats
 
