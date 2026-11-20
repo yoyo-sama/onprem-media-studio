@@ -231,8 +231,8 @@ Nothing below was asked to be done now; each waits for the owner.
 - r2v with clip and sound references (PR #11): never rendered on a GB10.
 - Long take from a screenplay file (2026-11-20, [LONG-VIDEO.md](LONG-VIDEO.md) § Screenplay
   files): rendered on promaxgb10-95c7 with no start image and as a described scene; the described
-  scene's segment 1 in i2v on its picture, a file with a start image, and an opening frame from
-  MOSS or Qwen instead of text to video are not rendered yet.
+  scene's segment 1 in i2v on its picture rendered alone (holds the picture); a whole take
+  starting in i2v, and a file with a start image, are not rendered yet.
 - Character sheet from a photo (Qwen Image 2.1, PR #9; five-view prompt adapted from H3 Character
   Sheet Designer since 2026-11-13): never qualified.
 - The SPAN upscaler weights are not yet downloaded on promaxgb10-95c7 (automatic on first use).

@@ -223,9 +223,16 @@ GB10 renders (promaxgb10-95c7, 2026-11-20):
   picture), 4 × 10 s, segment 1 started on the picture: 37.8 s, -18.1 LUFS, the garden and the
   woman held across the three joins, but a cut at 0.08 s (see above; the fountain also changed
   shape in segment 3). Segment 1 now starts on the picture in i2v instead.
-- Still to render: that i2v start, the same file with a start image, and an opening frame made
-  by an image engine (MOSS-Image or Qwen Image 2.1) from the screenplay when there is no
-  picture, to compare with H3 text to video.
+- Segment 1 alone, starting on a first frame in i2v (10 s each, same text and seed for b, c, d):
+  a) the empty garden: 647 s, frame 0 is the picture, no cut, the woman really enters from the
+  left and the garden holds; b) no picture, H3 text to video (the take above): clean, stable
+  face, little walking; c) a MOSS-Image frame (77 s) then i2v (693 s): frame kept, but the face
+  aged within 2 s and the background changed; d) a Qwen Image 2.1 frame (108 s, 1344×768: Qwen
+  needs multiples of 32) then i2v (470 s): the most natural frame and the steadiest face. One
+  render per case: a trend, not a qualification. Kept: text to video when there is no picture
+  (no extra step); a user who wants to see the opening first can make it with Qwen and start
+  from it.
+- Still to render: the same file with a start image.
 
 ## Results
 

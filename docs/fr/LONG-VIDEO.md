@@ -240,9 +240,16 @@ Rendus sur le GB10 (promaxgb10-95c7, 2026-11-20) :
   départ), 4 × 10 s, segment 1 démarré sur l'image : 37,8 s, -18,1 LUFS, le jardin et la femme
   tiennent aux trois raccords, mais une coupe à 0,08 s (voir plus haut ; la fontaine change
   aussi de forme au segment 3). Le segment 1 démarre désormais sur l'image en i2v.
-- Reste à rendre : ce départ en i2v, le même fichier avec une image de départ, et une première
-  image créée par un moteur d'image (MOSS-Image ou Qwen Image 2.1) à partir du scénario quand il
-  n'y a pas d'image, à comparer au texte vers vidéo H3.
+- Segment 1 seul, démarré sur une première image en i2v (10 s chacun, même texte et même graine
+  pour b, c, d) : a) le jardin vide : 647 s, l'image 0 est l'image de départ, aucune coupe, la
+  femme entre vraiment par la gauche et le jardin tient ; b) sans image, texte vers vidéo H3 (la
+  prise ci-dessus) : propre, visage stable, peu de marche ; c) une image MOSS-Image (77 s) puis
+  i2v (693 s) : image tenue, mais le visage vieillit en 2 s et le fond change ; d) une image Qwen
+  Image 2.1 (108 s, 1344×768 : Qwen exige des multiples de 32) puis i2v (470 s) : l'image la plus
+  naturelle et le visage le plus stable. Un rendu par cas : une tendance, pas une qualification.
+  Retenu : le texte vers vidéo quand il n'y a pas d'image (aucune étape de plus) ; qui veut voir
+  l'ouverture d'abord peut la faire avec Qwen et partir d'elle.
+- Reste à rendre : le même fichier avec une image de départ.
 
 ## Résultats
 
