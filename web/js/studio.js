@@ -37,7 +37,7 @@ const SCENARIOS = {
     example: "Localized promotional poster variant for the Japanese market: keep the premium sci-fi brand identity, adapt background, wardrobe and typography cues to Tokyo night aesthetics." },
 };
 // The long take's brief is its screenplay, and the first prompt of every segment.
-const MOTION_EXAMPLE = "Smooth cinematic camera transition between the key frames, consistent subject, style and lighting, natural motion.";
+const MOTION_EXAMPLE = "A woman walks along a garden path at dawn, stops by a flowering tree, then turns toward the camera and smiles.";
 let activeScenario = "campaign";
 
 // What the main button starts, said on the button.
@@ -539,7 +539,7 @@ async function generate() {
   // the button says so, with the time spent.
   const busy = wf.pipeline === "storyboard" ? L("{llm} is writing the sheets and the shot list… {time}")
     : wf.pipeline === "reference2video" ? L("{llm} is preparing the director… {time}")
-    : wf.pipeline === "sequence" ? L("{llm} is describing the start image… {time}")
+    : wf.pipeline === "sequence" && seqImages.length ? L("{llm} is describing the start image… {time}")
     : autoEnrich && wf.enrich !== "builtin" ? L("{llm} is enriching the brief… {time}") : null;
   const start = Date.now();
   const tick = () => {
@@ -548,7 +548,9 @@ async function generate() {
   };
   const timer = busy ? (tick(), setInterval(tick, 1000)) : 0;
   try {
-    if (autoEnrich && wf.enrich !== "builtin") {
+    // A long take's screenplay in the H3 layout is read as written: never enriched.
+    const written = wf.pipeline === "sequence" && !!P.parseScreenplay(F.brief());
+    if (autoEnrich && wf.enrich !== "builtin" && !written) {
       log("req", "Auto enrichment of the brief with {llm}…", { llm: LLM });
       await enrich(wf);
     } else if (autoEnrich) log("sys", "{workflow} builds its own prompts: brief sent as it is.", { workflow: t(wf.label) });
@@ -603,7 +605,7 @@ const CARD_FORM = {
   edit_image: a => ["image2image", "qwen21_i2i", a.instruction],
   video_from_text: a => ["text2video", "h3_t2v", a.prompt],
   video_from_image: a => ["image2video", "h3_i2v", a.prompt],
-  image_sequence: a => ["sequence", "h3_sequence", a.prompt],
+  long_take: a => ["sequence", "h3_sequence", a.screenplay],
   campaign: a => ["campaign", "campaign", a.brief],
   storyboard: a => ["storyboard", "storyboard_qwen21", a.brief],
   reference_video: a => ["reference2video", "h3_r2v", a.brief],
@@ -637,7 +639,7 @@ async function openCardInForm(tool, a, image, quiet = false) {
   // Sheets of a storyboard card: the director keeps them (another card drops them).
   D.useSheets(tool === "storyboard"
     ? { subjects: (a.subject_sheets || []).map(img), setting: a.setting_sheet?.length ? img(a.setting_sheet[0]) : null } : null);
-  if (tool === "image_sequence") { seqImages.splice(0, Infinity, ...a.images.map(id => ({ ...img(id), dur: a.duration }))); renderSeqList(); }
+  if (tool === "long_take") { seqImages.splice(0, Infinity, ...(a.images || []).map(id => ({ ...img(id), dur: 10 }))); renderSeqList(); }
   renderRefs();
   brief.value = text;
   if (quiet) return;
@@ -1016,6 +1018,20 @@ function initForm() {
   $("seqFiles").addEventListener("change", () => {
     for (const f of $("seqFiles").files) if (!addSeqImage({ name: f.name, blob: f })) break;
     $("seqFiles").value = "";
+  });
+  // A screenplay file becomes the brief (Undo puts the old one back); nothing starts.
+  $("seqImportBtn").addEventListener("click", () => $("seqImportFile").click());
+  $("seqImportFile").addEventListener("change", async () => {
+    const file = $("seqImportFile").files[0];
+    $("seqImportFile").value = "";
+    const text = file ? (await file.text()).trim() : "";
+    if (!text) return;
+    const before = brief.value;
+    brief.value = text;
+    const play = P.parseScreenplay(text);
+    log("ok", play ? "Screenplay {name} imported: {n} segment(s), opened as written." : "Screenplay {name} imported: Gemma splits it once the long take is open.",
+      { name: file.name, n: play?.segments.length || 0 });
+    undoToast("Screenplay imported into the brief.", {}, () => { brief.value = before; });
   });
   $("refImagesInput").addEventListener("change", () => {
     addRefs([...$("refImagesInput").files].map(f => ({ name: f.name, blob: f })));

@@ -219,7 +219,7 @@
           </button>
           <button type="button" class="usecase" data-scenario="storyboard" data-pipeline="sequence" aria-pressed="false">
             <strong>Long video (long take)</strong>
-            <span>One continuous video made of chained segments, from a photo or a character sheet.</span>
+            <span>One continuous video made of chained segments, from a photo, a character sheet or text alone.</span>
             <small>Director / Videographer</small>
           </button>
           <button type="button" class="usecase" data-scenario="localization" data-pipeline="image2image" aria-pressed="false">
@@ -300,7 +300,11 @@
             </div>
             <div class="form-stack gb-block" id="seqWrap" hidden>
               <h3 class="section-title">Long take from images</h3>
-              <p class="hint">1 to 6 images: the long take starts on the first, and each next image is where a segment ends. The brief is its screenplay. Nothing renders yet: the long take opens on its segments.</p>
+              <p class="hint">0 to 6 images: the long take starts on the first, and each next image is where a segment ends. With none, its first segment is generated from the text. The brief is its screenplay. Nothing renders yet: the long take opens on its segments.</p>
+              <div class="composer-row">
+                <button type="button" class="secondary-btn" id="seqImportBtn" title="Puts a screenplay file (.txt, .md) in the brief. Written in the H3 layout (summary:, camera_direction:, lighting:, detailed_description: with one Segment line per segment…), it gives the segments and the shared fields as written.">📄 Import a screenplay</button>
+                <input type="file" id="seqImportFile" accept=".txt,.md,text/plain,text/markdown" hidden>
+              </div>
               <input type="file" id="seqFiles" accept="image/*" multiple>
               <div class="seq-list" id="seqList"></div>
               <div class="hint" id="seqSummary"></div>
@@ -520,7 +524,9 @@
           </label>
           <div class="composer-row">
             <label>Total length (s) <input type="number" id="relayTotal" min="5" max="150" value="30"></label>
-            <button type="button" class="secondary-btn" id="relayComposeBtn" title="Gemma writes one action per segment and fills the shared fields left empty. Nothing renders: read and fix each segment before starting the chain." disabled>✨ Split the screenplay</button>
+            <button type="button" class="secondary-btn" id="relayComposeBtn" title="Gemma writes one action per segment and fills the shared fields left empty; a screenplay in the H3 layout (Segment lines with their timestamps) is split as written, without Gemma. Nothing renders: read and fix each segment before starting the chain." disabled>✨ Split the screenplay</button>
+            <button type="button" class="secondary-btn" id="relayImportBtn" title="Reads a screenplay file (.txt, .md) into the screenplay and splits it. Nothing renders." disabled>📄 Import a screenplay</button>
+            <input type="file" id="relayImportFile" accept=".txt,.md,text/plain,text/markdown" hidden>
             <span class="hint" id="relayPlan"></span>
           </div>
           <details class="seg-more">
@@ -532,9 +538,11 @@
           </details>
         </div>
         <details class="relay-composer relay-look" id="relayLook">
-          <summary class="composer-lbl">Shared by every segment: framing, lighting, soundscape, music</summary>
+          <summary class="composer-lbl">Shared by every segment: subjects, framing, lighting, soundscape, music</summary>
           <div class="relay-look-body">
             <p class="hint">Written once and added to the prompt of every segment. An empty field is left out.</p>
+            <label>Subjects<textarea data-look="subjects" rows="2" spellcheck="false" placeholder="Who the subjects are, as H3 reads them: &lt;Subject 1&gt; is… With a start image or sheets, added after the definitions the app writes."></textarea></label>
+            <label>Identity to keep<textarea data-look="retention" rows="2" spellcheck="false" placeholder="What must not change from one segment to the next: face, hair, outfit…"></textarea></label>
             <label>Framing<textarea data-look="camera" rows="2" spellcheck="false" placeholder="Shot size and camera height of the whole sequence. Each segment gives its own camera movement."></textarea></label>
             <label>Lighting<textarea data-look="lighting" rows="2" spellcheck="false" placeholder="The light, the same in every segment."></textarea></label>
             <label>Soundscape<textarea data-look="sound" rows="2" spellcheck="false" placeholder="The natural sounds heard throughout."></textarea></label>

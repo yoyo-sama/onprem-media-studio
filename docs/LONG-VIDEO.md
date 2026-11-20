@@ -168,6 +168,48 @@ The swap the plan announced, with the video tail only (step 2b). The path stays 
   replaced), and the latent-preparation patch on stand-in FastVideo modules. `tools/relay-ui.js`
   checks the job chain. A 50 s render through the UI on the GB10 qualifies it.
 
+## Screenplay files, text start and the assistant (2026-11-20)
+
+Three additions asked by the owner on 2026-11-20, all on the same path (brief → length → one
+click), not yet rendered on the GB10.
+
+- **Screenplay file.** A screenplay in the H3 layout the owner already used by hand for
+  relay50 (`subject_definitions:`, `summary:`, `retention_analysis:`, `camera_direction:`,
+  `lighting:`, `detailed_description:` holding `[Shot N]` lines and
+  `Segment N (00:00.000–00:10.000) – Title` lines each followed by its action,
+  `overall_soundscape:`, `non_diegetic_music:`) is read as written by `parseScreenplay`
+  (`web/js/prompts.js`): no Gemma. One card per segment, its length from the timestamps
+  (brought into 5 to 15 s; none given: the maximum per segment), the first segment of a later
+  shot a cut, the shot's own line after the action of its first segment; camera_direction →
+  Framing, lighting → Lighting, overall_soundscape → Soundscape, non_diegetic_music → Music
+  (N/A, None: no music). Two shared fields were added for it: **Subjects**
+  (`subject_definitions`) and **Identity to keep** (`retention_analysis`), written word for
+  word after the lines the app writes from the references (with no reference, they are the
+  whole field). Empty, every prompt is the one sent before. Timestamps and the field lines are
+  optional: a file of `[Shot N]` lines alone gives one segment per shot. A file in plain prose
+  is the screenplay Gemma splits, as before. The import is in the form (📄 Import a screenplay
+  puts the file in the brief; auto enrichment never rewrites such a brief) and in the Relay (📄
+  Import, or ✨ Split on a pasted one). The summary and the first shot's line describe the take
+  for the shot image composed from a start sheet.
+- **A described scene rather than a subject.** A screenplay in that layout that names no
+  `<Subject N>` describes a scene: its start picture (or, with none, segment 1's last frame) is
+  sent as the location reference (`<Subject 1> is the location as defined by <Picture 1>`), not
+  as the main character. A sheet always holds a subject, and a plain prose screenplay keeps the
+  start picture as the main character, as before.
+- **No start image.** Segment 1 is H3 text to video (`h3-t2v`) with the same six-field block
+  without reference (`buildRelayTextPrompt`: no `<Picture N>`, no task tag), at the format its
+  card shows. H3 keeps its last frame and latents like any clip: the last frame becomes the
+  long take's start picture for the segments after it, which continue it with `continue_from`
+  as a long take from a photo does. Regenerating segment 1 replaces that frame.
+- **The assistant.** Its `image_sequence` card rendered key-image pairs one by one and joined
+  them with `video-concat`: it never used the long take. It is replaced by `long_take`
+  (screenplay in the layout above, 0 to 6 images): "🎞 Open the long take" switches to the
+  Studio and opens the Relay on its segments, rendering nothing; the chain starts there. The
+  Canvas will get it later.
+
+To qualify on the GB10: a take from the owner's file with no image (segment 1 from text, then
+continuation on its last frame), the same file with a start image, and a described scene.
+
 ## Results
 
 ### Step 1, latent continuation (GB10, 2026-11-19)

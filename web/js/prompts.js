@@ -408,7 +408,10 @@
   // h3AssignRefs when clips or sounds are among the references. `music` (optional):
   // the score asked for in words, for non_diegetic_music; `sound` (optional): the
   // ambience asked for in words, for overall_soundscape.
-  function buildH3RefPrompt({ subjects, summary, body, music, sound }) {
+  // `defs`, `retention` (optional): the user's own subject definitions and retention notes
+  // (a Relay's shared fields), kept word for word after the ones the code writes from the
+  // references. `tag: false` leaves out the task tag of `summary` (a clip with no reference).
+  function buildH3RefPrompt({ subjects, summary, body, music, sound, defs: userDefs, retention: userRet, tag = true }) {
     const chars = subjects.filter(sub => sub.kind === "character");
     const multiChar = chars.length > 1;
     let voices = 0;
@@ -433,10 +436,12 @@
     const roles = subjects.map(sub => ({ sub, role: H3_MEDIA_ROLES[sub.kind] })).filter(x => x.role);
     const tasks = ["reference generation", ...new Set(roles.map(x => x.role.task).filter(Boolean))];
     const layer = key => roles.filter(x => x.role[key]).map(x => x.role[key](x.sub.source)).join(" ");
+    const own = v => String(v || "").trim();
+    const allDefs = [defs, own(userDefs)].filter(Boolean).join("\n"), allRet = [ret, own(userRet)].filter(Boolean).join("\n");
     return [
-      `subject_definitions:\n${defs || "—"}`,
-      `summary:\n[${tasks.join(" + ")}] ${summary}`,
-      `retention_analysis:\n${ret || "—"}`,
+      `subject_definitions:\n${allDefs || "—"}`,
+      `summary:\n${tag ? `[${tasks.join(" + ")}] ` : ""}${summary}`,
+      `retention_analysis:\n${allRet || "—"}`,
       `detailed_description:\n${body}`,
       // The last two fields belong to the grammar: H3 expects them.
       `overall_soundscape:\n${[layer("sound"), String(sound || "").trim()].filter(Boolean).join(" ") || "Natural diegetic ambience consistent with the scene."}`,
@@ -1209,7 +1214,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const body = [h3SceneLead(subs) + sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "",
       styleTextFor(styleId)].filter(Boolean).join(" ");
     return capH3Prompt(`${h3Alignment(!!hasLast, duration)}\n\n` + buildH3RefPrompt({
-      subjects: subs, summary: h3Summary(action), body, sound: lk.sound, music: lk.music
+      subjects: subs, summary: h3Summary(action), body, sound: lk.sound, music: lk.music, defs: lk.subjects, retention: lk.retention
     }), onWarn);
   }
 
@@ -1224,7 +1229,19 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const text = [sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "", styleTextFor(styleId)]
       .filter(Boolean).join(" ");
     return capH3Prompt(buildH3RefPrompt({ subjects: all, summary: h3Summary(action), body: h3RefBody(all, text),
-      sound: lk.sound, music: lk.music }), onWarn);
+      sound: lk.sound, music: lk.music, defs: lk.subjects, retention: lk.retention }), onWarn);
+  }
+
+  // Prompt of the first segment of a long take with no start image (H3 text to video): the
+  // same block with no reference, so the subjects are only the user's own definitions.
+  function buildRelayTextPrompt(action, look, styleId, onWarn) {
+    const lk = look || {};
+    const sentence = v => { const x = String(v || "").trim(); return x && !/[.!?…]$/.test(x) ? x + "." : x; };
+    const camera = String(lk.camera || "").trim();
+    const body = [sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "", styleTextFor(styleId)]
+      .filter(Boolean).join(" ");
+    return capH3Prompt(buildH3RefPrompt({ subjects: [], summary: h3Summary(action), body, sound: lk.sound, music: lk.music,
+      defs: lk.subjects, retention: lk.retention, tag: false }), onWarn);
   }
 
   // Legend of the stand-ins, built from h3CutSubjects, the function that numbers the
@@ -1250,6 +1267,91 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
                                music: NO_MUSIC_RE.test(music) ? "" : music } };
   }
 
+  // A screenplay written in the H3 layout (a file the user imports, or pasted as the brief):
+  // `field:` lines (subject_definitions, summary, retention_analysis, camera_direction,
+  // lighting, detailed_description, overall_soundscape, non_diegetic_music), and inside
+  // detailed_description "[Shot N] …" lines and "Segment N (00:00.000–00:10.000) – Title"
+  // lines, each followed by that segment's action. Returns null when no segment line is
+  // found (plain prose: Gemma splits it). The text is the user's, word for word; only the
+  // line breaks of a hard-wrapped paragraph become spaces. The first segment of a shot
+  // carries the shot's own line after its action; the first segment of a later shot is a
+  // cut. Durations are the timestamps' (0 when unreadable: the caller decides).
+  const SCREENPLAY_FIELDS = {
+    subject_definitions: "subjects", summary: "summary", retention_analysis: "retention", camera_direction: "camera",
+    framing: "camera", lighting: "lighting", detailed_description: "description", overall_soundscape: "sound",
+    soundscape: "sound", non_diegetic_music: "music", music: "music",
+  };
+  const SCREENPLAY_FIELD_RE = /^\s*([A-Za-z_]+)\s*:\s*(.*)$/;
+  // "Segment 2 (00:10.000–00:20.000) – Title": a title after a dash is dropped, any other text
+  // on the line (after a colon or not) is the start of the action; the timestamps may be left out.
+  const SCREENPLAY_SEGMENT_RE = /^\s*segment\s+\d+\b\s*(?:\(\s*([\d:.,]+)\s*s?\s*[–—-]+\s*([\d:.,]+)\s*s?\s*\))?\s*(.*)$/i;
+  const SCREENPLAY_SHOT_RE = /^\s*\[\s*shot\s*\d+\s*\]\s*(.*)$/i;
+  // "01:02.500", "1:02:03", "12.5" → seconds.
+  const screenplaySeconds = v => String(v).replace(",", ".").split(":").reduce((sum, part) => sum * 60 + parseFloat(part || 0), 0);
+  function parseScreenplay(text) {
+    const fields = {}, pre = [];
+    let cur = null;
+    for (const line of String(text || "").replace(/\r/g, "").split("\n")) {
+      const m = SCREENPLAY_FIELD_RE.exec(line), key = m && SCREENPLAY_FIELDS[m[1].toLowerCase()];
+      if (key) { cur = key; fields[key] = m[2] ? [m[2]] : []; }
+      else if (cur) fields[cur].push(line);
+      else pre.push(line);
+    }
+    // Segments written with no detailed_description: field: the lines before the first field.
+    const described = fields.description || pre;
+    const flat = lines => (lines || []).map(x => x.trim()).filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+    const segments = [];
+    let shot = [], shotIdx = 0, seg = null, segShot = 0, firstShot = "";
+    const close = () => {
+      if (!seg) return;
+      const action = flat(seg.lines);
+      segments.push({ prompt: [action, seg.shot].filter(Boolean).join(action && !/[.!?…]$/.test(action) && seg.shot ? ". " : " "),
+                      duration: Math.max(0, Math.round(seg.end - seg.start)), mode: seg.cut ? "cut" : "continue" });
+      seg = null;
+    };
+    for (const line of described) {
+      const sh = SCREENPLAY_SHOT_RE.exec(line), sg = SCREENPLAY_SEGMENT_RE.exec(line);
+      if (sh) { close(); shotIdx += 1; shot = [sh[1]]; if (shotIdx === 1) firstShot = flat([sh[1]]); continue; }
+      if (sg) {
+        close();
+        const first = segShot !== shotIdx || !segments.length;
+        seg = { start: sg[1] ? screenplaySeconds(sg[1]) : 0, end: sg[2] ? screenplaySeconds(sg[2]) : 0, lines: /^[–—-]/.test(sg[3]) ? [] : [sg[3].replace(/^:\s*/, "")],
+                shot: first ? flat(shot) : "", cut: first && segments.length > 0 };
+        segShot = shotIdx;
+        continue;
+      }
+      if (seg) seg.lines.push(line);
+      else shot.push(line);
+    }
+    close();
+    // Shots but no segment line: each shot is a segment, a later one a cut.
+    if (!segments.length && shotIdx > 0) {
+      let k = 0;
+      for (const line of described) {
+        const sh = SCREENPLAY_SHOT_RE.exec(line);
+        if (sh) segments.push({ lines: [sh[1]], cut: k++ > 0 });
+        else if (segments.length) segments[segments.length - 1].lines.push(line);
+      }
+      segments.splice(0, Infinity, ...segments.map(x => ({ prompt: flat(x.lines), duration: 0, mode: x.cut ? "cut" : "continue" }))
+        .filter(x => x.prompt));
+    }
+    if (!segments.length) return null;
+    const music = flat(fields.music);
+    // One line per subject: a line that opens on a <Subject N> marker starts a new one.
+    const bySubject = lines => (lines || []).reduce((out, x) => {
+      const v = x.trim();
+      if (!v) return out;
+      if (!out.length || /^</.test(v)) out.push(v); else out[out.length - 1] += " " + v;
+      return out;
+    }, []).map(x => x.replace(/\s+/g, " ")).join("\n");
+    const look = { camera: flat(fields.camera), lighting: flat(fields.lighting), sound: flat(fields.sound),
+                   music: NO_MUSIC_RE.test(music) ? "" : music, subjects: bySubject(fields.subjects), retention: bySubject(fields.retention) };
+    // `scene`: the whole take in a few words (summary, then the first shot's line), for the
+    // shot image composed from a start sheet.
+    return { scene: [flat(fields.summary), firstShot].filter(Boolean).join(" "), segments, look,
+             given: Object.keys(look).filter(k => fields[k] !== undefined) };
+  }
+
   const Prompts = {
     LLM_NAME,
     CAMERA_LIB, LIGHTING_LIB, STYLE_PACKS, styleTextFor, asSubjects,
@@ -1270,7 +1372,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     isKrea2Workflow, briefEnrichSystem, enrichBrief, ENRICH_INSTRUCTIONS, setInstructionOverrides,
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage, describeStartImage,
-    buildRelaySegmentPrompt, buildRelayCutPrompt, relaySubjectLegend, composeScenario,
+    buildRelaySegmentPrompt, buildRelayCutPrompt, buildRelayTextPrompt, relaySubjectLegend, composeScenario, parseScreenplay,
   };
   if (typeof module === "object" && module.exports) module.exports = Prompts;
   else global.Prompts = Prompts;
