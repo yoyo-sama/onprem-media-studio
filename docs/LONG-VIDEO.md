@@ -249,3 +249,6 @@ per clip, 224 s for the stitch (1127 frames, 332 latents decoded once in 214 s).
   one garden progressing with the texts, no jump of place at a join.
 - Sound −18.1 LUFS (clips −50 to −57 LUFS before levelling), no click at the joins, true peak
   −0.9 dBTP: 0.1 dB above the criterion. The limiter goes to −2 dBFS.
+- Owner's verdict on the take (2026-11-20): "not perfect, but the result is satisfying". The
+  absolute join criterion of 10 does not fit a take that moves this much; the joins were judged
+  by eye.

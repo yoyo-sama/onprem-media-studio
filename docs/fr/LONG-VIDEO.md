@@ -269,3 +269,6 @@ latents.
   gros plan final ; un seul jardin qui avance avec les textes, aucun saut de lieu à un raccord.
 - Son à -18,1 LUFS (clips entre -50 et -57 LUFS avant nivellement), aucun clic aux raccords,
   crête vraie à -0,9 dBTP : 0,1 dB au-dessus du critère. Le limiteur passe à -2 dBFS.
+- Avis du propriétaire sur la prise (2026-11-20) : « ce n'est pas parfait mais le résultat est
+  satisfaisant ». Le critère absolu de 10 pour un raccord ne convient pas à une prise qui bouge
+  autant ; les raccords ont été jugés à l'œil.
