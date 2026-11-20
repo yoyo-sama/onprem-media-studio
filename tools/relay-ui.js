@@ -550,7 +550,8 @@ const SPLIT = {
     `segment 2 after text: ${JSON.stringify(after1)}`);
   check(lt[2]?.params.continue_from === `outputs/${lt[1]?.id}.mp4`, "segment 3 does not continue segment 2");
 
-  // A described scene (no <Subject N>), from a picture: the picture is the scene's reference.
+  // A described scene (no <Subject N>), from a picture: the picture is the scene's reference,
+  // never segment 1's first frame (an empty place cut to the people after 2 frames).
   visionSheet = false;
   await page.click("#studioExitBtn");
   await page.evaluate(() => { localStorage.removeItem("studioProject"); });
@@ -569,6 +570,11 @@ const SPLIT = {
   check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v", "h3-r2v", "video-stitch"])
     && /<Subject 1> is the location as defined by <Picture 1>/.test(lt[1]?.params.prompt || "") && !/main character/.test(lt[1]?.params.prompt || ""),
     `described scene: ${JSON.stringify(lt.map(j => j.pipeline))} ${lt[1]?.params.prompt}`);
+  check(/<Subject 1> is the location as defined by <Picture 1>/.test(lt[0]?.params.prompt || "") && !("image" in (lt[0]?.params || {}))
+    && !!lt[0]?.params.aspect && lt[0]?.params.references?.length === 1 && lt[1]?.params.references?.[0] === lt[0]?.params.references[0]
+    && lt[1]?.params.continue_from === `outputs/${lt[0]?.id}.mp4`,
+    `described scene, segment 1 starts on its picture or loses it: ${JSON.stringify({ ...lt[0]?.params, prompt: undefined })}`);
+  check(await page.isHidden("#relayList .seg-start"), "described scene: the start choice is still shown");
 
   // The Relay's own import splits the file as written, without Gemma.
   chatsBefore = chats.length;

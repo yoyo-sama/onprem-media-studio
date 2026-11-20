@@ -1343,8 +1343,9 @@ function renderStartChoice(row, seg, busy) {
   const st = d.startImage, stale = () => { if (seg.status === "ready") seg.status = "stale"; };
   row.hidden = false;
   const btn = row.querySelector(".seg-start");
-  // No start image: the first segment is text to video, at the format chosen here.
-  if (!st) {
+  // No start image: the first segment is text to video, at the format chosen here. A
+  // described scene's picture is only the place's reference: no start choice either.
+  if (!st || (!st.sheet && describedScene())) {
     btn.hidden = true;
     tx(row.querySelector(".seg-start-ratio span"), "Video format");
     return startFormat(row, busy, stale, true);
@@ -1540,6 +1541,15 @@ async function renderSegment(i) {
   if (i > 0 && continuous(seg) && !prev)
     throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
   const subs = relaySubjects(), look = r.look;
+  // A described scene: its start picture is the place, seen as a reference only. Started on,
+  // an empty place cut after 2 frames to the people the screenplay describes (GB10 2026-11-20).
+  if (isLongTake() && i === 0 && !s.startImage.sheet && !seg.endImage?.ref && describedScene()) {
+    const refs = relayRefs(null);
+    log("req", "Relay, segment {n}/{total}: video from the references…", { n: i + 1, total });
+    seg.start = null;
+    seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
+    return segmentDone(s, seg, i, total, await relayR2vJob(s, seg, i, total, refs), began);
+  }
   let start;
   // From a sheet, segment 1 starts on a shot composed from its character.
   if (isLongTake() && i === 0 && s.startImage.sheet) {
@@ -1638,14 +1648,15 @@ async function segmentDone(s, seg, i, total, job, began) {
 // the setting, if any.
 // A long take whose screenplay is in the H3 layout and names no <Subject N> describes a
 // scene, not a subject: its start picture (or, with none, segment 1's last frame) is that
-// scene's reference, the location. A sheet always holds a subject; a screenplay in plain
+// scene's reference, the location, never its first frame. A sheet always holds a subject; a screenplay in plain
 // prose keeps the start picture as the main character, as before.
 function relayRefs(setting) {
-  const scene = isLongTake() && !d.startImage?.sheet && !!P.parseScreenplay(d.relay.scenario) && !namesSubjects();
+  const scene = describedScene();
   return [...relaySubjects().map((x, k) => ({ kind: k === 0 ? (scene ? "environment" : "character") : x.kind === "human" ? "character" : "reference",
     desc: x.desc, ref: x.ref })),
     ...(setting ? [{ kind: "environment", ...setting }] : [])];
 }
+const describedScene = () => isLongTake() && !d.startImage?.sheet && !!P.parseScreenplay(d.relay.scenario) && !namesSubjects();
 const namesSubjects = () => [...d.relay.segments.map(seg => seg.prompt), d.relay.look.subjects, d.relay.look.retention]
   .some(x => new RegExp(P.H3_TOKEN_RE.source, "i").test(x || ""));
 // The setting's sheet (the director's Relay; a long take has none). A continuous segment takes

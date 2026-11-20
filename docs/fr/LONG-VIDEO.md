@@ -210,8 +210,12 @@ durée → un clic), pas encore rendus sur le GB10.
 - **Une scène décrite plutôt qu'un sujet.** Un scénario à ce format qui ne nomme aucun
   `<Subject N>` décrit une scène : son image de départ (ou, sans image, la dernière image du
   segment 1) est envoyée comme référence du lieu (`<Subject 1> is the location as defined by
-  <Picture 1>`), pas comme personnage principal. Une planche contient toujours un sujet, et un
-  scénario en prose libre garde l'image de départ comme personnage principal, comme avant.
+  <Picture 1>`), pas comme personnage principal. Cette image n'est jamais la première image du
+  segment 1 : le segment 1 est du Ref2VA H3 sur elle, sans image de départ, au format du
+  plan-séquence. Démarrée sur un jardin vide, la première prise sur le GB10 le montrait 2 images,
+  puis coupait vers un autre cadrage où la femme décrite par le scénario était déjà là
+  (2026-11-20). Une planche contient toujours un sujet, et un scénario en prose libre garde
+  l'image de départ comme personnage principal, comme avant.
 - **Sans image de départ.** Le segment 1 est du texte vers vidéo H3 (`h3-t2v`) avec le même bloc
   à six champs sans référence (`buildRelayTextPrompt` : pas de `<Picture N>`, pas d'étiquette de
   tâche), au format que montre sa carte. H3 garde sa dernière image et ses latents comme pour
@@ -224,9 +228,16 @@ durée → un clic), pas encore rendus sur le GB10.
   passe dans le Studio et ouvre le Relay sur ses segments, sans rien générer ; la chaîne se lance
   de là. Le Canvas l'aura plus tard.
 
-À qualifier sur le GB10 : une prise à partir du fichier du propriétaire sans image (segment 1 à
-partir du texte, puis continuation sur sa dernière image), le même fichier avec une image de
-départ, et une scène décrite.
+Rendus sur le GB10 (promaxgb10-95c7, 2026-11-20) :
+- Le fichier jardin du propriétaire sans image, 5 × 10 s : segment 1 à partir du texte 617 s,
+  continuations 441/300/305/310 s, assemblage 245 s ; 47 s en 1280×736, -18,4 LUFS. Une seule
+  femme, même visage, mêmes cheveux et même tenue du début à la fin, les cinq actions dans
+  l'ordre, aucune coupe trouvée (détection de scène ffmpeg à 0,15).
+- Une scène décrite (une femme décrite en mots, un jardin vide de Krea 2 comme image de
+  départ), 4 × 10 s, segment 1 démarré sur l'image : 37,8 s, -18,1 LUFS, le jardin et la femme
+  tiennent aux trois raccords, mais une coupe à 0,08 s (voir plus haut ; la fontaine change
+  aussi de forme au segment 3). Depuis, le segment 1 ne démarre plus sur l'image.
+- Reste à rendre : le même fichier avec une image de départ.
 
 ## Résultats
 

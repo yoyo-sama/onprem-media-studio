@@ -194,8 +194,11 @@ click), not yet rendered on the GB10.
 - **A described scene rather than a subject.** A screenplay in that layout that names no
   `<Subject N>` describes a scene: its start picture (or, with none, segment 1's last frame) is
   sent as the location reference (`<Subject 1> is the location as defined by <Picture 1>`), not
-  as the main character. A sheet always holds a subject, and a plain prose screenplay keeps the
-  start picture as the main character, as before.
+  as the main character. That picture is never segment 1's first frame: segment 1 is H3 Ref2VA
+  on it with no start image, at the long take's format. Started on an empty garden, the first
+  GB10 take showed it for 2 frames, then cut to another framing with the woman the screenplay
+  describes already in view (2026-11-20). A sheet always holds a subject, and a plain prose
+  screenplay keeps the start picture as the main character, as before.
 - **No start image.** Segment 1 is H3 text to video (`h3-t2v`) with the same six-field block
   without reference (`buildRelayTextPrompt`: no `<Picture N>`, no task tag), at the format its
   card shows. H3 keeps its last frame and latents like any clip: the last frame becomes the
@@ -207,8 +210,16 @@ click), not yet rendered on the GB10.
   Studio and opens the Relay on its segments, rendering nothing; the chain starts there. The
   Canvas will get it later.
 
-To qualify on the GB10: a take from the owner's file with no image (segment 1 from text, then
-continuation on its last frame), the same file with a start image, and a described scene.
+GB10 renders (promaxgb10-95c7, 2026-11-20):
+- The owner's garden file with no image, 5 × 10 s: segment 1 from text 617 s, continuations
+  441/300/305/310 s, stitch 245 s; 47 s at 1280×736, -18.4 LUFS. One woman with the same face,
+  hair and outfit throughout, the five actions in order, no cut found (ffmpeg scene detection
+  at 0.15).
+- A described scene (a woman described in words, an empty garden from Krea 2 as start
+  picture), 4 × 10 s, segment 1 started on the picture: 37.8 s, -18.1 LUFS, the garden and the
+  woman held across the three joins, but a cut at 0.08 s (see above; the fountain also changed
+  shape in segment 3). Segment 1 has since been taken off the picture.
+- Still to render: the same file with a start image.
 
 ## Results
 
