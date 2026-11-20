@@ -158,8 +158,9 @@ there (`RemoteUpdater` in `studio/update.py`).
   container, so its `docker compose` sees exactly the configuration of a run on the host (same
   volume source, no spurious recreation). Values used by `compose.yaml` must live in `.env`, not
   in shell exports, to survive an update.
-- **Private repository.** `git ls-remote` and `git pull` run without the host's credential
-  helpers. For a private repository, put a GitHub token that can read it in `.env`
+- **Private fork.** `git ls-remote` and `git pull` run without the host's credential
+  helpers. The public repository needs no credential. For a private fork, put a GitHub token that can read it
+  in `.env`
   (`STUDIO_GIT_TOKEN=...`, a fine-grained token with *Contents: read-only* on this repository),
   then `docker compose up -d` once. It is handed to git through the environment, never on a
   command line, and never logged.
