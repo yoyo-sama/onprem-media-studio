@@ -42,6 +42,7 @@ const CARDS = [
                                   references: ["A1"], kinds: ["character"], music: "A slow romantic piano score", duration: 5, ratio: "16:9" }),
   card("C11", "create_image", { prompt: 'A cafe chalkboard reading "Menu du jour"', engine: "krea2", ratio: "16:9", count: 1, style: "none" }),
   card("C12", "long_take", { screenplay: "summary:\nA walk.\n\ndetailed_description:\nSegment 1 (00:00–00:10) – Start\nA woman walks along a garden path.\nSegment 2 (00:10–00:20) – End\nShe stops by a tree and smiles.\n\nnon_diegetic_music:\nN/A" }),
+  card("C13", "long_take", { screenplay: "A woman walks along a garden path.", first_frame: "C1#1", references: ["A1"], kinds: ["setting"] }),
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
@@ -447,9 +448,9 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   await galleryTab("image");
   await page.waitForTimeout(400);
   await page.selectOption("#pipelineSelect", "sequence");
-  const seqN = async () => (await page.$$("#seqList > *")).length, seq0 = await seqN();
   await use();
-  check(await page.inputValue("#pipelineSelect") === "sequence" && await seqN() === seq0 + 1, "Use as input in the sequence");
+  check(await page.inputValue("#pipelineSelect") === "sequence" && await page.isVisible("#assetChip"), "Use as input in the long take is not its first frame");
+  await page.click("#assetChipClear");
   await page.selectOption("#pipelineSelect", "text2video");
   await use();
   check(await page.inputValue("#pipelineSelect") === "image2video" && await page.isVisible("#assetChip"), "Use as input in t2v did not open i2v");
@@ -519,6 +520,16 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
     "the long take card did not open the long take");
   check(await page.inputValue('#relayList .relay-seg[data-seg="1"] textarea') === "She stops by a tree and smiles.", "the long take card's segments");
   check(jobs.length === before12 && cardPosts.some(([id, b]) => id === "C12" && b.status === "launched"), "the long take card submitted a job or was not reported");
+  await page.click("#studioExitBtn");
+  // With a first frame and a reference: the first frame is the form's input image (no
+  // video format to choose), the reference keeps its role; still no job.
+  await page.click('.rail-mode[data-mode="assistant"]');
+  await page.click('.chat-card[data-card="C13"] .primary-btn');
+  const lt13 = await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1 && !document.getElementById("studioRelay").hidden,
+    null, { timeout: 10000 }).then(() => true, () => false);
+  check(lt13 && await page.inputValue("#pipelineSelect") === "sequence" && !(await page.$eval("#assetChip", e => e.hidden))
+    && await page.isHidden("#relayList .seg-start-row"), "the long take card with a first frame did not open on it");
+  check(jobs.length === before12, "the long take card with images submitted a job");
   await page.click("#studioExitBtn");
   await page.click('.rail-mode[data-mode="assistant"]');
   // A reload opens on the welcome; the conversation stays in the list.

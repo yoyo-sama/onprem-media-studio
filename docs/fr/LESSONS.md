@@ -281,7 +281,12 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     (2026-11-16) Par l'interface, sur cinq segments, OmniRef a encore lâché son image de départ
     une fois sur trois segments continus (première image à 60 de l'image, contre 5 à 7 pour un
     vrai raccord) : la carte mesure l'écart entre l'image de départ et la première image du clip
-    et affiche « raccord cassé, régénère » ; rien ne se relance tout seul. (2026-11-16)
+    et affiche « raccord cassé, régénère » ; rien ne se relance tout seul. (2026-11-16) La
+    devinette planche ou photo et le plan Qwen composé à partir d'une planche ont ensuite été
+    retirés : le formulaire du plan-séquence demande la première image et les références dans
+    deux champs, chaque référence avec son rôle, si bien que l'utilisateur dit ce qu'est une
+    image et qu'une planche va dans les références (docs/fr/LONG-VIDEO.md § Première image et
+    références). (2026-11-20)
 52. **Un plan-séquence continue ses latents, il ne repart pas d'une image.** Toutes les façons
     de faire partir un segment d'une image ont cassé quelque part : une image de départ en
     Ref2VA a été lâchée 7 fois sur 11, les images clés prévues par Qwen ont manqué leur valeur de

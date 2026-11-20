@@ -246,6 +246,9 @@ Rien ci-dessous n'a été demandé pour maintenant ; chaque point attend le prop
   § Fichiers de scénario) : rendu sur promaxgb10-95c7 sans image de départ et en scène décrite ;
   le segment 1 de la scène décrite en i2v sur son image, rendu seul, tient l'image ; une prise
   entière démarrée en i2v, et un fichier avec une image de départ, ne sont pas encore rendus.
+- Plan-séquence avec un champ Première image et une liste Références avec rôles (2026-11-20 au
+  soir, [LONG-VIDEO.md](LONG-VIDEO.md) § Première image et références) : pas encore rendu sur un
+  GB10.
 - Planche personnage depuis une photo (Qwen Image 2.1, PR #9 ; prompt à cinq vues adapté de H3
   Character Sheet Designer depuis le 2026-11-13) : jamais qualifiée.
 - Les poids de l'upscaler SPAN ne sont pas encore téléchargés sur promaxgb10-95c7

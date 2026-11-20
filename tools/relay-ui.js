@@ -359,16 +359,20 @@ const SPLIT = {
     await page.screenshot({ path: path.join(SHOTS, "relay-board-390-light.png") });
   }
 
-  // ── Long take from images (the "sequence" pipeline) ──
-  // A fresh page: no saved project. Two images give one segment from the first to the second.
+  // ── Long take from a first frame (the "sequence" pipeline) ──
+  // A fresh page: no saved project. The input image is the first frame: segment 1 starts on
+  // it in i2v; an end image set on the segment's card makes it FL2VA.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.evaluate(() => { localStorage.removeItem("studioProject"); });
   await page.reload({ waitUntil: "load" });
   await page.click('.usecase[data-scenario="storyboard"]');
   await page.selectOption("#pipelineSelect", "sequence");
   check(await page.isHidden("#resumeProjectBtn"), "a resume button shows with no saved long take");
-  await page.setInputFiles("#seqFiles", [{ name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") },
-                                         { name: "end.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  check(await page.isVisible("#imageInputWrap") && (await page.textContent("#imageInputLabel")).trim() === "First frame (optional)"
+    && await page.isVisible("#refExtrasWrap") && (await page.textContent("#refExtrasTitle")).trim() === "References (optional)"
+    && await page.isVisible("#imageInputWrap .seq-only") && await page.isVisible("#refExtrasWrap .seq-only") && await page.isHidden("#refExtrasWrap .r2v-only"),
+    "the long take form does not show its first frame and its references");
+  await page.setInputFiles("#imageInput", { name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
   await page.fill("#brief", "She walks to the gate.");
   before = jobs.length;
   const chats0 = chats.length;
@@ -376,16 +380,16 @@ const SPLIT = {
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
   check(jobs.length === before, `opening the long take submitted ${jobs.length - before} job(s)`);
-  check(chats.length === chats0 + 1 && chats[chats0].images?.length === 1, "the start image was not described once by Gemma's vision");
+  check(chats.length === chats0 + 1 && chats[chats0].images?.length === 1, "the first frame was not described once by Gemma's vision");
   const nav = await page.$$eval("#studioNav .studio-nav-btn", bs => bs.filter(b => !b.hidden).map(b => b.dataset.section));
   check(JSON.stringify(nav) === JSON.stringify(["relay"]), `long take navigation: ${JSON.stringify(nav)}`);
   check(await page.inputValue("#relayList .relay-seg textarea") === "She walks to the gate.", "the segment does not start with the brief");
   check(await page.inputValue("#relayScenario") === "She walks to the gate.", "the screenplay is not the brief");
   check(await page.isHidden("#relayList .seg-link"), "a long take offers a cut");
-  check(/reference sheet/.test(chats[chats0].system || ""), "the start image was not checked for a reference sheet");
-  check((await page.textContent("#relayList .seg-start")).trim() === "🖼 Start: the image as it is" && await page.isHidden("#relayList .seg-start-ratio"),
-    `start of a long take from a picture: "${await page.textContent("#relayList .seg-start")}"`);
-  check(await page.isVisible("#relayList .relay-endframe img"), "the second image is not the segment's end image");
+  check(await page.isHidden("#relayList .seg-start-row"), "a long take with a first frame offers a format");
+  await page.setInputFiles('#relayList .relay-seg[data-seg="0"] .seg-end-file', { name: "end.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.waitForFunction(() => !!document.querySelector("#relayList .relay-endframe img"));
+  check(jobs.length === before, "setting an end image submitted a job");
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
   let lt = jobs.slice(before);
@@ -411,7 +415,7 @@ const SPLIT = {
   const seg1Id = jobs.slice(0, before).filter(j => j.pipeline === "h3-i2v").pop()?.id;
   check(lt[0]?.params.continue_from === `outputs/${seg1Id}.mp4` && !("image" in (lt[0]?.params || {})),
     `segment 2 does not continue the clip of segment 1: ${JSON.stringify(lt[0]?.params)}`);
-  // The start picture is the subject's only reference: segment 2 sees it as it continues.
+  // With no reference, the first frame is the subject's reference: segment 2 sees it as it continues.
   check(JSON.stringify(lt[0]?.params.references) === JSON.stringify([clip.image]) && !("aspect" in (lt[0]?.params || {})),
     `segment 2 of a long take, references: ${JSON.stringify(lt[0]?.params.references)}`);
   check(!("last_image" in (lt[0]?.params || {})), "segment 2 has an end image");
@@ -423,23 +427,27 @@ const SPLIT = {
   check(await page.isVisible("#studioRelay"), "the resumed long take does not open on the Relay");
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "longtake-1440-light.png") });
 
-  // ── Long take from a character sheet ──
-  // The sheet is never the first frame: segment 1 starts on a shot image Qwen composes
-  // from it. A 50 s plan gives five cards, and the chain waits until all are written.
-  visionSheet = true;
+  // ── Long take from references, with no first frame ──
+  // Each reference has its role (a character sheet, an object); none is ever a frame.
+  // Segment 1 is Ref2VA from them at the format of its card. A 50 s plan gives five cards,
+  // and the chain waits until all are written.
   await page.click("#studioExitBtn");
   await page.evaluate(() => { localStorage.removeItem("studioProject"); });
   await page.reload({ waitUntil: "load" });
   await page.click('.usecase[data-scenario="storyboard"]');
   await page.selectOption("#pipelineSelect", "sequence");
-  await page.setInputFiles("#seqFiles", [{ name: "sheet.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.setInputFiles("#refImagesInput", [{ name: "sheet.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") },
+                                               { name: "racket.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.waitForFunction(() => document.querySelectorAll("#refSubjects .rs-role").length === 2);
+  const roles = await page.$$eval("#refSubjects .rs-role", els => els.map(e => e.value));
+  check(JSON.stringify(roles) === JSON.stringify(["character", "character"]), `default roles of the references: ${JSON.stringify(roles)}`);
+  await page.selectOption("#refSubjects .ref-subject:nth-child(2) .rs-role", "object");
   await page.fill("#brief", "She walks along the garden path at dawn.");
   before = jobs.length;
   await page.click("#generateBtn");
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
-  check((await page.textContent("#relayList .seg-start")).trim() === "🧍 Start: a shot composed from the sheet" && await page.isVisible("#relayList .seg-start-ratio"),
-    `start of a long take from a sheet: "${await page.textContent("#relayList .seg-start")}"`);
+  check(await page.isVisible("#relayList .seg-start-ratio"), "a long take with no first frame does not offer its video format");
   await page.fill("#relayTotal", "50");
   await page.dispatchEvent("#relayTotal", "change");
   check(await page.$$eval("#relayList .relay-seg", els => els.length) === 5, "a 50 s plan does not give five cards");
@@ -448,19 +456,18 @@ const SPLIT = {
   await page.fill("#relayTotal", "10");
   await page.dispatchEvent("#relayTotal", "change");
   await page.selectOption("#relayList .seg-start-ratio select", "9:16");
-  check(jobs.length === before, "opening a long take from a sheet or setting its plan submitted a job");
+  check(jobs.length === before, "opening a long take from references or setting its plan submitted a job");
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-r2v"]), `long take from a sheet: ${JSON.stringify(lt.map(j => j.pipeline))}`);
-  const shot = lt[0]?.params || {};
-  check(shot.images?.length === 1 && /^inputs\/up-\d+\.png$/.test(shot.images[0]) && shot.width === 768 && shot.height === 1344,
-    `shot image from the sheet: ${JSON.stringify({ images: shot.images, w: shot.width, h: shot.height })}`);
-  check(/character sheet/.test(shot.prompt) && /exactly one single instance/.test(shot.prompt) && /a woman in a green wool coat/.test(shot.prompt)
-    && /garden path at dawn/.test(shot.prompt), `shot image prompt: ${shot.prompt}`);
-  check(lt[1]?.params.image === `outputs/${lt[0]?.id}.png`,
-    `the clip does not start on the shot image: ${lt[1]?.params.image}`);
-  // A cut in a long take: Ref2VA on the start sheet and, as the setting, the previous
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]), `long take from references: ${JSON.stringify(lt.map(j => j.pipeline))}`);
+  const seg1 = lt[0]?.params || {}, refsUp = seg1.references || [];
+  check(refsUp.length === 2 && refsUp.every(x => /^inputs\/up-\d+\.png$/.test(x)) && seg1.aspect === "9:16" && !("image" in seg1) && !("continue_from" in seg1),
+    `segment 1 from the references: ${JSON.stringify({ ...seg1, prompt: undefined })}`);
+  check(/<Subject 1> is the main character in <Picture 1>, a woman in a green wool coat/.test(seg1.prompt || "")
+    && /<Subject 2> is an additional reference in <Picture 2>/.test(seg1.prompt || "") && /garden path at dawn/.test(seg1.prompt || ""),
+    `segment 1 from the references, prompt: ${seg1.prompt}`);
+  // A cut in a long take: Ref2VA on the references and, as the setting, the previous
   // segment's transition frame (its last frame by default). The link starts nothing.
   await page.click("#relayAddBtn");
   const seg2 = '#relayList .relay-seg[data-seg="1"]';
@@ -477,9 +484,9 @@ const SPLIT = {
   check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["video-frames", "h3-r2v", "video-stitch"]), `cut in a long take: ${JSON.stringify(lt.map(j => j.pipeline))}`);
   const cut = lt[1]?.params || {}, framesJob = lt[0];
   const seg1Clip = jobs.slice(0, before).filter(j => j.pipeline === "h3-r2v").pop();
-  check(JSON.stringify(cut.references) === JSON.stringify([shot.images?.[0], `outputs/${seg1Clip?.id}.png`]) && cut.aspect === "9:16",
+  check(JSON.stringify(cut.references) === JSON.stringify([...refsUp, `outputs/${seg1Clip?.id}.png`]) && cut.aspect === "9:16",
     `cut in a long take, references: ${JSON.stringify({ refs: cut.references, aspect: cut.aspect })}`);
-  check(/another path/.test(cut.prompt || "") && /<Subject 2> is the location as defined by <Picture 2>\./.test(cut.prompt || ""), `cut in a long take, prompt: ${cut.prompt}`);
+  check(/another path/.test(cut.prompt || "") && /<Subject 3> is the location as defined by <Picture 3>\./.test(cut.prompt || ""), `cut in a long take, prompt: ${cut.prompt}`);
   // Another transition frame of segment 1 (one where nobody is in view) becomes the cut's
   // setting; choosing it starts nothing.
   before = jobs.length;
@@ -490,22 +497,33 @@ const SPLIT = {
   await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "Ready", null, { timeout: 10000 });
   lt = jobs.slice(before);
   check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"])
-    && JSON.stringify(lt[0]?.params.references) === JSON.stringify([shot.images?.[0], `outputs/${framesJob?.id}-3.png`]),
+    && JSON.stringify(lt[0]?.params.references) === JSON.stringify([...refsUp, `outputs/${framesJob?.id}-3.png`]),
     `cut on a chosen transition frame: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.references]))}`);
-  await page.$eval(`${seg2} .seg-del`, b => b.click());
+
+  // A setting reference is the long take's place: every segment sees it as the location.
+  await page.click("#studioExitBtn");
+  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.reload({ waitUntil: "load" });
+  await page.click('.usecase[data-pipeline="sequence"]');
+  await page.setInputFiles("#refImagesInput", [{ name: "her.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") },
+                                               { name: "garden.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.waitForFunction(() => document.querySelectorAll("#refSubjects .rs-role").length === 2);
+  await page.selectOption("#refSubjects .ref-subject:nth-child(2) .rs-role", "setting");
+  await page.fill("#brief", "She sits on the bench.");
+  await page.click("#generateBtn");
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
-  // Saying it is one single picture starts nothing: segment 1 becomes "to regenerate".
+  await page.click("#relayAddBtn");
+  await page.fill('#relayList .relay-seg[data-seg="1"] textarea', "She stands up.");
+  await page.dispatchEvent('#relayList .relay-seg[data-seg="1"] textarea', "change");
   before = jobs.length;
-  await page.click("#relayList .seg-start");
-  await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "To regenerate");
-  check((await page.textContent("#relayList .seg-start")).trim() === "🖼 Start: the image as it is", "the start choice does not switch");
-  check(jobs.length === before, "switching the start submitted a job");
   await page.click("#relayRunBtn");
-  await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
+  await assembled(before);
   lt = jobs.slice(before);
-  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]) && lt[0].params.image === shot.images?.[0]
-    && JSON.stringify(lt[0].params.references) === JSON.stringify([shot.images?.[0]]),
-    `long take from the image as it is: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.image]))}`);
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v", "h3-r2v", "video-stitch"])
+    && lt.slice(0, 2).every(j => j.params.references?.length === 2 && /<Subject 2> is the location as defined by <Picture 2>/.test(j.params.prompt || ""))
+    && lt[1]?.params.continue_from === `outputs/${lt[0]?.id}.mp4`,
+    `long take with a setting reference: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.references]))}`);
 
   // ── Long take with no start image, from an imported screenplay file ──
   // The file goes into the brief (no job, no Gemma); the long take opens on its three
@@ -532,8 +550,7 @@ const SPLIT = {
   check(imported.subjects === "<Subject 1> is an adult woman with auburn hair. Same outfit throughout." && imported.camera === "16:9 cinematic medium shots."
     && imported.lighting === "Soft natural morning sunlight." && imported.sound === "Birdsong and soft footsteps." && imported.music === ""
     && imported.retention === "Preserve the same facial identity and clothing across all segments.", `imported shared fields: ${JSON.stringify(imported)}`);
-  check(await page.isHidden("#relayList .seg-start") && await page.isVisible("#relayList .seg-start-ratio"),
-    "a long take with no start image does not offer its video format alone");
+  check(await page.isVisible("#relayList .seg-start-ratio"), "a long take with no start image does not offer its video format");
   await page.selectOption("#relayList .seg-start-ratio select", "9:16");
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
@@ -558,7 +575,7 @@ const SPLIT = {
   await page.evaluate(() => { localStorage.removeItem("studioProject"); });
   await page.reload({ waitUntil: "load" });
   await page.click('.usecase[data-pipeline="sequence"]');
-  await page.setInputFiles("#seqFiles", [{ name: "forest.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.setInputFiles("#imageInput", { name: "forest.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
   await page.fill("#brief", SCENE);
   await page.click("#generateBtn");
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
@@ -592,7 +609,7 @@ const SPLIT = {
   await page.click('.usecase[data-pipeline="sequence"]');
   check(await page.inputValue("#pipelineSelect") === "sequence" && await page.isHidden("#modelSelect"),
     "the long video card does not open the long take, or shows its one-engine menu");
-  await page.setInputFiles("#seqFiles", [{ name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.setInputFiles("#imageInput", { name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
   await page.fill("#brief", "She walks through the garden, stops by a tree, then looks at the sun.");
   await page.click("#generateBtn");
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });

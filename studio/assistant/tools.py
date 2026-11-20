@@ -120,12 +120,17 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
         ["prompt", "image"]),
     "long_take": (
         "Card: a long take (plan-séquence): one continuous video of 10 s segments chained by MiniMax H3, up to "
-        "150 s, keeping the subject and the place; it starts on an image (a photo or a character sheet) or on the "
-        "text alone. Opens the Studio's long take on its segments; the user reads them and starts the chain.",
+        "150 s, keeping the subjects and the place. Two kinds of images, both optional: the first frame, where "
+        "the video starts as it is, and references, who or what stays the same (never shown as they are); with "
+        "neither, it starts from the text alone. Opens the Studio's long take on its segments; the user reads "
+        "them and starts the chain.",
         {"screenplay": _str(SCREENPLAY_HELP),
-         "images": _ids("Optional. The start image (a photo or a character sheet of the main subject), then images "
-                        "where segments must end, in order, " + IMAGE_ID + "; none: the first segment is made "
-                        "from the text", 0, 6)},
+         "first_frame": _str("Optional. " + IMAGE_ID + " the video starts on, as it is (a picture of the opening "
+                             "scene, never a character sheet)"),
+         "references": _ids("Optional. Reference images, main character first: photos or sheets of the characters, "
+                            "objects, a setting, " + IMAGE_ID, 0, 7),
+         "kinds": {"type": "array", "items": {"type": "string"}, "maxItems": 7,
+                   "description": "Role of each reference, in the same order: character, setting or object"}},
         ["screenplay"]),
     "join_videos": (
         "Card: join clips end to end with hard cuts.",
@@ -185,8 +190,8 @@ ENGINE_NOTES = {
     "video_from_image": "video_from_image: MiniMax H3 from a first image, optionally to a last image, 5 to 15 s, "
                         "native sound. Each clip also leaves its last frame as an image.",
     "long_take": "long_take: a long continuous video (up to 150 s) as chained 10 s H3 segments that keep the "
-                 "subject and the place, from a start image or from the text alone; the screenplay gives one "
-                 "timed segment per 10 s.",
+                 "subjects and the place, starting on a first frame, from references (character sheets, "
+                 "objects, a setting) or from the text alone; the screenplay gives one timed segment per 10 s.",
     "join_videos": "join_videos: clips end to end, hard cuts.",
     "campaign": "campaign: posters, thumbnails and a social image (Krea 2) plus a 9:16 H3 teaser from one brief.",
     "storyboard": "storyboard: opens the step-by-step director (sheets, shot images with Qwen Image 2.1, H3 cuts); "
@@ -284,7 +289,7 @@ def normalize(name: str, raw, known_ids) -> tuple[dict, list[str]]:
     unknown = sorted(set(raw) - set(props))
     if unknown:
         warnings.append("ignored: " + ", ".join(unknown))
-    for key in ("image", "last_image", "references", "images", "clips", "subject_sheets", "setting_sheet", "photo"):
+    for key in ("image", "last_image", "first_frame", "references", "images", "clips", "subject_sheets", "setting_sheet", "photo"):
         for ref in ([out[key]] if isinstance(out.get(key), str) else out.get(key) or []):
             if not known_ids(ref):
                 warnings.append(f"{ref} is not in the reference table")

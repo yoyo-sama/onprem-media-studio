@@ -229,7 +229,6 @@ function cardFor(a) {
   else {
     actions.append(button(video ? "▶ Play" : "⤢ Enlarge", null, () => openLightbox(card._asset)));
     actions.append(button("→ Use as input", null, () => hooks.useAsInput?.(card._asset)));
-    if (!video) actions.append(button("➕ Sequence", "Add to the multi-image sequence", () => hooks.addToSequence?.(card._asset)));
     if (!a.input) {
       actions.append(button("★", "Favourite", () => setFavs([card._asset], !card._asset.fav), "fav-btn"));
       actions.append(button("🗑", "Delete from the gallery", () => remove([card._asset])));

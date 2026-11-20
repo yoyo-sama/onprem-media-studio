@@ -227,7 +227,7 @@ durée → un clic), pas encore rendus sur le GB10.
   photo. Régénérer le segment 1 remplace cette image.
 - **L'assistant.** Sa carte `image_sequence` rendait des paires d'images clés une à une et les
   joignait avec `video-concat` : elle n'utilisait jamais le plan-séquence. Elle est remplacée par
-  `long_take` (scénario au format ci-dessus, 0 à 6 images) : « 🎞 Ouvrir le plan-séquence »
+  `long_take` (scénario au format ci-dessus, une première image facultative et des références avec leur rôle) : « 🎞 Ouvrir le plan-séquence »
   passe dans le Studio et ouvre le Relay sur ses segments, sans rien générer ; la chaîne se lance
   de là. Le Canvas l'aura plus tard.
 
@@ -250,6 +250,29 @@ Rendus sur le GB10 (promaxgb10-95c7, 2026-11-20) :
   Retenu : le texte vers vidéo quand il n'y a pas d'image (aucune étape de plus) ; qui veut voir
   l'ouverture d'abord peut la faire avec Qwen et partir d'elle.
 - Reste à rendre : le même fichier avec une image de départ.
+
+## Première image et références (2026-11-20, soir)
+
+Le propriétaire a trouvé confuse la liste d'images du plan-séquence (« 0 à 6 images » : image
+de départ, images de fin, avec une devinette planche ou photo sur la première). Le formulaire
+demande maintenant chaque sorte d'image dans son propre champ, toutes deux facultatives :
+
+- **Première image**, une seule : la vidéo part exactement d'elle et la respecte (le segment 1
+  est `h3-i2v` sur elle). Une planche de personnage n'est pas une première image.
+- **Références**, jusqu'à 7 (comme en référence vers vidéo, puisque H3 Ref2VA les prend
+  directement ; le plafond de 3 venait des deux sujets par image de plan du réalisateur), chacune
+  avec son rôle : personnage, lieu ou objet. Qui ou quoi doit rester identique ; jamais montrée
+  comme une image du film. Sans première image, le segment 1 est un `h3-r2v` fait à partir
+  d'elles. Une référence de lieu est le décor de chaque segment. Chaque référence allonge un peu
+  le rendu de chaque segment.
+- **Ni l'une ni l'autre** : le segment 1 naît du texte avec H3, comme avant.
+
+Les images de fin quittent le formulaire : chaque carte de segment prend la sienne (🎯 Image de
+fin). La devinette planche ou photo et le plan Qwen composé à partir d'une planche (LESSONS
+n°51) disparaissent : l'utilisateur dit ce qu'est chaque image. Une scène décrite (un scénario
+qui ne nomme aucun `<Subject N>`) fait toujours de la première image son lieu quand aucune
+référence n'est donnée. La carte `long_take` de l'assistant prend `first_frame`, `references`
+et `kinds` de la même façon. Pas encore rendu sur le GB10.
 
 ## Résultats
 

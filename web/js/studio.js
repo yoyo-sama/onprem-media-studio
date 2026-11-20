@@ -105,10 +105,13 @@ function updateModelLabel() {
   if ($("lastImageWrap").hidden) $("lastImageInput").value = "";
   const ctx = F.refCtx(wf);
   $("refExtrasWrap").hidden = !ctx;
-  for (const [cls, on] of [[".r2v-only", ctx === "r2v"], [".sb-only", ctx === "sb"], [".i2i-only", ctx === "i2i"]])
-    document.querySelectorAll(`#refExtrasWrap ${cls}`).forEach(el => { el.hidden = !on; });
+  for (const [cls, on] of [[".r2v-only", ctx === "r2v"], [".sb-only", ctx === "sb"], [".i2i-only", ctx === "i2i"], [".seq-only", ctx === "seq"]])
+    document.querySelectorAll(`#refExtrasWrap ${cls}, #imageInputWrap ${cls}`).forEach(el => { el.hidden = !on; });
+  // A long take's input image is its first frame, and its list is its references.
+  tx($("imageInputLabel"), ctx === "seq" ? "First frame (optional)" : "Input image");
+  tx($("refExtrasTitle"), ctx === "seq" ? "References (optional)" : "Extra references");
   if (ctx === "r2v") tx($("refCapLabel"), "Extra references: up to 7 images, 3 clips and 3 sounds");
-  else tx($("refCapLabel"), "Extra reference images (at most {max})", { max: F.REF_CAPS[ctx] || 7 });
+  else tx($("refCapLabel"), ctx === "seq" ? "Reference images (at most {max})" : "Extra reference images (at most {max})", { max: F.REF_CAPS[ctx] || 7 });
   renderRefs();
   renderFormLoras();
   updateResumeButton();
@@ -165,22 +168,20 @@ function setSelectedAsset(a) {
   tx($("assetChipName"), "Gallery: {name}", { name: a.filename });
   $("assetChip").hidden = false;
   $("imageInput").value = "";
-  if (!["image2image", "image2video"].includes(F.currentPipeline())) {
+  if (!["image2image", "image2video", "sequence"].includes(F.currentPipeline())) {
     $("pipelineSelect").value = "image2image";
     updateModelOptions();
   }
   log("req", "{name} chosen as the input image.", { name: a.filename });
 }
 function clearSelectedAsset() { selectedAsset = null; $("assetChip").hidden = true; }
-// "→ Use as input" from the gallery goes to the pipeline on screen: the sequence, the
-// input image, or the reference list (reference to video also takes clips). A pipeline
+// "→ Use as input" from the gallery goes to the pipeline on screen: the input
+// image (a long take's first frame), or the reference list (reference to video also takes clips). A pipeline
 // with none of them opens its image counterpart (Image2Video from Text2Video, else
 // Image2Image) with the image; a clip it cannot take is refused. No job either way.
 function useAsInput(a) {
   const video = a.type === "video", ctx = F.refCtx();
-  if (!video && F.hasControl("seq")) {
-    if (addSeqImage({ name: a.filename, ref: a.ref })) notice(true, "{name} added to the sequence ({n}/{max}).", { name: a.filename, n: seqImages.length, max: SEQ_MAX });
-  } else if (!video && F.hasControl("image")) setSelectedAsset(a);
+  if (!video && F.hasControl("image")) setSelectedAsset(a);
   else if (ctx && (!video || ctx === "r2v")) {
     const before = F.refList().length;
     addRefs([{ name: a.filename, ref: a.ref }]);
@@ -198,6 +199,14 @@ async function inputImageRef() {
   const file = $("imageInput").files[0];
   if (!file) throw new Error(t("Choose an input image (a file, or a gallery image with “→ Use as input”)."));
   return F.imageRef({ name: file.name, blob: file });
+}
+const hasInputImage = () => !!selectedAsset || !!$("imageInput").files[0];
+// A long take's two image fields: the first frame (the input image, optional) and its
+// references, each with its role.
+async function longTakeImages() {
+  const file = $("imageInput").files[0];
+  const first = selectedAsset ? { name: selectedAsset.filename, ref: selectedAsset.ref } : file ? { name: file.name, blob: file } : null;
+  return { first, refs: F.refList("seq").slice(0, F.REF_CAPS.seq).map(it => ({ ...it, kind: F.itemRole(it) })) };
 }
 
 // ── Target markets ────────────────────────────────────────────────────────────
@@ -220,62 +229,6 @@ function renderMarkets() {
   translateTree($("marketChips"));
 }
 
-// ── Multi-image sequence ──────────────────────────────────────────────────────
-const SEQ_MAX = 6;
-const seqImages = [];   // {name, ref | blob, dur}: dur = length of the segment that starts on it
-function addSeqImage(img) {
-  if (seqImages.length >= SEQ_MAX) { notice(false, "The sequence holds at most {max} images.", { max: SEQ_MAX }); return false; }
-  seqImages.push({ ...img, dur: 10 });
-  renderSeqList();
-  return true;
-}
-function renderSeqList() {
-  const list = $("seqList");
-  list.replaceChildren(...seqImages.map((item, i) => {
-    const row = document.createElement("div");
-    row.className = "seq-item";
-    const img = document.createElement("img");
-    img.alt = "";
-    img.src = F.imageURL(item);
-    const name = document.createElement("div");
-    name.className = "seq-name";
-    name.dataset.raw = "";
-    name.textContent = `${i + 1}. ${item.name}`;
-    const dur = document.createElement("div");
-    dur.className = "seq-dur";
-    // The last image ends the long take, unless it is the only one (then it starts it).
-    if (i < seqImages.length - 1 || seqImages.length === 1) {
-      const input = document.createElement("input");
-      input.type = "number"; input.min = "5"; input.max = "15"; input.value = item.dur;
-      txAria(input, "Segment length (s)");
-      input.addEventListener("change", () => { item.dur = F.clampDuration(input.value, item.dur); input.value = item.dur; renderSeqSummary(); });
-      dur.append("→ ", input, " s");
-    } else tx(dur, "end");
-    const ctl = document.createElement("div");
-    ctl.className = "seq-ctl";
-    for (const [text, title, fn] of [
-      ["↑", L("Move up"), () => { if (i > 0) { [seqImages[i - 1], seqImages[i]] = [seqImages[i], seqImages[i - 1]]; renderSeqList(); } }],
-      ["↓", L("Move down"), () => { if (i < seqImages.length - 1) { [seqImages[i + 1], seqImages[i]] = [seqImages[i], seqImages[i + 1]]; renderSeqList(); } }],
-      ["✕", L("Remove"), () => { seqImages.splice(i, 1); renderSeqList(); }]]) {
-      const b = document.createElement("button");
-      b.type = "button"; b.textContent = text; b.title = title; b.setAttribute("aria-label", title);
-      b.addEventListener("click", fn);
-      ctl.appendChild(b);
-    }
-    row.append(img, name, dur, ctl);
-    return row;
-  }));
-  translateTree(list);
-  renderSeqSummary();
-}
-function renderSeqSummary() {
-  if (!seqImages.length) { $("seqSummary").textContent = ""; return; }
-  const starts = seqImages.length > 1 ? seqImages.slice(0, -1) : seqImages, segs = starts.length;
-  const asked = starts.reduce((s, it) => s + it.dur, 0);
-  const real = starts.reduce((s, it) => s + P.h3RealDuration(it.dur), 0);
-  tx($("seqSummary"), "{n} segment(s), {asked} s asked, {real} s rendered (H3 frame grid).",
-    { n: segs, asked, real: real.toFixed(2) });
-}
 const txAria = (el, text) => { el.setAttribute("aria-label", text); el.title = text; };
 
 // ── Extra references and H3 subjects ──────────────────────────────────────────
@@ -313,7 +266,7 @@ function renderRefs() {
     tag.className = "rs-tag";
     const entry = plan?.entries.find(e => e.item === img);
     if (ctx === "i2i") tag.textContent = `<image${i + 2}>`;
-    else if (ctx === "sb") tx(tag, "Reference {n}", { n: i + 1 });
+    else if (ctx === "sb" || ctx === "seq") tx(tag, "Reference {n}", { n: i + 1 });
     else if (!entry) { tx(tag, "Not sent (over the limit)"); row.classList.add("ref-ignored"); }
     else {
       const [, word, n] = /^<(\w+) (\d+)>$/.exec(entry.label);
@@ -328,8 +281,9 @@ function renderRefs() {
     txAria(x, "Remove this reference");
     x.addEventListener("click", () => { F.refList(ctx).splice(i, 1); renderRefs(); });
     row.append(tag, name);
-    // A clip or a sound has a role, which decides its label: redraw on change.
-    if (ctx === "r2v" && F.itemMedia(img) !== "image") {
+    // A clip or a sound has a role, which decides its label: redraw on change. So does each
+    // reference of a long take (character, setting or object).
+    if ((ctx === "r2v" && F.itemMedia(img) !== "image") || ctx === "seq") {
       const role = document.createElement("select");
       role.className = "rs-role";
       fillSelect(role, F.MEDIA_KINDS[F.itemMedia(img)].map(k => [k, t(F.REF_KINDS[k][1])]), F.itemRole(img));
@@ -472,11 +426,6 @@ const refMax = () => F.refCtx() === "r2v" ? Object.values(F.R2V_MEDIA_CAPS).redu
 function initDrops() {
   dropZone($("imageInputWrap"), { put: f => setInputFile($("imageInput"), f), putAsset: setSelectedAsset });
   dropZone($("lastImageWrap"), { put: f => setInputFile($("lastImageInput"), f) });
-  dropZone($("seqWrap"), {
-    max: () => SEQ_MAX, count: () => seqImages.length,
-    put: f => addSeqImage({ name: f.name, blob: f }),
-    putAsset: a => addSeqImage({ name: a.filename, ref: a.ref }),
-  });
   dropZone($("refDropZone"), {
     // Reference to video: clips and sounds too, capped per media by addRefs.
     media: () => F.refCtx() === "r2v",
@@ -539,7 +488,7 @@ async function generate() {
   // the button says so, with the time spent.
   const busy = wf.pipeline === "storyboard" ? L("{llm} is writing the sheets and the shot list… {time}")
     : wf.pipeline === "reference2video" ? L("{llm} is preparing the director… {time}")
-    : wf.pipeline === "sequence" && seqImages.length ? L("{llm} is describing the start image… {time}")
+    : wf.pipeline === "sequence" && (hasInputImage() || F.refList("seq").length) ? L("{llm} is describing the images… {time}")
     : autoEnrich && wf.enrich !== "builtin" ? L("{llm} is enriching the brief… {time}") : null;
   const start = Date.now();
   const tick = () => {
@@ -559,7 +508,7 @@ async function generate() {
     else if (wf.pipeline === "reference2video") {
       if ($("skipSheetsToggle").checked) await D.r2vWithoutSheets(seed);
       else await D.startR2V(seed);
-    } else if (wf.pipeline === "sequence") await D.startLongTake(seed, seqImages.slice());
+    } else if (wf.pipeline === "sequence") await D.startLongTake(seed, await longTakeImages());
     else if (wf.pipeline === "campaign") generateCampaign(seed);
     else await generatePlain(wf, seed);
   } catch (err) { warn(err); generateError(err?.message ?? String(err)); }
@@ -627,6 +576,11 @@ async function openCardInForm(tool, a, image, quiet = false) {
   if (a.style && F.hasControl("style")) { $("styleSelect").value = a.style; D.setStyle(a.style); }
   const img = id => image(id) && { name: image(id).name, ref: image(id).ref };
   if (a.image) setSelectedAsset({ ref: img(a.image).ref, filename: img(a.image).name });
+  // A long take's first frame is the input image: none on the card, none in the form.
+  if (tool === "long_take") {
+    if (a.first_frame) setSelectedAsset({ ref: img(a.first_frame).ref, filename: img(a.first_frame).name });
+    else { clearSelectedAsset(); $("imageInput").value = ""; }
+  }
   if (a.last_image) setInputFile($("lastImageInput"), await assetFile({ ref: img(a.last_image).ref, filename: img(a.last_image).name }));
   if (tool === "edit_image") {
     F.refList("i2i").splice(0, Infinity, ...(a.references || []).map(img));
@@ -639,7 +593,8 @@ async function openCardInForm(tool, a, image, quiet = false) {
   // Sheets of a storyboard card: the director keeps them (another card drops them).
   D.useSheets(tool === "storyboard"
     ? { subjects: (a.subject_sheets || []).map(img), setting: a.setting_sheet?.length ? img(a.setting_sheet[0]) : null } : null);
-  if (tool === "long_take") { seqImages.splice(0, Infinity, ...(a.images || []).map(id => ({ ...img(id), dur: 10 }))); renderSeqList(); }
+  if (tool === "long_take")
+    F.refList("seq").splice(0, Infinity, ...(a.references || []).map((id, i) => ({ ...img(id), kind: a.kinds?.[i] })));
   renderRefs();
   brief.value = text;
   if (quiet) return;
@@ -1015,10 +970,6 @@ function initForm() {
   $("skipSheetsToggle").addEventListener("change", () => { renderRefs(); refreshGenerateLabel(); });
   $("assetChipClear").addEventListener("click", clearSelectedAsset);
   $("imageInput").addEventListener("change", () => { if ($("imageInput").files[0]) clearSelectedAsset(); });
-  $("seqFiles").addEventListener("change", () => {
-    for (const f of $("seqFiles").files) if (!addSeqImage({ name: f.name, blob: f })) break;
-    $("seqFiles").value = "";
-  });
   // A screenplay file becomes the brief (Undo puts the old one back); nothing starts.
   $("seqImportBtn").addEventListener("click", () => $("seqImportFile").click());
   $("seqImportFile").addEventListener("change", async () => {
@@ -1102,7 +1053,6 @@ function boot() {
     // From the assistant, a gallery image goes to the chat; from the Studio, to the form.
     useAsInput: a => (!inAssistant() ? useAsInput(a)
       : a.type === "video" ? notice(false, "A clip cannot be attached to a message: attach an image.") : attachAsset(a)),
-    addToSequence: a => { if (addSeqImage({ name: a.filename, ref: a.ref })) notice(true, "{name} added to the sequence ({n}/{max}).", { name: a.filename, n: seqImages.length, max: SEQ_MAX }); },
     reusePrompt: a => {
       if (inAssistant()) { chatReusePrompt(a.prompt); return; }
       const before = brief.value;

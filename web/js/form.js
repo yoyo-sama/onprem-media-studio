@@ -50,7 +50,7 @@ export const PIPELINES = [
   { id: "image2image", label: L("Image editing (Image2Image)"), controls: ["image", "markets"] },
   { id: "text2video", label: L("Video from a text (Text2Video)"), controls: ["duration", "ratio"] },
   { id: "image2video", label: L("Video from an image (Image2Video)"), controls: ["duration", "image"] },
-  { id: "sequence", label: L("Long take (Relay)"), scenario: ["storyboard"], controls: ["seq"] },
+  { id: "sequence", label: L("Long take (Relay)"), scenario: ["storyboard"], controls: ["seq", "image"] },
   { id: "storyboard", label: L("Storyboard + animatic (sheets, shots, cuts)"), scenario: ["storyboard"],
     controls: ["shots", "duration", "hold", "ratio", "style", "sheetTemplate"] },
   { id: "reference2video", label: L("Consistent character + setting (MiniMax H3)"), scenario: ["storyboard"],
@@ -129,13 +129,15 @@ export async function imageBlob(img) {
 
 // ── Extra references ──────────────────────────────────────────────────────────
 // One list per use: "r2v" (reference to video), "sb" (storyboard shot images with Qwen
-// Image 2.1), "i2i" (Qwen Image 2.1 editing: 10 images with the input image). A list
-// never leaks into another pipeline, and nothing is lost when the engine changes.
-export const REF_CAPS = { r2v: 7, sb: 7, i2i: 9 };
-const refLists = { r2v: [], sb: [], i2i: [] };
+// Image 2.1), "i2i" (Qwen Image 2.1 editing: 10 images with the input image), "seq" (a long
+// take's references, each with its role). A list never leaks into another pipeline, and
+// nothing is lost when the engine changes.
+export const REF_CAPS = { r2v: 7, sb: 7, i2i: 9, seq: 7 };
+const refLists = { r2v: [], sb: [], i2i: [], seq: [] };
 export function refCtx(wf = currentWorkflow()) {
   const p = currentPipeline();
   if (p === "reference2video") return "r2v";
+  if (p === "sequence") return "seq";
   if (p === "storyboard" && wf?.keyframes === "qwen-image-2.1") return "sb";
   if (p === "image2image" && wf?.id === "qwen21_i2i") return "i2i";
   return "";
@@ -184,21 +186,6 @@ export async function refRefs(ctx) {
   if (list.length > max)
     log("warn", "Extra references limited to {max}: {n} image(s) ignored.", { max, n: list.length - max });
   return Promise.all(list.slice(0, max).map(imageRef));
-}
-
-// A long take's start image read by Gemma's vision: {sheet, desc}. When it fails the
-// image is taken as a picture ({sheet: false, desc: ""}), and the Relay's first segment
-// lets the user say otherwise. Never blocks.
-export async function describeStart(img) {
-  log("req", "Describing {n} reference(s) with {llm} (vision)…", { n: 1, llm: LLM });
-  try {
-    const found = await P.describeStartImage(llm, await blobToBase64(await imageBlob(img)));
-    log("ok", "{ok}/{n} reference(s) described by {llm}.", { ok: 1, n: 1, llm: LLM });
-    return found;
-  } catch (err) {
-    log("warn", "Description of {name} unavailable ({error}).", { name: img.name, error: err.message });
-    return { sheet: false, desc: "" };
-  }
 }
 
 // Gemma's description of each image (vision), "" when it fails: an undescribed

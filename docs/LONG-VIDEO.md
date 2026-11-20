@@ -210,7 +210,7 @@ click), not yet rendered on the GB10.
   as a long take from a photo does. Regenerating segment 1 replaces that frame.
 - **The assistant.** Its `image_sequence` card rendered key-image pairs one by one and joined
   them with `video-concat`: it never used the long take. It is replaced by `long_take`
-  (screenplay in the layout above, 0 to 6 images): "🎞 Open the long take" switches to the
+  (screenplay in the layout above, an optional first frame and references with their roles): "🎞 Open the long take" switches to the
   Studio and opens the Relay on its segments, rendering nothing; the chain starts there. The
   Canvas will get it later.
 
@@ -233,6 +233,27 @@ GB10 renders (promaxgb10-95c7, 2026-11-20):
   (no extra step); a user who wants to see the opening first can make it with Qwen and start
   from it.
 - Still to render: the same file with a start image.
+
+## First frame and references (2026-11-20, evening)
+
+The owner found the long take's image list confusing ("0 to 6 images": start image, end
+images, with a guess whether the first was a sheet). The form now asks for each kind of image
+in its own field, both optional:
+
+- **First frame**, one image: the video starts on it exactly and keeps it (segment 1 is
+  `h3-i2v` on it). A character sheet is not a first frame.
+- **References**, up to 7 (as in reference to video, since H3 Ref2VA takes them directly; the
+  cap of 3 came from the director's two subjects per shot image), each with its role:
+  character, setting or object. Who or what must stay the same; never shown as a frame. With no
+  first frame, segment 1 is `h3-r2v` made from them. A setting reference is the location of
+  every segment. Each reference makes every segment's render a little longer.
+- **Neither**: segment 1 is H3 text to video, as before.
+
+End images left the form: each segment card takes its own (🎯 End image). The sheet-or-photo
+guess and the Qwen shot composed from a sheet (LESSONS #51) are gone: the user says what each
+image is. A described scene (a screenplay that names no `<Subject N>`) still makes the first
+frame its location when no reference is given. The assistant's `long_take` card takes
+`first_frame`, `references` and `kinds` the same way. Not rendered on the GB10 yet.
 
 ## Results
 

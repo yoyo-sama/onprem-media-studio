@@ -124,11 +124,14 @@ def test_normalize_flags_unknown_images_and_refuses_bad_calls():
 
 
 def test_long_take_needs_only_its_screenplay():
-    """No image: the first segment is text to video; images, when given, are the start image then end images."""
+    """No image: the first segment is text to video. The first frame and the references are two fields."""
     args, warnings = T.normalize("long_take", {"screenplay": "summary:\nA walk."}, lambda r: True)
     assert args == {"screenplay": "summary:\nA walk."} and not warnings
-    args, _ = T.normalize("long_take", {"screenplay": "x", "images": ["A1", "A2"]}, lambda r: True)
-    assert args["images"] == ["A1", "A2"]
+    args, warnings = T.normalize("long_take", {"screenplay": "x", "first_frame": "A1", "references": ["A2", "A3"],
+                                               "kinds": ["character", "setting"]}, lambda r: True)
+    assert args["first_frame"] == "A1" and args["references"] == ["A2", "A3"] and not warnings
+    args, warnings = T.normalize("long_take", {"screenplay": "x", "first_frame": "Z9"}, lambda r: r != "Z9")
+    assert "Z9 is not in the reference table" in warnings
     assert "detailed_description:" in T.SCHEMAS["long_take"][1]["screenplay"]["description"]
     assert "image_sequence" not in T.SCHEMAS
 
