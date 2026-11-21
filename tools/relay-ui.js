@@ -111,6 +111,31 @@ const SPLIT = {
   catch (err) { console.error("ERROR (test could not run): " + err.message.split("\n")[0]); process.exit(2); }
   const fails = [];
   const check = (ok, msg) => { if (!ok) fails.push(msg); };
+  // The split's new shots: a flag next to each segment's text, the older list of numbers,
+  // and the scenes known from a card's paragraphs (one segment per scene: each one after
+  // the first is a new shot, as Gemma missed the home at dusk on the GB10, 2026-11-21).
+  {
+    const P = require(path.join(__dirname, "..", "web", "js", "prompts.js"));
+    const split = async (answer, scenes) => {
+      let system = "";
+      const r = await P.composeScenario(async sys => { system = sys; return answer; }, "a\n\nb\n\nc", 3, "", 15, [], scenes);
+      return { ...r, system };
+    };
+    const seg = (text, cut) => ({ new_shot: cut, text });
+    let r = await split({ segments: [seg("SUBJECTREF1 at the port.", true), seg("At sea.", true), seg("Still at sea.", false)] });
+    check(JSON.stringify(r.segments) === '["<Subject 1> at the port.","At sea.","Still at sea."]' && JSON.stringify(r.cuts) === "[1]",
+      `inline new shots: ${JSON.stringify(r)}`);
+    check(!/exactly 2 segments start a new shot/.test(r.system) && /"new_shot"/.test(r.system) && !/"cuts"/.test(r.system),
+      "the split instruction without known scenes");
+    r = await split({ segments: ["Port.", "Sea."], cuts: [2] });
+    check(JSON.stringify(r.cuts) === "[1]", `the older list of cut numbers: ${JSON.stringify(r.cuts)}`);
+    r = await split({ segments: [seg("Port.", false), seg("Sea.", true), seg("Home.", false)] }, 3);
+    check(JSON.stringify(r.cuts) === "[1,2]" && /This scenario has 3 scenes, one per paragraph: exactly 2 segments start a new shot/.test(r.system),
+      `known scenes, one segment each: ${JSON.stringify(r.cuts)}`);
+    r = await split({ segments: [seg("Port.", false), seg("Port again.", false), seg("Sea.", true), seg("Sea again.", false)] }, 2);
+    check(JSON.stringify(r.cuts) === "[2]", `known scenes, several segments each, keep Gemma's flags: ${JSON.stringify(r.cuts)}`);
+    check(/never to an object, the hands or the feet/.test(r.system), "the split's framing rule");
+  }
   const jobs = [], chats = [], done = new Map(), held = [];
   let n = 0, hold = false, sock = null, visionSheet = false;
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });

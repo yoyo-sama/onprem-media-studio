@@ -300,6 +300,17 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     same Gemma call as "✨ Split the screenplay", which gave clean cuts on the narrative tests. The
     layout stays for files a user imports. (2026-11-21)
 
+56. **A flag next to the item beats a list of numbers beside it, and the face rule takes no
+    exception.** Gemma's split listed the segments that start a new shot in a separate `cuts`
+    array: on the fisherman's three scenes it listed only segment 2, so the home at dusk was
+    chained as a continuation and H3 cut on its own 1 s later; on the café take a continuous
+    segment jumped to another square. Each segment is now `{"new_shot", "text"}`, and a card's
+    screenplay, one paragraph per scene, tells the split how many scenes there are (one segment
+    per scene: each one after the first is a new shot, by code). The framing rule allowed "a
+    close shot of feet, hands or an object where the scenario asks": Gemma read "places her bag"
+    and "holding a cup" as asking, and the face was out of frame for half the take. The camera
+    may now come closer to the face only, which stays in view from the first moment. (2026-11-21)
+
 ## 8. Front end (for the port in step 4)
 
 39. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes

@@ -891,7 +891,7 @@ Answer ONLY with JSON: {"prompt": "..."}`;
   // Scenario split into Relay segments: Gemma writes the look shared by the whole sequence
   // once (camera, lighting, sounds, music) and one action per segment; the H3 structure
   // is assembled at render time, subjects arrive as bare stand-ins.
-  const H3_SCENARIO_SYSTEM = (n, legend) => `You are a shot-list writer for the MiniMax H3 video model.
+  const H3_SCENARIO_SYSTEM = (n, legend, scenes = 0) => `You are a shot-list writer for the MiniMax H3 video model.
 Split the user's scenario into exactly ${n} consecutive video segments, in chronological order: one continuous shot, or several shots when the scenario has several scenes. Each segment is rendered on its own, a few seconds long, so it holds one simple action.
 Also write, once, the look that every segment shares, so that no segment repeats it.
 Rules:
@@ -899,18 +899,19 @@ Rules:
 - "lighting": one English sentence of 8 to 25 words, the light of the whole sequence, the same in every segment. When the scenario has several scenes at different moments or places, only what their light has in common (its quality, the colour grade), never a change of time of day.
 - "soundscape": one English sentence of 8 to 25 words, the natural sounds heard throughout the sequence. When the scenario has several scenes in different places, only what is heard in all of them, or "".
 - "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.
-- Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement that keeps the face of the main subject in frame (a close shot of feet, hands or an object only where the scenario asks for one). Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
+- Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement during which the face of the main subject stays in view from the first moment to the last: the camera may come closer to that face, never to an object, the hands or the feet. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
 - Two exceptions. A segment that starts a new shot opens by naming its place, its light and its sounds in a few words. And when the scenario changes a subject's appearance (a coat taken off, bare feet, wet hair), state that change in every segment where it holds.
 - A segment acts within the place of its shot: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
 - The segments follow on from one another: segment k+1 starts exactly where segment k ended. Never restart the scene, never retell the whole scenario inside one segment, never jump elsewhere unless the scenario says so.
-- A new shot: when the scenario itself moves to another place, another moment or another shot, the segment where that happens starts a new shot. List the numbers of those segments, counting from 1, in "cuts"; segment 1 is never listed. A scenario that is one continuous scene has "cuts": [].
+- A new shot: when the scenario itself moves to another place, another moment or another shot, the segment where that happens starts a new shot: its "new_shot" is true. Every other segment, and always the first one, has "new_shot": false. A scenario that is one continuous scene has no new shot.${scenes > 1 ? `
+- This scenario has ${scenes} scenes, one per paragraph: exactly ${scenes - 1} segments start a new shot, the first segment of each paragraph after the first.` : ""}
 - The recurring subjects are named by a marker, one bare word each. Copy each marker character for character wherever that subject acts:
 ${legend}
 - Write the marker instead of a proper name, and instead of a bare pronoun whenever the sentence would otherwise be ambiguous.
 - Use ONLY positive phrasing (never "no", "without", "avoid").
 - Plain prose only: no field name, no heading, no numbering, no timestamp, no angle bracket, no square bracket.
 - Never write "masterpiece", "best quality", "8k" or "ultra detailed".
-Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": ["...", "..."], "cuts": []} with exactly ${n} segments, in order.`;
+Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": [{"new_shot": false, "text": "..."}, {"new_shot": false, "text": "..."}]} with exactly ${n} segments, in order.`;
 
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
   const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
@@ -1220,18 +1221,27 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   }
 
   // Splits a scenario into at most `max` segment texts (Gemma may return one more or one
-  // less than `n`: what it wrote is kept) and the shared look. Returns {segments, look};
-  // throws when no segment came back.
+  // less than `n`: what it wrote is kept) and the shared look. Returns {segments, cuts, look};
+  // throws when no segment came back. `scenes`: the number of scenes the text is known to
+  // hold, one per paragraph (an assistant card's screenplay), else 0.
   const NO_MUSIC_RE = /^(none|n\/a|no music|silence)\.?$/i;
-  async function composeScenario(llm, text, n, locDesc, max, subjects) {
-    const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects)), text);
+  async function composeScenario(llm, text, n, locDesc, max, subjects, scenes = 0) {
+    const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects), scenes), text);
     const clean = v => h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(v))));
-    const segments = (Array.isArray(out.segments) ? out.segments : []).map(clean).filter(Boolean).slice(0, max);
+    // A segment is {"new_shot", "text"}: the flag next to its text (a separate list of cut
+    // numbers missed the home at dusk, GB10 2026-11-21); a bare string is read too.
+    const list = (Array.isArray(out.segments) ? out.segments : [])
+      .map(seg => ({ text: clean(seg && typeof seg === "object" && "text" in seg ? seg.text : seg), cut: seg?.new_shot === true }))
+      .filter(seg => seg.text).slice(0, max);
+    const segments = list.map(seg => seg.text);
     if (!segments.length) throw new Error("no segment returned");
     const music = clean(out.music);
-    // "cuts": 1-based numbers of the segments that start a new shot (never the first).
-    const cuts = [...new Set((Array.isArray(out.cuts) ? out.cuts : []).map(Number)
-      .filter(k => Number.isInteger(k) && k >= 2 && k <= segments.length).map(k => k - 1))].sort((a, b) => a - b);
+    // New shots, 0-based, never the first: the flagged segments and the numbers of an older
+    // "cuts" list (1-based). With one segment per known scene, each scene after the first is one.
+    const listed = (Array.isArray(out.cuts) ? out.cuts : []).map(Number).filter(Number.isInteger).map(k => k - 1);
+    const known = scenes > 1 && segments.length === scenes ? segments.map((_, i) => i) : [];
+    const cuts = [...new Set([...list.flatMap((seg, i) => (seg.cut ? [i] : [])), ...listed, ...known])]
+      .filter(k => k >= 1 && k < segments.length).sort((a, b) => a - b);
     return { segments, cuts, look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
                                      music: NO_MUSIC_RE.test(music) ? "" : music } };
   }
