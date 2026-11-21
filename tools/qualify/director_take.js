@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // A three-scene story told to the assistant, rendered as a person would click it: the
 // message (automatic role), the Director's questions answered towards a subject sheet,
-// the sheet card's Generate, then "🎞 Open the long take" and "Generate the chain" in the
-// Studio. Gemma's replies decide the path; at most MAX_TURNS messages. Needs a running
+// the sheet cards' Generate, then "🎞 Open the long take" (the Studio's long take at the card's
+// length, its screenplay split by Gemma) and "Generate the chain". Gemma's replies decide the path; at most MAX_TURNS messages. Needs a running
 // server on the GB10 and Playwright with its Chromium. Writes report.json (the transcript,
 // the cards, the jobs) and page screenshots to the output folder; the frames are inspected
 // by a person, never trusted from "done".
@@ -99,15 +99,12 @@ const MAX_TURNS = 6, MIN = 60e3;
   say(`open the long take (${take.id})`);
   await cardButton(take.id, /Open the long take/).click();
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 15 * MIN });
-  await page.waitForTimeout(3000);
-  // A screenplay outside the H3 layout opens as one card: Gemma splits it.
-  if (await page.locator("#relayList .relay-seg").count() < 2) {
-    say("split the screenplay with Gemma");
-    await page.waitForSelector("#relayComposeBtn:not([disabled])", { timeout: 2 * MIN });
-    await page.click("#relayComposeBtn");
-    await page.waitForFunction(() => { const a = [...document.querySelectorAll("#relayList .relay-seg textarea")];
-      return a.length > 1 && a.every(x => x.value.trim()); }, null, { timeout: 15 * MIN });
-  }
+  // The card opens the long take at its length and Gemma splits its screenplay: wait for
+  // every segment to have its text.
+  say("waiting for the split");
+  await page.waitForFunction(() => { const a = [...document.querySelectorAll("#relayList .relay-seg textarea")];
+    return a.length > 1 && a.every(x => x.value.trim()) && !document.getElementById("relayComposeBtn").textContent.includes("…"); },
+    null, { timeout: 15 * MIN, polling: 2000 });
   const segments = await page.$$eval("#relayList .relay-seg", els => els.map(e => ({
     text: e.querySelector("textarea").value,
     link: e.querySelector(".seg-link") && !e.querySelector(".seg-link").hidden ? e.querySelector(".seg-link").textContent.trim() : "",

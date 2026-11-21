@@ -41,7 +41,7 @@ const CARDS = [
                                   references: ["A1"], kinds: ["character"], music: "A slow romantic piano score", duration: 5, ratio: "16:9" }),
   card("C11", "create_image", { prompt: 'A cafe chalkboard reading "Menu du jour"', engine: "krea2", ratio: "16:9", count: 1, style: "none" }),
   card("C12", "long_take", { screenplay: "summary:\nA walk.\n\ndetailed_description:\nSegment 1 (00:00–00:10) – Start\nA woman walks along a garden path.\nSegment 2 (00:10–00:20) – End\nShe stops by a tree and smiles.\n\nnon_diegetic_music:\nN/A" }),
-  card("C13", "long_take", { screenplay: "A woman walks along a garden path.", first_frame: "C1#1", references: ["A1"], kinds: ["setting"] }),
+  card("C13", "long_take", { screenplay: "A woman walks along a garden path.", total: 40, first_frame: "C1#1", references: ["A1"], kinds: ["setting"] }),
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
@@ -501,12 +501,23 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   // With a first frame and a reference: the first frame is the form's input image (no
   // video format to choose), the reference keeps its role; still no job.
   await page.click('.rail-mode[data-mode="assistant"]');
+  const llm13 = llmBodies.length;
   await page.click('.chat-card[data-card="C13"] .primary-btn');
-  const lt13 = await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1 && !document.getElementById("studioRelay").hidden,
+  const lt13 = await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length >= 1 && !document.getElementById("studioRelay").hidden,
     null, { timeout: 10000 }).then(() => true, () => false);
   check(lt13 && await page.inputValue("#pipelineSelect") === "sequence" && !(await page.$eval("#assetChip", e => e.hidden))
     && await page.isHidden("#relayList .seg-start-row"), "the long take card with a first frame did not open on it");
   check(jobs.length === before12, "the long take card with images submitted a job");
+  // A prose screenplay opens at the card's total length and is split by Gemma (stubbed out
+  // here: the segments stay as the length laid them out), as "✨ Split the screenplay" does;
+  // a laid-out one (C12) is not.
+  for (let w = 0; w < 100 && !llmBodies.slice(llm13).some(b => b.includes("shot-list writer")); w++) await page.waitForTimeout(100);
+  await page.waitForFunction(() => !document.getElementById("relayComposeBtn").textContent.includes("…"), null, { timeout: 10000 }).catch(() => {});
+  check(await page.inputValue("#relayTotal") === "40", "the long take card's total length: " + await page.inputValue("#relayTotal"));
+  // The Gemma calls after the click: the two images described, then the split into 4 segments.
+  const split = llmBodies.slice(llm13).filter(b => b.includes("shot-list writer"));
+  check(split.length === 1 && split[0].includes("exactly 4 consecutive") && split[0].includes("A woman walks along a garden path.")
+    && await page.$$eval("#relayList .relay-seg", e => e.length) === 4, "the long take card's prose screenplay was not split at its length");
   await page.click("#studioExitBtn");
   await page.click('.rail-mode[data-mode="assistant"]');
   // A reload opens on the welcome; the conversation stays in the list.

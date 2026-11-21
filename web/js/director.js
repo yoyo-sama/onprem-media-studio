@@ -321,6 +321,16 @@ async function composeRelay() {
   save();
 }
 
+// A long take opened from an assistant card: its total length, then its screenplay (prose,
+// scene by scene) split by Gemma as "✨ Split the screenplay" does. Nothing renders; a
+// screenplay in the H3 layout already gave its segments.
+export async function splitLongTake(total) {
+  const r = d?.relay;
+  if (!r || r.segments.length > 1) return;
+  if (total) { r.total = clampTotal(total); fitRelayToPlan(); }
+  await composeRelay();
+}
+
 // A screenplay in the H3 layout becomes the chain as written: one card per segment, its
 // length from its timestamps (5 to 15 s), the first segment of a later shot a new scene (🎞,
 // as a split's: from the references, its shot line naming its place), and the shared fields

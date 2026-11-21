@@ -125,14 +125,18 @@ def test_normalize_flags_unknown_images_and_refuses_bad_calls():
 
 def test_long_take_needs_only_its_screenplay():
     """No image: the first segment is text to video. The first frame and the references are two fields."""
-    args, warnings = T.normalize("long_take", {"screenplay": "summary:\nA walk."}, lambda r: True)
-    assert args == {"screenplay": "summary:\nA walk."} and not warnings
+    args, warnings = T.normalize("long_take", {"screenplay": "A woman walks along a garden path."}, lambda r: True)
+    assert args == {"screenplay": "A woman walks along a garden path.", "total": 30} and not warnings
     args, warnings = T.normalize("long_take", {"screenplay": "x", "first_frame": "A1", "references": ["A2", "A3"],
                                                "kinds": ["character", "setting"]}, lambda r: True)
     assert args["first_frame"] == "A1" and args["references"] == ["A2", "A3"] and not warnings
     args, warnings = T.normalize("long_take", {"screenplay": "x", "first_frame": "Z9"}, lambda r: r != "Z9")
     assert "Z9 is not in the reference table" in warnings
-    assert "detailed_description:" in T.SCHEMAS["long_take"][1]["screenplay"]["description"]
+    # Prose scene by scene, split by the Studio: Gemma wrote the H3 field layout unreliably.
+    assert "scene by scene" in T.SCHEMAS["long_take"][1]["screenplay"]["description"]
+    assert "detailed_description" not in T.SCHEMAS["long_take"][1]["screenplay"]["description"]
+    args, _ = T.normalize("long_take", {"screenplay": "x", "total": 400}, lambda r: True)
+    assert args["total"] == 150
     assert "image_sequence" not in T.SCHEMAS
 
 

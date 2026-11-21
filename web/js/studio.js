@@ -588,12 +588,14 @@ async function openCardInForm(tool, a, image, quiet = false) {
 }
 
 // A long take card's own button: the form takes the card over, then its click is the
-// Generate click, which opens the long take.
+// Generate click, which opens the long take, at the card's length, its screenplay split into
+// segments (Gemma; nothing renders before "Generate the chain").
 async function launchDirector(tool, a, image) {
   await openCardInForm(tool, a, image, true);
   log("sys", "Director started from an assistant card.");
   window.scrollTo({ top: 0, behavior: "smooth" });
-  generate();
+  await generate();
+  await D.splitLongTake(a.total);
 }
 
 // ── Modes ─────────────────────────────────────────────────────────────────────
