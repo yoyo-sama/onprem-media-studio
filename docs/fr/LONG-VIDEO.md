@@ -318,6 +318,19 @@ communs ne gardent que ce que partagent toutes les scènes, un nouveau plan nomm
 sa lumière et ses sons, et un changement d'apparence est écrit partout où il vaut. À rendre de
 nouveau avec le même brief.
 
+**Second rendu, PR #51, 2026-11-21** (même brief, 26,6 min, aucun job d'images de transition).
+Gemma a marqué les deux mêmes nouvelles scènes ; « pieds nus » a tenu sur les segments 3 et 4
+(raté la première fois) ; les coupes n'ont pris que la planche et aucune image précédente n'a
+débordé ; le segment 1 est resté dans la rue. Mais la lumière commune de Gemma (« étalonnage
+doré, lueurs du matin et du soir ») et ses sons (ville, train, vagues) couvraient encore les
+trois lieux malgré la règle : la mer au bout de la rue et à l'horizon depuis le train, des rails
+le long de la rue, des poteaux caténaires sur la plage. Corrigé dans le code plutôt qu'en
+redemandant à Gemma : quand le découpage trouve de nouvelles scènes, les champs communs Lumière
+et Ambiance sonore ne sont pas remplis (le segment de chaque scène nomme les siens) ; ce que
+l'utilisateur y a écrit reste. Encore vu dans les deux rendus : la tête hors cadre quelques
+secondes autour du raccord continu sur la plage (le travelling latéral bascule vers les pieds),
+dépendant de la graine.
+
 ## Résultats
 
 ### Étape 1, continuation latente (GB10, 2026-11-19)

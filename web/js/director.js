@@ -1207,9 +1207,14 @@ async function composeRelay() {
     if (cuts.length) log("ok", "Relay: {n} new shot(s) found in the screenplay: their segments start with a cut (🎞).", { n: cuts.length });
     syncRelayTotal();
     r.scenario = text;
-    // The shared look fills only the fields left empty: what the user wrote stays.
+    // The shared look fills only the fields left empty: what the user wrote stays. With new
+    // scenes, Gemma's shared light and sounds spanned every place and time of day, and each
+    // segment carried them all (the sea in the street, GB10 2026-11-21): each scene's segment
+    // names its own, and those two fields are left as the user wrote them.
     const kept = RELAY_LOOK_KEYS.filter(k => r.look[k].trim());
-    for (const k of RELAY_LOOK_KEYS) if (!r.look[k].trim()) r.look[k] = look[k] || "";
+    const perScene = cuts.length ? ["lighting", "sound"] : [];
+    for (const k of RELAY_LOOK_KEYS) if (!r.look[k].trim() && !perScene.includes(k)) r.look[k] = look[k] || "";
+    if (cuts.length) log("ok", "Relay: several scenes: each one's light and sounds are written in its segments, not in the shared fields.");
     if (kept.length) log("ok", "Relay: your shared fields were kept ({n}), Gemma filled the empty ones.", { n: kept.length });
     // Gemma may write one segment more or less: kept, and said.
     if (list.length === n) log("ok", "Relay: {n} segments written: read them before starting the chain.", { n });

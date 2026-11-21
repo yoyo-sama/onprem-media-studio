@@ -631,6 +631,10 @@ const SPLIT = {
   check(dialogs === 0, "splitting a long take that only holds its screenplay asked for a confirmation");
   const links = await page.$$eval("#relayList .relay-seg .seg-link", els => els.map(e => e.hidden ? "-" : e.textContent));
   check(/🔗/.test(links[1]) && /🎞/.test(links[2]), `a new scene in the split is not a cut: ${JSON.stringify(links)}`);
+  // Several scenes: Gemma's shared light and sounds are left out, the framing is kept.
+  const lookOf = k => page.inputValue(`#relayLook textarea[data-look="${k}"]`);
+  check(!(await lookOf("lighting")) && !(await lookOf("sound")) && (await lookOf("camera")) === SPLIT.framing,
+    `several scenes keep a shared light or sound: ${JSON.stringify([await lookOf("lighting"), await lookOf("sound"), await lookOf("camera")])}`);
   await page.fill('#relayList .relay-seg[data-seg="1"] textarea', "She sits on a bench.");
   await page.dispatchEvent('#relayList .relay-seg[data-seg="1"] textarea', "change");
   await page.click("#relayComposeBtn");

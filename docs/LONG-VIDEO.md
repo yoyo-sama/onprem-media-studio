@@ -295,6 +295,17 @@ scene (`scene`) takes the subjects' references only, extracts no transition fram
 shot names its own place, light and sounds, and a change of appearance is stated wherever it
 holds. To render again with the same brief.
 
+**Second render, PR #51, 2026-11-21** (same brief, 26.6 min, no transition-frame job). Gemma
+marked the same two new scenes; "barefoot" held in segments 3 and 4 (failed before); the cuts
+took the sheet only and no previous picture leaked; segment 1 stayed in the street. But Gemma's
+shared light ("warm golden grade, morning and evening glows") and sounds (city, train, waves)
+still spanned the three places despite the rule: the sea showed at the end of the street and on
+the horizon from the train, rails along the street, catenary masts on the beach. Fixed in code
+rather than by asking Gemma again: when the split finds new scenes, the shared Lighting and
+Soundscape fields are not filled (each scene's segment names its own); what the user wrote
+there stays. Still seen in both renders: the head out of frame for a few seconds around the
+continuous join on the beach (the lateral track tilts down to the feet), seed-driven.
+
 ## Results
 
 ### Step 1, latent continuation (GB10, 2026-11-19)

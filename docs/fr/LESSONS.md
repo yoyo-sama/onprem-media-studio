@@ -309,7 +309,10 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     comme nouvelle scène ne prend plus que les références des sujets et nomme son propre lieu, sa
     lumière et ses sons ; une coupe manuelle garde l'image précédente (un autre angle sur le même
     lieu). Le découpage reprend aussi chaque changement d'apparence que fait le scénario (pieds
-    nus) : omis, H3 gardait les bottines de la planche. docs/fr/LONG-VIDEO.md. (2026-11-21)
+    nus) : omis, H3 gardait les bottines de la planche. Prié de ne garder que ce que toutes les
+    scènes partagent, Gemma écrivait encore une lumière et des sons couvrant tous les lieux :
+    avec de nouvelles scènes, le code laisse plutôt ces deux champs communs vides.
+    docs/fr/LONG-VIDEO.md. (2026-11-21)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

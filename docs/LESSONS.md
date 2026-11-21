@@ -279,7 +279,9 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     Gemma's split marks as a new scene now takes the subjects' references only and names its
     own place, light and sounds; a manual cut keeps the previous frame (a new angle on the same
     place). The split also states every change of appearance the scenario makes (bare feet):
-    left out, H3 kept the boots of the sheet. docs/LONG-VIDEO.md. (2026-11-21)
+    left out, H3 kept the boots of the sheet. Asked to keep only what every scene shares, Gemma
+    still wrote a light and sounds spanning all places: with new scenes, the code leaves those
+    two shared fields empty instead. docs/LONG-VIDEO.md. (2026-11-21)
 
 ## 8. Front end (for the port in step 4)
 
