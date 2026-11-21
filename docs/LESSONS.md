@@ -271,6 +271,17 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     after clip (-32 to -59 LUFS): only the video is carried, and each clip's own sound is
     levelled to -18 LUFS. Over 47 s the identity held better than the i2v chain, in less time
     (33 min against 50 min for 50 s). docs/LONG-VIDEO.md. (2026-11-20)
+53. **A cut to a new scene carries nothing of the previous place, and the shared look holds only
+    what every scene shares.** In a three-scene story (street, train, beach), a cut that took
+    the previous segment's last frame as its location kept that place: the town showed in the
+    train window, a church spire on the beach. A shared light "from dawn to golden hour" and a
+    soundscape of city, train and waves made segment 1 walk to the sea by itself. A cut that
+    Gemma's split marks as a new scene now takes the subjects' references only and names its
+    own place, light and sounds; a manual cut keeps the previous frame (a new angle on the same
+    place). The split also states every change of appearance the scenario makes (bare feet):
+    left out, H3 kept the boots of the sheet. Asked to keep only what every scene shares, Gemma
+    still wrote a light and sounds spanning all places: with new scenes, the code leaves those
+    two shared fields empty instead. docs/LONG-VIDEO.md. (2026-11-21)
 
 ## 8. Front end (for the port in step 4)
 

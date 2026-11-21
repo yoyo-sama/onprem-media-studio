@@ -300,6 +300,48 @@ carte « Vidéo longue », et a choisi de les regrouper selon ce plan :
    docs). D'ici là, il s'ouvre depuis la carte storyboard de l'assistant, et un projet storyboard
    enregistré se reprend depuis la carte narrative.
 
+**Rendu GB10, 2026-11-21** (`tools/qualify/narrative_take.js` pilote le vrai Studio avec
+Playwright : carte, planche du sujet depuis le brief, Générer, 40 s, découpage, chaîne). Un
+brief en français : une femme quitte son immeuble à l'aube par une rue pavée, plus tard lit une
+lettre dans un train, le soir marche pieds nus sur une plage au coucher du soleil, bottines à la
+main. 28,7 min : planche 148 s, segments 451/336/334/321 s, assemblage 91 s ; 39,58 s en
+1280×736, -17,8 LUFS. Gemma a placé les deux coupes là où la scène change (segments 2 et 3 ;
+segment 4 continu). L'identité a tenu sur les quatre segments (visage, cheveux, manteau,
+bottines, personne d'autre) ; les deux coupes sont franches, sur une image ; le raccord continu
+ne se voit pas. Trois défauts (LESSONS n°53) : chaque coupe prenait la dernière image du segment
+précédent comme lieu (la mer au bout de la rue, la ville par la fenêtre du train, un clocher sur
+la plage) ; la lumière et le son communs couvraient toute la journée, si bien que le segment 1
+marchait jusqu'à la mer ; « pieds nus » s'est perdu dans le découpage. Corrigé : une coupe que le
+découpage marque comme nouvelle scène (`scene`) ne prend que les références des sujets,
+n'extrait aucune image de transition et affiche « 🎞 Nouvelle scène » ; la lumière et le son
+communs ne gardent que ce que partagent toutes les scènes, un nouveau plan nomme son propre lieu,
+sa lumière et ses sons, et un changement d'apparence est écrit partout où il vaut. À rendre de
+nouveau avec le même brief.
+
+**Second rendu, PR #51, 2026-11-21** (même brief, 26,6 min, aucun job d'images de transition).
+Gemma a marqué les deux mêmes nouvelles scènes ; « pieds nus » a tenu sur les segments 3 et 4
+(raté la première fois) ; les coupes n'ont pris que la planche et aucune image précédente n'a
+débordé ; le segment 1 est resté dans la rue. Mais la lumière commune de Gemma (« étalonnage
+doré, lueurs du matin et du soir ») et ses sons (ville, train, vagues) couvraient encore les
+trois lieux malgré la règle : la mer au bout de la rue et à l'horizon depuis le train, des rails
+le long de la rue, des poteaux caténaires sur la plage. Corrigé dans le code plutôt qu'en
+redemandant à Gemma : quand le découpage trouve de nouvelles scènes, les champs communs Lumière
+et Ambiance sonore ne sont pas remplis (le segment de chaque scène nomme les siens) ; ce que
+l'utilisateur y a écrit reste. Encore vu dans les deux rendus : la tête hors cadre quelques
+secondes autour du raccord continu sur la plage (le travelling latéral bascule vers les pieds),
+dépendant de la graine.
+
+**Troisième rendu, 2026-11-21** (b61f593, 26,5 min, même brief). Plus aucun lieu ne déborde :
+une rue de maisons en brique à l'aube bleue avec les fenêtres allumées, des champs verts sous
+une lumière grise par la fenêtre du train, une plage dans les lueurs du couchant, rien d'un lieu
+dans un autre ; pieds nus tenu, les deux coupes franches, le raccord continu invisible,
+l'identité tenue, -18,1 LUFS. Avec la lumière et le son communs vides, Gemma n'a cette fois nommé
+aucun son, si bien que chaque segment a reçu la ligne d'ambiance générique. Défaut restant : la
+tête hors cadre environ 11 s sur la plage, demandée par le segment 4 de Gemma lui-même (« zoom
+lent sur les pieds nus »). Le découpage demande maintenant un mouvement de caméra qui garde le
+visage du sujet principal dans le cadre, un gros plan sur les pieds, les mains ou un objet
+seulement là où le scénario le demande (non rendu).
+
 ## Résultats
 
 ### Étape 1, continuation latente (GB10, 2026-11-19)

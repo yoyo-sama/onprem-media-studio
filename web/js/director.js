@@ -1151,6 +1151,8 @@ const latentLink = i => {
   const seg = d?.relay?.segments[i];
   return i > 0 && !!seg && continuous(seg) && !seg.endImage && relayRefs(settingSheet()).length > 0;
 };
+// Segment i takes no frame of the clip before it: a latent link, or a new scene of the split.
+const takesNoFrame = i => latentLink(i) || (!!d?.relay?.segments[i]?.scene && !continuous(d.relay.segments[i]));
 const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min(seg.transitionIdx || 0, seg.transitions.length - 1)] : null);
 
 function updateRelayButtons() {
@@ -1201,13 +1203,18 @@ async function composeRelay() {
     // segment that starts a new scene is a cut (🎞): Ref2VA from the references.
     const ends = r.segments.map(seg => seg.endImage);
     r.segments = list.map((prompt, i) => ({ ...newRelaySegment(prompt, durs[Math.min(i, n - 1)]),
-      ...(cuts.includes(i) ? { mode: "cut" } : {}), endImage: ends[i] || null }));
+      ...(cuts.includes(i) ? { mode: "cut", scene: true } : {}), endImage: ends[i] || null }));
     if (cuts.length) log("ok", "Relay: {n} new shot(s) found in the screenplay: their segments start with a cut (🎞).", { n: cuts.length });
     syncRelayTotal();
     r.scenario = text;
-    // The shared look fills only the fields left empty: what the user wrote stays.
+    // The shared look fills only the fields left empty: what the user wrote stays. With new
+    // scenes, Gemma's shared light and sounds spanned every place and time of day, and each
+    // segment carried them all (the sea in the street, GB10 2026-11-21): each scene's segment
+    // names its own, and those two fields are left as the user wrote them.
     const kept = RELAY_LOOK_KEYS.filter(k => r.look[k].trim());
-    for (const k of RELAY_LOOK_KEYS) if (!r.look[k].trim()) r.look[k] = look[k] || "";
+    const perScene = cuts.length ? ["lighting", "sound"] : [];
+    for (const k of RELAY_LOOK_KEYS) if (!r.look[k].trim() && !perScene.includes(k)) r.look[k] = look[k] || "";
+    if (cuts.length) log("ok", "Relay: several scenes: each one's light and sounds are written in its segments, not in the shared fields.");
     if (kept.length) log("ok", "Relay: your shared fields were kept ({n}), Gemma filled the empty ones.", { n: kept.length });
     // Gemma may write one segment more or less: kept, and said.
     if (list.length === n) log("ok", "Relay: {n} segments written: read them before starting the chain.", { n });
@@ -1334,13 +1341,14 @@ function renderRelay() {
     if (i === 0) link.hidden = true;
     if (isLongTake() && i === 0) renderStartChoice(el.querySelector(".seg-start-row"), seg, busy);
     else if (i > 0) {
-      tx(link, continuous(seg) ? "🔗 Continuous" : "🎞 Cut (new shot from the references)");
+      tx(link, continuous(seg) ? "🔗 Continuous" : seg.scene ? "🎞 New scene (from the references)" : "🎞 Cut (new shot from the references)");
       txAttr(link, "title", continuous(seg)
         ? "The segment carries on from the previous one, movement included (its last second is carried over), and keeps the subjects' sheets in view so they stay the same. Click for a cut."
+        : seg.scene ? "A new scene of the screenplay: a new shot rendered from the subjects' references and its own text; the previous place is not carried over. Click for a continuous segment."
         : "A deliberate cut: a new shot rendered from the references (the subjects' sheets and the setting, or else the previous segment's transition image: choose one where nobody is in view), so a subject who left the frame comes back as itself. Click for a continuous segment.");
       link.classList.toggle("active", continuous(seg));
       link.disabled = busy;
-      link.addEventListener("click", () => { seg.mode = seg.mode === "continue" ? "cut" : "continue"; renderRelay(); save(); });
+      link.addEventListener("click", () => { seg.mode = seg.mode === "continue" ? "cut" : "continue"; delete seg.scene; renderRelay(); save(); });
     }
     const enrich = el.querySelector(".seg-enrich");
     enrich.disabled = busy;
@@ -1504,8 +1512,8 @@ async function setEndImage(i, file) {
 }
 
 function renderTransitions(wrap, i, seg, busy) {
-  // A latent link takes no frame of the clip before it: nothing to choose.
-  if (!seg.transitions?.length || i >= d.relay.segments.length - 1 || latentLink(i + 1)) return;
+  // A latent link, or a new scene, takes no frame of the clip before it: nothing to choose.
+  if (!seg.transitions?.length || i >= d.relay.segments.length - 1 || takesNoFrame(i + 1)) return;
   wrap.hidden = false;
   const lbl = document.createElement("span");
   lbl.className = "transitions-lbl";
@@ -1640,7 +1648,7 @@ async function segmentDone(s, seg, i, total, job, began) {
   seg.ref = out(job, ".mp4");
   seg.transitions = null;
   seg.lastFrame = out(job, ".png");
-  if (i < total - 1 && !latentLink(i + 1)) await extractTransitions(seg, i, total);
+  if (i < total - 1 && !takesNoFrame(i + 1)) await extractTransitions(seg, i, total);
   if (!sameSession(s)) return;
   seg.status = "ready";
   seg.renderSec = Math.round((Date.now() - began) / 1000);
@@ -1684,11 +1692,14 @@ function relayR2vJob(s, seg, i, total, refs, from = null) {
 // A cut: H3 Ref2VA with no start image and no end image. Its setting is the setting's sheet,
 // or else the previous segment's chosen transition frame (its last frame unless another is
 // chosen). A subject still visible in that frame is drifted already and wins over its sheet
-// (GB10, 2026-11-15): the user picks a frame where nobody is in view.
+// (GB10, 2026-11-15): the user picks a frame where nobody is in view. A new scene of the
+// split (`scene`) takes no frame of the previous place: H3 kept that place (the sea at the
+// end of the street, the town in the train window, GB10 2026-11-21).
 async function renderCutSegment(s, seg, i, total, before, began) {
-  if (!settingSheet()) await ensureTransitions(before, i - 1, total);
+  const carry = !seg.scene && !settingSheet();
+  if (carry) await ensureTransitions(before, i - 1, total);
   if (!sameSession(s)) return;
-  const frame = before?.ref ? transitionOf(before)?.ref || before.lastFrame : null;
+  const frame = carry && before?.ref ? transitionOf(before)?.ref || before.lastFrame : null;
   const refs = relayRefs(settingSheet() || (frame ? { ref: frame, desc: "" } : null));
   log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });
   seg.start = null;

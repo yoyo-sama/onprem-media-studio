@@ -4197,4 +4197,19 @@ export const DICT = {
     es: "Relay: {n} plano(s) nuevo(s) en el guion: sus segmentos empiezan con un corte (🎞).",
     de: "Relay: {n} neue Einstellung(en) im Drehbuch gefunden: ihre Segmente beginnen mit einem Schnitt (🎞).",
   },
+  "🎞 New scene (from the references)": {
+    fr: "🎞 Nouvelle scène (à partir des références)",
+    es: "🎞 Nueva escena (a partir de las referencias)",
+    de: "🎞 Neue Szene (aus den Referenzen)",
+  },
+  "A new scene of the screenplay: a new shot rendered from the subjects' references and its own text; the previous place is not carried over. Click for a continuous segment.": {
+    fr: "Une nouvelle scène du scénario : un nouveau plan rendu à partir des références des sujets et de son propre texte ; le lieu précédent n'est pas repris. Clique pour un segment continu.",
+    es: "Una nueva escena del guion: un nuevo plano generado a partir de las referencias de los sujetos y de su propio texto; el lugar anterior no se conserva. Haz clic para un segmento continuo.",
+    de: "Eine neue Szene des Drehbuchs: eine neue Einstellung aus den Referenzen der Figuren und ihrem eigenen Text; der vorherige Ort wird nicht übernommen. Klicke für ein durchgehendes Segment.",
+  },
+  "Relay: several scenes: each one's light and sounds are written in its segments, not in the shared fields.": {
+    fr: "Relay : plusieurs scènes : la lumière et les sons de chacune sont écrits dans ses segments, pas dans les champs communs.",
+    es: "Relay: varias escenas: la luz y los sonidos de cada una se escriben en sus segmentos, no en los campos comunes.",
+    de: "Relay: mehrere Szenen: Licht und Geräusche jeder Szene stehen in ihren Segmenten, nicht in den gemeinsamen Feldern.",
+  },
 };

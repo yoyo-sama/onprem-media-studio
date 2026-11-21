@@ -896,11 +896,12 @@ Split the user's scenario into exactly ${n} consecutive video segments, in chron
 Also write, once, the look that every segment shares, so that no segment repeats it.
 Rules:
 - "framing": one English sentence of 5 to 20 words, the framing of the whole sequence: shot size, camera height and lens. Never a camera movement: each segment gives its own.
-- "lighting": one English sentence of 8 to 25 words, the light of the whole sequence, the same in every segment.
-- "soundscape": one English sentence of 8 to 25 words, the natural sounds heard throughout the sequence.
+- "lighting": one English sentence of 8 to 25 words, the light of the whole sequence, the same in every segment. When the scenario has several scenes at different moments or places, only what their light has in common (its quality, the colour grade), never a change of time of day.
+- "soundscape": one English sentence of 8 to 25 words, the natural sounds heard throughout the sequence. When the scenario has several scenes in different places, only what is heard in all of them, or "".
 - "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.
-- Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
-- A segment acts within the place already shown: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
+- Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement that keeps the face of the main subject in frame (a close shot of feet, hands or an object only where the scenario asks for one). Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
+- Two exceptions. A segment that starts a new shot opens by naming its place, its light and its sounds in a few words. And when the scenario changes a subject's appearance (a coat taken off, bare feet, wet hair), state that change in every segment where it holds.
+- A segment acts within the place of its shot: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
 - The segments follow on from one another: segment k+1 starts exactly where segment k ended. Never restart the scene, never retell the whole scenario inside one segment, never jump elsewhere unless the scenario says so.
 - A new shot: when the scenario itself moves to another place, another moment or another shot, the segment where that happens starts a new shot. List the numbers of those segments, counting from 1, in "cuts"; segment 1 is never listed. A scenario that is one continuous scene has "cuts": [].
 - The recurring subjects are named by a marker, one bare word each. Copy each marker character for character wherever that subject acts:
