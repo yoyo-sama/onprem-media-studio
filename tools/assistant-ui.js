@@ -42,6 +42,9 @@ const CARDS = [
   card("C11", "create_image", { prompt: 'A cafe chalkboard reading "Menu du jour"', engine: "krea2", ratio: "16:9", count: 1, style: "none" }),
   card("C12", "long_take", { screenplay: "summary:\nA walk.\n\ndetailed_description:\nSegment 1 (00:00–00:10) – Start\nA woman walks along a garden path.\nSegment 2 (00:10–00:20) – End\nShe stops by a tree and smiles.\n\nnon_diegetic_music:\nN/A" }),
   card("C13", "long_take", { screenplay: "A woman walks along a garden path.", total: 40, first_frame: "C1#1", references: ["A1"], kinds: ["setting"] }),
+  card("C14", "location_sheet", { description: "a small harbour at dawn", style: "none" },
+       { state: { status: "done", outputs: ["outputs/harbour.png"] } }),
+  card("C15", "long_take", { screenplay: "Harbour at dawn. A woman walks along the quay.", references: ["C8#1", "C14#1"] }),
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
@@ -518,6 +521,15 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   const split = llmBodies.slice(llm13).filter(b => b.includes("shot-list writer"));
   check(split.length === 1 && split[0].includes("exactly 4 consecutive") && split[0].includes("A woman walks along a garden path.")
     && await page.$$eval("#relayList .relay-seg", e => e.length) === 4, "the long take card's prose screenplay was not split at its length");
+  await page.click("#studioExitBtn");
+  await page.click('.rail-mode[data-mode="assistant"]');
+  // References with no kinds from Gemma: a sheet keeps the role of the card that made it
+  // (a setting sheet is the setting, not a second character).
+  await page.click('.chat-card[data-card="C15"] .primary-btn');
+  await page.waitForFunction(() => !document.getElementById("studioRelay").hidden, null, { timeout: 10000 }).catch(() => {});
+  const roles15 = await page.$$eval("#refSubjects .rs-role", e => e.map(x => x.value));
+  check(JSON.stringify(roles15) === '["character","setting"]', `the long take card's sheets without kinds: ${JSON.stringify(roles15)}`);
+  check(jobs.length === before12, "the long take card with sheets submitted a job");
   await page.click("#studioExitBtn");
   await page.click('.rail-mode[data-mode="assistant"]');
   // A reload opens on the welcome; the conversation stays in the list.

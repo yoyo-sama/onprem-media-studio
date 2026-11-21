@@ -352,7 +352,10 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     (« <Subject 1> is in <Subject 3> », la maison) : en mer, une maison sur un ponton avec le mur
     du port derrière, le pêcheur en double, et 9 min par segment au lieu de 5. Avec des scènes
     découpées, les segments ne prennent plus que les personnages et les objets ; chaque lieu est
-    dans le texte de sa scène. Un plan-séquence en un seul lieu garde son décor. (2026-11-21)
+    dans le texte de sa scène. Un plan-séquence en un seul lieu garde son décor. La règle a besoin
+    du rôle de chaque référence : quand la carte de Gemma ne donne pas de `kinds`, une planche
+    garde le rôle de la carte qui l'a faite (une planche de décor est un décor) ; sinon chaque
+    image devenait un personnage et les décors repartaient. (2026-11-21)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

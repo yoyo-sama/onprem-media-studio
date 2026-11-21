@@ -90,10 +90,19 @@ const cardLorasParam = (card, a) => stackParams(cardStack(card, a));
 const { R2V_MEDIA_CAPS: R2V_MAX, R2V_MAX_REFS } = F;  // FastH3 OmniRef's limits (server h3.py)
 const { REF_KINDS, MEDIA_KINDS, AUDIO_RE: AUDIO } = F;
 const mediaOf = id => F.refMedia(refOf(id));
+// A reference with no kind from Gemma: a sheet a card made keeps the role of that card (a
+// setting sheet is a setting; a long take once sent the harbour, the boat and the cottage as
+// characters, GB10 2026-11-21); else the first image is the character, the others objects.
+function sheetKind(id) {
+  const m = /^(C\d+)#\d+$/.exec(id || ""), card = m && findCard(m[1]);
+  if (card?.tool === "location_sheet") return "setting";
+  if (card?.tool === "character_sheet") return card.args?.kind === "other" ? "object" : "character";
+  return null;
+}
 function kindOf(a, i) {
   const media = mediaOf(a.references[i]), k = a.kinds?.[i];
   if (MEDIA_KINDS[media].includes(k)) return k;
-  return media === "image" ? (i === 0 ? "character" : "object") : MEDIA_KINDS[media][0];
+  return media === "image" ? sheetKind(a.references[i]) || (i === 0 ? "character" : "object") : MEDIA_KINDS[media][0];
 }
 // H3 labels of a card's references, in their order (P.h3AssignRefs).
 const refLabels = a => P.h3AssignRefs((a.references || []).map((id, i) => ({ media: mediaOf(id), kind: REF_KINDS[kindOf(a, i)][0] })));
@@ -623,7 +632,7 @@ async function openInStudio(card, launch = false) {
   let a = argsOf(card);
   const images = {}, cid = conv.id;
   // Every reference goes with its role (the Studio's list keeps those of clips and sounds).
-  if (card.tool === "reference_video") a = { ...a, kinds: (a.references || []).map((_, i) => kindOf(a, i)) };
+  if (card.tool === "reference_video" || card.tool === "long_take") a = { ...a, kinds: (a.references || []).map((_, i) => kindOf(a, i)) };
   // The card's LoRAs become the form's stack for that engine.
   const folder = cardLoraFolder(card, a);
   if (folder) F.loraStack(folder).splice(0, Infinity, ...cardLorasParam(card, a));

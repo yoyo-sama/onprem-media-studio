@@ -317,7 +317,9 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     <Subject 3>", the cottage): at sea a cottage stood on a deck with the harbour wall behind,
     the fisherman appeared twice, and each segment took 9 min instead of 5. With split scenes
     the segments now take the characters and objects only; each place is in its scene's text.
-    A one-place take keeps its setting. (2026-11-21)
+    A one-place take keeps its setting. The rule needs each reference's role: when Gemma's card
+    gives no `kinds`, a sheet keeps the role of the card that made it (a setting sheet is a
+    setting); otherwise every image became a character and the settings went on. (2026-11-21)
 
 ## 8. Front end (for the port in step 4)
 
