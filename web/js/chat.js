@@ -142,7 +142,26 @@ function refOf(id) {
   const m = /^(C\d+)#(\d+)$/.exec(id || "");
   return m ? findCard(m[1])?.state.outputs?.[+m[2] - 1] || null : null;
 }
-const argsOf = card => ({ ...card.args, ...(drafts.get(card.id) || {}) });
+// A long take card that names no references takes the conversation's sheets made before it:
+// Gemma left them out once after making four, and the take forgot the fisherman (GB10
+// 2026-11-21). Subjects first, settings last; a list the user edited on the card stays theirs.
+const SHEET_RANK = c => (c.tool === "location_sheet" ? 2 : c.args?.kind === "other" ? 1 : 0);
+function conversationSheets(card) {
+  const sheets = [];
+  for (const m of conv?.messages || []) for (const c of m.cards || []) {
+    if (c.id === card.id) return sheets.sort((x, y) => SHEET_RANK(x) - SHEET_RANK(y)).slice(0, 7).map(c => `${c.id}#1`);
+    if (["character_sheet", "location_sheet"].includes(c.tool) && c.state?.outputs?.length) sheets.push(c);
+  }
+  return [];
+}
+function argsOf(card) {
+  const draft = drafts.get(card.id) || {}, a = { ...card.args, ...draft };
+  if (card.tool === "long_take" && !a.references?.length && !("references" in draft)) {
+    const refs = conversationSheets(card);
+    if (refs.length) return { ...a, references: refs, kinds: [] };
+  }
+  return a;
+}
 const imageIds = (card, a = argsOf(card)) => (CARD_UI[card.tool]?.images || []).flatMap(k => [].concat(a[k] || []));
 const fileName = ref => String(ref).split("/").pop();
 

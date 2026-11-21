@@ -46,6 +46,7 @@ const CARDS = [
        { state: { status: "done", outputs: ["outputs/harbour.png"] } }),
   card("C15", "long_take", { screenplay: "Harbour at dawn. A woman walks along the quay.", references: ["C8#1", "C14#1"] }),
   card("C8", "character_sheet", { description: "a woman in a red coat", photo: ["A1"], kind: "human", style: "none" }),
+  card("C16", "long_take", { screenplay: "Harbour at dawn. A woman walks along the quay.\n\nAt dusk she sits by the fire." }),
   card("C6", "join_videos", { clips: ["C3#1", "C9#1"] }, { invalid: "clips needs at least 2 items" }),
 ];
 const GALLERY_IMAGE = { key: "krea2-t2i/g1.png", filename: "g1.png", folder: "krea2-t2i", type: "image", url: "/outputs/krea2-t2i/g1.png",
@@ -530,6 +531,14 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   const roles15 = await page.$$eval("#refSubjects .rs-role", e => e.map(x => x.value));
   check(JSON.stringify(roles15) === '["character","setting"]', `the long take card's sheets without kinds: ${JSON.stringify(roles15)}`);
   check(jobs.length === before12, "the long take card with sheets submitted a job");
+  await page.click("#studioExitBtn");
+  await page.click('.rail-mode[data-mode="assistant"]');
+  // A long take card that names no references takes the conversation's sheets made before
+  // it, the subject first, each with its card's role.
+  await page.click('.chat-card[data-card="C16"] .primary-btn');
+  await page.waitForFunction(() => !document.getElementById("studioRelay").hidden, null, { timeout: 10000 }).catch(() => {});
+  const roles16 = await page.$$eval("#refSubjects .rs-role", e => e.map(x => x.value));
+  check(JSON.stringify(roles16) === '["character","setting"]', `the long take card without references: ${JSON.stringify(roles16)}`);
   await page.click("#studioExitBtn");
   await page.click('.rail-mode[data-mode="assistant"]');
   // A reload opens on the welcome; the conversation stays in the list.

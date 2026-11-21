@@ -355,7 +355,11 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     dans le texte de sa scène. Un plan-séquence en un seul lieu garde son décor. La règle a besoin
     du rôle de chaque référence : quand la carte de Gemma ne donne pas de `kinds`, une planche
     garde le rôle de la carte qui l'a faite (une planche de décor est un décor) ; sinon chaque
-    image devenait un personnage et les décors repartaient. (2026-11-21)
+    image devenait un personnage et les décors repartaient. Et quand la carte ne nomme aucune
+    référence (Gemma a une fois omis les quatre planches qu'il venait de faire, et la prise a
+    oublié le pêcheur), elle prend les planches de la conversation faites avant elle, les sujets
+    d'abord. Quatre rendus, quatre trous différents dans la carte de Gemma : ce que l'application
+    peut remplir, elle le remplit. (2026-11-21)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

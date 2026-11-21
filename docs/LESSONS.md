@@ -319,7 +319,11 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     the segments now take the characters and objects only; each place is in its scene's text.
     A one-place take keeps its setting. The rule needs each reference's role: when Gemma's card
     gives no `kinds`, a sheet keeps the role of the card that made it (a setting sheet is a
-    setting); otherwise every image became a character and the settings went on. (2026-11-21)
+    setting); otherwise every image became a character and the settings went on. And when the
+    card names no references at all (Gemma once left out the four sheets it had just made, and
+    the take forgot the fisherman), it takes the conversation's sheets made before it, subjects
+    first. Four renders, four different gaps in Gemma's card: what the app can fill, it fills.
+    (2026-11-21)
 
 ## 8. Front end (for the port in step 4)
 
