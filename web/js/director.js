@@ -269,7 +269,9 @@ function updateRelayButtons() {
 
 // The whole screenplay split by Gemma into consecutive segments, written for the H3
 // grammar with the subjects as stand-ins. It REPLACES the chain: asked first.
-async function composeRelay() {
+// `scenes`: how many scenes the screenplay holds, one per paragraph, when that is known (an
+// assistant card's screenplay), else 0.
+async function composeRelay(scenes = 0) {
   const r = d?.relay, text = $("relayScenario").value.trim();
   if (!r || !text) return;
   const durs = relayDurations(r.total, r.segMax), n = durs.length;
@@ -292,7 +294,7 @@ async function composeRelay() {
   tx(btn, "Splitting…");
   try {
     log("req", "Relay: splitting the screenplay into {n} segments with {llm}…", { n, llm: LLM });
-    const { segments: list, look, cuts } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects());
+    const { segments: list, look, cuts } = await P.composeScenario(F.llm, text, n, locDesc(), RELAY_MAX_SEGMENTS, relaySubjects(), scenes);
     // The end images stay with the segment of the same rank (a long take's key images). A
     // segment that starts a new scene is a cut (🎞): Ref2VA from the references.
     const ends = r.segments.map(seg => seg.endImage);
@@ -328,7 +330,8 @@ export async function splitLongTake(total) {
   const r = d?.relay;
   if (!r || r.segments.length > 1) return;
   if (total) { r.total = clampTotal(total); fitRelayToPlan(); }
-  await composeRelay();
+  // The card's screenplay has one paragraph per scene (the Director's rule).
+  await composeRelay(r.scenario.split(/\n\s*\n/).filter(p => p.trim()).length);
 }
 
 // A screenplay in the H3 layout becomes the chain as written: one card per segment, its
@@ -757,11 +760,18 @@ async function segmentDone(s, seg, i, total, job, began) {
 // (or, with none, segment 1's last frame) is the main character; but when its screenplay is in
 // the H3 layout and names no <Subject N>, it describes a scene, and that picture is the
 // scene's reference, the location.
+// A take of several scenes sends no setting reference: each scene's place is written in its
+// own segments. Every setting sheet went to every segment, and the subject was anchored in
+// the first one: the cottage stood in the open sea (GB10 2026-11-21). With only settings
+// given, they stay.
 function relayRefs(setting) {
   const scene = describedScene();
-  return [...relaySubjects().map((x, k) => ({ kind: k === 0 && scene ? "environment" : x.role || (k === 0 || x.kind === "human" ? "character" : "reference"),
+  const all = [...relaySubjects().map((x, k) => ({ kind: k === 0 && scene ? "environment" : x.role || (k === 0 || x.kind === "human" ? "character" : "reference"),
     desc: x.desc, ref: x.ref })),
     ...(setting ? [{ kind: "environment", ...setting }] : [])];
+  if (!d.relay.segments.some(seg => seg.scene)) return all;
+  const kept = all.filter(x => x.kind !== "environment");
+  return kept.length ? kept : all;
 }
 const describedScene = () => !d.refsGiven && !!P.parseScreenplay(d.relay.scenario) && !namesSubjects();
 const namesSubjects = () => [...d.relay.segments.map(seg => seg.prompt), d.relay.look.subjects, d.relay.look.retention]
@@ -990,7 +1000,7 @@ export function initDirector(h) {
   $("relayRunBtn").addEventListener("click", runRelay);
   $("relayStopBtn").addEventListener("click", () => { relayStop = true; updateRelayButtons(); });
   $("relayAssembleBtn").addEventListener("click", assembleRelay);
-  $("relayComposeBtn").addEventListener("click", composeRelay);
+  $("relayComposeBtn").addEventListener("click", () => composeRelay());
   // A screenplay file: read into the screenplay, then split as the button would (asked first
   // when segments would be lost). Nothing renders.
   $("relayImportBtn").addEventListener("click", () => $("relayImportFile").click());

@@ -300,6 +300,31 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     same Gemma call as "✨ Split the screenplay", which gave clean cuts on the narrative tests. The
     layout stays for files a user imports. (2026-11-21)
 
+56. **A flag next to the item beats a list of numbers beside it, and the face rule takes no
+    exception.** Gemma's split listed the segments that start a new shot in a separate `cuts`
+    array: on the fisherman's three scenes it listed only segment 2, so the home at dusk was
+    chained as a continuation and H3 cut on its own 1 s later; on the café take a continuous
+    segment jumped to another square. Each segment is now `{"new_shot", "text"}`, and a card's
+    screenplay, one paragraph per scene, tells the split how many scenes there are (one segment
+    per scene: each one after the first is a new shot, by code). The framing rule allowed "a
+    close shot of feet, hands or an object where the scenario asks": Gemma read "places her bag"
+    and "holding a cup" as asking, and the face was out of frame for half the take. The camera
+    may now come closer to the face only, which stays in view from the first moment. (2026-11-21)
+
+57. **A take of several scenes sends no setting reference.** Casting made four sheets for the
+    fisherman's story (him, the boat, the harbour, the cottage); every segment received all of
+    them, and the Ref2VA prompt anchors the character in the first setting ("<Subject 1> is in
+    <Subject 3>", the cottage): at sea a cottage stood on a deck with the harbour wall behind,
+    the fisherman appeared twice, and each segment took 9 min instead of 5. With split scenes
+    the segments now take the characters and objects only; each place is in its scene's text.
+    A one-place take keeps its setting. The rule needs each reference's role: when Gemma's card
+    gives no `kinds`, a sheet keeps the role of the card that made it (a setting sheet is a
+    setting); otherwise every image became a character and the settings went on. And when the
+    card names no references at all (Gemma once left out the four sheets it had just made, and
+    the take forgot the fisherman), it takes the conversation's sheets made before it, subjects
+    first. Four renders, four different gaps in Gemma's card: what the app can fill, it fills.
+    (2026-11-21)
+
 ## 8. Front end (for the port in step 4)
 
 39. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes
