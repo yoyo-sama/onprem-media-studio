@@ -300,6 +300,24 @@ carte « Vidéo longue », et a choisi de les regrouper selon ce plan :
    docs). D'ici là, il s'ouvre depuis la carte storyboard de l'assistant, et un projet storyboard
    enregistré se reprend depuis la carte narrative.
 
+**Rendu GB10, 2026-11-21** (`tools/qualify/narrative_take.js` pilote le vrai Studio avec
+Playwright : carte, planche du sujet depuis le brief, Générer, 40 s, découpage, chaîne). Un
+brief en français : une femme quitte son immeuble à l'aube par une rue pavée, plus tard lit une
+lettre dans un train, le soir marche pieds nus sur une plage au coucher du soleil, bottines à la
+main. 28,7 min : planche 148 s, segments 451/336/334/321 s, assemblage 91 s ; 39,58 s en
+1280×736, -17,8 LUFS. Gemma a placé les deux coupes là où la scène change (segments 2 et 3 ;
+segment 4 continu). L'identité a tenu sur les quatre segments (visage, cheveux, manteau,
+bottines, personne d'autre) ; les deux coupes sont franches, sur une image ; le raccord continu
+ne se voit pas. Trois défauts (LESSONS n°53) : chaque coupe prenait la dernière image du segment
+précédent comme lieu (la mer au bout de la rue, la ville par la fenêtre du train, un clocher sur
+la plage) ; la lumière et le son communs couvraient toute la journée, si bien que le segment 1
+marchait jusqu'à la mer ; « pieds nus » s'est perdu dans le découpage. Corrigé : une coupe que le
+découpage marque comme nouvelle scène (`scene`) ne prend que les références des sujets,
+n'extrait aucune image de transition et affiche « 🎞 Nouvelle scène » ; la lumière et le son
+communs ne gardent que ce que partagent toutes les scènes, un nouveau plan nomme son propre lieu,
+sa lumière et ses sons, et un changement d'apparence est écrit partout où il vaut. À rendre de
+nouveau avec le même brief.
+
 ## Résultats
 
 ### Étape 1, continuation latente (GB10, 2026-11-19)

@@ -279,6 +279,22 @@ redundant and chose to merge them along this plan:
    docs). Until then it opens from the assistant's storyboard card, and a saved storyboard
    project resumes from the narrative card.
 
+**GB10 render, 2026-11-21** (`tools/qualify/narrative_take.js` drives the real Studio with
+Playwright: card, subject sheet from the brief, Generate, 40 s, split, chain). A French brief:
+a woman leaves her building at dawn down a cobbled street, later reads a letter in a train,
+in the evening walks barefoot on a beach at sunset, boots in hand. 28.7 min: sheet 148 s,
+segments 451/336/334/321 s, stitch 91 s; 39.58 s at 1280×736, -17.8 LUFS. Gemma put the two
+cuts where the scenes change (segments 2 and 3; segment 4 continuous). Identity held in all
+four segments (face, hair, coat, boots, nobody else); both cuts are one-frame hard cuts; the
+continuous join does not show. Three defects (LESSONS #53): each cut took the previous
+segment's last frame as its location (the sea at the end of the street, the town in the train
+window, a spire on the beach); the shared light and sound covered the whole day, so segment 1
+walked to the sea; "barefoot" was lost in the split. Fixed: a cut the split marks as a new
+scene (`scene`) takes the subjects' references only, extracts no transition frame and shows
+"🎞 New scene"; the split's shared light and sound keep only what every scene shares, a new
+shot names its own place, light and sounds, and a change of appearance is stated wherever it
+holds. To render again with the same brief.
+
 ## Results
 
 ### Step 1, latent continuation (GB10, 2026-11-19)

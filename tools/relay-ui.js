@@ -637,6 +637,17 @@ const SPLIT = {
   await page.waitForFunction(() => /flowering tree/.test(document.querySelector('#relayList .relay-seg[data-seg="1"] textarea')?.value || ""));
   check(dialogs === 1, `replacing a rewritten segment asked ${dialogs} time(s)`);
   check(jobs.length === before, "splitting the screenplay submitted a job");
+  // The new scene renders from the references only: no frame of the previous place is
+  // extracted or sent, and the segment before it offers no transition image to choose.
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
+  await assembled(before);
+  lt = jobs.slice(before);
+  const sceneJob = lt.filter(j => j.pipeline === "h3-r2v").pop();
+  check(!lt.some(j => j.pipeline === "video-frames") && sceneJob && !sceneJob.params.continue_from && !sceneJob.params.image
+    && !(sceneJob.params.references || []).some(r => /^outputs\//.test(r)) && !/is the location/.test(sceneJob.params.prompt || ""),
+    `a new scene carries the previous place: ${JSON.stringify(lt.map(j => ({ pipeline: j.pipeline, refs: j.params.references })))}`);
+  check(await page.isHidden('#relayList .relay-seg[data-seg="1"] .relay-transitions'), "the segment before a new scene offers transition images");
 
   // Sheets under the references: one click, one job, the sheet joins the list with its role;
   // a character photo's sheet takes the photo's place. Writing the brief or adding a photo

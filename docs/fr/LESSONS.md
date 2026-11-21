@@ -300,6 +300,16 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     reprise, et le son propre à chaque clip est porté à -18 LUFS. Sur 47 s, l'identité a mieux
     tenu que la chaîne i2v, en moins de temps (33 min contre 50 min pour 50 s).
     docs/fr/LONG-VIDEO.md. (2026-11-20)
+53. **Une coupe vers une nouvelle scène n'emporte rien du lieu précédent, et l'ambiance commune ne
+    garde que ce que toutes les scènes partagent.** Dans une histoire en trois scènes (rue, train,
+    plage), une coupe qui prenait la dernière image du segment précédent comme lieu gardait ce
+    lieu : la ville se voyait par la fenêtre du train, un clocher sur la plage. Une lumière
+    commune « de l'aube à l'heure dorée » et un son de ville, de train et de vagues faisaient
+    marcher le segment 1 jusqu'à la mer à lui seul. Une coupe que le découpage de Gemma marque
+    comme nouvelle scène ne prend plus que les références des sujets et nomme son propre lieu, sa
+    lumière et ses sons ; une coupe manuelle garde l'image précédente (un autre angle sur le même
+    lieu). Le découpage reprend aussi chaque changement d'apparence que fait le scénario (pieds
+    nus) : omis, H3 gardait les bottines de la planche. docs/fr/LONG-VIDEO.md. (2026-11-21)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
