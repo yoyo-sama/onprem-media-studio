@@ -147,7 +147,7 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
         ["brief"]),
     "reference_video": (
         "Card: one MiniMax H3 clip that keeps characters, places and objects from reference images (and clips); "
-        "the user can add clips and sounds on the card, renders it from the card or opens the step-by-step director.",
+        "the user can add clips and sounds on the card and renders it from the card or the Studio form.",
         {"brief": _str("What happens in the clip, in English, one continuous shot. Name each reference by its id "
                        "alone, as the subject of the sentence (\"A1 rides a motorcycle along a jungle track, A2 "
                        "charging behind him\"), never \"the man from A1\": each id becomes that reference's "
@@ -188,8 +188,8 @@ ENGINE_NOTES = {
     "reference_video": "reference_video: H3 keeps characters, places and objects from up to 9 reference images "
                        "(each named by its id in the brief, with its kind); a clip a card made can join them, as a "
                        "subject or for its camera movement, and the user can add clips and sounds (a voice, music, "
-                       "ambience) on the card; rendered from the card, or through the director, which draws sheets "
-                       "first and takes the images only.",
+                       "ambience) on the card; rendered from the card, or from the Studio's \"Video from references\" "
+                       "form, which takes the same references.",
 }
 
 

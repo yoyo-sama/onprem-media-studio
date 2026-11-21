@@ -1,6 +1,6 @@
 // Studio page: goal cards, the generate form and its flows, the models, LoRA and
-// update panels, the monitor. The director (reference to video, long take) lives
-// in director.js, the gallery in gallery.js.
+// update panels, the monitor. The director (the long take) lives in director.js, the
+// gallery in gallery.js.
 //
 // Nothing here submits a job except the Generate button: choosing a card, a pipeline,
 // an engine or a language, dropping an image or editing a field starts nothing, and
@@ -18,7 +18,7 @@ import * as F from "./form.js";
 import { LORA_FOLDERS, folderForName, renderLoraStack, setLoraFiles } from "./lora-stack.js";
 import * as D from "./director.js";
 import * as G from "./generate.js";
-import { CARD_IMAGE_WORKFLOWS, attachAsset, initChat, loadRolePanel, reusePrompt as chatReusePrompt, showAssistant } from "./chat.js";
+import { CARD_IMAGE_WORKFLOWS, attachAsset, initChat, loadRolePanel, r2vCardBrief, reusePrompt as chatReusePrompt, showAssistant } from "./chat.js";
 
 const P = F.P;
 const brief = $("brief");
@@ -43,16 +43,11 @@ let activeScenario = "campaign";
 const GENERATE_LABELS = {
   text2image: L("Generate the images"), image2image: L("Generate the variants"),
   text2video: L("Generate the video"), image2video: L("Generate the video"),
-  sequence: L("Open the long take"),
+  sequence: L("Open the long take"), reference2video: L("Generate the video"),
   campaign: L("Start the campaign (posters + thumbnails + teaser)"),
 };
 function refreshGenerateLabel() {
-  const p = F.currentPipeline();
-  tx($("generateBtn"), p === "reference2video"
-    ? ($("skipSheetsToggle").checked ? "Generate the video" : "Open the studio (step 1/2)")
-    : GENERATE_LABELS[p] || "Generate");
-  // What skipping the sheets does is said only once it is ticked.
-  $("skipSheetsHint").hidden = !F.hasControl("skipSheets") || !$("skipSheetsToggle").checked;
+  tx($("generateBtn"), GENERATE_LABELS[F.currentPipeline()] || "Generate");
 }
 
 function selectScenario(scenario, pipeline = SCENARIOS[scenario].pipeline) {
@@ -67,7 +62,6 @@ const usePipeline = p => selectScenario(p === "image2image" ? "localization" : "
 const CONTROL_WRAPS = {
   image: "imageInputWrap", duration: "durationWrap", markets: "marketsWrap", seq: "seqWrap",
   variants: "variantsWrap", ratio: "ratioWrap", style: "styleWrap",
-  sheetTemplate: "sheetTemplateWrap", skipSheets: "skipSheetsWrap",
 };
 
 // A goal card with its own pipeline (long take, ad campaign) shows it alone and
@@ -106,7 +100,8 @@ function updateModelLabel() {
   if ($("lastImageWrap").hidden) $("lastImageInput").value = "";
   const ctx = F.refCtx(wf);
   $("refExtrasWrap").hidden = !ctx;
-  for (const [cls, on] of [[".r2v-only", ctx === "r2v"], [".i2i-only", ctx === "i2i"], [".seq-only", ctx === "seq"]])
+  for (const [cls, on] of [[".r2v-only", ctx === "r2v"], [".i2i-only", ctx === "i2i"], [".seq-only", ctx === "seq"],
+                           [".sheets-only", ctx === "seq" || ctx === "r2v"]])
     document.querySelectorAll(`#refExtrasWrap ${cls}, #imageInputWrap ${cls}`).forEach(el => { el.hidden = !on; });
   // A long take's input image is its first frame, and its list is its references. Where the
   // form takes both, the gallery offers both (CSS on body[data-gallery-use]).
@@ -114,56 +109,17 @@ function updateModelLabel() {
   if (both) document.body.dataset.galleryUse = both;
   else delete document.body.dataset.galleryUse;
   tx($("imageInputLabel"), ctx === "seq" ? "First frame (optional)" : "Input image");
-  tx($("refExtrasTitle"), ctx === "seq" ? "References (optional)" : "Extra references");
-  if (ctx === "r2v") tx($("refCapLabel"), "Extra references: up to 7 images, 3 clips and 3 sounds");
+  tx($("refExtrasTitle"), ctx === "seq" ? "References (optional)" : ctx === "r2v" ? "References" : "Extra references");
+  if (ctx === "r2v") tx($("refCapLabel"), "Up to 9 images, 3 clips and 3 sounds (12 in all)");
   else tx($("refCapLabel"), ctx === "seq" ? "Reference images (at most {max})" : "Extra reference images (at most {max})", { max: F.REF_CAPS[ctx] || 7 });
   renderRefs();
   renderFormLoras();
   updateResumeButton();
-  D.refreshSessionBar();
 }
 
-// ── Style and sheet layout ────────────────────────────────────────────────────
+// ── Style ─────────────────────────────────────────────────────────────────────
 function renderStyleOptions() {
   fillSelect($("styleSelect"), Object.entries(P.STYLE_PACKS).map(([id, s]) => [id, s.label]), $("styleSelect").value || "cinematic");
-}
-
-// Layout sketch of each sheet template, drawn in the picker: the choice is made by
-// eye on the arrangement of the boxes. The <select> stays the source of truth.
-const WIRE_STRIP = `<rect x="6" y="61" width="108" height="6" rx="2" opacity=".3"/>`;
-const SHEET_WIRES = {
-  turnaround: `<rect x="6" y="6" width="26" height="22" rx="2" opacity=".75"/><rect x="38" y="11" width="10" height="10" rx="2" opacity=".5"/><rect x="51" y="11" width="10" height="10" rx="2" opacity=".5"/><rect x="64" y="11" width="10" height="10" rx="2" opacity=".5"/><rect x="77" y="11" width="10" height="10" rx="2" opacity=".5"/><rect x="94" y="9" width="9" height="7" rx="2" opacity=".35"/><rect x="105" y="9" width="9" height="7" rx="2" opacity=".35"/><rect x="94" y="19" width="9" height="7" rx="2" opacity=".35"/><rect x="6" y="33" width="24" height="24" rx="2" opacity=".75"/><rect x="34" y="33" width="24" height="24" rx="2" opacity=".75"/><rect x="62" y="33" width="24" height="24" rx="2" opacity=".75"/><rect x="90" y="33" width="24" height="24" rx="2" opacity=".75"/>`,
-  expressions: `<rect x="6" y="5" width="11" height="9" rx="2" opacity=".5"/><rect x="6" y="16" width="11" height="9" rx="2" opacity=".5"/><rect x="6" y="27" width="11" height="9" rx="2" opacity=".5"/><rect x="6" y="38" width="11" height="9" rx="2" opacity=".5"/><rect x="6" y="49" width="11" height="9" rx="2" opacity=".5"/><rect x="24" y="5" width="28" height="42" rx="2" opacity=".75"/><rect x="56" y="5" width="28" height="42" rx="2" opacity=".75"/><rect x="88" y="5" width="26" height="42" rx="2" opacity=".75"/><rect x="24" y="51" width="9" height="7" rx="2" opacity=".35"/><rect x="36" y="51" width="9" height="7" rx="2" opacity=".35"/><rect x="48" y="51" width="9" height="7" rx="2" opacity=".35"/>`,
-  portrait: `<rect x="6" y="6" width="34" height="51" rx="2" opacity=".8"/><rect x="46" y="6" width="12" height="11" rx="2" opacity=".5"/><rect x="61" y="6" width="12" height="11" rx="2" opacity=".5"/><rect x="76" y="6" width="12" height="11" rx="2" opacity=".5"/><rect x="91" y="6" width="12" height="11" rx="2" opacity=".5"/><rect x="106" y="6" width="8" height="11" rx="2" opacity=".5"/><rect x="46" y="22" width="20" height="35" rx="2" opacity=".75"/><rect x="70" y="22" width="20" height="35" rx="2" opacity=".75"/><rect x="94" y="22" width="20" height="35" rx="2" opacity=".75"/>`,
-  wardrobe: `<rect x="6" y="6" width="24" height="19" rx="2" opacity=".8"/><rect x="6" y="29" width="19" height="28" rx="2" opacity=".75"/><rect x="28" y="29" width="19" height="28" rx="2" opacity=".75"/><rect x="50" y="29" width="19" height="28" rx="2" opacity=".75"/><rect x="72" y="29" width="19" height="28" rx="2" opacity=".75"/><rect x="96" y="6" width="18" height="15" rx="2" opacity=".45"/><rect x="96" y="24" width="18" height="15" rx="2" opacity=".45"/><rect x="96" y="42" width="18" height="15" rx="2" opacity=".45"/>`,
-  action: `<rect x="6" y="6" width="17" height="23" rx="2" opacity=".75"/><rect x="26" y="6" width="17" height="23" rx="2" opacity=".75"/><rect x="46" y="6" width="17" height="23" rx="2" opacity=".75"/><rect x="66" y="6" width="17" height="23" rx="2" opacity=".75"/><rect x="6" y="33" width="17" height="24" rx="2" opacity=".55"/><rect x="26" y="33" width="17" height="24" rx="2" opacity=".55"/><rect x="46" y="33" width="17" height="24" rx="2" opacity=".55"/><rect x="88" y="6" width="26" height="20" rx="2" opacity=".8"/><rect x="88" y="29" width="11" height="9" rx="2" opacity=".5"/><rect x="103" y="29" width="11" height="9" rx="2" opacity=".5"/><rect x="88" y="41" width="11" height="9" rx="2" opacity=".35"/><rect x="103" y="41" width="11" height="9" rx="2" opacity=".35"/>`,
-};
-function renderSheetTemplateOptions() {
-  const sel = $("sheetTemplateSelect");
-  const entries = [["auto", L("Auto (follows the subject)"), SHEET_WIRES.turnaround, true],
-    ...Object.entries(P.SHEET_TEMPLATES).map(([id, v]) => [id, v.label, SHEET_WIRES[id], false])];
-  const cur = entries.some(([id]) => id === sel.value) ? sel.value : "auto";
-  fillSelect(sel, entries.map(([id, label]) => [id, label]), cur);
-  const grid = $("sheetTemplateWrap").querySelector(".tpl-grid");
-  grid.replaceChildren(...entries.map(([id, label, wire, faded]) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "tpl-card";
-    b.dataset.tpl = id;
-    b.setAttribute("aria-pressed", String(id === cur));
-    b.innerHTML = `<svg viewBox="0 0 120 72" aria-hidden="true" fill="currentColor">${faded ? `<g opacity=".55">${wire}${WIRE_STRIP}</g>` : wire + WIRE_STRIP}</svg><span class="tpl-name"></span>`;
-    b.querySelector(".tpl-name").textContent = label;
-    b.addEventListener("click", () => selectSheetTemplate(id));
-    return b;
-  }));
-  translateTree(grid);
-}
-function selectSheetTemplate(id) {
-  const sel = $("sheetTemplateSelect");
-  if (sel.value === id) return;
-  sel.value = id;
-  $("sheetTemplateWrap").querySelectorAll(".tpl-card").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.tpl === id)));
-  sel.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 // ── Input image ───────────────────────────────────────────────────────────────
@@ -185,7 +141,7 @@ function useAsInput(a) {
   const video = a.type === "video", ctx = F.refCtx();
   if (!video && F.hasControl("image")) setSelectedAsset(a);
   else if (ctx && (!video || ctx === "r2v")) useAsRef(a);
-  else if (video) notice(false, "This pipeline takes no clip: a clip is a reference of “Consistent character + setting”.");
+  else if (video) notice(false, "This pipeline takes no clip: a clip is a reference of “Video from references”.");
   else {
     usePipeline(F.currentPipeline() === "text2video" ? "image2video" : "image2image");
     setSelectedAsset(a);
@@ -235,9 +191,10 @@ function renderMarkets() {
 
 const txAria = (el, text) => { el.setAttribute("aria-label", text); el.title = text; };
 
-// ── Extra references and H3 subjects ──────────────────────────────────────────
-// Reference to video also takes clips and sounds (7 images, 3 clips, 3 sounds next to
-// the sheets); the other lists take images only.
+// ── References and H3 subjects ────────────────────────────────────────────────
+// Video from references also takes clips and sounds (9 images, 3 clips, 3 sounds, 12 in
+// all); the other lists take images only. A reference image's role is first a character,
+// then an object, as on the assistant's card; the user changes it on its row.
 function addRefs(items) {
   const ctx = F.refCtx(), list = F.refList(ctx);
   if (!ctx) return;
@@ -247,36 +204,43 @@ function addRefs(items) {
     if (items.length > room) notice(false, "At most {max} images here: the extra ones were ignored.", { max });
   } else {
     const room = Object.fromEntries(Object.entries(F.R2V_MEDIA_CAPS).map(([m, max]) => [m, max - list.filter(it => F.itemMedia(it) === m).length]));
-    const kept = items.filter(it => room[F.itemMedia(it)]-- > 0);
-    list.push(...kept);
-    if (kept.length < items.length) notice(false, "At most 7 images, 3 clips and 3 sounds here: the extra files were ignored.");
+    let total = F.R2V_MAX_REFS - list.length;
+    const kept = items.filter(it => total > 0 && room[F.itemMedia(it)]-- > 0 && total-- > 0);
+    for (const it of kept) {
+      if (!it.kind && F.itemMedia(it) === "image") it.kind = list.some(x => F.itemMedia(x) === "image") ? "object" : "character";
+      list.push(it);
+    }
+    if (kept.length < items.length) notice(false, "At most 9 images, 3 clips and 3 sounds here (12 in all): the extra files were ignored.");
   }
   renderRefs();
 }
 
-// Subjects of the next Ref2VA job, in their order. Skipping the sheets makes the first
-// reference image the character, the others free references; a clip can be a subject too.
+// Subjects of the next Ref2VA job, in their order; a clip can be a subject too.
 const SUBJECT_KINDS = { character: L("character"), environment: L("setting"), reference: L("reference") };
-const r2vPlan = () => F.r2vPlan($("skipSheetsToggle").checked);
-const plannedSubjects = () => r2vPlan().entries.filter(e => SUBJECT_KINDS[e.kind]).map(e => e.kind);
+const plannedSubjects = () => F.r2vPlan().entries.filter(e => SUBJECT_KINDS[e.kind]).map(e => e.kind);
 
-// A long take's sheets, from the brief or from a character photo: one click, one job; the
-// sheet joins the references (a photo's sheet takes the photo's place). No approval step.
+// Sheets of the references (a long take, a video from references), from the brief or from
+// a character photo: one click, one job; the sheet joins the references (a photo's sheet
+// takes the photo's place). No approval step.
 let sheetBusy = false;
 async function makeSheet(kind, photo = null) {
   if (sheetBusy) return;
+  const ctx = F.refCtx();
   sheetBusy = true;
   const btns = [$("seqCharSheetBtn"), $("seqSetSheetBtn")];
   btns.forEach(b => { b.disabled = true; });
   renderRefs();
   try {
-    const ref = await D.longTakeSheet(kind, photo);
-    const list = F.refList("seq");
+    const ref = await D.referenceSheet(kind, photo, ctx === "r2v" ? "reference2video" : "relay");
+    const list = F.refList(ctx);
     const item = { name: ref.split("/").pop(), ref, kind: kind === "setting" ? "setting" : "character", sheet: true };
     const at = photo ? list.indexOf(photo) : -1;
+    const max = ctx === "r2v" ? F.R2V_MEDIA_CAPS.image : F.REF_CAPS.seq;
+    const room = ctx === "r2v" ? list.filter(it => F.itemMedia(it) === "image").length < max && list.length < F.R2V_MAX_REFS
+                               : list.length < max;
     if (at >= 0) list.splice(at, 1, item);
-    else if (list.length < F.REF_CAPS.seq) list.push(item);
-    else notice(false, "At most {max} images here: the extra ones were ignored.", { max: F.REF_CAPS.seq });
+    else if (room) list.push(item);
+    else notice(false, "At most {max} images here: the extra ones were ignored.", { max });
     log("ok", kind === "setting" ? "Setting sheet added to the references." : "Subject sheet added to the references.");
   } catch (err) { warn(err); } finally {
     sheetBusy = false;
@@ -286,7 +250,7 @@ async function makeSheet(kind, photo = null) {
 }
 
 function renderRefs() {
-  const ctx = F.refCtx(), plan = ctx === "r2v" ? r2vPlan() : null;
+  const ctx = F.refCtx(), plan = ctx === "r2v" ? F.r2vPlan() : null;
   $("refImagesInput").accept = ctx === "r2v" ? "image/*,video/*,audio/*" : "image/*";
   $("refSubjects").replaceChildren(...F.refList(ctx).map((img, i) => {
     const row = document.createElement("div");
@@ -310,9 +274,9 @@ function renderRefs() {
     txAria(x, "Remove this reference");
     x.addEventListener("click", () => { F.refList(ctx).splice(i, 1); renderRefs(); });
     row.append(tag, name);
-    // A clip or a sound has a role, which decides its label: redraw on change. So does each
-    // reference of a long take (character, setting or object).
-    if ((ctx === "r2v" && F.itemMedia(img) !== "image") || ctx === "seq") {
+    // Each reference has a role (character, setting or object; a clip's camera movement; a
+    // sound's voice, music or ambience), which decides its label: redraw on change.
+    if (ctx === "r2v" || ctx === "seq") {
       const role = document.createElement("select");
       role.className = "rs-role";
       fillSelect(role, F.MEDIA_KINDS[F.itemMedia(img)].map(k => [k, t(F.REF_KINDS[k][1])]), F.itemRole(img));
@@ -320,8 +284,8 @@ function renderRefs() {
       role.addEventListener("change", () => { img.kind = role.value; renderRefs(); });
       row.appendChild(role);
     }
-    // A long take's character photo can become its sheet (five views), in its place.
-    if (ctx === "seq" && F.itemRole(img) === "character" && !img.sheet) {
+    // A character photo can become its sheet (five views), in its place.
+    if ((ctx === "seq" || ctx === "r2v") && F.itemMedia(img) === "image" && F.itemRole(img) === "character" && !img.sheet) {
       const b = document.createElement("button");
       b.type = "button"; b.className = "rs-sheet"; b.textContent = "✨ Sheet";
       txAttr(b, "title", "Draws a five-view sheet of this photo's subject (Qwen Image 2.1, one job); the sheet takes the photo's place");
@@ -432,12 +396,12 @@ function dropZone(el, { max = () => 1, count = () => 0, put, putAsset, media = (
     chain = chain.then(() => handle(files, asset)).catch(warn);
   });
 }
-const refMax = () => F.refCtx() === "r2v" ? Object.values(F.R2V_MEDIA_CAPS).reduce((a, b) => a + b, 0) : F.REF_CAPS[F.refCtx()] || 0;
+const refMax = () => F.refCtx() === "r2v" ? F.R2V_MAX_REFS : F.REF_CAPS[F.refCtx()] || 0;
 function initDrops() {
   dropZone($("imageInputWrap"), { put: f => setInputFile($("imageInput"), f), putAsset: setSelectedAsset });
   dropZone($("lastImageWrap"), { put: f => setInputFile($("lastImageInput"), f) });
   dropZone($("refDropZone"), {
-    // Reference to video: clips and sounds too, capped per media by addRefs.
+    // Video from references: clips and sounds too, capped per media and in all by addRefs.
     media: () => F.refCtx() === "r2v",
     max: refMax,
     count: () => F.refList().length,
@@ -496,8 +460,9 @@ async function generate() {
   btn.disabled = true;
   // The director's first step and the auto enrichment wait on Gemma before any job:
   // the button says so, with the time spent.
-  const busy = wf.pipeline === "reference2video" ? L("{llm} is preparing the director… {time}")
-    : wf.pipeline === "sequence" && (hasInputImage() || F.refList("seq").length) ? L("{llm} is describing the images… {time}")
+  const busy = (wf.pipeline === "sequence" && (hasInputImage() || F.refList("seq").length))
+      || (wf.pipeline === "reference2video" && F.refList("r2v").some(it => F.itemMedia(it) === "image"))
+    ? L("{llm} is describing the images… {time}")
     : autoEnrich && wf.enrich !== "builtin" ? L("{llm} is enriching the brief… {time}") : null;
   const start = Date.now();
   const tick = () => {
@@ -513,10 +478,8 @@ async function generate() {
       await enrich(wf);
     } else if (autoEnrich) log("sys", "{workflow} builds its own prompts: brief sent as it is.", { workflow: t(wf.label) });
     const seed = F.formSeed();
-    if (wf.pipeline === "reference2video") {
-      if ($("skipSheetsToggle").checked) await D.r2vWithoutSheets(seed);
-      else await D.startR2V(seed);
-    } else if (wf.pipeline === "sequence") await D.startLongTake(seed, await longTakeImages());
+    if (wf.pipeline === "reference2video") await generateR2V(seed);
+    else if (wf.pipeline === "sequence") await D.startLongTake(seed, await longTakeImages());
     else if (wf.pipeline === "campaign") generateCampaign(seed);
     else await generatePlain(wf, seed);
   } catch (err) { warn(err); generateError(err?.message ?? String(err)); }
@@ -546,6 +509,21 @@ async function generatePlain(wf, seed) {
     count, duration, loras, image, last, refs, seed, mode: $("mossModeSelect").value }).forEach(detach);
 }
 
+// Video from references: one H3 Ref2VA job on the list, each reference in its role and
+// under its H3 label; Gemma's vision describes each image first. Nothing to review.
+async function generateR2V(seed) {
+  const { entries, dropped } = F.r2vPlan();
+  if (!entries.some(e => e.media !== "audio"))
+    throw new Error(t("Add at least one reference image or clip: a photo or a sheet of the subject, or make a sheet from the brief."));
+  if (dropped) log("warn", "References limited to 9 images, 3 clips and 3 sounds: {n} ignored.", { n: dropped });
+  const prompt = await F.r2vPrompt(entries, F.brief());
+  const references = await Promise.all(entries.map(e => F.imageRef(e.item)));
+  const duration = F.formDuration();
+  detach(runJob("h3-r2v", { prompt, duration, seed, loras: F.formLoras(), aspect: $("ratioSelect").value, references }, {
+    origin: "reference2video", label: ["Video from references (MiniMax H3)"],
+    sub: ["{info} · seed {seed}", { info: `${duration} s · ${references.length} ref.`, seed }] }));
+}
+
 // Posters, thumbnails and a social image (Krea 2), plus a vertical H3 teaser.
 function generateCampaign(seed) {
   G.runCampaign({ text: F.brief(), styleId: F.currentStyleId(), count: clampInt($("variants").value, 1, 4, 3),
@@ -563,7 +541,7 @@ const CARD_FORM = {
   video_from_image: a => ["image2video", "h3_i2v", a.prompt],
   long_take: a => ["sequence", "h3_sequence", a.screenplay],
   campaign: a => ["campaign", "campaign", a.brief],
-  reference_video: a => ["reference2video", "h3_r2v", a.brief],
+  reference_video: a => ["reference2video", "h3_r2v", r2vCardBrief(a)],
 };
 async function openCardInForm(tool, a, image, quiet = false) {
   setMode("studio");
@@ -578,7 +556,7 @@ async function openCardInForm(tool, a, image, quiet = false) {
   if (a.mode) $("mossModeSelect").value = a.mode;
   if (a.count || a.variants) $("variants").value = a.count || a.variants;
   if (a.duration) $("videoDuration").value = a.duration;
-  if (a.style && F.hasControl("style")) { $("styleSelect").value = a.style; D.setStyle(a.style); }
+  if (a.style && F.hasControl("style")) $("styleSelect").value = a.style;
   const img = id => image(id) && { name: image(id).name, ref: image(id).ref };
   if (a.image) setSelectedAsset({ ref: img(a.image).ref, filename: img(a.image).name });
   // A long take's first frame is the input image: none on the card, none in the form.
@@ -609,8 +587,8 @@ async function openCardInForm(tool, a, image, quiet = false) {
   brief.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
-// A director card's own button: the form takes the card over, then its click is the
-// Generate click, which opens the director (references, or the long take).
+// A long take card's own button: the form takes the card over, then its click is the
+// Generate click, which opens the long take.
 async function launchDirector(tool, a, image) {
   await openCardInForm(tool, a, image, true);
   log("sys", "Director started from an assistant card.");
@@ -715,7 +693,7 @@ const INSTRUCTION_LABELS = {
   krea2: L("Krea 2 (image from a text, campaign)"),
   qwen21: L("Qwen Image 2.1 (image from a text, image editing)"),
   h3_video: L("MiniMax H3 (video from a text or an image, sequence)"),
-  h3_r2v: L("MiniMax H3 references (consistent character + setting)"),
+  h3_r2v: L("MiniMax H3 (video from references)"),
   storyboard: L("Storyboard brief (sheets and shots)"),
 };
 let instrSaved = {};
@@ -967,9 +945,6 @@ function initForm() {
   }));
   $("pipelineSelect").addEventListener("change", updateModelOptions);
   $("modelSelect").addEventListener("change", () => { updateModelLabel(); });
-  $("styleSelect").addEventListener("change", () => D.setStyle($("styleSelect").value));
-  $("sheetTemplateSelect").addEventListener("change", () => D.setTemplate($("sheetTemplateSelect").value));
-  $("skipSheetsToggle").addEventListener("change", () => { renderRefs(); refreshGenerateLabel(); });
   $("assetChipClear").addEventListener("click", clearSelectedAsset);
   $("seqCharSheetBtn").addEventListener("click", () => makeSheet("char"));
   $("seqSetSheetBtn").addEventListener("click", () => makeSheet("setting"));
@@ -1041,7 +1016,6 @@ function boot() {
   initForm();
   renderStyleOptions();
   fillSelect($("mossModeSelect"), F.MOSS_MODES, F.MOSS_DEFAULT_MODE);
-  renderSheetTemplateOptions();
   renderMarkets();
   renderAutoEnrich();
   initDrops();

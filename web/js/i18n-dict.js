@@ -2,16 +2,6 @@
 // Most entries come from 1.4; tests/test_i18n.py checks that none is missing.
 // Interface text says tu / tú / du.
 export const DICT = {
-  "#{n} · import · {status}": {
-    fr: "#{n} · import · {status}",
-    es: "#{n} · importación · {status}",
-    de: "#{n} · Import · {status}",
-  },
-  "#{n} · seed {seed} · {status}": {
-    fr: "#{n} · seed {seed} · {status}",
-    es: "#{n} · semilla {seed} · {status}",
-    de: "#{n} · Seed {seed} · {status}",
-  },
   "+ New card": {
     fr: "+ Nouvelle carte",
     es: "+ Nueva tarjeta",
@@ -42,11 +32,6 @@ export const DICT = {
     es: "Un plano de vídeo de unos segundos, listo para difundir.",
     de: "Eine Videoeinstellung von wenigen Sekunden, sendefertig.",
   },
-  "Accessories": {
-    fr: "Accessoires",
-    es: "Accesorios",
-    de: "Accessoires",
-  },
   "Action enrichment unavailable ({error}): text kept.": {
     fr: "Enrichissement de l'action indisponible ({error}) : texte conservé.",
     es: "Enriquecimiento de la acción no disponible ({error}): texto conservado.",
@@ -56,11 +41,6 @@ export const DICT = {
     fr: "Poses d'action + équipement",
     es: "Poses de acción + equipo",
     de: "Action-Posen + Ausrüstung",
-  },
-  "Active": {
-    fr: "Active",
-    es: "Activa",
-    de: "Aktiv",
   },
   "Adapts an existing image to several markets.": {
     fr: "Adapte une image existante à plusieurs marchés.",
@@ -137,21 +117,6 @@ export const DICT = {
     es: "Aplicar y regenerar",
     de: "Übernehmen und neu generieren",
   },
-  "Approve the character and setting sheets to enable the launch.": {
-    fr: "Valide les planches personnage et décor pour activer le lancement.",
-    es: "Aprueba las láminas de personaje y decorado para activar el lanzamiento.",
-    de: "Gib die Figuren- und Schauplatzbögen frei, um den Start zu aktivieren.",
-  },
-  "Approve the sheets": {
-    fr: "Valider les planches",
-    es: "Aprobar las láminas",
-    de: "Bögen freigeben",
-  },
-  "Architecture": {
-    fr: "Architecture",
-    es: "Arquitectura",
-    de: "Architektur",
-  },
   "Art director / Motion designer": {
     fr: "Directeur artistique / Motion designer",
     es: "Director artístico / Motion designer",
@@ -191,11 +156,6 @@ export const DICT = {
     fr: "Auto",
     es: "Auto",
     de: "Automatisch",
-  },
-  "Auto (follows the subject)": {
-    fr: "Auto (selon le sujet)",
-    es: "Auto (según el sujeto)",
-    de: "Auto (je nach Motiv)",
   },
   "Auto enrichment of the brief with {llm}…": {
     fr: "Enrichissement automatique du brief avec {llm}…",
@@ -377,16 +337,6 @@ export const DICT = {
     es: "Un vídeo no se puede adjuntar a un mensaje: adjunta una imagen.",
     de: "Ein Video kann nicht an eine Nachricht angehängt werden: Häng ein Bild an.",
   },
-  "This pipeline takes no clip: a clip is a reference of “Consistent character + setting”.": {
-    fr: "Ce pipeline ne prend pas de vidéo : une vidéo sert de référence dans « Personnage + décor cohérents ».",
-    es: "Este pipeline no admite vídeos: un vídeo sirve de referencia en «Personaje + decorado coherentes».",
-    de: "Diese Pipeline nimmt kein Video: Ein Video dient als Referenz in „Konsistente Figur + Schauplatz“.",
-  },
-  "Consistent character + setting (MiniMax H3)": {
-    fr: "Personnage + décor cohérents (MiniMax H3)",
-    es: "Personaje + decorado coherentes (MiniMax H3)",
-    de: "Konsistente Figur + Schauplatz (MiniMax H3)",
-  },
   "Contact sheet": {
     fr: "Planche contact",
     es: "Hoja de contactos",
@@ -471,11 +421,6 @@ export const DICT = {
     fr: "Supprimé le {date}",
     es: "Eliminado el {date}",
     de: "Gelöscht am {date}",
-  },
-  "Describe the character and the setting in the brief before generating.": {
-    fr: "Décris le personnage et le décor dans le brief avant de générer.",
-    es: "Describe el personaje y el decorado en el brief antes de generar.",
-    de: "Beschreibe Figur und Schauplatz im Briefing, bevor du generierst.",
   },
   "Describe the scene in the brief before generating.": {
     fr: "Décris la scène dans le brief avant de générer.",
@@ -582,16 +527,6 @@ export const DICT = {
     es: "Cada imagen recibe un número de sujeto, y cada vídeo y cada sonido su propia etiqueta, usados automáticamente en el prompt. Un vídeo se envía sin sonido: para usar su sonido, añade el sonido en sí.",
     de: "Jedes Bild erhält eine Motivnummer, jeder Clip und jeder Ton eine eigene Marke, die automatisch im Prompt verwendet werden. Ein Clip wird ohne Ton gesendet: Um seinen Ton zu nutzen, füge den Ton selbst hinzu.",
   },
-  "Extra references: up to 7 images, 3 clips and 3 sounds": {
-    fr: "Références en plus : jusqu'à 7 images, 3 vidéos et 3 sons",
-    es: "Referencias adicionales: hasta 7 imágenes, 3 vídeos y 3 sonidos",
-    de: "Zusätzliche Referenzen: bis zu 7 Bilder, 3 Clips und 3 Töne",
-  },
-  "At most 7 images, 3 clips and 3 sounds here: the extra files were ignored.": {
-    fr: "7 images, 3 vidéos et 3 sons au plus ici : les autres fichiers ont été ignorés.",
-    es: "Aquí caben como máximo 7 imágenes, 3 vídeos y 3 sonidos: los demás archivos se han ignorado.",
-    de: "Hier höchstens 7 Bilder, 3 Clips und 3 Töne: Die übrigen Dateien wurden ignoriert.",
-  },
   "Not sent (over the limit)": {
     fr: "Non envoyée (au-delà de la limite)",
     es: "No enviada (por encima del límite)",
@@ -611,11 +546,6 @@ export const DICT = {
     fr: "{name} n'est ni une image, ni une vidéo, ni un son.",
     es: "{name} no es una imagen, ni un vídeo, ni un sonido.",
     de: "{name} ist weder ein Bild noch ein Clip noch ein Ton.",
-  },
-  "Edit the fields then regenerate to make a new variant; click a thumbnail to choose the active sheet.": {
-    fr: "Modifie les champs puis régénère pour créer une variante ; clique sur une vignette pour choisir la planche active.",
-    es: "Edita los campos y regenera para crear una variante; haz clic en una miniatura para elegir la lámina activa.",
-    de: "Bearbeite die Felder und generiere neu, um eine Variante zu erstellen; klicke auf ein Vorschaubild, um den aktiven Bogen zu wählen.",
   },
   "Editing instruction": {
     fr: "Instruction d'édition",
@@ -812,11 +742,6 @@ export const DICT = {
     es: "Error",
     de: "Fehlgeschlagen",
   },
-  "Face": {
-    fr: "Visage",
-    es: "Rostro",
-    de: "Gesicht",
-  },
   "Favourite": {
     fr: "Favori",
     es: "Favorito",
@@ -866,11 +791,6 @@ export const DICT = {
     fr: "Recadrer la vue sur les cartes",
     es: "Encuadrar la vista en las tarjetas",
     de: "Ansicht an Karten anpassen",
-  },
-  "Form": {
-    fr: "Forme",
-    es: "Forma",
-    de: "Form",
   },
   "From": {
     fr: "Du",
@@ -942,11 +862,6 @@ export const DICT = {
     es: "Generar las imágenes",
     de: "Bilder generieren",
   },
-  "Generate the sheet": {
-    fr: "Générer la planche",
-    es: "Generar la lámina",
-    de: "Bogen generieren",
-  },
   "Generate the variants": {
     fr: "Générer les variantes",
     es: "Generar las variantes",
@@ -992,11 +907,6 @@ export const DICT = {
     es: "Estilo H3 (LoRA)",
     de: "H3-Stil (LoRA)",
   },
-  "Hair": {
-    fr: "Cheveux",
-    es: "Cabello",
-    de: "Haar",
-  },
   "Handheld": {
     fr: "Caméra portée",
     es: "Cámara en mano",
@@ -1026,16 +936,6 @@ export const DICT = {
     fr: "Je pars de fiches personnage et décor",
     es: "Parto de fichas de personaje y escenario",
     de: "Ich starte von Charakter- und Kulissenblättern",
-  },
-  "Identity anchored": {
-    fr: "Identité ancrée",
-    es: "Identidad anclada",
-    de: "Identität verankert",
-  },
-  "Identity to approve": {
-    fr: "Identité à valider",
-    es: "Identidad por aprobar",
-    de: "Identität freizugeben",
   },
   "Image": {
     fr: "Image",
@@ -1091,11 +991,6 @@ export const DICT = {
     fr: "Importé : {name}",
     es: "Importado: {name}",
     de: "Importiert: {name}",
-  },
-  "In addition to the character and setting sheets. None required.": {
-    fr: "En plus des planches personnage et décor. Aucune obligatoire.",
-    es: "Además de las láminas de personaje y decorado. Ninguna obligatoria.",
-    de: "Zusätzlich zu den Figuren- und Schauplatzbögen. Keine erforderlich.",
   },
   "Indexing in progress…": {
     fr: "Indexation en cours…",
@@ -1181,11 +1076,6 @@ export const DICT = {
     fr: "Krea 2 + MiniMax H3",
     es: "Krea 2 + MiniMax H3",
     de: "Krea 2 + MiniMax H3",
-  },
-  "Krea 2 encodes no negative prompt: say every constraint positively. Enriching again rewrites only the subject's description; the sheet layout is always put back.": {
-    fr: "Krea 2 n'encode aucun prompt négatif : formule chaque contrainte positivement. Un nouvel enrichissement ne réécrit que la description du sujet ; la mise en page de la planche est toujours remise.",
-    es: "Krea 2 no codifica ningún prompt negativo: formula cada restricción en positivo. Un nuevo enriquecimiento solo reescribe la descripción del sujeto; el diseño de la lámina se restituye siempre.",
-    de: "Krea 2 kodiert keinen negativen Prompt: Formuliere jede Vorgabe positiv. Erneutes Anreichern schreibt nur die Beschreibung des Motivs um; das Layout des Bogens wird immer wieder eingesetzt.",
   },
   "Krea 2 enrichment unavailable ({error}): edited prompt kept.": {
     fr: "Enrichissement Krea 2 indisponible ({error}) : prompt modifié conservé.",
@@ -1317,11 +1207,6 @@ export const DICT = {
     es: "Contrapicado",
     de: "Untersicht",
   },
-  "Materials": {
-    fr: "Matériaux",
-    es: "Materiales",
-    de: "Materialien",
-  },
   "Medium shot": {
     fr: "Plan moyen",
     es: "Plano medio",
@@ -1346,11 +1231,6 @@ export const DICT = {
     fr: "MiniMax H3 r2v en cours…",
     es: "MiniMax H3 r2v en curso…",
     de: "MiniMax H3 r2v läuft…",
-  },
-  "MiniMax H3 references (consistent character + setting)": {
-    fr: "MiniMax H3 références (personnage + décor cohérents)",
-    es: "MiniMax H3 referencias (personaje + escenario coherentes)",
-    de: "MiniMax H3 Referenzen (konsistente Figur + Schauplatz)",
   },
   "MiniMax H3 {engine} · {d} s/shot · {n} cuts": {
     fr: "MiniMax H3 {engine} · {d} s/plan · {n} cuts",
@@ -1562,20 +1442,10 @@ export const DICT = {
     es: "Otro (animal, objeto…)",
     de: "Anderes (Tier, Objekt …)",
   },
-  "Outfit": {
-    fr: "Tenue",
-    es: "Vestuario",
-    de: "Outfit",
-  },
   "Overcast": {
     fr: "Ciel couvert",
     es: "Cielo cubierto",
     de: "Bedeckt",
-  },
-  "Palette": {
-    fr: "Palette",
-    es: "Paleta",
-    de: "Palette",
   },
   "Path": {
     fr: "Chemin",
@@ -1591,11 +1461,6 @@ export const DICT = {
     fr: "Déroulé du pipeline",
     es: "Flujo del pipeline",
     de: "Pipeline-Ablauf",
-  },
-  "Place": {
-    fr: "Lieu",
-    es: "Lugar",
-    de: "Ort",
   },
   "Point of view": {
     fr: "Point de vue",
@@ -1757,35 +1622,15 @@ export const DICT = {
     es: "Listo",
     de: "Bereit",
   },
-  "Regenerate the video": {
-    fr: "Régénérer la vidéo",
-    es: "Regenerar el vídeo",
-    de: "Video neu generieren",
-  },
-  "The video is rendering: its progress shows in the job queue.": {
-    fr: "La vidéo est en cours de rendu : son avancement s'affiche dans la file des jobs.",
-    es: "El vídeo se está renderizando: su avance aparece en la cola de trabajos.",
-    de: "Das Video wird gerendert: Den Fortschritt siehst du in der Job-Warteschlange.",
-  },
-  "Video ready. Regenerating it keeps the same sheets and draws a new seed.": {
-    fr: "Vidéo prête. La régénérer garde les mêmes planches et prend un nouveau seed.",
-    es: "Vídeo listo. Regenerarlo mantiene las mismas láminas y usa una nueva semilla.",
-    de: "Video fertig. Neu generieren behält dieselben Blätter und nimmt einen neuen Seed.",
-  },
-  "Ready to start the video.": {
-    fr: "Prêt à lancer la vidéo.",
-    es: "Listo para iniciar el vídeo.",
-    de: "Bereit, das Video zu starten.",
-  },
   "reference": {
     fr: "référence",
     es: "referencia",
     de: "Referenz",
   },
-  "Reference to video": {
-    fr: "Référence vers vidéo",
-    es: "Referencia a vídeo",
-    de: "Referenz zu Video",
+  "Video from references": {
+    fr: "Vidéo à partir de références",
+    es: "Vídeo a partir de referencias",
+    de: "Video aus Referenzen",
   },
   "Reference {n}": {
     fr: "Référence {n}",
@@ -2027,11 +1872,6 @@ export const DICT = {
     es: "Lámina de escenario (Krea 2)…",
     de: "Kulissenblatt (Krea 2)…",
   },
-  "Setting sheet imported: {name}.": {
-    fr: "Planche décor importée : {name}.",
-    es: "Lámina de decorado importada: {name}.",
-    de: "Schauplatzbogen importiert: {name}.",
-  },
   "Setting sheet unavailable from the LLM ({error}): brief used as it is.": {
     fr: "Planche décor indisponible auprès du LLM ({error}) : brief utilisé tel quel.",
     es: "Lámina de decorado no disponible desde el LLM ({error}): brief usado tal cual.",
@@ -2051,16 +1891,6 @@ export const DICT = {
     fr: "Description de la planche enrichie par {model} (mise en page du gabarit conservée).",
     es: "Descripción de la lámina enriquecida por {model} (diseño de la plantilla conservado).",
     de: "Beschreibung des Bogens angereichert von {model} (Layout der Vorlage beibehalten).",
-  },
-  "Sheet layout": {
-    fr: "Gabarit de planche",
-    es: "Plantilla de lámina",
-    de: "Bogenlayout",
-  },
-  "Sheets": {
-    fr: "Planches",
-    es: "Láminas",
-    de: "Bögen",
   },
   "Short ad / campaign": {
     fr: "Pub courte / campagne",
@@ -2102,21 +1932,6 @@ export const DICT = {
     es: "Tamaño",
     de: "Größe",
   },
-  "Skip the sheets: use my references only": {
-    fr: "Ignorer les planches : utiliser seulement mes références",
-    es: "Omitir las láminas: usar solo mis referencias",
-    de: "Bögen überspringen: nur meine Referenzen verwenden",
-  },
-  "The first image of “Extra references” becomes the character, the others stay free references.": {
-    fr: "La première image de « Références supplémentaires » devient le personnage, les autres restent des références libres.",
-    es: "La primera imagen de «Referencias adicionales» pasa a ser el personaje, las demás siguen siendo referencias libres.",
-    de: "Das erste Bild unter „Zusätzliche Referenzen“ wird die Figur, die anderen bleiben freie Referenzen.",
-  },
-  "Skipping the sheets needs at least one image in “Extra references”: the character.": {
-    fr: "Pour ignorer les planches, il faut au moins une image dans « Références supplémentaires » : le personnage.",
-    es: "Para omitir las láminas hace falta al menos una imagen en «Referencias adicionales»: el personaje.",
-    de: "Zum Überspringen der Bögen braucht es mindestens ein Bild unter „Zusätzliche Referenzen“: die Figur.",
-  },
   "social image": {
     fr: "image réseaux sociaux",
     es: "imagen para redes sociales",
@@ -2136,11 +1951,6 @@ export const DICT = {
     fr: "Lancer la campagne (affiches + miniatures + teaser)",
     es: "Lanzar la campaña (pósters + miniaturas + teaser)",
     de: "Kampagne starten (Poster + Thumbnails + Teaser)",
-  },
-  "Start the video": {
-    fr: "Lancer la vidéo",
-    es: "Iniciar el vídeo",
-    de: "Video starten",
   },
   "Starts on first use": {
     fr: "Démarre à la première utilisation",
@@ -2187,16 +1997,6 @@ export const DICT = {
     es: "Estilo",
     de: "Stil",
   },
-  "Subject": {
-    fr: "Sujet",
-    es: "Sujeto",
-    de: "Motiv",
-  },
-  "Subject sheet imported: {name}.": {
-    fr: "Planche du sujet importée : {name}.",
-    es: "Lámina del sujeto importada: {name}.",
-    de: "Motivbogen importiert: {name}.",
-  },
   "Subject sheet unavailable from the LLM ({error}): brief used as it is.": {
     fr: "Planche du sujet indisponible auprès du LLM ({error}) : brief utilisé tel quel.",
     es: "Lámina del sujeto no disponible desde el LLM ({error}): brief usado tal cual.",
@@ -2221,11 +2021,6 @@ export const DICT = {
     fr: "Sujet {n} · {kind}",
     es: "Sujeto {n} · {kind}",
     de: "Motiv {n} · {kind}",
-  },
-  "Surface": {
-    fr: "Surface",
-    es: "Superficie",
-    de: "Oberfläche",
   },
   "Tag name": {
     fr: "Nom du tag",
@@ -2477,11 +2272,6 @@ export const DICT = {
     es: "Duración del vídeo (s)",
     de: "Videolänge (s)",
   },
-  "Video ready: {name}.": {
-    fr: "Vidéo prête : {name}.",
-    es: "Vídeo listo: {name}.",
-    de: "Video fertig: {name}.",
-  },
   "Videos": {
     fr: "Vidéos",
     es: "Vídeos",
@@ -2677,11 +2467,6 @@ export const DICT = {
     es: "{ok}/{n} referencia(s) descrita(s) por {llm}.",
     de: "{ok}/{n} Referenz(en) von {llm} beschrieben.",
   },
-  "{status} · sheet {n} of {total} active": {
-    fr: "{status} · planche {n} sur {total} active",
-    es: "{status} · lámina {n} de {total} activa",
-    de: "{status} · Bogen {n} von {total} aktiv",
-  },
   "{used} / {total} GiB": {
     fr: "{used} / {total} Gio",
     es: "{used} / {total} GiB",
@@ -2736,11 +2521,6 @@ export const DICT = {
     fr: "★ Favoris",
     es: "★ Favoritos",
     de: "★ Favoriten",
-  },
-  "✎ Prompt": {
-    fr: "✎ Prompt",
-    es: "✎ Prompt",
-    de: "✎ Prompt",
   },
   "✎ Rename": {
     fr: "✎ Renommer",
@@ -2837,20 +2617,10 @@ export const DICT = {
     es: "📋 Copiar el prompt",
     de: "📋 Prompt kopieren",
   },
-  "📥 Import an image": {
-    fr: "📥 Importer une image",
-    es: "📥 Importar una imagen",
-    de: "📥 Bild importieren",
-  },
   "🔄 Regenerate": {
     fr: "🔄 Régénérer",
     es: "🔄 Regenerar",
     de: "🔄 Neu generieren",
-  },
-  "🔄 Regenerate the sheet": {
-    fr: "🔄 Régénérer la planche",
-    es: "🔄 Regenerar la lámina",
-    de: "🔄 Bogen neu generieren",
   },
   "🔗 Continuous": {
     fr: "🔗 Continu",
@@ -3227,11 +2997,6 @@ export const DICT = {
     es: "Prompt copiado en tu mensaje.",
     de: "Prompt in deine Nachricht kopiert.",
   },
-  "Switches to the Studio and starts the step-by-step review with this brief": {
-    fr: "Passe au Studio et lance la revue étape par étape avec ce brief",
-    es: "Pasa al Studio e inicia la revisión paso a paso con este brief",
-    de: "Wechselt ins Studio und startet die schrittweise Prüfung mit diesem Briefing",
-  },
   "{name} attached to your next message.": {
     fr: "{name} joint à ton prochain message.",
     es: "{name} adjuntado a tu próximo mensaje.",
@@ -3241,11 +3006,6 @@ export const DICT = {
     fr: "→ Utiliser dans le Studio",
     es: "→ Usar en el Studio",
     de: "→ Im Studio verwenden",
-  },
-  "🎬 Launch the director": {
-    fr: "🎬 Lancer le Réalisateur",
-    es: "🎬 Lanzar el Director",
-    de: "🎬 Regie starten",
   },
   "Close the library": {
     fr: "Fermer la bibliothèque",
@@ -3297,11 +3057,6 @@ export const DICT = {
     es: "Renderizando {pct} % · {time}",
     de: "Rendering {pct} % · {time}",
   },
-  "{llm} is preparing the director… {time}": {
-    fr: "{llm} prépare le réalisateur… {time}",
-    es: "{llm} prepara al director… {time}",
-    de: "{llm} bereitet die Regie vor… {time}",
-  },
   "{llm} is enriching the brief… {time}": {
     fr: "{llm} enrichit le brief… {time}",
     es: "{llm} enriquece el brief… {time}",
@@ -3312,50 +3067,10 @@ export const DICT = {
     es: "Foto",
     de: "Foto",
   },
-  "📷 Sheet from a photo": {
-    fr: "📷 Planche depuis une photo",
-    es: "📷 Hoja desde una foto",
-    de: "📷 Blatt aus einem Foto",
-  },
-  "Draws a five-view sheet (two portraits, three full-body views) from a photo or a drawing of the subject, keeping its look and its style; the sheet layout menu does not apply (Qwen Image 2.1)": {
-    fr: "Dessine une planche à cinq vues (deux portraits, trois vues en pied) à partir d'une photo ou d'un dessin du sujet, en gardant son apparence et son style ; le menu de mise en page des planches ne s'applique pas (Qwen Image 2.1)",
-    es: "Dibuja una hoja de cinco vistas (dos retratos, tres vistas de cuerpo entero) a partir de una foto o un dibujo del sujeto, conservando su aspecto y su estilo; el menú de diseño de hojas no se aplica (Qwen Image 2.1)",
-    de: "Zeichnet ein Blatt mit fünf Ansichten (zwei Porträts, drei Ganzkörperansichten) aus einem Foto oder einer Zeichnung des Motivs und behält sein Aussehen und seinen Stil; das Menü für das Blattlayout gilt hier nicht (Qwen Image 2.1)",
-  },
-  "Use an image that is already a finished sheet, as it is": {
-    fr: "Utilise telle quelle une image qui est déjà une planche terminée",
-    es: "Usa tal cual una imagen que ya es una hoja terminada",
-    de: "Verwendet ein Bild, das schon ein fertiges Blatt ist, unverändert",
-  },
   "Subject sheet from a photo: {name} (Qwen Image 2.1)…": {
     fr: "Planche du sujet depuis une photo : {name} (Qwen Image 2.1)…",
     es: "Hoja del sujeto desde una foto: {name} (Qwen Image 2.1)…",
     de: "Motivblatt aus einem Foto: {name} (Qwen Image 2.1)…",
-  },
-  "Director: subject and setting descriptions with {llm}…": {
-    fr: "Réalisateur : descriptions du sujet et du décor par {llm}…",
-    es: "Director: descripciones del sujeto y del decorado con {llm}…",
-    de: "Regie: Beschreibungen von Motiv und Schauplatz mit {llm}…",
-  },
-  "No sheet yet: generate it from the fields (or ✎ Prompt), from a photo, or import a finished sheet.": {
-    fr: "Pas encore de planche : génère-la depuis les champs (ou ✎ Prompt), depuis une photo, ou importe une planche terminée.",
-    es: "Aún no hay hoja: genérala desde los campos (o ✎ Prompt), desde una foto, o importa una hoja terminada.",
-    de: "Noch kein Blatt: generiere es aus den Feldern (oder ✎ Prompt), aus einem Foto, oder importiere ein fertiges Blatt.",
-  },
-  "No sheet yet: generate it from the fields (or ✎ Prompt), or import a finished sheet.": {
-    fr: "Pas encore de planche : génère-la depuis les champs (ou ✎ Prompt), ou importe une planche terminée.",
-    es: "Aún no hay hoja: genérala desde los campos (o ✎ Prompt), o importa una hoja terminada.",
-    de: "Noch kein Blatt: generiere es aus den Feldern (oder ✎ Prompt), oder importiere ein fertiges Blatt.",
-  },
-  "Studio open: no sheet is drawn yet. Generate each one from its description or a photo, or import a finished sheet.": {
-    fr: "Studio ouvert : aucune planche n'est encore dessinée. Génère chacune depuis sa description ou une photo, ou importe une planche terminée.",
-    es: "Estudio abierto: aún no se ha dibujado ninguna hoja. Genera cada una desde su descripción o una foto, o importa una hoja terminada.",
-    de: "Studio geöffnet: noch kein Blatt gezeichnet. Generiere jedes aus seiner Beschreibung oder einem Foto, oder importiere ein fertiges Blatt.",
-  },
-  "Open the studio (step 1/2)": {
-    fr: "Entrer dans le studio (étape 1/2)",
-    es: "Entrar en el estudio (paso 1/2)",
-    de: "Studio öffnen (Schritt 1/2)",
   },
   "🎞 Generate the video": {
     fr: "🎞 Générer la vidéo",
@@ -3906,5 +3621,45 @@ export const DICT = {
     fr: "Relay : plusieurs scènes : la lumière et les sons de chacune sont écrits dans ses segments, pas dans les champs communs.",
     es: "Relay: varias escenas: la luz y los sonidos de cada una se escriben en sus segmentos, no en los campos comunes.",
     de: "Relay: mehrere Szenen: Licht und Geräusche jeder Szene stehen in ihren Segmenten, nicht in den gemeinsamen Feldern.",
+  },
+  "Video from references (MiniMax H3)": {
+    fr: "Vidéo à partir de références (MiniMax H3)",
+    es: "Vídeo a partir de referencias (MiniMax H3)",
+    de: "Video aus Referenzen (MiniMax H3)",
+  },
+  "Who or what the video keeps: photos or sheets of the characters, a setting, objects; clips (a camera movement, or a subject) and sounds (a voice, music, ambience). Each one gets its role. No image yet? Make a sheet from the brief below. Nothing to review: Generate renders the video at once.": {
+    fr: "Qui ou quoi la vidéo garde : photos ou planches des personnages, un décor, des objets ; des vidéos (un mouvement de caméra, ou un sujet) et des sons (une voix, une musique, une ambiance). Chacun a son rôle. Pas encore d'image ? Crée une planche depuis le brief ci-dessous. Rien à valider : Générer rend la vidéo tout de suite.",
+    es: "Quién o qué conserva el vídeo: fotos u hojas de los personajes, un decorado, objetos; vídeos (un movimiento de cámara, o un sujeto) y sonidos (una voz, música, un ambiente). Cada uno tiene su función. ¿Aún no tienes imagen? Crea una hoja a partir del brief aquí abajo. Nada que validar: Generar renderiza el vídeo enseguida.",
+    de: "Wer oder was im Video gleich bleibt: Fotos oder Blätter der Figuren, ein Schauplatz, Objekte; Videos (eine Kamerabewegung oder ein Subjekt) und Töne (eine Stimme, Musik, eine Atmosphäre). Jedes Element hat seine Rolle. Noch kein Bild? Erstell unten ein Blatt aus dem Briefing. Nichts zu bestätigen: Generieren rendert das Video sofort.",
+  },
+  "Add at least one reference image or clip: a photo or a sheet of the subject, or make a sheet from the brief.": {
+    fr: "Ajoute au moins une image ou une vidéo de référence : une photo ou une planche du sujet, ou crée une planche depuis le brief.",
+    es: "Añade al menos una imagen o un vídeo de referencia: una foto o una hoja del sujeto, o crea una hoja a partir del brief.",
+    de: "Füg mindestens ein Referenzbild oder -video hinzu: ein Foto oder ein Blatt des Subjekts, oder erstell ein Blatt aus dem Briefing.",
+  },
+  "At most 9 images, 3 clips and 3 sounds here (12 in all): the extra files were ignored.": {
+    fr: "9 images, 3 vidéos et 3 sons au maximum ici (12 en tout) : les fichiers en trop ont été ignorés.",
+    es: "9 imágenes, 3 vídeos y 3 sonidos como máximo aquí (12 en total): los archivos sobrantes se han ignorado.",
+    de: "Höchstens 9 Bilder, 3 Videos und 3 Töne hier (12 insgesamt): Die überzähligen Dateien wurden ignoriert.",
+  },
+  "MiniMax H3 (video from references)": {
+    fr: "MiniMax H3 (vidéo à partir de références)",
+    es: "MiniMax H3 (vídeo a partir de referencias)",
+    de: "MiniMax H3 (Video aus Referenzen)",
+  },
+  "References limited to 9 images, 3 clips and 3 sounds: {n} ignored.": {
+    fr: "Références limitées à 9 images, 3 vidéos et 3 sons : {n} ignorée(s).",
+    es: "Referencias limitadas a 9 imágenes, 3 vídeos y 3 sonidos: {n} ignorada(s).",
+    de: "Referenzen auf 9 Bilder, 3 Videos und 3 Töne begrenzt: {n} ignoriert.",
+  },
+  "This pipeline takes no clip: a clip is a reference of “Video from references”.": {
+    fr: "Ce pipeline ne prend pas de vidéo : une vidéo sert de référence dans « Vidéo à partir de références ».",
+    es: "Este pipeline no admite vídeos: un vídeo sirve de referencia en «Vídeo a partir de referencias».",
+    de: "Diese Pipeline nimmt kein Video: Ein Video dient als Referenz in „Video aus Referenzen“.",
+  },
+  "Up to 9 images, 3 clips and 3 sounds (12 in all)": {
+    fr: "Jusqu'à 9 images, 3 vidéos et 3 sons (12 en tout)",
+    es: "Hasta 9 imágenes, 3 vídeos y 3 sonidos (12 en total)",
+    de: "Bis zu 9 Bilder, 3 Videos und 3 Töne (12 insgesamt)",
   },
 };

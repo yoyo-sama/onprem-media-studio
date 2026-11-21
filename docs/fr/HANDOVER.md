@@ -20,7 +20,8 @@ fixés par le propriétaire du projet (GitHub `yoyo-sama`) le 2026-10-29 :
 - **Autonome** : ni ComfyUI, ni Ollama, ni génération dans le cloud. L'application fait tourner
   les modèles elle-même et télécharge les poids nécessaires à la première utilisation.
 - **Même couverture fonctionnelle que la 1.4** : Text2Image, Image2Image, campagne, planches de
-  sujet et de décor, référence vers vidéo, le plan-séquence (Relay ; le storyboard de la 1.4 y a
+  sujet et de décor, référence vers vidéo (un formulaire et un clic depuis le 2026-11-21,
+  « Vidéo à partir de références » : aucune planche à valider), le plan-séquence (Relay ; le storyboard de la 1.4 y a
   été fondu le 2026-11-21 et reste sur le Canvas), le Canvas, la galerie, la mise à jour depuis l'interface. En plus,
   nouveau en 2.0 : l'assistant de création (un chat à rôles), MOSS-Image, l'agrandissement ×2,
   les piles de LoRA sur tous les moteurs.
@@ -256,6 +257,9 @@ Rien ci-dessous n'a été demandé pour maintenant ; chaque point attend le prop
   storyboard de l'assistant ont été retirés après elle. La règle de cadrage qui garde le visage
   du sujet principal dans le champ, et les scènes `[Shot N]` d'un fichier de scénario, ne sont
   pas encore rendues.
+- « Vidéo à partir de références » dans le formulaire du Studio (2026-11-21,
+  [FRONTEND.md](FRONTEND.md)) : un job `h3-r2v` depuis la liste Références, le prompt construit
+  comme le fait la carte de l'assistant ; pas encore rendu depuis le formulaire sur un GB10.
 - Planche personnage depuis une photo (Qwen Image 2.1, PR #9 ; prompt à cinq vues adapté de H3
   Character Sheet Designer depuis le 2026-11-13) : jamais qualifiée.
 - Les poids de l'upscaler SPAN ne sont pas encore téléchargés sur promaxgb10-95c7

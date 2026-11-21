@@ -143,7 +143,7 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 | `long_take` | Scénario au format H3 (un segment minuté de 10 s par temps du récit, une ligne `[Shot N]` avant le premier segment de chaque scène suivante), une `first_frame` facultative (l'image dont part la vidéo, jamais une planche) et jusqu'à 7 `references` avec leurs `kinds` (personnage, lieu, objet) | le plan-séquence du Studio : « 🎞 Ouvrir le plan-séquence » passe dans le Studio et ouvre le Relay sur ses segments, sans rien générer ; la chaîne se lance de là (elle remplace depuis le 2026-11-20 `image_sequence`, qui rendait des paires d'images clés sans le plan-séquence) |
 | `join_videos` | Clips | `video-concat` |
 | `campaign` | Brief, variantes, durée, style | la campagne complète (affiches, miniatures, image sociale, teaser) |
-| `reference_video` | Brief, références avec chacune son rôle, durée, ratio : jusqu'à 9 images (personnage, décor, objet), 3 vidéos (mouvement de caméra et rythme, ou personnage, décor, objet) et 3 sons (voix d'un personnage, musique, ambiance et bruitages), 12 en tout ; musique demandée en mots (facultative) | « 🎞 Générer la vidéo » : un job `h3-r2v` depuis la carte. Chaque référence reçoit son repère H3, numéros donnés par l'app (`P.h3AssignRefs`) : un sujet est `<Subject N>` dans son ordre ; une vidéo gardée pour son mouvement de caméra reste `<Video N>`, un son `<Audio N>`. Le brief nomme les références par leur id (`A1 rides…`), chacun remplacé par son repère ; la vision de Gemma décrit chaque image pour `subject_definitions`, et le bloc Ref2VA à six champs est construit par `buildH3RefPrompt`, comme dans le réalisateur : une voix est le timbre du n-ième personnage (`(S1)`…), une musique est reprise comme partition (`non_diegetic_music`), une ambiance guide `overall_soundscape`, le champ musique de la carte va dans `non_diegetic_music` (sinon « None. »), et le résumé ajoute `audio reuse` ou `audio reference` (guide « full-reference » de MiniMax). On peut retirer des références, ou en ajouter depuis les images et vidéos de la conversation ou l'ordinateur. Gemma ne propose que des images et des vidéos ; les sons viennent de l'ordinateur. « Lancer le Réalisateur » et « Ouvrir dans le Studio » ouvrent toujours la revue étape par étape, chaque référence gardant son rôle |
+| `reference_video` | Brief, références avec chacune son rôle, durée, ratio : jusqu'à 9 images (personnage, décor, objet), 3 vidéos (mouvement de caméra et rythme, ou personnage, décor, objet) et 3 sons (voix d'un personnage, musique, ambiance et bruitages), 12 en tout ; musique demandée en mots (facultative) | « 🎞 Générer la vidéo » : un job `h3-r2v` depuis la carte. Chaque référence reçoit son repère H3, numéros donnés par l'app (`P.h3AssignRefs`) : un sujet est `<Subject N>` dans son ordre ; une vidéo gardée pour son mouvement de caméra reste `<Video N>`, un son `<Audio N>`. Le brief nomme les références par leur id (`A1 rides…`), chacun remplacé par son repère ; la vision de Gemma décrit chaque image pour `subject_definitions`, et le bloc Ref2VA à six champs est construit par `buildH3RefPrompt` via `F.r2vPrompt`, la même fonction que le formulaire « Vidéo à partir de références » du Studio : une voix est le timbre du n-ième personnage (`(S1)`…), une musique est reprise comme partition (`non_diegetic_music`), une ambiance guide `overall_soundscape`, le champ musique de la carte va dans `non_diegetic_music` (sinon « None. »), et le résumé ajoute `audio reuse` ou `audio reference` (guide « full-reference » de MiniMax). On peut retirer des références, ou en ajouter depuis les images et vidéos de la conversation ou l'ordinateur. Gemma ne propose que des images et des vidéos ; les sons viennent de l'ordinateur. « Ouvrir dans le Studio » remplit ce formulaire avec chaque référence dans son rôle et le brief qui les nomme par leurs repères ; il n'y a plus de revue étape par étape (2026-11-21) |
 | `ask_choices` | Une question avec 2 à 4 boutons et « Autre… » | rien : le choix part comme réponse de l'utilisateur |
 
 - Une carte ne tourne **que sur le clic de l'utilisateur**, par les mêmes fonctions que le
@@ -163,17 +163,16 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
   rechargement repart sans.
 - « Ouvrir dans le Studio » passe au Studio et remplit le formulaire (pipeline, moteur, réglages,
   images, brief, les LoRA activées), sans rien lancer ; Annuler remet le brief et le pipeline.
-- « Lancer le Réalisateur » (cartes référence vers vidéo) et « 🎞 Ouvrir le plan-séquence »
-  remplissent le formulaire de la même façon, puis leur clic vaut le clic sur Générer : la
-  première étape du réalisateur démarre et chaque étape suivante attend le clic de
+- « 🎞 Ouvrir le plan-séquence » remplit le formulaire de la même façon, puis son clic vaut le
+  clic sur Générer : le plan-séquence s'ouvre sur ses segments, et la chaîne attend le clic de
   l'utilisateur, comme toujours.
 - La carte storyboard a été retirée avec le storyboard du Studio (2026-11-21) : le rôle
   Réalisateur mène une histoire en plusieurs scènes à une carte `long_take`, les planches que
   contient la conversation allant dans ses `references` avec leur rôle. Une carte enregistrée
   dans une ancienne conversation n'est plus affichée.
 - Le navigateur signale ce qu'est devenue une carte (`POST /api/chats/{id}/cards/{card}` : en
-  cours avec les réglages utilisés, terminée avec ses fichiers, erreur, annulée, ouverte, réalisateur
-lancé). Les
+  cours avec les réglages utilisés, terminée avec ses fichiers, erreur, annulée, ouverte, plan-séquence
+ouvert). Les
   tours suivants le voient : les résultats prennent les ids **C3#1, C3#2…** (un clip H3 est suivi
   de sa dernière image, C3#2), que les cartes suivantes peuvent utiliser. Une carte qui a besoin
   d'un résultat pas encore rendu attend (« En attente de C3#1 »).

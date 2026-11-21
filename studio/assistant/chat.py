@@ -239,7 +239,7 @@ def card_summary(card: dict) -> str:
     if status == "opened":
         return text + ". The user opened it in the Studio form to go on there."
     if status == "launched":
-        return text + ". The user launched the director with it: the step-by-step review goes on in the Studio."
+        return text + ". The user opened the long take with it: its segments are read and rendered in the Studio."
     if status == "running":
         return text + ". Rendering now."
     if status == "done":
