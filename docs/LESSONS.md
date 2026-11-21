@@ -311,6 +311,14 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     and "holding a cup" as asking, and the face was out of frame for half the take. The camera
     may now come closer to the face only, which stays in view from the first moment. (2026-11-21)
 
+57. **A take of several scenes sends no setting reference.** Casting made four sheets for the
+    fisherman's story (him, the boat, the harbour, the cottage); every segment received all of
+    them, and the Ref2VA prompt anchors the character in the first setting ("<Subject 1> is in
+    <Subject 3>", the cottage): at sea a cottage stood on a deck with the harbour wall behind,
+    the fisherman appeared twice, and each segment took 9 min instead of 5. With split scenes
+    the segments now take the characters and objects only; each place is in its scene's text.
+    A one-place take keeps its setting. (2026-11-21)
+
 ## 8. Front end (for the port in step 4)
 
 39. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes

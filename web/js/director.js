@@ -760,11 +760,18 @@ async function segmentDone(s, seg, i, total, job, began) {
 // (or, with none, segment 1's last frame) is the main character; but when its screenplay is in
 // the H3 layout and names no <Subject N>, it describes a scene, and that picture is the
 // scene's reference, the location.
+// A take of several scenes sends no setting reference: each scene's place is written in its
+// own segments. Every setting sheet went to every segment, and the subject was anchored in
+// the first one: the cottage stood in the open sea (GB10 2026-11-21). With only settings
+// given, they stay.
 function relayRefs(setting) {
   const scene = describedScene();
-  return [...relaySubjects().map((x, k) => ({ kind: k === 0 && scene ? "environment" : x.role || (k === 0 || x.kind === "human" ? "character" : "reference"),
+  const all = [...relaySubjects().map((x, k) => ({ kind: k === 0 && scene ? "environment" : x.role || (k === 0 || x.kind === "human" ? "character" : "reference"),
     desc: x.desc, ref: x.ref })),
     ...(setting ? [{ kind: "environment", ...setting }] : [])];
+  if (!d.relay.segments.some(seg => seg.scene)) return all;
+  const kept = all.filter(x => x.kind !== "environment");
+  return kept.length ? kept : all;
 }
 const describedScene = () => !d.refsGiven && !!P.parseScreenplay(d.relay.scenario) && !namesSubjects();
 const namesSubjects = () => [...d.relay.segments.map(seg => seg.prompt), d.relay.look.subjects, d.relay.look.retention]

@@ -713,6 +713,21 @@ const SPLIT = {
     `sheet from a photo: ${JSON.stringify(sj.map(j => ({ pipeline: j.pipeline, images: j.params.images })))}`);
   check(r.length === 3 && r[2]?.name === `${sj[0]?.id}.png` && r[2]?.role === "character" && !r[2]?.sheet,
     `the photo's sheet does not take its place: ${JSON.stringify(r)}`);
+  // A take of several scenes sends no setting reference, in any segment: each scene's place
+  // is in its text (every setting sheet in every segment put the cottage at sea, GB10).
+  before = jobs.length;
+  await page.click("#generateBtn");
+  await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
+  await page.fill("#relayTotal", "30");
+  await page.dispatchEvent("#relayTotal", "change");
+  await page.click("#relayComposeBtn");
+  await page.waitForFunction(() => /gravel path/.test(document.querySelector("#relayList .relay-seg textarea")?.value || ""));
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
+  await assembled(before);
+  const scenes = jobs.slice(before).filter(j => j.pipeline === "h3-r2v");
+  check(scenes.length === 3 && scenes.every(j => j.params.references?.length === 2 && !/is in <Subject|is the location/.test(j.params.prompt || "")),
+    `a take of several scenes sends a setting: ${JSON.stringify(scenes.map(j => j.params.references))}`);
   if (SHOTS) {
     await page.selectOption("#langSelect", "fr");
     await page.setInputFiles("#refImagesInput", { name: "lea.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
