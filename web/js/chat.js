@@ -2,9 +2,9 @@
 // picks the role best placed to answer and streams its reply; every tool call the role
 // makes arrives as a card. A card runs only on the user's click, through the same
 // functions as the Studio form (generate.js), and its result is reported back so later
-// turns can use it (C3#1…). Storyboard and reference-to-video cards run the director:
-// their click switches to the Studio, fills the form and starts the step-by-step
-// review there, the only way to run them.
+// turns can use it (C3#1…). Long take and reference-to-video cards can run the director:
+// their click switches to the Studio, fills the form and opens the long take, or the
+// step-by-step review of the sheets.
 
 import { api, chatStream, on, refURL } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
@@ -68,8 +68,6 @@ const CARD_UI = {
   join_videos: { title: L("Joined clips"), images: ["clips"] },
   campaign: { title: L("Campaign"), text: "brief", fields: ["variants", "duration", "style"], form: true,
               enrich: () => "campaign" },
-  storyboard: { title: L("Storyboard"), text: "brief", images: ["subject_sheets", "setting_sheet"], fields: ["shots", "duration", "ratio"],
-                form: true, director: true },
   reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio", "music"],
                      form: true, director: true, video: true, wf: () => "h3_r2v" },
 };
@@ -101,7 +99,7 @@ function kindOf(a, i) {
 const refLabels = a => P.h3AssignRefs((a.references || []).map((id, i) => ({ media: mediaOf(id), kind: REF_KINDS[kindOf(a, i)][0] })));
 const IMAGE_LABELS = {
   image: L("Image"), references: L("References"), last_image: L("Last frame"), first_frame: L("First frame"), clips: L("Clips"),
-  subject_sheets: L("Subject sheets"), setting_sheet: L("Setting sheet"), photo: L("Photo"),
+  photo: L("Photo"),
 };
 const FIELDS = {
   engine: { label: L("Engine"), options: () => [["krea2", "Krea 2 Turbo"], ["qwen", "Qwen Image 2.1"], ["moss", "MOSS-Image"]],
@@ -115,7 +113,6 @@ const FIELDS = {
   count: { label: L("Variants"), min: 1, max: 4 },
   variants: { label: L("Variants"), min: 1, max: 4 },
   duration: { label: L("Video length (s)"), min: 5, max: 15 },
-  shots: { label: L("Number of shots"), min: 4, max: 16 },
   music: { label: L("Music"), text: true },
 };
 const STATUS = {
@@ -136,7 +133,7 @@ function refOf(id) {
   return m ? findCard(m[1])?.state.outputs?.[+m[2] - 1] || null : null;
 }
 const argsOf = card => ({ ...card.args, ...(drafts.get(card.id) || {}) });
-const imageIds = (card, a = argsOf(card)) => (CARD_UI[card.tool].images || []).flatMap(k => [].concat(a[k] || []));
+const imageIds = (card, a = argsOf(card)) => (CARD_UI[card.tool]?.images || []).flatMap(k => [].concat(a[k] || []));
 const fileName = ref => String(ref).split("/").pop();
 
 function setDraft(card, key, value) {

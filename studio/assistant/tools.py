@@ -54,10 +54,13 @@ SCREENPLAY_HELP = (
     "The whole long take in English, in this exact layout, one field name per line followed by its text: "
     "subject_definitions: (<Subject 1> is …: who the main subject is and what about them must stay the same), "
     "summary: (one sentence), retention_analysis: (what must not change across segments), camera_direction: "
-    "(shot size and camera height, the same for the whole take), lighting:, detailed_description: then one "
+    "(shot size and camera height, the same for the whole take), lighting: (empty when the take has several "
+    "scenes: each scene's light goes on its shot line), detailed_description: then one "
     "line per segment, 'Segment 1 (00:00.000–00:10.000) – title', followed on the next lines by that segment's "
     "action and its own camera movement, 10 s each, each segment going on from where the previous one ended, "
-    "the subject always written <Subject 1>; overall_soundscape:, non_diegetic_music: (N/A when none)")
+    "the subject always written <Subject 1>; where the story moves to another place or time, a line "
+    "'[Shot N] where, when and its light' before that segment's line starts a new scene (a cut); "
+    "overall_soundscape: (empty when the take has several scenes), non_diegetic_music: (N/A when none)")
 
 # name → (description, properties, required). The order is the order the model sees.
 SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
@@ -142,18 +145,6 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
         {"brief": _str("Campaign brief in English"), "variants": _int("Poster variants", 1, 4, 3),
          "duration": DURATION, "style": STYLE},
         ["brief"]),
-    "storyboard": (
-        "Card: opens the step-by-step storyboard director with the brief filled in (sheets, shot images, cuts, "
-        "each approved by the user).",
-        {"brief": _str("The user's story, completed with the staging they settled, in English"),
-         "subject_sheets": _ids("Character or subject sheets the conversation already holds, one per recurring "
-                                "subject, main subject first; the director uses them instead of drawing new ones, "
-                                + IMAGE_ID, 0, 4),
-         "setting_sheet": _ids("The setting sheet the conversation already holds, if any, " + IMAGE_ID, 0, 1),
-         "shots": _int("Number of shots", 4, 16, 6), "duration": _int("Length of each cut in seconds",
-                                                                         MIN_SECONDS, MAX_SECONDS, 5),
-         "ratio": RATIO},
-        ["brief"]),
     "reference_video": (
         "Card: one MiniMax H3 clip that keeps characters, places and objects from reference images (and clips); "
         "the user can add clips and sounds on the card, renders it from the card or opens the step-by-step director.",
@@ -194,9 +185,6 @@ ENGINE_NOTES = {
                  "objects, a setting) or from the text alone; the screenplay gives one timed segment per 10 s.",
     "join_videos": "join_videos: clips end to end, hard cuts.",
     "campaign": "campaign: posters, thumbnails and a social image (Krea 2) plus a 9:16 H3 teaser from one brief.",
-    "storyboard": "storyboard: opens the step-by-step director (sheets, shot images with Qwen Image 2.1, H3 cuts); "
-                  "the user approves each step. Sheets already in the conversation go in subject_sheets and "
-                  "setting_sheet: the director keeps them and draws only the missing ones.",
     "reference_video": "reference_video: H3 keeps characters, places and objects from up to 9 reference images "
                        "(each named by its id in the brief, with its kind); a clip a card made can join them, as a "
                        "subject or for its camera movement, and the user can add clips and sounds (a voice, music, "
@@ -289,7 +277,7 @@ def normalize(name: str, raw, known_ids) -> tuple[dict, list[str]]:
     unknown = sorted(set(raw) - set(props))
     if unknown:
         warnings.append("ignored: " + ", ".join(unknown))
-    for key in ("image", "last_image", "first_frame", "references", "images", "clips", "subject_sheets", "setting_sheet", "photo"):
+    for key in ("image", "last_image", "first_frame", "references", "images", "clips", "photo"):
         for ref in ([out[key]] if isinstance(out.get(key), str) else out.get(key) or []):
             if not known_ids(ref):
                 warnings.append(f"{ref} is not in the reference table")

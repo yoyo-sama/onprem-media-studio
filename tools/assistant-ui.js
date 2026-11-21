@@ -35,9 +35,7 @@ const CARDS = [
   card("C2", "edit_image", { instruction: "Replace the background of <image1> with a beach", image: "A1", references: [], markets: ["europe"] }),
   card("C3", "video_from_image", { prompt: "slow push-in, waves", image: "C1#1", duration: 6 }, { warnings: ["duration 3 out of range, 5 used"] }),
   card("C4", "ask_choices", { question: "Which mood?", options: ["Sunny", "Night", "Autre…"] }),
-  card("C5", "storyboard", { brief: "A detective enters a studio", shots: 5, duration: 5, ratio: "16:9" }),
-  card("C7", "storyboard", { brief: "A dwarf and an elf pick mushrooms", subject_sheets: ["C1#1", "A1"], setting_sheet: ["C1#1"],
-                             shots: 4, duration: 5, ratio: "16:9" }),
+  card("C5", "reference_video", { brief: "A detective enters a studio", duration: 7, ratio: "16:9" }),
   card("C10", "reference_video", { brief: "A1 rides a motorcycle along a jungle track, an elephant charging behind him.",
                                   references: ["A1"], kinds: ["character"], music: "A slow romantic piano score", duration: 5, ratio: "16:9" }),
   card("C11", "create_image", { prompt: 'A cafe chalkboard reading "Menu du jour"', engine: "krea2", ratio: "16:9", count: 1, style: "none" }),
@@ -226,11 +224,11 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
     "C3: the job does not carry the LoRAs turned on: " + JSON.stringify(jobs[1]?.params.loras));
   check((await page.$$('.chat-card[data-card="C3"] .cc-outputs figure')).length === 1, "C3 should show the clip only (last frame hidden)");
   // Open in the Studio: switches to the Studio, fills the form, starts nothing.
-  await page.click('.chat-card[data-card="C5"] .cc-actions button >> nth=1');
+  await page.click('.chat-card[data-card="C5"] .cc-actions button >> nth=2');
   await page.waitForTimeout(300);
   check(await page.evaluate(() => document.body.dataset.mode) === "studio", "Open in the Studio did not switch to the Studio");
-  check(await page.inputValue("#brief") === "A detective enters a studio", "storyboard brief not in the form");
-  check(await page.inputValue("#pipelineSelect") === "storyboard" && await page.inputValue("#shotCount") === "5", "storyboard settings not in the form");
+  check(await page.inputValue("#brief") === "A detective enters a studio", "director card brief not in the form");
+  check(await page.inputValue("#pipelineSelect") === "reference2video" && await page.inputValue("#videoDuration") === "7", "director card settings not in the form");
   check(jobs.length === 2, "Open in the Studio submitted a job");
   await page.click("#undoToastBtn");
   check(await page.inputValue("#brief") === "", "undo did not restore the brief");
@@ -252,46 +250,27 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   // director (its first step asks Gemma for the sheets, stubbed out here).
   check(llmBodies.length === 0, "Gemma called before the director was launched");
   const jobsAtLaunch = jobs.length;
-  await page.click('.chat-card[data-card="C5"] .primary-btn');
+  await page.click('.chat-card[data-card="C5"] .cc-actions button >> nth=1');
   await page.waitForTimeout(800);
   check(await page.evaluate(() => document.body.dataset.mode) === "studio", "Launch the director did not switch to the Studio");
-  check(await page.inputValue("#brief") === "A detective enters a studio" && await page.inputValue("#pipelineSelect") === "storyboard", "director brief not in the form");
+  check(await page.inputValue("#brief") === "A detective enters a studio" && await page.inputValue("#pipelineSelect") === "reference2video", "director brief not in the form");
   check(llmBodies.some(b => b.includes("A detective enters a studio")), "the director did not start");
   check(cardPosts.some(([id, b]) => id === "C5" && b.status === "launched"), "launch not reported");
   // While Gemma prepares the director, the button says so; then it comes back.
   const waiting = await page.textContent("#generateBtn");
-  check(waiting.includes("écrit les fiches"), "Generate button does not say Gemma is working: " + waiting);
+  check(waiting.includes("prépare le réalisateur"), "Generate button does not say Gemma is working: " + waiting);
   // Each Gemma call of the first step waits 1.5 s here, then fails: the button comes back.
-  const back = await page.waitForFunction(() => !document.getElementById("generateBtn").textContent.includes("écrit les fiches"),
+  const back = await page.waitForFunction(() => !document.getElementById("generateBtn").textContent.includes("prépare le réalisateur"),
     null, { timeout: 20000 }).then(() => true, () => false);
   check(back, "Generate button label not restored");
-  // The first step opens the studio and draws nothing; a sheet renders on its own click,
-  // with the seed the automatic first step used to give it.
+  // The first step opens the studio and draws nothing; a sheet renders on its own click.
   check(await page.evaluate(() => document.body.dataset.studio) === "1", "the director's studio did not open");
   check(!jobs.slice(jobsAtLaunch).some(j => j.pipeline === "krea2-t2i"), "the first step drew a sheet");
   await page.click("#studioCharacter .sheet-regen");
   await page.waitForTimeout(400);
-  const sheetJob = jobs[jobs.length - 1], proj = await page.evaluate(() => JSON.parse(localStorage.getItem("studioProject")));
-  check(sheetJob?.pipeline === "krea2-t2i" && sheetJob.params.seed === proj.seed && sheetJob.params.width === 1920,
-    "subject sheet on click: " + JSON.stringify(sheetJob?.params?.seed) + " vs " + proj?.seed);
-  // Sheets handed over by a storyboard card: the director keeps them, Gemma reads each
-  // one (vision), no sheet job is submitted and every shot starts with both subjects.
-  await page.click('.rail-mode[data-mode="assistant"]');
-  await page.click('.chat-card[data-card="C7"] .cc-actions button >> nth=1');
-  await page.waitForTimeout(300);
-  check(!(await page.isHidden("#givenSheetsWrap")) && (await page.$$("#givenSheets .ref-subject")).length === 3, "handed-over sheets not shown in the form");
-  const jobsBefore = jobs.length, llmBefore = llmBodies.length;
-  await page.click("#generateBtn");
-  const opened = await page.waitForFunction(() => document.body.dataset.studio === "1" && document.querySelectorAll("#subjectTabs .subject-tab:not(.add):not(.del)").length === 2,
-    null, { timeout: 20000 }).then(() => true, () => false);
-  check(opened, "director did not open with the two handed-over subjects");
-  const reads = llmBodies.slice(llmBefore).map(b => JSON.parse(b));
-  check(reads.filter(b => b.images?.length === 1).length === 3, "Gemma did not read the 3 sheets: " + reads.map(b => b.images?.length).join(","));
-  check(jobs.slice(jobsBefore).every(j => j.pipeline !== "krea2-t2i"), "a handed-over sheet was drawn again");
-  check(await page.isHidden("#givenSheetsWrap"), "handed-over sheets still shown once used");
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem("studioProject") || "null"));
-  check(saved?.shots?.every(sh => JSON.stringify(sh.subjects) === "[0,1]"), "shots do not start with both subjects");
-  check(saved?.locVariants?.[0]?.source === "imported" && saved.chars.every(c => c.variants[0].source === "imported"), "sheets not kept as imported");
+  const sheetJob = jobs[jobs.length - 1];
+  check(jobs.length === jobsAtLaunch + 1 && sheetJob?.pipeline === "krea2-t2i" && sheetJob.params.width === 1920,
+    "subject sheet on click: " + JSON.stringify(jobs.slice(jobsAtLaunch).map(j => j.pipeline)));
   // The director's "Sheet from a photo": one Qwen Image 2.1 job on the chosen image, as a new variant.
   const beforeDir = jobs.length;
   await page.setInputFiles("#studioCharacter .sheet-photo-input", { name: "me.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });

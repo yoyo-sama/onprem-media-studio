@@ -1,23 +1,20 @@
-// Director: the step-by-step review of the storyboard and reference-to-video
-// pipelines, in the full-screen studio. Sheets (Krea 2) → approval → shot images
-// (Qwen Image 2.1) → cuts (MiniMax H3 image to video) → animatic;
-// the Relay builds a long take out of chained segments. Reference to video stops after
-// the sheets: one H3 Ref2VA job. A long take from images (the "sequence" pipeline) opens
-// the Relay alone, on its start image (or on text alone: its first segment is H3 text to
-// video): no sheet, no approval.
+// Director: the full-screen studio of two pipelines. Reference to video: sheets (Krea 2)
+// → approval → one H3 Ref2VA job. A long take (the "sequence" pipeline, the "Narrative
+// video" card) opens the Relay alone: chained or cut H3 segments from its first frame, its
+// references or its text, no sheet to approve. The storyboard (shot list, shot images,
+// animatic) was folded into the long take on 2026-11-21.
 //
 // Rules carried over from 1.4 (docs/LESSONS.md): nothing renders without a click; a
 // prompt the user edited is sent verbatim and never compiled over; the anchoring
-// blocks are re-appended by code; a shot holds at most two subjects.
+// blocks are re-appended by code.
 
 import { blobToBase64, on, refURL } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
-import { $, LLM, MOBILE, log, openPromptEditor, promptLog, runJob, undoToast, warn } from "./ui.js";
+import { $, LLM, MOBILE, log, openPromptEditor, promptLog, runJob, warn } from "./ui.js";
 import { openLightbox } from "./gallery.js";
 import * as F from "./form.js";
 
 const P = F.P;
-const MAX_SHOT_SUBJECTS = 2;
 const RELAY_MAX_SEGMENTS = 10;
 // Default segment length: the longest H3 clip qualified on the GB10 (10 s → 10.125 s).
 const RELAY_SEG_DEFAULT = 10;
@@ -30,18 +27,10 @@ const SAVE_KEY = "studioProject";
 let d = null;            // the session
 let hooks = {};
 let savedCache = null;   // valid saved project (drives "Resume the project")
-// Sheets an assistant card handed over ({subjects: [image], setting: image | null}): the
-// next storyboard keeps them instead of drawing new ones. Shown in the form.
-let givenSheets = null;
-export function useSheets(sheets) {
-  givenSheets = sheets && (sheets.subjects?.length || sheets.setting) ? { subjects: sheets.subjects || [], setting: sheets.setting || null } : null;
-}
-export const sheetsGiven = () => givenSheets;
-
 export const active = () => !!d;
 const isR2V = () => d?.pipeline === "reference2video";
 const isLongTake = () => d?.pipeline === "sequence";
-const origin = () => (isR2V() ? "reference2video" : isLongTake() ? "relay" : "storyboard");
+const origin = () => (isR2V() ? "reference2video" : "relay");
 const out = (job, ext) => job.outputs.find(o => o.endsWith(ext)) || null;
 const sameSession = s => d === s;
 
@@ -53,41 +42,13 @@ const locVariant = () => d.locVariants[d.locActive];
 const charDesc = c => P.charDescFromFields(c.fields);
 const locDesc = () => P.locDescFromFields(d.locFields);
 
-// Subject indexes of a shot: within the list, no duplicates, at most two, never empty
-// (a shot with no subject has nothing to anchor).
-function shotSubjectIdx(shot) {
-  const n = d?.chars?.length || 1, idx = [];
-  for (const i of Array.isArray(shot?.subjects) ? shot.subjects : [0])
-    if (Number.isInteger(i) && i >= 0 && i < n && !idx.includes(i)) idx.push(i);
-  return idx.length ? idx.slice(0, MAX_SHOT_SUBJECTS) : [0];
-}
-// {desc, kind, ref} of a shot's subjects, in image order.
-const shotSubjects = shot => shotSubjectIdx(shot).map(i => {
-  const c = d.chars[i];
-  return { desc: charDesc(c), kind: P.charKindOf(c.fields), ref: activeVariant(c)?.ref || null };
-});
-
-// Short name of a subject (tabs, shot chips): the name Gemma gave, else the first
-// words of the first filled field.
-function subjectLabel(i) {
-  const f = d?.chars?.[i]?.fields;
-  const head = (P.fieldText(f?.label) || P.charFieldKeys(f).map(k => P.fieldText(f?.[k])).find(Boolean) || "")
-    .split(/[,;.]/)[0].trim().split(/\s+/).slice(0, 4).join(" ");
-  return head ? t("Subject {n} · {name}", { n: i + 1, name: head }) : t("Subject {n}", { n: i + 1 });
-}
-
 // A long take has no sheets to approve: its start image is its anchor.
 const anchorsReady = () => isLongTake() || !!d && d.chars.every(c => activeVariant(c)?.status === "ready") && locVariant()?.status === "ready";
-const keyframesReady = () => !!d?.keyframes?.length && d.keyframes.every(k => k.status === "ready");
 
 // ── Prompts ───────────────────────────────────────────────────────────────────
 const charSheetPrompt = fields => P.charsheetPromptFrom(P.charDescFromFields(fields), P.charKindOf(fields), d.sheetTemplate, d.style);
 const locSheetPrompt = () => P.locsheetPromptFrom(locDesc(), d.style);
-const keyframePrompt = shot => P.compileKeyframePrompt(shot, shotSubjects(shot), locDesc(), d.style);
 const h3Warn = (msg, params) => log("warn", msg, params);
-const cutPrompt = (shot, holdMotion, duration, body) =>
-  P.buildH3CutPrompt(shot, shotSubjects(shot), locDesc(), holdMotion, duration, body || null, false, d.style, h3Warn);
-const keyframeEngineName = () => P.keyframeModelName(d.wf.keyframes);
 
 // ── Jobs ──────────────────────────────────────────────────────────────────────
 function sheetJob(kind, prompt, seed) {
@@ -96,31 +57,15 @@ function sheetJob(kind, prompt, seed) {
     sub: ["{info} · seed {seed}", { info: "Krea 2", seed }] });
 }
 
-// Shot image: subjects (1 or 2 sheets, or the previous frame for a Relay cut), the
-// setting sheet and the extra references, at the project's ratio.
-async function keyframeJob(subjectRefs, prompt, seed, label, onSubmitted) {
-  const [width, height] = F.QWEN21_RATIOS[d.ratio];
-  const params = { prompt, subjects: subjectRefs, setting: locVariant().ref, references: await F.refRefs("sb"), width, height, seed };
-  return runJob(d.wf.keyframes, params, { origin: origin(), label, sub: ["{info} · seed {seed}", { info: keyframeEngineName(), seed }], onSubmitted });
-}
-
-// Cut: H3 image to video from a shot image (FL2VA with an end image).
+// A Relay segment in H3 image to video from its start frame (FL2VA with an end image).
 function cutJob(imageRef, prompt, duration, seed, label, lastRef, onSubmitted) {
   return runJob("h3-i2v", { prompt, duration, seed, loras: d.loras || [], image: imageRef, ...(lastRef ? { last_image: lastRef } : {}) }, {
     origin: origin(), label, onSubmitted,
     sub: ["{info} · seed {seed}", { info: `${lastRef ? "FL2VA" : "I2VA"} · ${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`, seed }] });
 }
 
-// Joins clips (one clip needs no job). `smooth`: the clips of one continuous take,
-// whose sound levels are matched at the joins.
-async function concat(refs, label, smooth = false) {
-  if (refs.length === 1) return refs[0];
-  return out(await runJob("video-concat", { clips: refs, ...(smooth ? { smooth_audio: true } : {}) }, { origin: origin(), label: [label], sub: ["{n} clip(s)", { n: refs.length }] }), ".mp4");
-}
-
 // ── Studio shell ──────────────────────────────────────────────────────────────
-const SECTIONS = { character: "studioCharacter", location: "studioLocation", storyboard: "studioStoryboard",
-                   montage: "studioMontage", relay: "studioRelay", video: "studioVideoR2V" };
+const SECTIONS = { character: "studioCharacter", location: "studioLocation", relay: "studioRelay", video: "studioVideoR2V" };
 const navBtn = name => document.querySelector(`#studioNav [data-section="${name}"]`);
 function enterStudio() { document.body.dataset.studio = "1"; hooks.onChange?.(); }
 export function exitStudio() { delete document.body.dataset.studio; hooks.onChange?.(); }
@@ -129,10 +74,9 @@ function selectSection(name) {
   document.querySelectorAll("#studioNav .studio-nav-btn").forEach(b => b.classList.toggle("active", b.dataset.section === name));
 }
 function updateNavForPipeline() {
-  for (const name of ["storyboard", "montage", "relay"]) navBtn(name).hidden = isR2V();
-  navBtn("video").hidden = !isR2V();
-  for (const name of ["character", "location", "storyboard", "montage"]) if (isLongTake()) navBtn(name).hidden = true;
-  if (!isLongTake()) for (const name of ["character", "location"]) navBtn(name).hidden = false;
+  navBtn("relay").hidden = !isLongTake();
+  navBtn("video").hidden = isLongTake();
+  for (const name of ["character", "location"]) navBtn(name).hidden = isLongTake();
 }
 export function placeProjectActions() {
   const box = document.querySelector(".studio-project-actions");
@@ -143,14 +87,6 @@ export function placeProjectActions() {
 export function reset() {
   d = null;
   exitStudio();
-  $("shotEditList").replaceChildren();
-  $("shotEditList").hidden = true;
-  renderShotStrip();
-  $("directorKeyframesBtn").hidden = true;
-  $("directorKeyframesBtn").disabled = false;
-  $("montageList").replaceChildren();
-  $("montagePlayer").replaceChildren();
-  $("studioTimeline").replaceChildren();
   $("relayList").replaceChildren();
   $("relayPlayer").replaceChildren();
   relayLive.clear();
@@ -167,7 +103,7 @@ export function reset() {
 // Display only: the active sheets and the step reached.
 export function refreshSessionBar() {
   const box = $("sbAnchors"), steps = $("sbSteps");
-  const show = !!d && ["storyboard", "reference2video"].includes(F.currentPipeline());
+  const show = !!d && isR2V();
   const c = d && activeVariant(d.chars[0]), l = d && locVariant();
   const anchors = show && c?.status === "ready" && l?.status === "ready";
   box.hidden = !anchors;
@@ -183,8 +119,8 @@ export function refreshSessionBar() {
   }
   steps.hidden = !d || isLongTake();
   if (!d || isLongTake()) return;
-  const names = isR2V() ? [L("Sheets"), L("Video")] : [L("Sheets"), L("Storyboard"), L("Montage")];
-  const cur = !d.validated ? 1 : isR2V() ? 2 : keyframesReady() ? 3 : 2;
+  const names = [L("Sheets"), L("Video")];
+  const cur = d.validated ? 2 : 1;
   steps.replaceChildren(...names.map((n, i) => {
     const li = document.createElement("li");
     tx(li, "{mark} {name}", { mark: i + 1 < cur ? "✓" : i + 1, name: t(n) });
@@ -194,11 +130,7 @@ export function refreshSessionBar() {
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-// Sheets from the brief (Gemma), the sheet jobs at once, then (storyboard) the shot list.
-// A sheet handed over by the assistant is kept as an imported variant: Gemma reads its
-// fields from the image (vision) and no job draws it again.
-const SUBJECT_FROM_SHEET = "The scene is the attached character sheet: describe the subject it shows, exactly as it looks there.";
-const SETTING_FROM_SHEET = "The scene is the attached setting sheet: describe the place it shows, exactly as it looks there.";
+// Sheet descriptions from the brief (Gemma); each sheet is drawn on the user's click.
 const imported = img => ({ ref: img.ref, seed: null, source: "imported", prompt: null, status: "ready" });
 
 // The sheet compilers, fed the image instead of the brief. A failed call leaves the
@@ -213,15 +145,9 @@ async function fieldsFromSheet(img, read, scene) {
 async function openSession(pipeline, seed) {
   const text = F.brief();
   if (!text) throw new Error(t("Describe the scene in the brief before generating."));
-  const given = pipeline === "storyboard" ? givenSheets : null;
-  const subjects = given?.subjects || [], setting = given?.setting || null;
-  if (given) log("req", "Director: reading the sheets from the assistant with {llm} (vision)…", { llm: LLM });
-  else log("req", "Director: subject and setting descriptions with {llm}…", { llm: LLM });
-  const charFields = [];
-  for (const img of subjects) charFields.push(await fieldsFromSheet(img, P.characterSheetFromBrief, SUBJECT_FROM_SHEET));
-  if (!subjects.length) charFields.push(await P.characterSheetFromBrief(F.llm, text, promptLog));
-  const locFields = setting ? await fieldsFromSheet(setting, P.locationSheetFromBrief, SETTING_FROM_SHEET)
-    : await P.locationSheetFromBrief(F.llm, text, promptLog);
+  log("req", "Director: subject and setting descriptions with {llm}…", { llm: LLM });
+  const charFields = [await P.characterSheetFromBrief(F.llm, text, promptLog)];
+  const locFields = await P.locationSheetFromBrief(F.llm, text, promptLog);
   const s = {
     pipeline, wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value,
     style: F.currentStyleId(), sheetTemplate: F.currentTemplateId(),
@@ -229,12 +155,6 @@ async function openSession(pipeline, seed) {
   };
   // Nothing is drawn here: the studio opens on the descriptions, and each sheet is
   // generated (from its fields or a photo) or imported by the user's click.
-  s.chars.forEach((c, i) => { if (subjects[i]) c.variants.push(imported(subjects[i])); });
-  if (setting) s.locVariants.push(imported(setting));
-  if (given) {
-    givenSheets = null;
-    log("ok", "{n} sheet(s) from the assistant kept: they are not drawn again.", { n: subjects.length + (setting ? 1 : 0) });
-  }
   return { s, text };
 }
 
@@ -246,7 +166,7 @@ function enterSession(s) {
   selectSection(isLongTake() ? "relay" : "character");
   renderSheetMenu("char");
   renderSheetMenu("loc");
-  if (!isR2V()) { renderRelay(); renderShotList(); }
+  if (isLongTake()) renderRelay();
   updateGate();
   if (isLongTake()) log("ok", "Long take open: read the segments, then generate the chain.");
   else log("ok", "Studio open: no sheet is drawn yet. Generate each one from its description or a photo, or import a finished sheet.");
@@ -281,7 +201,7 @@ export async function startLongTake(seed, { first = null, refs = [] } = {}) {
     pipeline: "sequence", wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value, style: "none", sheetTemplate: "auto",
     loras: F.formLoras(), startImage: first ? { ref: up(first) } : null, refsGiven: subjects.length + (place ? 1 : 0),
     chars, charIdx: 0, locFields: place ? { place: desc(place) } : {}, locVariants: place ? [imported({ ref: up(place) })] : [],
-    locActive: 0, validated: true, shots: [], keyframes: null, cutPlan: null, cuts: null, order: null, animatic: null,
+    locActive: 0, validated: true,
     relay: newRelay({ scenario: text, total: RELAY_SEG_DEFAULT, segMax: RELAY_SEG_DEFAULT,
       segments: [{ prompt: text, duration: RELAY_SEG_DEFAULT, endImage: null }] }),
   };
@@ -321,21 +241,6 @@ export async function longTakeSheet(kind, photo = null) {
       ...P.SHEET_SIZE, count: 1, seed }, meta("Subject sheet", "Krea 2"));
   }
   return out(job, ".png");
-}
-
-export async function startStoryboard(seed) {
-  const { s, text } = await openSession("storyboard", seed);
-  s.n = Math.min(16, Math.max(4, parseInt($("shotCount").value, 10) || 6));
-  s.segDur = F.formDuration();
-  s.holdDur = parseInt($("holdDuration").value, 10) > 0 ? F.clampDuration($("holdDuration").value) : 0;
-  s.shots = await P.shotListFromBrief(F.llm, text, s.n, s.segDur, promptLog);
-  // Several subjects handed over: each shot starts with the first two (the cap of a
-  // shot); the shot list's chips change that.
-  if (s.chars.length > 1) s.shots.forEach(shot => { shot.subjects = [0, 1]; });
-  s.keyframes = null; s.cutPlan = null; s.cuts = null; s.order = null; s.animatic = null;
-  s.relay = newRelay();
-  enterSession(s);
-  showRelayComposer();
 }
 
 export async function startR2V(seed) {
@@ -389,27 +294,6 @@ function renderFields(kind, keys) {
   translateTree(box);
 }
 
-function renderSubjectTabs() {
-  const wrap = $("subjectTabs");
-  wrap.hidden = !d || isR2V();
-  if (wrap.hidden) return;
-  const busy = d.chars.some(c => c.variants.some(v => v.status === "pending"));
-  const tab = (cls, text, params, onClick, disabled) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "subject-tab" + cls;
-    if (params) tx(b, text, params); else b.textContent = text;
-    b.disabled = !!disabled;
-    b.addEventListener("click", onClick);
-    return b;
-  };
-  wrap.replaceChildren(
-    ...d.chars.map((_, i) => tab(i === d.charIdx ? " active" : "", subjectLabel(i), null, () => selectSubject(i))),
-    tab(" add", "+ Add a subject", {}, addSubject),
-    // Removing a subject whose sheet is rendering would orphan the job: only this waits.
-    ...(d.chars.length > 1 ? [tab(" del", "Remove this subject", {}, () => removeSubject(d.charIdx), busy)] : []));
-}
-
 function renderCharKind() {
   const wrap = $("charKindToggle");
   wrap.hidden = !d;
@@ -434,58 +318,10 @@ function switchKind(kind) {
   save();
 }
 
-function selectSubject(i) {
-  if (!d || i === d.charIdx || !d.chars[i]) return;
-  d.charIdx = i;
-  renderSheetMenu("char");
-  save();
-}
-
-// A new subject is an EMPTY slot, nothing else: no Gemma call, no job. The user
-// describes it, then generates its sheet (on a one-subject brief Gemma used to invent
-// a second subject and its sheet rendered unasked).
-function addSubject() {
-  if (!d || isR2V()) return;
-  const fields = { kind: P.charKindOf(curChar().fields), label: "" };
-  for (const k of P.charFieldKeys(fields)) fields[k] = "";
-  d.chars.push(newChar(fields));
-  d.charIdx = d.chars.length - 1;
-  d.validated = false;
-  renderSheetMenu("char");
-  refreshSheetUI("char");
-  renderShotList();
-  save();
-  log("sys", "Subject {n} added (empty): describe it, then generate its sheet.", { n: d.chars.length });
-}
-
-// Shots name their subjects by index: theirs are shifted before the splice. Undo puts
-// everything back unless the project changed since.
-function removeSubject(i) {
-  if (!d || d.chars.length < 2 || !d.chars[i] || d.chars.some(c => c.variants.some(v => v.status === "pending"))) return;
-  const s = d, shots = s.shots || [];
-  const snap = { slot: s.chars[i], charIdx: s.charIdx, validated: s.validated, left: s.chars.length - 1,
-                 subjects: shots.map(shot => ({ had: "subjects" in shot, v: shot.subjects })) };
-  const remap = shots.map(shot => shotSubjectIdx(shot).filter(x => x !== i).map(x => (x > i ? x - 1 : x)));
-  s.chars.splice(i, 1);
-  shots.forEach((shot, k) => { shot.subjects = remap[k].length ? remap[k] : [0]; });
-  s.charIdx = Math.min(s.charIdx, s.chars.length - 1);
-  s.validated = false;
-  const redraw = () => { renderSheetMenu("char"); refreshSheetUI("char"); renderShotList(); save(); };
-  redraw();
-  undoToast("Subject {n} removed.", { n: i + 1 }, () => {
-    if (d !== s || s.chars.length !== snap.left) { log("warn", "Undo impossible: the project changed since."); return; }
-    s.chars.splice(i, 0, snap.slot);
-    shots.forEach((shot, k) => { if (snap.subjects[k].had) shot.subjects = snap.subjects[k].v; else delete shot.subjects; });
-    s.charIdx = snap.charIdx;
-    s.validated = snap.validated;
-    redraw();
-  });
-}
-
 function renderSheetMenu(kind) {
   const isChar = kind === "char";
   const fields = d ? (isChar ? curChar().fields : d.locFields) : null;
-  if (isChar) { renderSubjectTabs(); renderCharKind(); }
+  if (isChar) renderCharKind();
   renderFields(kind, isChar ? P.charFieldKeys(fields) : P.LOC_FIELD_KEYS);
   sheetSection(kind).querySelectorAll("[data-field]").forEach(input => {
     input.value = fields ? fields[input.dataset.field] || "" : "";
@@ -542,7 +378,6 @@ function renderVariantStrip(kind) {
 
 function refreshSheetUI(kind) {
   renderVariantStrip(kind);
-  if (kind === "char") renderSubjectTabs();
   updateGate();
 }
 
@@ -576,7 +411,7 @@ function regenerateSheet(kind, promptOverride) {
   const keys = isChar ? P.charFieldKeys(fields) : P.LOC_FIELD_KEYS;
   if (promptOverride && !(isChar ? P.charDescFromFields(fields) : P.locDescFromFields(fields))) {
     const back = P.stripSheetSkeleton(promptOverride, skeleton(kind));
-    if (back) { fields[keys[0]] = back; renderSheetMenu(kind); if (isChar) renderShotList(); }
+    if (back) { fields[keys[0]] = back; renderSheetMenu(kind); }
   }
   const prompt = promptOverride || (isChar ? charSheetPrompt(fields) : locSheetPrompt());
   const variant = { seed, source: "generated", prompt, edited: !!promptOverride, status: "pending" };
@@ -640,8 +475,8 @@ function openSheetPrompt(kind) {
 }
 
 // ── Gate ──────────────────────────────────────────────────────────────────────
-// Storyboard and Relay open once the active sheets are ready AND approved; Montage once
-// every shot image is ready. Reference to video: approved = ready to launch.
+// Reference to video: the launch opens once the active sheets are ready AND approved. A
+// long take has nothing to approve.
 function updateGate() {
   const unlocked = anchorsReady() && !!d?.validated;
   $("directorValidateBtn").hidden = !!d?.validated;
@@ -658,12 +493,7 @@ function updateGate() {
       : "Ready to start the video.");
     lock("video", unlocked);
   } else {
-    $("shotEditList").hidden = !unlocked;
-    $("directorKeyframesBtn").hidden = !(unlocked && !d?.keyframes);
-    lock("storyboard", unlocked);
-    lock("montage", keyframesReady());
-    lock("relay", unlocked);
-    updateMontageButtons();
+    lock("relay", !!d);
     updateRelayButtons();
   }
   updateNavMarks();
@@ -672,394 +502,10 @@ function updateGate() {
 // The menu reads as a checklist: ✓ on each step that has its result.
 function updateNavMarks() {
   const marks = { character: !!d && d.chars.every(c => activeVariant(c)?.status === "ready"), location: locVariantReady(),
-    storyboard: keyframesReady(), montage: !!d?.animatic?.ref, relay: !!d?.relay?.video?.ref, video: !!d?.r2vVideo?.ref };
+    relay: !!d?.relay?.video?.ref, video: !!d?.r2vVideo?.ref };
   for (const [name, done] of Object.entries(marks)) navBtn(name).classList.toggle("done", done);
 }
 const locVariantReady = () => !!d && locVariant()?.status === "ready";
-
-// ── Shot list ─────────────────────────────────────────────────────────────────
-// One chip per subject, lit = in the shot. At two subjects the unlit chips are
-// disabled, with the reason said: a third would never reach the model.
-function renderShotSubjects(fields, shot) {
-  if (d.chars.length < 2) return;
-  const sel = shotSubjectIdx(shot), full = sel.length >= MAX_SHOT_SUBJECTS;
-  const row = document.createElement("div");
-  row.className = "shot-subjects";
-  const lbl = document.createElement("p");
-  lbl.className = "hint shot-subjects-lbl";
-  tx(lbl, full ? "{max} subjects at most per shot." : "Subjects in this shot (up to {max}):", { max: MAX_SHOT_SUBJECTS });
-  row.appendChild(lbl);
-  d.chars.forEach((_, si) => {
-    const on = sel.includes(si);
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "subj-chip" + (on ? " on" : "");
-    chip.setAttribute("aria-pressed", String(on));
-    chip.textContent = `${on ? "✓" : "+"} ${subjectLabel(si)}`;
-    chip.disabled = !on && full;
-    chip.addEventListener("click", () => {
-      if (on && sel.length === 1) return;   // a shot keeps at least one subject
-      shot.subjects = on ? sel.filter(x => x !== si) : [...sel, si];
-      renderShotList();
-      save();
-    });
-    row.appendChild(chip);
-  });
-  fields.prepend(row);
-}
-
-function libOptions(select, lib, value) {
-  select.replaceChildren(...Object.entries(lib).map(([id, v]) => new Option(v.label, id, false, id === value)));
-}
-
-function renderShotList() {
-  if (!d?.shots) return;
-  const list = $("shotEditList");
-  list.replaceChildren(...d.shots.map((shot, i) => {
-    const item = document.createElement("div");
-    item.className = "shot-edit-item";
-    item.id = `shotItem_${i}`;
-    item.tabIndex = -1;
-    item.innerHTML = `<strong></strong>
-      <div class="shot-edit-body">
-        <div class="shot-edit-fields">
-          <div class="two-cols">
-            <label>Camera<select data-field="camera"></select></label>
-            <label>Lighting<select data-field="lighting"></select></label>
-          </div>
-          <label>Action<textarea class="small" data-field="action"></textarea></label>
-          <button type="button" class="secondary-btn shot-action-btn">✎ Rewrite the action</button>
-          <div class="two-cols">
-            <label>Emotion<input type="text" data-field="emotion"></label>
-            <label>Length (s)<input type="number" min="5" max="15" data-field="duration" title="MiniMax H3 renders on a 17n+5 frame grid"></label>
-          </div>
-          <label>Details<input type="text" data-field="extra"></label>
-        </div>
-        <div class="shot-kf" id="kfSlot_${i}"></div>
-      </div>`;
-    tx(item.querySelector("strong"), "Shot {n}/{total}", { n: i + 1, total: d.n });
-    renderShotSubjects(item.querySelector(".shot-edit-fields"), shot);
-    const field = name => item.querySelector(`[data-field="${name}"]`);
-    libOptions(field("camera"), P.CAMERA_LIB, shot.camera);
-    libOptions(field("lighting"), P.LIGHTING_LIB, shot.lighting);
-    field("action").value = shot.action;
-    field("emotion").value = shot.emotion;
-    field("duration").value = shot.duration;
-    field("extra").value = shot.extra;
-    item.querySelector(".shot-action-btn").addEventListener("click", () => openShotActionPrompt(i));
-    const on = (name, fn) => field(name).addEventListener("change", () => { fn(field(name)); save(); });
-    on("camera", el => { shot.camera = el.value; });
-    on("lighting", el => { shot.lighting = el.value; });
-    on("action", el => { shot.action = el.value.trim() || shot.action; });
-    on("emotion", el => { shot.emotion = el.value.trim(); });
-    on("duration", el => { shot.duration = F.clampDuration(el.value, shot.duration); el.value = shot.duration; });
-    on("extra", el => { shot.extra = el.value.trim(); });
-    return item;
-  }));
-  translateTree(list);
-  renderAllKeyframeCards();
-  renderShotStrip();
-}
-
-// Thumbnails of the shots at the top of the Storyboard section: a click scrolls to the
-// shot and focuses it, nothing else. Updated in place, so the keyboard focus survives.
-function renderShotStrip() {
-  const strip = $("shotStrip"), n = d?.shots?.length || 0;
-  strip.hidden = !n;
-  while (strip.children.length > n) strip.lastChild.remove();
-  for (let i = 0; i < n; i++) {
-    let b = strip.children[i];
-    if (!b) {
-      b = document.createElement("button");
-      b.type = "button";
-      b.innerHTML = `<span class="st-img"></span><span class="st-n"></span><span class="st-s"></span>`;
-      b.addEventListener("click", () => { const it = $(`shotItem_${i}`); if (it) { it.scrollIntoView({ block: "start" }); it.focus({ preventScroll: true }); } });
-      strip.appendChild(b);
-    }
-    const kf = d.keyframes?.[i];
-    const st = !kf ? "todo" : kf.locked ? "locked" : kf.status;
-    b.className = `shot-thumb ${st}`;
-    b.querySelector(".st-img").style.backgroundImage = kf?.ref && st !== "missing" ? `url("${refURL(kf.ref)}")` : "";
-    tx(b.querySelector(".st-n"), "Shot {n}", { n: i + 1 });
-    tx(b.querySelector(".st-s"), st === "todo" ? "To do" : statusWord(st));
-    b.setAttribute("aria-label", t("Shot {n}: {status}", { n: i + 1, status: t(st === "todo" ? "To do" : statusWord(st)) }));
-  }
-}
-
-// The Action field can be rewritten before any shot image exists. The applied text
-// replaces it as it is; the shot's subjects go to the enrichment, so two subjects both act.
-function openShotActionPrompt(i) {
-  const shot = d?.shots?.[i];
-  if (!shot) return;
-  const descs = shotSubjects(shot).map(r => r.desc).filter(Boolean);
-  openPromptEditor({
-    title: "Shot action prompt",
-    applyLabel: "Apply to the shot",
-    hint: "This text says what happens in the shot. It is used as it is in the shot image, then in the cut; framing, light and style are added by the app.",
-    text: shot.action,
-    enrich: text => P.enrichShotAction(F.llm, text, descs, promptLog),
-    apply: text => { shot.action = text; renderShotList(); save(); },
-  });
-}
-
-// ── Shot images ───────────────────────────────────────────────────────────────
-// One job per shot, each with its own status: a failed shot can be regenerated from
-// its card while the others go on. No automatic retry.
-async function generateKeyframes() {
-  log("req", "Director: shot images anchored on the approved sheets…");
-  d.keyframes = d.shots.map((shot, i) => ({ status: "pending", locked: false, seed: F.seedPlus(d.seed, 11 + i), ref: null,
-                                             prompt: keyframePrompt(shot), edited: false }));
-  // New shot images make the montage obsolete.
-  d.cutPlan = null; d.cuts = null; d.order = null; d.animatic = null;
-  renderShotList();
-  renderMontage(); renderMontagePlayer(); renderTimeline();
-  updateGate();
-  await Promise.all(d.keyframes.map((_, i) => renderKeyframe(i)));
-}
-
-async function renderKeyframe(i) {
-  const s = d, kf = s.keyframes[i], shot = s.shots[i];
-  kf.status = "pending";
-  renderKeyframeCard(i);
-  updateGate();
-  try {
-    const job = await keyframeJob(shotSubjects(shot).map(r => r.ref), kf.prompt, kf.seed, ["Shot image {n}/{total}", { n: i + 1, total: s.n }]);
-    if (!sameSession(s)) return;
-    kf.ref = out(job, ".png");
-    kf.status = "ready";
-  } catch (err) {
-    if (!sameSession(s)) return;
-    kf.status = "error";
-    warn(err);
-  }
-  renderKeyframeCard(i);
-  updateGate();
-  save();
-}
-
-function renderKeyframeCard(i) {
-  renderShotStrip();
-  const kf = d.keyframes[i], slot = $(`kfSlot_${i}`);
-  if (!slot) return;
-  let card = slot.querySelector(".asset");
-  if (!card) {
-    card = document.createElement("div");
-    card.className = "asset fade-in";
-    card.innerHTML = `<img alt=""><div class="thumb-missing" hidden></div><div class="meta"><strong></strong><span></span></div>
-      <div class="asset-actions"><button type="button" class="kf-regen"></button><button type="button" class="kf-prompt"></button><button type="button" class="kf-lock"></button></div>`;
-    card.querySelector("img").addEventListener("click", () => { const k = d?.keyframes?.[i]; if (k?.ref) openLightbox({ url: refURL(k.ref), type: "image" }); });
-    card.querySelector(".kf-regen").addEventListener("click", () => regenerateKeyframe(i));
-    card.querySelector(".kf-prompt").addEventListener("click", () => openKeyframePrompt(i));
-    card.querySelector(".kf-lock").addEventListener("click", () => toggleLock(i));
-    slot.appendChild(card);
-  }
-  card.classList.toggle("locked", kf.locked);
-  tx(card.querySelector("strong"), "Shot {n}/{total}", { n: i + 1, total: d.n });
-  tx(card.querySelector("span"), kf.locked ? "Locked" : statusWord(kf.status));
-  const img = card.querySelector("img"), miss = card.querySelector(".thumb-missing");
-  miss.hidden = kf.status !== "missing";
-  img.hidden = kf.status === "missing" || !kf.ref;
-  if (kf.status === "missing") tx(miss, "Missing");
-  if (kf.ref) img.src = refURL(kf.ref);
-  const regen = card.querySelector(".kf-regen"), prompt = card.querySelector(".kf-prompt"), lock = card.querySelector(".kf-lock");
-  tx(regen, "🔄 Regenerate");
-  regen.disabled = kf.locked || kf.status === "pending";
-  tx(prompt, kf.edited ? "✎ Full image prompt ✱" : "✎ Full image prompt");
-  prompt.disabled = kf.locked || kf.status === "pending";
-  tx(lock, kf.locked ? "🔓 Unlock" : "🔒 Lock");
-  lock.disabled = kf.status !== "ready" && !kf.locked;
-  lock.classList.toggle("active", kf.locked);
-}
-function renderAllKeyframeCards() { d?.keyframes?.forEach((_, i) => renderKeyframeCard(i)); }
-
-// Without `promptOverride`, the prompt the shot image already carries: a prompt the user
-// edited is never compiled over. An unedited one follows the shot's fields.
-function regenerateKeyframe(i, promptOverride) {
-  const kf = d.keyframes[i];
-  if (kf.locked || kf.status === "pending") return;
-  kf.seed = F.seedPlus(kf.seed, 1);
-  if (promptOverride) { kf.prompt = promptOverride; kf.edited = true; }
-  else if (!kf.edited) kf.prompt = keyframePrompt(d.shots[i]);
-  renderKeyframe(i);
-}
-
-// The anchoring block to re-append depends on the number of subjects of the shot.
-function openKeyframePrompt(i) {
-  const kf = d?.keyframes?.[i];
-  if (!kf || kf.locked || kf.status === "pending") return;
-  const dual = shotSubjects(d.shots[i]).length > 1;
-  openPromptEditor({
-    title: "Shot image prompt",
-    hint: "This is the prompt sent to the engine, not a shot description: it must keep the sentences that say what each reference image is for. To describe only the action, use “✎ Rewrite the action” on the shot. “↩ Original prompt” brings the compiled one back, and the final anchoring block is always put back.",
-    text: kf.prompt || keyframePrompt(d.shots[i]),
-    enrich: text => P.enrichKeyframeText(F.llm, text, dual, keyframeEngineName(), promptLog),
-    apply: text => regenerateKeyframe(i, P.ensureKeyframeAnchor(text, dual, promptLog)),
-  });
-}
-
-function toggleLock(i) {
-  const kf = d.keyframes[i];
-  if (kf.status !== "ready" && !kf.locked) return;
-  kf.locked = !kf.locked;
-  renderKeyframeCard(i);
-  save();
-}
-
-// ── Montage ───────────────────────────────────────────────────────────────────
-// One cut per shot (its length), plus a hold on the last shot when asked.
-function buildCutPlan() {
-  const plan = d.shots.map((shot, k) => ({ k, shot, holdMotion: null, duration: shot.duration }));
-  if (d.holdDur > 0) plan.push({ k: d.n - 1, shot: d.shots[d.n - 1], holdMotion: P.HOLD_MOTION, duration: d.holdDur });
-  return plan;
-}
-
-function updateMontageButtons() {
-  $("directorLaunchBtn").disabled = !keyframesReady() || !!d?.cuts?.some(c => c.status === "pending");
-  const cuts = d?.cuts;
-  $("directorAssembleBtn").disabled = !(cuts?.length && cuts.every(c => c.ref && (c.status === "ready" || c.status === "stale")));
-}
-
-// "Generate the cuts": contact sheet (not awaited) + one cut per shot, each with its status.
-async function generateCuts() {
-  if (!d || !keyframesReady()) return;
-  const s = d;
-  log("req", "Montage: contact sheet and cuts (one per shot, MiniMax H3)…");
-  detachJob(runJob("image-grid", { images: s.keyframes.map(k => k.ref) }, { origin: "storyboard", label: ["Storyboard · contact sheet"],
-    sub: ["{n} image(s)", { n: s.keyframes.length }] }));
-  s.cutPlan = buildCutPlan();
-  s.cuts = s.cutPlan.map((p, k) => ({ ref: null, seed: F.seedPlus(s.seed, 31 + k), duration: p.duration, status: "pending",
-                                      edited: false, prompt: cutPrompt(p.shot, p.holdMotion, p.duration) }));
-  s.order = s.cutPlan.map((_, k) => k);
-  renderMontage(); renderTimeline(); updateMontageButtons();
-  await Promise.all(s.cuts.map((_, k) => renderCut(k)));
-  if (!sameSession(s)) return;
-  const held = s.cutPlan.length - s.n;
-  log("ok", held ? "{n} cuts generated + the hold on the last shot: reorder them, then assemble." : "{n} cuts generated: reorder them, then assemble.", { n: s.n });
-}
-const detachJob = p => { p.catch(warn); };
-
-async function renderCut(k) {
-  const s = d, cut = s.cuts[k], p = s.cutPlan[k];
-  cut.status = "pending";
-  renderMontage(); renderTimeline(); updateMontageButtons();
-  try {
-    const label = p.holdMotion ? ["Hold on the last shot"] : ["Cut {n}/{total}", { n: k + 1, total: s.n }];
-    const job = await cutJob(s.keyframes[p.k].ref, cut.prompt, cut.duration, cut.seed, label);
-    if (!sameSession(s)) return;
-    cut.ref = out(job, ".mp4");
-    cut.status = "ready";
-  } catch (err) {
-    if (!sameSession(s)) return;
-    cut.status = "error";
-    warn(err);
-  }
-  renderMontage(); renderTimeline(); updateMontageButtons();
-  save();
-}
-
-// One cut again, on the same shot image, seed + 1. An edited prompt stays; an unedited
-// one is compiled again (its alignment sentence carries the length).
-function regenerateCut(k, promptOverride) {
-  const cut = d.cuts?.[k], p = d.cutPlan?.[k];
-  if (!cut || !p || cut.status === "pending") return;
-  cut.seed = F.seedPlus(cut.seed, 1);
-  if (promptOverride) { cut.prompt = promptOverride; cut.edited = true; }
-  if (!cut.edited) cut.prompt = cutPrompt(p.shot, p.holdMotion, cut.duration);
-  renderCut(k);
-}
-
-// Reordering changes only the order: nothing renders.
-function moveClip(pos, dir) {
-  const order = d.order, j = pos + dir;
-  if (j < 0 || j >= order.length) return;
-  [order[pos], order[j]] = [order[j], order[pos]];
-  renderMontage(); renderTimeline();
-  save();
-}
-
-async function assembleAnimatic() {
-  if (!d?.cuts?.length) return;
-  const s = d;
-  $("directorAssembleBtn").disabled = true;
-  try {
-    log("req", "Montage: assembling the animatic (montage order)…");
-    const ref = await concat(s.order.map(k => s.cuts[k].ref), "Storyboard · animatic");
-    if (!sameSession(s)) return;
-    s.animatic = { ref };
-    renderMontagePlayer();
-    updateNavMarks();
-    log("ok", "Montage: animatic assembled.");
-  } catch (err) { warn(err); }
-  updateMontageButtons();
-  save();
-}
-
-// A cut's prompt is an H3 block: enriching again rewrites only detailed_description,
-// then the block is assembled again (subject_definitions, so the anchoring, stays).
-function openCutPrompt(k) {
-  const cut = d?.cuts?.[k], p = d?.cutPlan?.[k];
-  if (!cut || !p || cut.status === "pending") return;
-  openPromptEditor({
-    title: "Cut prompt",
-    hint: "MiniMax H3 block with fields: enriching again rewrites only detailed_description, the subject definitions stay in place.",
-    text: cut.prompt || cutPrompt(p.shot, p.holdMotion, cut.duration),
-    enrich: async text => cutPrompt(p.shot, p.holdMotion, cut.duration, await P.enrichCutText(F.llm, P.h3CutBodyOf(text), promptLog)),
-    apply: text => regenerateCut(k, text),
-  });
-}
-
-function renderMontage() {
-  const list = $("montageList");
-  if (!d?.cuts?.length) { list.replaceChildren(); return; }
-  list.replaceChildren(...d.order.map((k, pos) => {
-    const cut = d.cuts[k], p = d.cutPlan[k];
-    const clip = document.createElement("div");
-    clip.className = "montage-clip";
-    clip.innerHTML = `<div class="clip-head"><strong></strong><span class="clip-meta"></span></div>
-      <video muted preload="metadata"></video><div class="thumb-missing" hidden></div>
-      <label>Length (s)<input type="number" min="5" max="15" data-field="cutdur"></label>
-      <div class="clip-actions">
-        <button type="button" class="clip-up">↑ Move up</button><button type="button" class="clip-down">↓ Move down</button>
-        <button type="button" class="clip-regen">🔄 Regenerate this shot</button><button type="button" class="clip-prompt"></button>
-        <button type="button" class="clip-preview">⤢ Preview</button>
-      </div>`;
-    // The hold is not one more shot: it has its own label, the shots keep the storyboard's numbers.
-    if (p.holdMotion) tx(clip.querySelector("strong"), "Hold on shot {n}", { n: d.n });
-    else tx(clip.querySelector("strong"), "Shot {n}/{total}", { n: k + 1, total: d.n });
-    tx(clip.querySelector(".clip-meta"), "seed {seed} · {real} s rendered · {status}",
-      { seed: cut.seed, real: P.h3RealDuration(cut.duration).toFixed(2), status: t(statusWord(cut.status)) });
-    const vid = clip.querySelector("video"), miss = clip.querySelector(".thumb-missing");
-    miss.hidden = cut.status !== "missing";
-    vid.hidden = cut.status === "missing" || !cut.ref;
-    if (cut.status === "missing") tx(miss, "Missing");
-    if (cut.ref) vid.src = refURL(cut.ref);
-    const dur = clip.querySelector('[data-field="cutdur"]');
-    dur.value = cut.duration;
-    dur.addEventListener("change", () => {
-      const v = F.clampDuration(dur.value, cut.duration);
-      dur.value = v;
-      if (v === cut.duration) return;
-      cut.duration = v;
-      if (cut.status === "ready") cut.status = "stale";
-      renderMontage(); renderTimeline(); updateMontageButtons();
-      save();
-    });
-    const btn = cls => clip.querySelector(cls);
-    btn(".clip-up").disabled = pos === 0;
-    btn(".clip-down").disabled = pos === d.order.length - 1;
-    btn(".clip-up").addEventListener("click", () => moveClip(pos, -1));
-    btn(".clip-down").addEventListener("click", () => moveClip(pos, 1));
-    btn(".clip-regen").disabled = cut.status === "pending";
-    btn(".clip-regen").addEventListener("click", () => regenerateCut(k));
-    tx(btn(".clip-prompt"), cut.edited ? "✎ Prompt ✱" : "✎ Prompt");
-    btn(".clip-prompt").disabled = cut.status === "pending";
-    btn(".clip-prompt").addEventListener("click", () => openCutPrompt(k));
-    btn(".clip-preview").disabled = !cut.ref || cut.status === "missing";
-    btn(".clip-preview").addEventListener("click", () => openLightbox({ url: refURL(cut.ref), type: "video" }));
-    return clip;
-  }));
-  translateTree(list);
-}
 
 function player(wrap, ref) {
   wrap.replaceChildren();
@@ -1070,31 +516,6 @@ function player(wrap, ref) {
   vid.src = refURL(ref);
   wrap.appendChild(vid);
 }
-const renderMontagePlayer = () => player($("montagePlayer"), d?.animatic?.ref);
-
-// Timeline at the foot of the studio: the clips in montage order; a click opens Montage.
-function renderTimeline() {
-  const foot = $("studioTimeline");
-  if (!d?.cuts?.length) { foot.replaceChildren(); return; }
-  const strip = document.createElement("div");
-  strip.className = "timeline-strip";
-  d.order.forEach((k, pos) => {
-    const cut = d.cuts[k];
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "timeline-thumb";
-    const dot = ["ready", "stale", "missing"].includes(cut.status) ? cut.status : "pending";
-    b.innerHTML = `<span class="timeline-dot ${dot}"></span>`
-      + (cut.ref && cut.status !== "missing" ? `<video muted preload="metadata"></video>` : `<div class="thumb-missing"></div>`)
-      + `<span class="timeline-cap"></span>`;
-    if (cut.ref && cut.status !== "missing") b.querySelector("video").src = refURL(cut.ref);
-    else tx(b.querySelector(".thumb-missing"), statusWord(cut.status));
-    b.querySelector(".timeline-cap").textContent = `${pos + 1} · ${cut.duration} s`;
-    b.addEventListener("click", () => selectSection("montage"));
-    strip.appendChild(b);
-  });
-  foot.replaceChildren(strip);
-}
 
 // ── Relay (long take) ─────────────────────────────────────────────────────────
 // A chain of short segments whose consistency comes from the chaining. 🔗 continue:
@@ -1102,8 +523,8 @@ function renderTimeline() {
 // frame-exact continuity). 🎞 cut: a new shot rendered by H3 Ref2VA on the subjects'
 // sheets (at most two) and the setting (its sheet, or else the previous segment's last
 // frame), which H3 keeps in view for the whole clip, so a subject who left the frame
-// comes back as itself. The first segment starts on a shot image (the sheets', or the
-// long take's start image).
+// comes back as itself. The first segment starts on the long take's first frame, or is
+// made from its references or its text.
 // `look` is written once and shared by every segment's prompt (camera, lighting,
 // soundscape, music); a segment holds only its action and its own camera motion.
 const newRelaySegment = (prompt = "", duration = RELAY_SEG_DEFAULT) => ({ prompt, duration, mode: "continue", status: "idle", ref: null,
@@ -1135,10 +556,8 @@ function relayDurations(total, segMax) {
 const realSeconds = durs => durs.reduce((sum, v) => sum + P.h3RealDuration(v), 0);
 // "00:10.1": a position in the sequence, from the durations H3 really renders.
 const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${(sec % 60).toFixed(1).padStart(4, "0")}`;
-// The chain follows subject 1, whatever tab the subject menu shows.
-// The subjects the Relay follows: the first two with a sheet (a shot image holds two at most);
-// a long take sends its references straight to Ref2VA, with no shot image: all of them.
-const relaySubjects = () => d.chars.filter(c => activeVariant(c)?.ref).slice(0, isLongTake() ? LONG_TAKE_REFS : 2)
+// The subjects the Relay follows: the long take's references, sent straight to Ref2VA.
+const relaySubjects = () => d.chars.filter(c => activeVariant(c)?.ref).slice(0, LONG_TAKE_REFS)
   .map(c => ({ desc: charDesc(c), kind: P.charKindOf(c.fields), role: c.fields.role, ref: activeVariant(c).ref }));
 const relayBusy = () => !!d?.relay?.segments.some(seg => seg.status === "pending");
 const relayReady = () => !!d?.relay?.segments.length && d.relay.segments.every(seg => seg.prompt.trim());
@@ -1156,11 +575,11 @@ const takesNoFrame = i => latentLink(i) || (!!d?.relay?.segments[i]?.scene && !c
 const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min(seg.transitionIdx || 0, seg.transitions.length - 1)] : null);
 
 function updateRelayButtons() {
-  const r = d?.relay, unlocked = isLongTake() || (anchorsReady() && !!d?.validated), busy = relayBusy();
+  const r = d?.relay, busy = relayBusy();
   $("relayComposeBtn").disabled = !r || busy || !$("relayScenario").value.trim();
   $("relayImportBtn").disabled = !r || busy;
   document.querySelectorAll("#relayLook textarea").forEach(el => { el.disabled = !r || busy; });
-  $("relayRunBtn").disabled = !unlocked || !relayReady() || busy;
+  $("relayRunBtn").disabled = !r || !relayReady() || busy;
   const from = relayResumeFrom();
   if (!r || from === 0) tx($("relayRunBtn"), "Generate the chain");
   else if (from < r.segments.length) tx($("relayRunBtn"), "Continue the chain from segment {n}", { n: from + 1 });
@@ -1228,12 +647,13 @@ async function composeRelay() {
 }
 
 // A screenplay in the H3 layout becomes the chain as written: one card per segment, its
-// length from its timestamps (5 to 15 s), the first segment of a later shot a cut, and the
-// shared fields the file gives (they replace the ones shown). Nothing renders.
+// length from its timestamps (5 to 15 s), the first segment of a later shot a new scene (🎞,
+// as a split's: from the references, its shot line naming its place), and the shared fields
+// the file gives (they replace the ones shown). Nothing renders.
 function applyScreenplay(r, play, ends = []) {
   const list = play.segments.slice(0, RELAY_MAX_SEGMENTS);
   r.segments = list.map((seg, i) => ({ ...newRelaySegment(seg.prompt, F.clampDuration(seg.duration || r.segMax, r.segMax)),
-    mode: i > 0 ? seg.mode : "continue", endImage: ends[i] || null }));
+    ...(i > 0 && seg.mode === "cut" ? { mode: "cut", scene: true } : { mode: "continue" }), endImage: ends[i] || null }));
   for (const k of play.given) r.look[k] = play.look[k];
   r.segMax = F.clampDuration(Math.max(...r.segments.map(seg => seg.duration)), r.segMax);
   r.total = clampTotal(r.segments.reduce((sum, seg) => sum + seg.duration, 0));
@@ -1337,9 +757,9 @@ function renderRelay() {
     dur.value = seg.duration;
     dur.addEventListener("change", () => { seg.duration = F.clampDuration(dur.value, seg.duration); syncRelayTotal(); renderRelay(); save(); });
     const link = el.querySelector(".seg-link");
-    // The first segment has no link: it starts on the shot image, or the start image.
+    // The first segment has no link: it starts on the first frame, the references or the text.
     if (i === 0) link.hidden = true;
-    if (isLongTake() && i === 0) renderStartChoice(el.querySelector(".seg-start-row"), seg, busy);
+    if (i === 0) renderStartChoice(el.querySelector(".seg-start-row"), seg, busy);
     else if (i > 0) {
       tx(link, continuous(seg) ? "🔗 Continuous" : seg.scene ? "🎞 New scene (from the references)" : "🎞 Cut (new shot from the references)");
       txAttr(link, "title", continuous(seg)
@@ -1402,7 +822,7 @@ function renderStartChoice(row, seg, busy) {
 const relayLive = new Map();      // segment → {phase, id, progress, start}
 const moreOpen = new WeakSet();   // segments whose advanced options are open
 let relayRunning = false, relayStop = false;
-const PHASE_WORDS = { image: L("Shot image"), video: L("Video"), frames: L("Transition frames") };
+const PHASE_WORDS = { video: L("Video"), frames: L("Transition frames") };
 on("job", job => {
   for (const live of relayLive.values()) if (live.id === job.id) {
     live.progress = job.status === "done" ? 1 : job.progress || 0;
@@ -1561,7 +981,7 @@ async function renderSegment(i) {
   // A cut: H3 Ref2VA on the subjects' sheets and the setting, with no start image.
   if (i > 0 && !continuous(seg)) return renderCutSegment(s, seg, i, total, before, began);
   // A long take with no first frame starts from its references, or else from the text.
-  if (isLongTake() && i === 0 && !s.startImage)
+  if (i === 0 && !s.startImage)
     return s.refsGiven ? renderCutSegment(s, seg, i, total, null, began) : renderTextSegment(s, seg, i, total, began);
   await ensureTransitions(before, i - 1, total);
   if (!sameSession(s)) return;
@@ -1570,22 +990,10 @@ async function renderSegment(i) {
   if (i > 0 && continuous(seg) && !prev)
     throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
   const subs = relaySubjects(), look = r.look;
-  let start;
-  // A long take starts on its first frame, as it is.
-  if (isLongTake() && i === 0) start = s.startImage.ref;
-  else if (i > 0 && prev && continuous(seg)) {
-    log("req", "Relay, segment {n}/{total}: video (continuous link)…", { n: i + 1, total });
-    start = prev.ref;
-  } else {
-    log("req", "Relay, segment {n}/{total}: shot image (cut)…", { n: i + 1, total });
-    // The shot image takes the shared light too, so the clip does not start in another one.
-    const text = [seg.prompt, look.lighting].map(x => x.trim().replace(/[\s.!?…]+$/, "")).filter(Boolean).join(". ");
-    const prompt = P.compileRelayKeyframePrompt(text, subs[0].desc, locDesc(), true, s.style);
-    const job = await tracked(seg, "image", sub => keyframeJob([subs[0].ref], prompt, F.seedPlus(s.seed, 401),
-      ["Relay · shot image {n}/{total}", { n: i + 1, total }], sub));
-    start = out(job, ".png");
-  }
-  if (!sameSession(s)) return;
+  // Segment 1 starts on the long take's first frame, as it is; a continuous one on the
+  // previous segment's transition frame.
+  if (i > 0) log("req", "Relay, segment {n}/{total}: video (continuous link)…", { n: i + 1, total });
+  const start = i === 0 ? s.startImage.ref : prev.ref;
   seg.start = { ref: start };
   const last = seg.endImage?.ref || null;
   // With the subjects' sheets, a segment starts on its frame AND sees the sheets (Ref2VA with a
@@ -1594,7 +1002,7 @@ async function renderSegment(i) {
   // frame: Ref2VA kept an empty garden 2 frames, then cut to the people the screenplay
   // describes (GB10 2026-11-20); i2v starts on it and keeps it. In a described scene that
   // frame is the place, and the segments after it see it as the location.
-  const firstFrame = isLongTake() && i === 0, place = firstFrame && describedScene();
+  const firstFrame = i === 0, place = firstFrame && describedScene();
   const refs = last || firstFrame ? [] : relayRefs(settingSheet());
   let job;
   if (refs.length) {
@@ -1670,7 +1078,7 @@ function relayRefs(setting) {
     desc: x.desc, ref: x.ref })),
     ...(setting ? [{ kind: "environment", ...setting }] : [])];
 }
-const describedScene = () => isLongTake() && !d.refsGiven && !!P.parseScreenplay(d.relay.scenario) && !namesSubjects();
+const describedScene = () => !d.refsGiven && !!P.parseScreenplay(d.relay.scenario) && !namesSubjects();
 const namesSubjects = () => [...d.relay.segments.map(seg => seg.prompt), d.relay.look.subjects, d.relay.look.retention]
   .some(x => new RegExp(P.H3_TOKEN_RE.source, "i").test(x || ""));
 // The setting's sheet: the director's, or a long take's setting reference. A segment that
@@ -1874,11 +1282,11 @@ const runJobDetached = p => { p.catch(warn); };
 export function setStyle(style) { if (d) { d.style = style; save(); } }
 export function setTemplate(id) { if (d) { d.sheetTemplate = id; save(); } }
 
-// ── Saving and resuming (storyboard only) ─────────────────────────────────────
+// ── Saving and resuming (long take only) ──────────────────────────────────────
 // The project is kept by file references (server files): nothing volatile is written.
 // A "pending" status is not saved; on resume, an item with its file is ready.
 function replacer(key, value) {
-  if (key === "wf" || key === "cutPlan") return undefined;
+  if (key === "wf") return undefined;
   if (key === "status" && value === "pending") return undefined;
   return value;
 }
@@ -1896,7 +1304,8 @@ function loadSaved() {
   try { p = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); }
   catch { log("warn", "Unreadable saved project: ignored."); return null; }
   if (!p) return null;
-  if (p.version !== 2 || !F.workflow(p.wfId)) { log("warn", "Saved project ignored (unknown format)."); return null; }
+  // A storyboard saved before 2026-11-21 is not a long take: ignored.
+  if (p.version !== 2 || p.pipeline !== "sequence" || !F.workflow(p.wfId)) { log("warn", "Saved project ignored (unknown format)."); return null; }
   return p;
 }
 export const hasSavedProject = () => !!savedCache;
@@ -1910,46 +1319,30 @@ export async function restoreProject() {
   if (!p) { savedCache = null; hooks.onChange?.(); return; }
   reset();
   $("brief").value = p.brief || $("brief").value;
-  if (p.pipeline !== "sequence") {
-    $("shotCount").value = p.n;
-    $("videoDuration").value = p.segDur;
-    $("holdDuration").value = p.holdDur;
-  }
   $("ratioSelect").value = p.ratio;
   if (P.STYLE_PACKS[p.style]) $("styleSelect").value = p.style;
   $("seed").value = String(p.seed);
   const revive = it => it && { ...it, status: !it.status || it.status === "missing" ? (it.ref ? "ready" : "error") : it.status };
   d = {
     // A project saved with an engine since dropped (Qwen Edit 2509) takes the pipeline's engine.
-    ...p, wf: F.workflow(p.wfId) || F.WORKFLOWS.find(w => w.pipeline === p.pipeline), validated: !!p.validated,
+    ...p, wf: F.workflow(p.wfId), validated: true,
     chars: p.chars.map(c => newChar(c.fields, c.variants.map(revive), c.active ?? 0)),
-    locVariants: p.locVariants.map(revive),
-    keyframes: p.keyframes ? p.keyframes.map(revive) : null,
-    cuts: p.cuts ? p.cuts.map(revive) : null, cutPlan: null,
+    locVariants: p.locVariants.map(revive), charIdx: 0,
     relay: newRelay(p.relay || {}),
   };
-  d.charIdx = Math.min(Math.max(0, p.charIdx ?? 0), d.chars.length - 1);
-  if (d.cuts) d.cutPlan = buildCutPlan();
   const s = d;
   updateNavForPipeline();
   enterStudio();
-  selectSection(isLongTake() ? "relay" : "character");
-  renderSheetMenu("char"); renderSheetMenu("loc");
-  renderShotList();
+  selectSection("relay");
   showRelayComposer();
   renderRelay(); player($("relayPlayer"), d.relay.video?.ref);
-  renderMontage(); renderTimeline(); renderMontagePlayer();
   updateGate();
   log("ok", "Project restored (saved {date}): checking its files…", { date: new Date(p.savedAt).toLocaleString(LANG) });
   // Every file is checked; a missing one is marked, the rest of the project stays usable.
-  const items = [...d.chars.map(activeVariant), locVariant(), ...(d.keyframes || []), ...(d.cuts || []),
-                 ...d.relay.segments].filter(it => it?.ref && ["ready", "stale"].includes(it.status));
+  const items = [...d.chars.map(activeVariant), locVariant(), ...d.relay.segments].filter(it => it?.ref && ["ready", "stale"].includes(it.status));
   await Promise.all(items.map(async it => { if (!(await exists(it.ref))) it.status = "missing"; }));
-  if (d.animatic?.ref && !(await exists(d.animatic.ref))) d.animatic = null;
   if (d.relay.video?.ref && !(await exists(d.relay.video.ref))) d.relay.video = null;
   if (!sameSession(s)) return;
-  renderSheetMenu("char"); renderSheetMenu("loc");
-  renderAllKeyframeCards(); renderMontage(); renderTimeline(); renderMontagePlayer();
   renderRelay(); player($("relayPlayer"), d.relay.video?.ref);
   updateGate();
   const missing = items.filter(it => it.status === "missing").length;
@@ -1967,9 +1360,6 @@ export function initDirector(h) {
       const input = e.target.closest("[data-field]");
       if (!input || !d) return;
       (kind === "char" ? curChar().fields : d.locFields)[input.dataset.field] = input.value.trim();
-      // A subject's label comes from its fields: tabs and shot chips follow.
-      if (kind === "char" && d.chars.length > 1) { renderSubjectTabs(); renderShotList(); }
-      save();
     });
     section.querySelector(".sheet-regen").addEventListener("click", () => regenerateSheet(kind));
     section.querySelector(".sheet-prompt").addEventListener("click", () => openSheetPrompt(kind));
@@ -1987,18 +1377,9 @@ export function initDirector(h) {
     if (!anchorsReady()) return;
     d.validated = true;
     updateGate();
-    // Approved: on to the next step.
-    selectSection(isR2V() ? "video" : "storyboard");
-    save();
+    // Approved: on to the video.
+    selectSection("video");
   });
-  $("directorKeyframesBtn").addEventListener("click", async () => {
-    const b = $("directorKeyframesBtn");
-    b.disabled = true;
-    try { await generateKeyframes(); b.hidden = true; } catch (err) { warn(err); }
-    finally { b.disabled = false; }
-  });
-  $("directorLaunchBtn").addEventListener("click", generateCuts);
-  $("directorAssembleBtn").addEventListener("click", assembleAnimatic);
   $("directorR2VLaunchBtn").addEventListener("click", launchR2V);
   $("relayAddBtn").addEventListener("click", () => {
     const r = d?.relay;
@@ -2064,11 +1445,6 @@ export function initDirector(h) {
     const img = b.querySelector("img");
     if (img.getAttribute("src")) openLightbox({ url: img.src, type: "image" });
   }));
-  document.addEventListener("langchange", () => {
-    if (!d) return;
-    renderSubjectTabs();
-    renderShotList();
-  });
   placeProjectActions();
   reset();
 }

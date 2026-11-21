@@ -4,7 +4,7 @@
     id: director
     name: Director
     when: one sentence the router reads to pick this role
-    tools: storyboard, reference_video
+    tools: long_take, reference_video
     ---
     The role's instructions (system prompt), sent as written.
 

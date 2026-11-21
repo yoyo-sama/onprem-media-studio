@@ -295,10 +295,8 @@ carte « Vidéo longue », et a choisi de les regrouper selon ce plan :
    retire avec ✕.
 3. Les images fixes par plan et l'animatique du storyboard quittent la carte : l'histoire est
    rendue directement en segments enchaînés ou coupés.
-4. Ensuite : une histoire en trois scènes avec coupes rendue sur le GB10, ses images inspectées.
-5. Si ce rendu est bon, le pipeline storyboard disparaît (code, carte storyboard de l'assistant,
-   docs). D'ici là, il s'ouvre depuis la carte storyboard de l'assistant, et un projet storyboard
-   enregistré se reprend depuis la carte narrative.
+4. Une histoire en trois scènes avec coupes rendue sur le GB10, ses images inspectées (ci-dessous).
+5. Ce rendu étant bon, le pipeline storyboard est parti (ci-dessous, § Storyboard retiré).
 
 **Rendu GB10, 2026-11-21** (`tools/qualify/narrative_take.js` pilote le vrai Studio avec
 Playwright : carte, planche du sujet depuis le brief, Générer, 40 s, découpage, chaîne). Un
@@ -341,6 +339,18 @@ tête hors cadre environ 11 s sur la plage, demandée par le segment 4 de Gemma 
 lent sur les pieds nus »). Le découpage demande maintenant un mouvement de caméra qui garde le
 visage du sujet principal dans le cadre, un gros plan sur les pieds, les mains ou un objet
 seulement là où le scénario le demande (non rendu).
+
+**Storyboard retiré, 2026-11-21.** Sur l'accord du propriétaire après le troisième rendu, le
+pipeline storyboard du Studio est parti : liste de plans, images des plans, cuts depuis les
+images des plans, animatique, onglets de sujets et planches passées par l'assistant. Le
+réalisateur garde la référence vers vidéo (planches, validation, vidéo) et le plan-séquence ; un
+projet storyboard enregistré avant n'est plus proposé à la reprise. La carte storyboard de
+l'assistant est partie aussi : le rôle Réalisateur mène une histoire en plusieurs scènes à une
+carte `long_take`, les planches de la conversation allant dans ses `references`. Dans un scénario
+au format H3 (un fichier ou la carte de l'assistant), le premier segment d'un `[Shot N]` suivant
+est désormais une nouvelle scène, comme celles du découpage : à partir des références, sans
+image du lieu précédent (c'était une coupe qui prenait la dernière image du segment précédent
+comme décor faute de planche décor). Le Canvas garde sa carte storyboard.
 
 ## Résultats
 

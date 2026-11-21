@@ -1,5 +1,5 @@
 // Studio page: goal cards, the generate form and its flows, the models, LoRA and
-// update panels, the monitor. The director (storyboard and reference to video) lives
+// update panels, the monitor. The director (reference to video, long take) lives
 // in director.js, the gallery in gallery.js.
 //
 // Nothing here submits a job except the Generate button: choosing a card, a pipeline,
@@ -31,8 +31,7 @@ const detach = promise => { promise.catch(warn); };
 const SCENARIOS = {
   campaign: { pipeline: "text2image",
     example: "A cinematic promotional poster for a premium sci-fi streaming series, dramatic blue lighting, futuristic city background, high contrast, premium entertainment campaign style." },
-  storyboard: { pipeline: "storyboard",
-    example: "A detective enters an abandoned broadcast studio at night, old monitors flicker in the background, tense cinematic cold atmosphere." },
+  narrative: { pipeline: "sequence", example: "" },
   localization: { pipeline: "image2image",
     example: "Localized promotional poster variant for the Japanese market: keep the premium sci-fi brand identity, adapt background, wardrobe and typography cues to Tokyo night aesthetics." },
 };
@@ -44,7 +43,7 @@ let activeScenario = "campaign";
 const GENERATE_LABELS = {
   text2image: L("Generate the images"), image2image: L("Generate the variants"),
   text2video: L("Generate the video"), image2video: L("Generate the video"),
-  sequence: L("Open the long take"), storyboard: L("Open the studio (step 1/3)"),
+  sequence: L("Open the long take"),
   campaign: L("Start the campaign (posters + thumbnails + teaser)"),
 };
 function refreshGenerateLabel() {
@@ -67,11 +66,11 @@ const usePipeline = p => selectScenario(p === "image2image" ? "localization" : "
 // ── Pipeline and engine menus ─────────────────────────────────────────────────
 const CONTROL_WRAPS = {
   image: "imageInputWrap", duration: "durationWrap", markets: "marketsWrap", seq: "seqWrap",
-  shots: "shotCountWrap", hold: "holdWrap", variants: "variantsWrap", ratio: "ratioWrap", style: "styleWrap",
+  variants: "variantsWrap", ratio: "ratioWrap", style: "styleWrap",
   sheetTemplate: "sheetTemplateWrap", skipSheets: "skipSheetsWrap",
 };
 
-// A goal card with its own pipeline (long take, ad campaign, trailer) shows it alone and
+// A goal card with its own pipeline (long take, ad campaign) shows it alone and
 // leaves the Pipeline menu out; the other cards share the general pipelines.
 function refreshPipelineOptions(pipeline = F.currentPipeline()) {
   const own = F.pipelineDef(pipeline)?.own ? F.pipelineDef(pipeline) : null;
@@ -107,7 +106,7 @@ function updateModelLabel() {
   if ($("lastImageWrap").hidden) $("lastImageInput").value = "";
   const ctx = F.refCtx(wf);
   $("refExtrasWrap").hidden = !ctx;
-  for (const [cls, on] of [[".r2v-only", ctx === "r2v"], [".sb-only", ctx === "sb"], [".i2i-only", ctx === "i2i"], [".seq-only", ctx === "seq"]])
+  for (const [cls, on] of [[".r2v-only", ctx === "r2v"], [".i2i-only", ctx === "i2i"], [".seq-only", ctx === "seq"]])
     document.querySelectorAll(`#refExtrasWrap ${cls}, #imageInputWrap ${cls}`).forEach(el => { el.hidden = !on; });
   // A long take's input image is its first frame, and its list is its references. Where the
   // form takes both, the gallery offers both (CSS on body[data-gallery-use]).
@@ -296,7 +295,7 @@ function renderRefs() {
     tag.className = "rs-tag";
     const entry = plan?.entries.find(e => e.item === img);
     if (ctx === "i2i") tag.textContent = `<image${i + 2}>`;
-    else if (ctx === "sb" || ctx === "seq") tx(tag, "Reference {n}", { n: i + 1 });
+    else if (ctx === "seq") tx(tag, "Reference {n}", { n: i + 1 });
     else if (!entry) { tx(tag, "Not sent (over the limit)"); row.classList.add("ref-ignored"); }
     else {
       const [, word, n] = /^<(\w+) (\d+)>$/.exec(entry.label);
@@ -335,34 +334,6 @@ function renderRefs() {
   }));
   translateTree($("refSubjects"));
   renderSubjectChips();
-  renderGivenSheets();
-}
-
-// Sheets handed over by an assistant card, shown while the storyboard is chosen: the
-// director keeps them instead of drawing new ones. ✕ drops one.
-function renderGivenSheets() {
-  const given = D.sheetsGiven(), on = !!given && F.currentPipeline() === "storyboard";
-  $("givenSheetsWrap").hidden = !on;
-  if (!on) return;
-  const rows = [...given.subjects.map((img, i) => [img, [L("Subject sheet {n}"), { n: i + 1 }], () => given.subjects.splice(i, 1)]),
-                ...(given.setting ? [[given.setting, [L("Setting sheet"), {}], () => { given.setting = null; }]] : [])];
-  $("givenSheets").replaceChildren(...rows.map(([img, [label, params], drop]) => {
-    const row = document.createElement("div");
-    row.className = "ref-subject ref-removable";
-    const tag = tx(document.createElement("div"), label, params);
-    tag.className = "rs-tag";
-    const name = document.createElement("div");
-    name.className = "rs-name";
-    name.dataset.raw = "";
-    name.textContent = img.name;
-    const x = document.createElement("button");
-    x.type = "button"; x.className = "rs-x"; x.textContent = "✕";
-    txAria(x, "Do not use this sheet");
-    x.addEventListener("click", () => { drop(); D.useSheets(given); renderGivenSheets(); });
-    row.append(tag, name, x);
-    return row;
-  }));
-  translateTree($("givenSheets"));
 }
 
 // Chips that insert a <Subject N> token at the cursor: the only way to tell H3 which
@@ -525,8 +496,7 @@ async function generate() {
   btn.disabled = true;
   // The director's first step and the auto enrichment wait on Gemma before any job:
   // the button says so, with the time spent.
-  const busy = wf.pipeline === "storyboard" ? L("{llm} is writing the sheets and the shot list… {time}")
-    : wf.pipeline === "reference2video" ? L("{llm} is preparing the director… {time}")
+  const busy = wf.pipeline === "reference2video" ? L("{llm} is preparing the director… {time}")
     : wf.pipeline === "sequence" && (hasInputImage() || F.refList("seq").length) ? L("{llm} is describing the images… {time}")
     : autoEnrich && wf.enrich !== "builtin" ? L("{llm} is enriching the brief… {time}") : null;
   const start = Date.now();
@@ -543,8 +513,7 @@ async function generate() {
       await enrich(wf);
     } else if (autoEnrich) log("sys", "{workflow} builds its own prompts: brief sent as it is.", { workflow: t(wf.label) });
     const seed = F.formSeed();
-    if (wf.pipeline === "storyboard") await D.startStoryboard(seed);
-    else if (wf.pipeline === "reference2video") {
+    if (wf.pipeline === "reference2video") {
       if ($("skipSheetsToggle").checked) await D.r2vWithoutSheets(seed);
       else await D.startR2V(seed);
     } else if (wf.pipeline === "sequence") await D.startLongTake(seed, await longTakeImages());
@@ -554,7 +523,6 @@ async function generate() {
   finally {
     clearInterval(timer);
     if (busy) refreshGenerateLabel();
-    renderGivenSheets();  // used by the director once its session opened
     btn.disabled = false;
   }
 }
@@ -595,7 +563,6 @@ const CARD_FORM = {
   video_from_image: a => ["image2video", "h3_i2v", a.prompt],
   long_take: a => ["sequence", "h3_sequence", a.screenplay],
   campaign: a => ["campaign", "campaign", a.brief],
-  storyboard: a => ["storyboard", "storyboard_qwen21", a.brief],
   reference_video: a => ["reference2video", "h3_r2v", a.brief],
 };
 async function openCardInForm(tool, a, image, quiet = false) {
@@ -611,7 +578,6 @@ async function openCardInForm(tool, a, image, quiet = false) {
   if (a.mode) $("mossModeSelect").value = a.mode;
   if (a.count || a.variants) $("variants").value = a.count || a.variants;
   if (a.duration) $("videoDuration").value = a.duration;
-  if (a.shots) $("shotCount").value = a.shots;
   if (a.style && F.hasControl("style")) { $("styleSelect").value = a.style; D.setStyle(a.style); }
   const img = id => image(id) && { name: image(id).name, ref: image(id).ref };
   if (a.image) setSelectedAsset({ ref: img(a.image).ref, filename: img(a.image).name });
@@ -629,9 +595,6 @@ async function openCardInForm(tool, a, image, quiet = false) {
   }
   if (tool === "reference_video")
     F.refList("r2v").splice(0, Infinity, ...(a.references || []).map((id, i) => ({ ...img(id), kind: a.kinds?.[i] })));
-  // Sheets of a storyboard card: the director keeps them (another card drops them).
-  D.useSheets(tool === "storyboard"
-    ? { subjects: (a.subject_sheets || []).map(img), setting: a.setting_sheet?.length ? img(a.setting_sheet[0]) : null } : null);
   if (tool === "long_take")
     F.refList("seq").splice(0, Infinity, ...(a.references || []).map((id, i) => ({ ...img(id), kind: a.kinds?.[i] })));
   renderRefs();
@@ -647,7 +610,7 @@ async function openCardInForm(tool, a, image, quiet = false) {
 }
 
 // A director card's own button: the form takes the card over, then its click is the
-// Generate click, which starts the step-by-step review (storyboard or references).
+// Generate click, which opens the director (references, or the long take).
 async function launchDirector(tool, a, image) {
   await openCardInForm(tool, a, image, true);
   log("sys", "Director started from an assistant card.");
@@ -684,11 +647,8 @@ function initialMode() {
 const inAssistant = () => document.body.dataset.mode === "assistant";
 
 // ── Project buttons (resume, cancel) ──────────────────────────────────────────
-// A storyboard project (the trailer card, folded into the narrative video's) resumes from
-// the narrative video card.
 function updateResumeButton() {
-  const saved = D.savedPipeline(), here = F.currentPipeline();
-  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && (here === saved || (saved === "storyboard" && here === "sequence")));
+  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && F.currentPipeline() === D.savedPipeline());
   updateCancelButton();
 }
 function updateCancelButton() {

@@ -12,11 +12,6 @@ export const DICT = {
     es: "#{n} · semilla {seed} · {status}",
     de: "#{n} · Seed {seed} · {status}",
   },
-  "+ Add a subject": {
-    fr: "+ Ajouter un sujet",
-    es: "+ Añadir un sujeto",
-    de: "+ Motiv hinzufügen",
-  },
   "+ New card": {
     fr: "+ Nouvelle carte",
     es: "+ Nueva tarjeta",
@@ -52,11 +47,6 @@ export const DICT = {
     es: "Accesorios",
     de: "Accessoires",
   },
-  "Action": {
-    fr: "Action",
-    es: "Acción",
-    de: "Aktion",
-  },
   "Action enrichment unavailable ({error}): text kept.": {
     fr: "Enrichissement de l'action indisponible ({error}) : texte conservé.",
     es: "Enriquecimiento de la acción no disponible ({error}): texto conservado.",
@@ -91,11 +81,6 @@ export const DICT = {
     fr: "Ajouter un tag (Entrée)",
     es: "Añadir una etiqueta (Intro)",
     de: "Tag hinzufügen (Enter)",
-  },
-  "Added to every Qwen Image 2.1 shot image, after the sheets: <image3>, <image4>… (one rank further in a two-subject shot). Name them in the shot's action.": {
-    fr: "Ajoutées à chaque image de plan Qwen Image 2.1, après les planches : <image3>, <image4>… (un rang plus loin dans un plan à deux sujets). Nomme-les dans l'action du plan.",
-    es: "Se añaden a cada imagen de plano de Qwen Image 2.1, después de las láminas: <image3>, <image4>… (un puesto más allá en un plano con dos sujetos). Nómbralas en la acción del plano.",
-    de: "Werden jedem Einstellungsbild von Qwen Image 2.1 nach den Bögen hinzugefügt: <image3>, <image4>… (in einer Einstellung mit zwei Motiven eine Stelle weiter). Nenne sie in der Aktion der Einstellung.",
   },
   "Advanced mode (pick a card type)": {
     fr: "Mode avancé (choisir un type de carte)",
@@ -152,11 +137,6 @@ export const DICT = {
     es: "Aplicar y regenerar",
     de: "Übernehmen und neu generieren",
   },
-  "Apply to the shot": {
-    fr: "Appliquer au plan",
-    es: "Aplicar al plano",
-    de: "Auf die Einstellung anwenden",
-  },
   "Approve the character and setting sheets to enable the launch.": {
     fr: "Valide les planches personnage et décor pour activer le lancement.",
     es: "Aprueba las láminas de personaje y decorado para activar el lanzamiento.",
@@ -191,11 +171,6 @@ export const DICT = {
     fr: "Ratio",
     es: "Proporción",
     de: "Seitenverhältnis",
-  },
-  "Assemble the animatic": {
-    fr: "Assembler l'animatic",
-    es: "Ensamblar el animatic",
-    de: "Animatic zusammensetzen",
   },
   "Assemble the sequence": {
     fr: "Assembler la séquence",
@@ -256,11 +231,6 @@ export const DICT = {
     fr: "Construction de la nouvelle image : quelques minutes, davantage si les dépendances ont changé. Le studio reste utilisable pendant ce temps.",
     es: "Construyendo la nueva imagen: unos minutos, más si cambiaron las dependencias. El estudio sigue funcionando mientras tanto.",
     de: "Das neue Image wird gebaut: einige Minuten, länger wenn sich Abhängigkeiten geändert haben. Das Studio bleibt währenddessen nutzbar.",
-  },
-  "Camera": {
-    fr: "Caméra",
-    es: "Cámara",
-    de: "Kamera",
   },
   "Campaign": {
     fr: "Campagne",
@@ -452,11 +422,6 @@ export const DICT = {
     es: "Enriquecimiento del corte no disponible ({error}): prompt editado conservado.",
     de: "Anreicherung des Cuts nicht verfügbar ({error}): bearbeiteter Prompt beibehalten.",
   },
-  "Cut prompt": {
-    fr: "Prompt du cut",
-    es: "Prompt del corte",
-    de: "Cut-Prompt",
-  },
   "Cut prompt enriched by {model} (MiniMax H3 instruction).": {
     fr: "Prompt du cut enrichi par {model} (consigne MiniMax H3).",
     es: "Prompt del corte enriquecido por {model} (instrucción MiniMax H3).",
@@ -541,11 +506,6 @@ export const DICT = {
     fr: "Mode Réalisateur",
     es: "Modo Director",
     de: "Regisseur-Modus",
-  },
-  "Director: shot images anchored on the approved sheets…": {
-    fr: "Réalisateur : images des plans ancrées sur les planches validées…",
-    es: "Director: imágenes de los planos ancladas en las láminas aprobadas…",
-    de: "Regie: Einstellungsbilder, verankert auf den freigegebenen Bögen…",
   },
   "Documentary": {
     fr: "Documentaire",
@@ -671,11 +631,6 @@ export const DICT = {
     fr: "Éditorial",
     es: "Editorial",
     de: "Editorial",
-  },
-  "Emotion": {
-    fr: "Émotion",
-    es: "Emoción",
-    de: "Emotion",
   },
   "Empty brief: describe what you want before generating.": {
     fr: "Brief vide : décris ce que tu veux avant de générer.",
@@ -982,16 +937,6 @@ export const DICT = {
     es: "Generar la cadena",
     de: "Kette generieren",
   },
-  "Generate the cuts": {
-    fr: "Générer les cuts",
-    es: "Generar los cortes",
-    de: "Cuts generieren",
-  },
-  "Generate the cuts, reorder or regenerate each shot, then assemble the animatic. Reordering starts nothing.": {
-    fr: "Génère les cuts, réordonne ou régénère chaque plan, puis assemble l'animatic. Réordonner ne lance rien.",
-    es: "Genera los cortes, reordena o regenera cada plano y luego ensambla el animatic. Reordenar no lanza nada.",
-    de: "Generiere die Cuts, ordne jede Einstellung neu oder generiere sie neu und setze dann das Animatic zusammen. Umordnen startet nichts.",
-  },
   "Generate the images": {
     fr: "Générer les images",
     es: "Generar las imágenes",
@@ -1001,11 +946,6 @@ export const DICT = {
     fr: "Générer la planche",
     es: "Generar la lámina",
     de: "Bogen generieren",
-  },
-  "Generate the shot images": {
-    fr: "Générer les images des plans",
-    es: "Generar las imágenes de los planos",
-    de: "Bilder der Einstellungen generieren",
   },
   "Generate the variants": {
     fr: "Générer les variantes",
@@ -1066,16 +1006,6 @@ export const DICT = {
     fr: "Plongée",
     es: "Picado",
     de: "Aufsicht",
-  },
-  "Hold on shot {n}": {
-    fr: "Maintien sur le plan {n}",
-    es: "Pausa en el plano {n}",
-    de: "Standbild auf Einstellung {n}",
-  },
-  "Hold on the last shot (s), 0 for none": {
-    fr: "Maintien sur le dernier plan (s), 0 pour aucun",
-    es: "Pausa en el último plano (s), 0 para ninguna",
-    de: "Standbild auf der letzten Einstellung (s), 0 für keins",
   },
   "Hugging Face access required (HF_TOKEN and the licence accepted).": {
     fr: "Accès Hugging Face requis (HF_TOKEN et licence acceptée).",
@@ -1412,11 +1342,6 @@ export const DICT = {
     es: "MiniMax H3 (vídeo a partir de un texto o una imagen, secuencia)",
     de: "MiniMax H3 (Video aus einem Text oder Bild, Sequenz)",
   },
-  "MiniMax H3 block with fields: enriching again rewrites only detailed_description, the subject definitions stay in place.": {
-    fr: "Bloc MiniMax H3 à champs : un nouvel enrichissement ne réécrit que detailed_description, les définitions de sujets restent en place.",
-    es: "Bloque MiniMax H3 con campos: un nuevo enriquecimiento solo reescribe detailed_description, las definiciones de sujetos se mantienen.",
-    de: "MiniMax-H3-Block mit Feldern: Erneutes Anreichern schreibt nur detailed_description um, die Motivdefinitionen bleiben erhalten.",
-  },
   "MiniMax H3 r2v running…": {
     fr: "MiniMax H3 r2v en cours…",
     es: "MiniMax H3 r2v en curso…",
@@ -1426,11 +1351,6 @@ export const DICT = {
     fr: "MiniMax H3 références (personnage + décor cohérents)",
     es: "MiniMax H3 referencias (personaje + escenario coherentes)",
     de: "MiniMax H3 Referenzen (konsistente Figur + Schauplatz)",
-  },
-  "MiniMax H3 renders on a 17n+5 frame grid": {
-    fr: "MiniMax H3 rend sur une grille de 17n+5 images",
-    es: "MiniMax H3 renderiza en una rejilla de 17n+5 fotogramas",
-    de: "MiniMax H3 rendert auf einem 17n+5-Bilder-Raster",
   },
   "MiniMax H3 {engine} · {d} s/shot · {n} cuts": {
     fr: "MiniMax H3 {engine} · {d} s/plan · {n} cuts",
@@ -1481,21 +1401,6 @@ export const DICT = {
     fr: "Montage",
     es: "Montaje",
     de: "Montage",
-  },
-  "Montage: animatic assembled.": {
-    fr: "Montage : animatic assemblé.",
-    es: "Montaje: animatic ensamblado.",
-    de: "Montage: Animatic zusammengesetzt.",
-  },
-  "Montage: assembling the animatic (montage order)…": {
-    fr: "Montage : assemblage de l'animatic (ordre du montage)…",
-    es: "Montaje: ensamblando el animatic (orden del montaje)…",
-    de: "Montage: Animatic wird zusammengesetzt (Montagereihenfolge)…",
-  },
-  "Montage: contact sheet and cuts (one per shot, MiniMax H3)…": {
-    fr: "Montage : planche contact et cuts (un par plan, MiniMax H3)…",
-    es: "Montaje: hoja de contactos y cortes (uno por plano, MiniMax H3)…",
-    de: "Montage: Kontaktbogen und Cuts (einer pro Einstellung, MiniMax H3)…",
   },
   "Month": {
     fr: "Mois",
@@ -1922,11 +1827,6 @@ export const DICT = {
     es: "Relay, segmento {n}/{total}: vídeo a partir de las referencias (corte)…",
     de: "Relay, Segment {n}/{total}: Video aus den Referenzen (Schnitt)…",
   },
-  "Relay, segment {n}/{total}: shot image (cut)…": {
-    fr: "Relay, segment {n}/{total} : image du plan (coupe)…",
-    es: "Relay, segmento {n}/{total}: imagen del plano (corte)…",
-    de: "Relay, Segment {n}/{total}: Einstellungsbild (Schnitt)…",
-  },
   "Relay, segment {n}/{total}: transition frames…": {
     fr: "Relay, segment {n}/{total} : images de transition…",
     es: "Relay, segmento {n}/{total}: fotogramas de transición…",
@@ -1991,11 +1891,6 @@ export const DICT = {
     fr: "Retirer cette référence",
     es: "Quitar esta referencia",
     de: "Diese Referenz entfernen",
-  },
-  "Remove this subject": {
-    fr: "Retirer ce sujet",
-    es: "Quitar este sujeto",
-    de: "Dieses Motiv entfernen",
   },
   "Rename": {
     fr: "Renommer",
@@ -2102,11 +1997,6 @@ export const DICT = {
     es: "Semilla (0 = auto)",
     de: "Seed (0 = automatisch)",
   },
-  "seed {seed} · {real} s rendered · {status}": {
-    fr: "seed {seed} · {real} s rendues · {status}",
-    es: "semilla {seed} · {real} s renderizados · {status}",
-    de: "Seed {seed} · {real} s gerendert · {status}",
-  },
   "Select": {
     fr: "Sélectionner",
     es: "Seleccionar",
@@ -2187,16 +2077,6 @@ export const DICT = {
     es: "Acción del plano enriquecida por {model} ({count} sujeto(s) tenido(s) en cuenta).",
     de: "Aktion der Einstellung angereichert von {model} ({count} Motiv(e) berücksichtigt).",
   },
-  "Shot action prompt": {
-    fr: "Prompt de l'action du plan",
-    es: "Prompt de la acción del plano",
-    de: "Aktions-Prompt der Einstellung",
-  },
-  "Shot image prompt": {
-    fr: "Prompt de l'image du plan",
-    es: "Prompt de la imagen del plano",
-    de: "Prompt des Bildes der Einstellung",
-  },
   "Shot images ({k}/{n} submitted)…": {
     fr: "Images des plans ({k}/{n} soumises)…",
     es: "Imágenes de los planos ({k}/{n} enviadas)…",
@@ -2211,26 +2091,6 @@ export const DICT = {
     fr: "Liste de plans indisponible auprès du LLM ({error}) : préréglages de repli utilisés.",
     es: "Lista de planos no disponible desde el LLM ({error}): se usan los ajustes de reserva.",
     de: "Einstellungsliste vom LLM nicht verfügbar ({error}): Ersatzvorgaben verwendet.",
-  },
-  "Shot {n}": {
-    fr: "Plan {n}",
-    es: "Plano {n}",
-    de: "Einstellung {n}",
-  },
-  "Shot {n}/{total}": {
-    fr: "Plan {n}/{total}",
-    es: "Plano {n}/{total}",
-    de: "Einstellung {n}/{total}",
-  },
-  "Shot {n}: {status}": {
-    fr: "Plan {n} : {status}",
-    es: "Plano {n}: {status}",
-    de: "Einstellung {n}: {status}",
-  },
-  "Shots overview": {
-    fr: "Vue d'ensemble des plans",
-    es: "Vista general de los planos",
-    de: "Übersicht der Einstellungen",
   },
   "Show everything": {
     fr: "Tout afficher",
@@ -2302,20 +2162,10 @@ export const DICT = {
     es: "Storyboard",
     de: "Storyboard",
   },
-  "Storyboard + animatic (sheets, shots, cuts)": {
-    fr: "Storyboard + animatic (planches, plans, cuts)",
-    es: "Storyboard + animatic (láminas, planos, cortes)",
-    de: "Storyboard + Animatic (Bögen, Einstellungen, Cuts)",
-  },
   "Storyboard brief (sheets and shots)": {
     fr: "Brief de storyboard (planches et plans)",
     es: "Brief de storyboard (fichas y planos)",
     de: "Storyboard-Briefing (Blätter und Einstellungen)",
-  },
-  "Storyboard · contact sheet": {
-    fr: "Storyboard · planche contact",
-    es: "Storyboard · hoja de contactos",
-    de: "Storyboard · Kontaktbogen",
   },
   "Storyboard: {n} shots with {llm}…": {
     fr: "Storyboard : {n} plans avec {llm}…",
@@ -2367,30 +2217,10 @@ export const DICT = {
     es: "Sujeto {n}",
     de: "Motiv {n}",
   },
-  "Subject {n} added (empty): describe it, then generate its sheet.": {
-    fr: "Sujet {n} ajouté (vide) : décris-le, puis génère sa planche.",
-    es: "Sujeto {n} añadido (vacío): descríbelo y luego genera su lámina.",
-    de: "Motiv {n} hinzugefügt (leer): Beschreibe es und generiere dann seinen Bogen.",
-  },
-  "Subject {n} removed.": {
-    fr: "Sujet {n} retiré.",
-    es: "Sujeto {n} eliminado.",
-    de: "Motiv {n} entfernt.",
-  },
   "Subject {n} · {kind}": {
     fr: "Sujet {n} · {kind}",
     es: "Sujeto {n} · {kind}",
     de: "Motiv {n} · {kind}",
-  },
-  "Subject {n} · {name}": {
-    fr: "Sujet {n} · {name}",
-    es: "Sujeto {n} · {name}",
-    de: "Motiv {n} · {name}",
-  },
-  "Subjects in this shot (up to {max}):": {
-    fr: "Sujets dans ce plan ({max} au plus) :",
-    es: "Sujetos en este plano (hasta {max}):",
-    de: "Motive in dieser Einstellung (bis zu {max}):",
   },
   "Surface": {
     fr: "Surface",
@@ -2482,16 +2312,6 @@ export const DICT = {
     es: "El guion completo de la secuencia, escrito de una vez.",
     de: "Das gesamte Drehbuch der Sequenz, in einem Zug geschrieben.",
   },
-  "This is the prompt sent to the engine, not a shot description: it must keep the sentences that say what each reference image is for. To describe only the action, use “✎ Rewrite the action” on the shot. “↩ Original prompt” brings the compiled one back, and the final anchoring block is always put back.": {
-    fr: "C'est le prompt envoyé au moteur, pas une description du plan : il doit garder les phrases qui disent à quoi sert chaque image de référence. Pour ne décrire que l'action, utilise « ✎ Réécrire l'action » sur le plan. « ↩ Prompt d'origine » ramène le prompt compilé, et le bloc d'ancrage final est toujours remis.",
-    es: "Es el prompt que se envía al motor, no una descripción del plano: debe conservar las frases que dicen para qué sirve cada imagen de referencia. Para describir solo la acción, usa «✎ Reescribir la acción» en el plano. «↩ Prompt original» recupera el prompt compilado, y el bloque de anclaje final se restituye siempre.",
-    de: "Das ist der Prompt, der an die Engine geht, keine Beschreibung der Einstellung: Er muss die Sätze behalten, die sagen, wozu jedes Referenzbild dient. Um nur die Aktion zu beschreiben, nutze „✎ Aktion umschreiben“ an der Einstellung. „↩ Ursprünglicher Prompt“ holt den kompilierten Prompt zurück, und der abschließende Verankerungsblock wird immer wieder eingesetzt.",
-  },
-  "This text says what happens in the shot. It is used as it is in the shot image, then in the cut; framing, light and style are added by the app.": {
-    fr: "Ce texte dit ce qui se passe dans le plan. Il est utilisé tel quel dans l'image du plan, puis dans le cut ; cadrage, lumière et style sont ajoutés par l'app.",
-    es: "Este texto dice lo que pasa en el plano. Se usa tal cual en la imagen del plano y luego en el corte; el encuadre, la luz y el estilo los añade la app.",
-    de: "Dieser Text sagt, was in der Einstellung passiert. Er wird unverändert im Einstellungsbild und dann im Cut verwendet; Bildausschnitt, Licht und Stil fügt die App hinzu.",
-  },
   "thumbnails": {
     fr: "miniatures",
     es: "miniaturas",
@@ -2501,11 +2321,6 @@ export const DICT = {
     fr: "Au",
     es: "Hasta",
     de: "Bis",
-  },
-  "To do": {
-    fr: "À faire",
-    es: "Pendiente",
-    de: "Offen",
   },
   "To generate": {
     fr: "À générer",
@@ -2551,11 +2366,6 @@ export const DICT = {
     fr: "Annuler",
     es: "Deshacer",
     de: "Rückgängig",
-  },
-  "Undo impossible: the project changed since.": {
-    fr: "Annulation impossible : le projet a changé depuis.",
-    es: "No se puede deshacer: el proyecto ha cambiado desde entonces.",
-    de: "Rückgängig nicht möglich: Das Projekt hat sich seitdem geändert.",
   },
   "Unreadable saved project: ignored.": {
     fr: "Projet enregistré illisible : ignoré.",
@@ -2767,11 +2577,6 @@ export const DICT = {
     es: "{label} terminado en {secs} s.",
     de: "{label} fertig in {secs} s.",
   },
-  "{max} subjects at most per shot.": {
-    fr: "{max} sujets au plus par plan.",
-    es: "{max} sujetos como máximo por plano.",
-    de: "Höchstens {max} Motive pro Einstellung.",
-  },
   "{name} added ({n}/{max}).": {
     fr: "{name} ajoutée ({n}/{max}).",
     es: "{name} añadida ({n}/{max}).",
@@ -2811,16 +2616,6 @@ export const DICT = {
     fr: "{n} clip(s)",
     es: "{n} clip(s)",
     de: "{n} Clip(s)",
-  },
-  "{n} cuts generated + the hold on the last shot: reorder them, then assemble.": {
-    fr: "{n} cuts générés + le maintien sur le dernier plan : réordonne-les, puis assemble.",
-    es: "{n} cortes generados + la pausa en el último plano: reordénalos y luego ensambla.",
-    de: "{n} Cuts generiert + das Standbild auf der letzten Einstellung: Ordne sie, dann setze zusammen.",
-  },
-  "{n} cuts generated: reorder them, then assemble.": {
-    fr: "{n} cuts générés : réordonne-les, puis assemble.",
-    es: "{n} cortes generados: reordénalos y luego ensambla.",
-    de: "{n} Cuts generiert: Ordne sie, dann setze zusammen.",
   },
   "{n} frames before the end": {
     fr: "{n} frames avant la fin",
@@ -2907,20 +2702,10 @@ export const DICT = {
     es: "«{old}» renombrado como «{new}».",
     de: "„{old}“ in „{new}“ umbenannt.",
   },
-  "↑ Move up": {
-    fr: "↑ Monter",
-    es: "↑ Subir",
-    de: "↑ Nach oben",
-  },
   "→ Use as input": {
     fr: "→ Utiliser en entrée",
     es: "→ Usar como entrada",
     de: "→ Als Eingabe verwenden",
-  },
-  "↓ Move down": {
-    fr: "↓ Descendre",
-    es: "↓ Bajar",
-    de: "↓ Nach unten",
   },
   "↩ Original prompt": {
     fr: "↩ Prompt d'origine",
@@ -2952,35 +2737,15 @@ export const DICT = {
     es: "★ Favoritos",
     de: "★ Favoriten",
   },
-  "✎ Full image prompt": {
-    fr: "✎ Prompt image complet",
-    es: "✎ Prompt de imagen completo",
-    de: "✎ Vollständiger Bild-Prompt",
-  },
-  "✎ Full image prompt ✱": {
-    fr: "✎ Prompt image complet ✱",
-    es: "✎ Prompt de imagen completo ✱",
-    de: "✎ Vollständiger Bild-Prompt ✱",
-  },
   "✎ Prompt": {
     fr: "✎ Prompt",
     es: "✎ Prompt",
     de: "✎ Prompt",
   },
-  "✎ Prompt ✱": {
-    fr: "✎ Prompt ✱",
-    es: "✎ Prompt ✱",
-    de: "✎ Prompt ✱",
-  },
   "✎ Rename": {
     fr: "✎ Renommer",
     es: "✎ Renombrar",
     de: "✎ Umbenennen",
-  },
-  "✎ Rewrite the action": {
-    fr: "✎ Réécrire l'action",
-    es: "✎ Reescribir la acción",
-    de: "✎ Aktion umschreiben",
   },
   "✓ Prompt copied": {
     fr: "✓ Prompt copié",
@@ -3042,11 +2807,6 @@ export const DICT = {
     es: "⤢ Ampliar",
     de: "⤢ Vergrößern",
   },
-  "⤢ Preview": {
-    fr: "⤢ Aperçu",
-    es: "⤢ Vista previa",
-    de: "⤢ Vorschau",
-  },
   "＋ Add a segment": {
     fr: "＋ Ajouter un segment",
     es: "＋ Añadir un segmento",
@@ -3091,21 +2851,6 @@ export const DICT = {
     fr: "🔄 Régénérer la planche",
     es: "🔄 Regenerar la lámina",
     de: "🔄 Bogen neu generieren",
-  },
-  "🔄 Regenerate this shot": {
-    fr: "🔄 Régénérer ce plan",
-    es: "🔄 Regenerar este plano",
-    de: "🔄 Diese Einstellung neu generieren",
-  },
-  "🔒 Lock": {
-    fr: "🔒 Verrouiller",
-    es: "🔒 Bloquear",
-    de: "🔒 Sperren",
-  },
-  "🔓 Unlock": {
-    fr: "🔓 Déverrouiller",
-    es: "🔓 Desbloquear",
-    de: "🔓 Entsperren",
   },
   "🔗 Continuous": {
     fr: "🔗 Continu",
@@ -3552,11 +3297,6 @@ export const DICT = {
     es: "Renderizando {pct} % · {time}",
     de: "Rendering {pct} % · {time}",
   },
-  "{llm} is writing the sheets and the shot list… {time}": {
-    fr: "{llm} écrit les fiches et la liste des plans… {time}",
-    es: "{llm} escribe las fichas y la lista de planos… {time}",
-    de: "{llm} schreibt die Blätter und die Einstellungsliste… {time}",
-  },
   "{llm} is preparing the director… {time}": {
     fr: "{llm} prépare le réalisateur… {time}",
     es: "{llm} prepara al director… {time}",
@@ -3566,41 +3306,6 @@ export const DICT = {
     fr: "{llm} enrichit le brief… {time}",
     es: "{llm} enriquece el brief… {time}",
     de: "{llm} reichert das Briefing an… {time}",
-  },
-  "Subject sheets": {
-    fr: "Planches des sujets",
-    es: "Hojas de los sujetos",
-    de: "Motivblätter",
-  },
-  "Subject sheet {n}": {
-    fr: "Planche du sujet {n}",
-    es: "Hoja del sujeto {n}",
-    de: "Motivblatt {n}",
-  },
-  "Director: reading the sheets from the assistant with {llm} (vision)…": {
-    fr: "Réalisateur : lecture des planches de l'assistant par {llm} (vision)…",
-    es: "Director: {llm} lee las láminas del asistente (visión)…",
-    de: "Regie: {llm} liest die Bögen des Assistenten (Bilderkennung)…",
-  },
-  "{n} sheet(s) from the assistant kept: they are not drawn again.": {
-    fr: "{n} planche(s) de l'assistant reprise(s) : elles ne sont pas redessinées.",
-    es: "{n} lámina(s) del asistente conservada(s): no se vuelven a dibujar.",
-    de: "{n} Bogen/Bögen des Assistenten übernommen: sie werden nicht neu gezeichnet.",
-  },
-  "Sheets from the assistant": {
-    fr: "Planches venues de l'assistant",
-    es: "Láminas del asistente",
-    de: "Bögen aus dem Assistenten",
-  },
-  "The director keeps these sheets and draws only the missing ones.": {
-    fr: "Le réalisateur garde ces planches et ne dessine que celles qui manquent.",
-    es: "El director conserva estas láminas y solo dibuja las que faltan.",
-    de: "Die Regie behält diese Bögen und zeichnet nur die fehlenden.",
-  },
-  "Do not use this sheet": {
-    fr: "Ne pas utiliser cette planche",
-    es: "No usar esta lámina",
-    de: "Diesen Bogen nicht verwenden",
   },
   "Photo": {
     fr: "Photo",
@@ -3646,11 +3351,6 @@ export const DICT = {
     fr: "Studio ouvert : aucune planche n'est encore dessinée. Génère chacune depuis sa description ou une photo, ou importe une planche terminée.",
     es: "Estudio abierto: aún no se ha dibujado ninguna hoja. Genera cada una desde su descripción o una foto, o importa una hoja terminada.",
     de: "Studio geöffnet: noch kein Blatt gezeichnet. Generiere jedes aus seiner Beschreibung oder einem Foto, oder importiere ein fertiges Blatt.",
-  },
-  "Open the studio (step 1/3)": {
-    fr: "Entrer dans le studio (étape 1/3)",
-    es: "Entrar en el estudio (paso 1/3)",
-    de: "Studio öffnen (Schritt 1/3)",
   },
   "Open the studio (step 1/2)": {
     fr: "Entrer dans le studio (étape 1/2)",
@@ -3891,11 +3591,6 @@ export const DICT = {
     fr: "Segment {n} : {status}",
     es: "Segmento {n}: {status}",
     de: "Segment {n}: {status}",
-  },
-  "Shot image": {
-    fr: "Image du plan",
-    es: "Imagen del plano",
-    de: "Einstellungsbild",
   },
   "Stopping after this segment…": {
     fr: "Arrêt après ce segment…",

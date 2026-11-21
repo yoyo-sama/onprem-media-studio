@@ -69,10 +69,10 @@ A role is a Markdown file: a header between `---` lines, then its instructions.
 ---
 id: director
 name: Director
-when: A story told in several shots: a script or scene to storyboard, a short film, a trailer…
-tools: storyboard, reference_video, video_from_image, long_take
+when: A story told in several shots or scenes: a script, a short film, a trailer…
+tools: long_take, reference_video, video_from_image
 ---
-You are a storyboard artist and director of photography…
+You are a director and director of photography…
 ```
 
 - `when` is what the router reads to pick the role; `tools` the generation tools the role may
@@ -136,10 +136,9 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
 | `character_sheet`, `location_sheet` | Description, subject type, style; a photo of the subject (subject sheet only) | `krea2-t2i` 1920×1088 with the 1.4 sheet templates; with a photo, `qwen-image-2.1` edits it into a five-view sheet at the same size (a left column of two head-and-shoulders portraits, front above side, then the full body from the front, the side and the back, each view once, in the image's own style; method adapted from H3 Character Sheet Designer, MIT; `charsheetFromPhotoPrompt`, not qualified yet). When Gemma leaves the photo out while the user's message carries one image, that image is the photo (with a warning on the card). The director's subject menu has the same action: "📷 Sheet from a photo" |
 | `video_from_text` | Prompt, length, ratio | `h3-t2v` |
 | `video_from_image` | Prompt, first image, optional last image, length | `h3-i2v` (I2VA or FL2VA) |
-| `long_take` | Screenplay in the H3 layout (one timed 10 s segment per beat), an optional `first_frame` (the image the video starts on, never a sheet) and up to 7 `references` with their `kinds` (character, setting, object) | the Studio's long take: "🎞 Open the long take" switches to the Studio and opens the Relay on its segments, rendering nothing; the chain starts there (it replaced `image_sequence` on 2026-11-20, which rendered key-image pairs without the long take) |
+| `long_take` | Screenplay in the H3 layout (one timed 10 s segment per beat, a `[Shot N]` line before the first segment of each later scene), an optional `first_frame` (the image the video starts on, never a sheet) and up to 7 `references` with their `kinds` (character, setting, object) | the Studio's long take: "🎞 Open the long take" switches to the Studio and opens the Relay on its segments, rendering nothing; the chain starts there (it replaced `image_sequence` on 2026-11-20, which rendered key-image pairs without the long take) |
 | `join_videos` | Clips | `video-concat` |
 | `campaign` | Brief, variants, length, style | the full campaign (posters, thumbnails, social image, teaser) |
-| `storyboard` | Brief and settings | the director: "Launch the director" switches to the Studio, fills the form and starts the step-by-step review there, as the form's Generate does |
 | `reference_video` | Brief, references each with its role, length, ratio: up to 9 images (character, setting, object), 3 clips (camera movement and pacing, or character, setting, object) and 3 sounds (voice of a character, music, ambience and sounds), 12 in all; music asked for in words (optional) | "🎞 Generate the video": one `h3-r2v` job from the card. Each reference gets its H3 label, numbers given by the app (`P.h3AssignRefs`): a subject is `<Subject N>` in its order; a clip kept for its camera movement stays `<Video N>`, a sound `<Audio N>`. The brief names references by their ids (`A1 rides…`), each replaced by its label; Gemma's vision describes each image for `subject_definitions`, and the six-field Ref2VA block is built by `buildH3RefPrompt`, as in the director: a voice is the timbre of the n-th character (`(S1)`…), music is reused as the score (`non_diegetic_music`), an ambience guides `overall_soundscape`, the card's music field goes to `non_diegetic_music` (else "None."), and the summary adds `audio reuse` or `audio reference` (MiniMax's full-reference guide). References can be removed, or added from the conversation's images and clips or the computer. Gemma proposes images and clips only; sounds come from the computer. "Launch the director" and "Open in the Studio" still open the step-by-step review, every reference keeping its role |
 | `ask_choices` | A question with 2 to 4 buttons and "Other…" | nothing: the choice is sent as the user's answer |
 
@@ -156,14 +155,12 @@ Conversations are JSON files in `STUDIO_DATA_DIR/chats/` (`GET/DELETE /api/chats
   the card's arguments (Gemma's tool call has no LoRA), so a reload starts the card without it.
 - "Open in the Studio" switches to the Studio and fills the form (pipeline, engine, settings,
   images, brief, the LoRAs turned on), starting nothing; Undo puts the brief and the pipeline back.
-- "Launch the director" (storyboard and reference-to-video cards) fills the form the same way,
-  then its click is the Generate click: the director's first step starts and every next step
-  waits for the user's approval, as always.
-- A storyboard card carries the sheets the conversation already holds (`subject_sheets`, main
-  subject first, and `setting_sheet`). The form lists them under "Sheets from the assistant" (✕
-  drops one); the director keeps them as imported variants, has Gemma read each one (vision) to
-  fill its fields, and draws only the missing sheets. With several subjects, every shot starts
-  with the first two.
+- "Launch the director" (reference-to-video cards) and "🎞 Open the long take" fill the form
+  the same way, then their click is the Generate click: the director's first step starts and
+  every next step waits for the user's click, as always.
+- The storyboard card was removed with the Studio's storyboard (2026-11-21): the Director role
+  takes a story in several scenes to a `long_take` card, the sheets the conversation holds going
+  in its `references` with their kinds. A card saved in an old conversation is no longer drawn.
 - The browser reports what became of a card (`POST /api/chats/{id}/cards/{card}`: running with
   the settings it ran with, done with its files, error, cancelled, opened, director launched). The next turns see it:
   the results get ids **C3#1, C3#2…** (an H3 clip is followed by its last frame, C3#2), which

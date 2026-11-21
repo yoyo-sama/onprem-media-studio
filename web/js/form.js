@@ -24,8 +24,9 @@ export const QWEN21_RATIOS = { "16:9": [1344, 768], "9:16": [768, 1344], "1:1": 
 
 // One entry per engine choice of a pipeline. `loras`: the LoRA folder (studio/loras.py)
 // of the engine the form's LoRA stack goes to; none = no LoRA control. `enrich: "builtin"`: never enriched
-// automatically (the storyboard and Ref2VA flows write their own prompts; their ✨
-// button has its own instruction, see Prompts.briefEnrichSystem).
+// automatically (the Ref2VA flow writes its own prompts; its ✨ button has its own
+// instruction, see Prompts.briefEnrichSystem). "storyboard_qwen21" is in no Studio
+// pipeline: it routes the ✨ of the Canvas storyboard and sheet cards.
 export const WORKFLOWS = [
   { id: "krea2_t2i", pipeline: "text2image", label: "Krea 2 Turbo", engine: "krea2-t2i", loras: "krea2" },
   { id: "qwen21_t2i", pipeline: "text2image", label: "Qwen Image 2.1", engine: "qwen-image-2.1", loras: "qwen21" },
@@ -42,9 +43,9 @@ export const WORKFLOWS = [
 ];
 
 // `scenario`: the goal cards a pipeline is offered under (none = all). `own`: the pipeline
-// of one goal card (long take, ad campaign, trailer); that card shows it alone, with no
+// of one goal card (long take, ad campaign); that card shows it alone, with no
 // Pipeline menu, and the other cards do not list it.
-// Controls: duration, shots, hold, variants, ratio, style, image, markets, seq,
+// Controls: duration, variants, ratio, style, image, markets, seq,
 // sheetTemplate, skipSheets. The extra references and the LoRA stack follow the engine
 // (refCtx, WORKFLOWS[].loras).
 export const PIPELINES = [
@@ -52,9 +53,7 @@ export const PIPELINES = [
   { id: "image2image", label: L("Image editing (Image2Image)"), controls: ["image", "markets"] },
   { id: "text2video", label: L("Video from a text (Text2Video)"), controls: ["duration", "ratio"] },
   { id: "image2video", label: L("Video from an image (Image2Video)"), controls: ["duration", "image"] },
-  { id: "sequence", label: L("Long take (Relay)"), scenario: ["storyboard"], own: true, controls: ["seq", "image"] },
-  { id: "storyboard", label: L("Storyboard + animatic (sheets, shots, cuts)"), scenario: ["storyboard"], own: true,
-    controls: ["shots", "duration", "hold", "ratio", "style", "sheetTemplate"] },
+  { id: "sequence", label: L("Long take (Relay)"), scenario: ["narrative"], own: true, controls: ["seq", "image"] },
   { id: "reference2video", label: L("Consistent character + setting (MiniMax H3)"),
     controls: ["duration", "ratio", "sheetTemplate", "skipSheets", "style"] },
   { id: "campaign", label: L("Full campaign (posters + thumbnails + teaser)"), scenario: ["campaign"], own: true,
@@ -130,17 +129,15 @@ export async function imageBlob(img) {
 }
 
 // ── Extra references ──────────────────────────────────────────────────────────
-// One list per use: "r2v" (reference to video), "sb" (storyboard shot images with Qwen
-// Image 2.1), "i2i" (Qwen Image 2.1 editing: 10 images with the input image), "seq" (a long
+// One list per use: "r2v" (reference to video), "i2i" (Qwen Image 2.1 editing: 10 images with the input image), "seq" (a long
 // take's references, each with its role). A list never leaks into another pipeline, and
 // nothing is lost when the engine changes.
-export const REF_CAPS = { r2v: 7, sb: 7, i2i: 9, seq: 7 };
-const refLists = { r2v: [], sb: [], i2i: [], seq: [] };
+export const REF_CAPS = { r2v: 7, i2i: 9, seq: 7 };
+const refLists = { r2v: [], i2i: [], seq: [] };
 export function refCtx(wf = currentWorkflow()) {
   const p = currentPipeline();
   if (p === "reference2video") return "r2v";
   if (p === "sequence") return "seq";
-  if (p === "storyboard" && wf?.keyframes === "qwen-image-2.1") return "sb";
   if (p === "image2image" && wf?.id === "qwen21_i2i") return "i2i";
   return "";
 }
