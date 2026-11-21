@@ -1,8 +1,8 @@
-// Director: the full-screen studio of two pipelines. Reference to video: sheets (Krea 2)
-// → approval → one H3 Ref2VA job. A long take (the "sequence" pipeline, the "Narrative
-// video" card) opens the Relay alone: chained or cut H3 segments from its first frame, its
-// references or its text, no sheet to approve. The storyboard (shot list, shot images,
-// animatic) was folded into the long take on 2026-11-21.
+// Director: the full-screen studio of the long take (the "sequence" pipeline, the "Narrative
+// video" card): the Relay, chained or cut H3 segments from its first frame, its references
+// or its text, no sheet to approve. The storyboard (shot list, shot images, animatic) was
+// folded into the long take on 2026-11-21; reference to video became a one-click form
+// pipeline the same day (studio.js), which only borrows the sheet maker below.
 //
 // Rules carried over from 1.4 (docs/LESSONS.md): nothing renders without a click; a
 // prompt the user edited is sent verbatim and never compiled over; the anchoring
@@ -10,8 +10,7 @@
 
 import { blobToBase64, on, refURL } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
-import { $, LLM, MOBILE, log, openPromptEditor, promptLog, runJob, warn } from "./ui.js";
-import { openLightbox } from "./gallery.js";
+import { $, LLM, MOBILE, log, promptLog, runJob, warn } from "./ui.js";
 import * as F from "./form.js";
 
 const P = F.P;
@@ -28,55 +27,33 @@ let d = null;            // the session
 let hooks = {};
 let savedCache = null;   // valid saved project (drives "Resume the project")
 export const active = () => !!d;
-const isR2V = () => d?.pipeline === "reference2video";
-const isLongTake = () => d?.pipeline === "sequence";
-const origin = () => (isR2V() ? "reference2video" : "relay");
 const out = (job, ext) => job.outputs.find(o => o.endsWith(ext)) || null;
 const sameSession = s => d === s;
 
 // ── Subjects ──────────────────────────────────────────────────────────────────
 const newChar = (fields, variants = [], active = 0) => ({ fields, variants, active });
-const curChar = () => d.chars[d.charIdx];
 const activeVariant = c => c.variants[c.active];
 const locVariant = () => d.locVariants[d.locActive];
 const charDesc = c => P.charDescFromFields(c.fields);
 const locDesc = () => P.locDescFromFields(d.locFields);
-
-// A long take has no sheets to approve: its start image is its anchor.
-const anchorsReady = () => isLongTake() || !!d && d.chars.every(c => activeVariant(c)?.status === "ready") && locVariant()?.status === "ready";
-
-// ── Prompts ───────────────────────────────────────────────────────────────────
-const charSheetPrompt = fields => P.charsheetPromptFrom(P.charDescFromFields(fields), P.charKindOf(fields), d.sheetTemplate, d.style);
-const locSheetPrompt = () => P.locsheetPromptFrom(locDesc(), d.style);
 const h3Warn = (msg, params) => log("warn", msg, params);
 
 // ── Jobs ──────────────────────────────────────────────────────────────────────
-function sheetJob(kind, prompt, seed) {
-  return runJob("krea2-t2i", { prompt, ...P.SHEET_SIZE, count: 1, seed }, {
-    origin: origin(), label: [kind === "char" ? "Subject sheet" : "Setting sheet"],
-    sub: ["{info} · seed {seed}", { info: "Krea 2", seed }] });
-}
-
 // A Relay segment in H3 image to video from its start frame (FL2VA with an end image).
 function cutJob(imageRef, prompt, duration, seed, label, lastRef, onSubmitted) {
   return runJob("h3-i2v", { prompt, duration, seed, loras: d.loras || [], image: imageRef, ...(lastRef ? { last_image: lastRef } : {}) }, {
-    origin: origin(), label, onSubmitted,
+    origin: "relay", label, onSubmitted,
     sub: ["{info} · seed {seed}", { info: `${lastRef ? "FL2VA" : "I2VA"} · ${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`, seed }] });
 }
 
 // ── Studio shell ──────────────────────────────────────────────────────────────
-const SECTIONS = { character: "studioCharacter", location: "studioLocation", relay: "studioRelay", video: "studioVideoR2V" };
+const SECTIONS = { relay: "studioRelay" };
 const navBtn = name => document.querySelector(`#studioNav [data-section="${name}"]`);
 function enterStudio() { document.body.dataset.studio = "1"; hooks.onChange?.(); }
 export function exitStudio() { delete document.body.dataset.studio; hooks.onChange?.(); }
 function selectSection(name) {
   for (const [key, id] of Object.entries(SECTIONS)) $(id).hidden = key !== name;
   document.querySelectorAll("#studioNav .studio-nav-btn").forEach(b => b.classList.toggle("active", b.dataset.section === name));
-}
-function updateNavForPipeline() {
-  navBtn("relay").hidden = !isLongTake();
-  navBtn("video").hidden = isLongTake();
-  for (const name of ["character", "location"]) navBtn(name).hidden = isLongTake();
 }
 export function placeProjectActions() {
   const box = document.querySelector(".studio-project-actions");
@@ -91,46 +68,11 @@ export function reset() {
   $("relayPlayer").replaceChildren();
   relayLive.clear();
   $("relayBoard").hidden = true;
-  $("r2vPlayer").replaceChildren();
-  updateNavForPipeline();
-  renderSheetMenu("char");
-  renderSheetMenu("loc");
   updateGate();
-  selectSection("character");
-}
-
-// ── Session bar ───────────────────────────────────────────────────────────────
-// Display only: the active sheets and the step reached.
-export function refreshSessionBar() {
-  const box = $("sbAnchors"), steps = $("sbSteps");
-  const show = !!d && isR2V();
-  const c = d && activeVariant(d.chars[0]), l = d && locVariant();
-  const anchors = show && c?.status === "ready" && l?.status === "ready";
-  box.hidden = !anchors;
-  if (anchors) {
-    for (const [kind, v, label] of [["char", c, L("Subject")], ["loc", l, L("Setting")]]) {
-      const b = box.querySelector(`[data-kind="${kind}"]`);
-      b.querySelector("img").src = refURL(v.ref);
-      b.title = t(label);
-      b.setAttribute("aria-label", t(label));
-    }
-    tx(box.querySelector(".sb-state"), d.validated ? "Identity anchored" : "Identity to approve");
-    box.classList.toggle("locked", d.validated);
-  }
-  steps.hidden = !d || isLongTake();
-  if (!d || isLongTake()) return;
-  const names = [L("Sheets"), L("Video")];
-  const cur = d.validated ? 2 : 1;
-  steps.replaceChildren(...names.map((n, i) => {
-    const li = document.createElement("li");
-    tx(li, "{mark} {name}", { mark: i + 1 < cur ? "✓" : i + 1, name: t(n) });
-    if (i + 1 === cur) li.setAttribute("aria-current", "step");
-    return li;
-  }));
+  selectSection("relay");
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-// Sheet descriptions from the brief (Gemma); each sheet is drawn on the user's click.
 const imported = img => ({ ref: img.ref, seed: null, source: "imported", prompt: null, status: "ready" });
 
 // The sheet compilers, fed the image instead of the brief. A failed call leaves the
@@ -142,34 +84,14 @@ async function fieldsFromSheet(img, read, scene) {
   return fields;
 }
 
-async function openSession(pipeline, seed) {
-  const text = F.brief();
-  if (!text) throw new Error(t("Describe the scene in the brief before generating."));
-  log("req", "Director: subject and setting descriptions with {llm}…", { llm: LLM });
-  const charFields = [await P.characterSheetFromBrief(F.llm, text, promptLog)];
-  const locFields = await P.locationSheetFromBrief(F.llm, text, promptLog);
-  const s = {
-    pipeline, wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value,
-    style: F.currentStyleId(), sheetTemplate: F.currentTemplateId(),
-    locFields, chars: charFields.map(f => newChar(f)), charIdx: 0, locVariants: [], locActive: 0, validated: false,
-  };
-  // Nothing is drawn here: the studio opens on the descriptions, and each sheet is
-  // generated (from its fields or a photo) or imported by the user's click.
-  return { s, text };
-}
-
 function enterSession(s) {
   reset();
   d = s;
-  updateNavForPipeline();
   enterStudio();
-  selectSection(isLongTake() ? "relay" : "character");
-  renderSheetMenu("char");
-  renderSheetMenu("loc");
-  if (isLongTake()) renderRelay();
+  selectSection("relay");
+  renderRelay();
   updateGate();
-  if (isLongTake()) log("ok", "Long take open: read the segments, then generate the chain.");
-  else log("ok", "Studio open: no sheet is drawn yet. Generate each one from its description or a photo, or import a finished sheet.");
+  log("ok", "Long take open: read the segments, then generate the chain.");
   save();
 }
 
@@ -198,10 +120,10 @@ export async function startLongTake(seed, { first = null, refs = [] } = {}) {
     ? subjects.map(x => newChar({ kind: "other", subject: desc(x), role: ROLES[x.kind] || "character" }, [imported({ ref: up(x) })]))
     : [newChar({ kind: "other", subject: first ? desc(first) : "" }, first ? [imported({ ref: up(first) })] : [])];
   const s = {
-    pipeline: "sequence", wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value, style: "none", sheetTemplate: "auto",
+    pipeline: "sequence", wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value, style: "none",
     loras: F.formLoras(), startImage: first ? { ref: up(first) } : null, refsGiven: subjects.length + (place ? 1 : 0),
-    chars, charIdx: 0, locFields: place ? { place: desc(place) } : {}, locVariants: place ? [imported({ ref: up(place) })] : [],
-    locActive: 0, validated: true,
+    chars, locFields: place ? { place: desc(place) } : {}, locVariants: place ? [imported({ ref: up(place) })] : [],
+    locActive: 0,
     relay: newRelay({ scenario: text, total: RELAY_SEG_DEFAULT, segMax: RELAY_SEG_DEFAULT,
       segments: [{ prompt: text, duration: RELAY_SEG_DEFAULT, endImage: null }] }),
   };
@@ -213,15 +135,16 @@ export async function startLongTake(seed, { first = null, refs = [] } = {}) {
   renderRelay();
 }
 
-// A sheet for a long take's references, made from the form before the long take opens:
-// one click, one job, no approval step. "char": the brief's main subject (Krea 2), or the
+// A sheet for the form's references (a long take, or a video from references), made before
+// anything renders: one click, one job, no approval step. "char": the brief's main subject (Krea 2), or the
 // subject of a photo, which Gemma's vision describes and Qwen Image 2.1 draws in five
-// views; "setting": the brief's place (Krea 2). Returns the sheet's image.
+// views; "setting": the brief's place (Krea 2). `origin`: the gallery feature of the job.
+// Returns the sheet's image.
 const SUBJECT_FROM_PHOTO = "The scene is the attached photo: describe the main subject it shows, exactly as it looks there.";
-export async function longTakeSheet(kind, photo = null) {
+export async function referenceSheet(kind, photo = null, origin = "relay") {
   const text = F.brief(), seed = F.formSeed();
   if (!photo && !text) throw new Error(t("Describe the scene in the brief before generating."));
-  const meta = (label, info) => ({ origin: "relay", label: [label], sub: ["{info} · seed {seed}", { info, seed }] });
+  const meta = (label, info) => ({ origin, label: [label], sub: ["{info} · seed {seed}", { info, seed }] });
   let job;
   if (kind === "setting") {
     log("req", "Setting sheet: the place of the brief with {llm}…", { llm: LLM });
@@ -243,269 +166,21 @@ export async function longTakeSheet(kind, photo = null) {
   return out(job, ".png");
 }
 
-export async function startR2V(seed) {
-  const { s } = await openSession("reference2video", seed);
-  // The video job's settings are read now, not at launch, so a form edited during the
-  // review changes nothing.
-  s.duration = F.formDuration();
-  s.loras = F.formLoras();
-  enterSession(s);
-}
-
-// Variant of a sheet job already submitted.
-function watchVariant(kind, variant, jobPromise) {
-  const s = d;
-  jobPromise.then(job => {
-    if (!sameSession(s)) return;
-    variant.ref = out(job, ".png");
-    variant.status = "ready";
-  }).catch(err => {
-    if (!sameSession(s)) return;
-    variant.status = "error";
-    warn(err);
-  }).finally(() => {
-    if (!sameSession(s)) return;
-    refreshSheetUI(kind);
-    save();
-  });
-}
-
-// ── Subject and setting menus ─────────────────────────────────────────────────
-const sheetSection = kind => $(kind === "char" ? "studioCharacter" : "studioLocation");
-const FIELD_LABELS = {
-  face: L("Face"), hair: L("Hair"), outfit: L("Outfit"), accessories: L("Accessories"), subject: L("Subject"),
-  form: L("Form"), surface: L("Surface"), details: L("Details"), palette: L("Palette"), place: L("Place"),
-  architecture: L("Architecture"), materials: L("Materials"), lighting: L("Lighting"),
-};
-
-// The fields follow the subject: a lion or a robot has a form and a surface, not an
-// outfit. Edits go through a delegated listener, so rebuilt fields stay wired.
-function renderFields(kind, keys) {
-  const box = sheetSection(kind).querySelector(".sheet-fields");
-  if ([...box.querySelectorAll("[data-field]")].map(i => i.dataset.field).join() === keys.join()) return;
-  box.replaceChildren(...keys.map(k => {
-    const label = document.createElement("label");
-    const input = document.createElement("input");
-    input.type = "text";
-    input.dataset.field = k;
-    label.append(FIELD_LABELS[k], input);
-    return label;
-  }));
-  translateTree(box);
-}
-
-function renderCharKind() {
-  const wrap = $("charKindToggle");
-  wrap.hidden = !d;
-  if (!d) return;
-  const kind = P.charKindOf(curChar().fields);
-  wrap.querySelectorAll("[data-kind]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.kind === kind)));
-}
-
-// Human / other switch of the shown subject. Gemma decides at creation and gets it
-// wrong at times. Both field sets live in the same object (disjoint keys), so
-// switching back loses nothing; the text already written goes into the first field of
-// an empty set.
-function switchKind(kind) {
-  if (!d) return;
-  const f = curChar().fields;
-  if (P.charKindOf(f) === kind) return;
-  const before = P.stripPromptPadding(P.charFieldKeys(f).filter(k => k !== "palette").map(k => P.fieldText(f[k])).filter(Boolean).join(", "));
-  f.kind = kind;
-  const keys = P.charFieldKeys(f);
-  if (before && !keys.some(k => k !== "palette" && P.fieldText(f[k]))) f[keys[0]] = before;
-  renderSheetMenu("char");
-  save();
-}
-
-function renderSheetMenu(kind) {
-  const isChar = kind === "char";
-  const fields = d ? (isChar ? curChar().fields : d.locFields) : null;
-  if (isChar) renderCharKind();
-  renderFields(kind, isChar ? P.charFieldKeys(fields) : P.LOC_FIELD_KEYS);
-  sheetSection(kind).querySelectorAll("[data-field]").forEach(input => {
-    input.value = fields ? fields[input.dataset.field] || "" : "";
-    input.disabled = !fields;
-  });
-  renderVariantStrip(kind);
-}
-
 const STATUS_WORDS = { pending: L("Generating…"), error: L("Error"), missing: L("Missing"), ready: L("Ready"),
                        stale: L("To regenerate"), locked: L("Locked"), idle: L("To generate") };
 const statusWord = st => STATUS_WORDS[st] || STATUS_WORDS.ready;
 
-// Variants of a sheet: thumbnail, active badge, seed or "import"; a click makes it active.
-function renderVariantStrip(kind) {
-  const isChar = kind === "char", section = sheetSection(kind);
-  const variants = d ? (isChar ? curChar().variants : d.locVariants) : [];
-  const act = d ? (isChar ? curChar().active : d.locActive) : -1;
-  section.querySelector(".variant-strip").replaceChildren(...variants.map((v, idx) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "variant-thumb" + (idx === act ? " active" : "");
-    b.innerHTML = (v.status === "missing" || !v.ref ? `<div class="thumb-missing"></div>` : `<img alt="">`)
-      + `<span class="variant-badge">Active</span><span class="variant-meta"></span>`;
-    if (v.ref && v.status !== "missing") b.querySelector("img").src = refURL(v.ref);
-    else tx(b.querySelector(".thumb-missing"), v.status === "missing" ? "Missing" : statusWord(v.status));
-    tx(b.querySelector(".variant-meta"), v.source === "imported" ? "#{n} · import · {status}" : "#{n} · seed {seed} · {status}",
-      { n: idx + 1, seed: v.seed, status: t(statusWord(v.status)) });
-    b.addEventListener("click", () => setActiveVariant(kind, idx));
-    return b;
-  }));
-  translateTree(section.querySelector(".variant-strip"));
-  const av = variants[act];
-  const img = section.querySelector(".sheet-preview img"), miss = section.querySelector(".sheet-preview .thumb-missing");
-  miss.hidden = av?.status !== "missing";
-  if (av?.status === "missing") tx(miss, "Missing");
-  if (av?.ref && av.status !== "missing") { img.src = refURL(av.ref); img.hidden = false; }
-  else { img.removeAttribute("src"); img.hidden = true; }
-  const status = section.querySelector(".sheet-status");
-  if (!av) tx(status, !d || variants.length ? "" : isChar
-    ? "No sheet yet: generate it from the fields (or ✎ Prompt), from a photo, or import a finished sheet."
-    : "No sheet yet: generate it from the fields (or ✎ Prompt), or import a finished sheet.");
-  else if (variants.length > 1) tx(status, "{status} · sheet {n} of {total} active", { status: t(statusWord(av.status)), n: act + 1, total: variants.length });
-  else tx(status, statusWord(av.status));
-  const busy = variants.some(v => v.status === "pending");
-  const regen = section.querySelector(".sheet-regen");
-  tx(regen, variants.length ? "🔄 Regenerate the sheet" : "Generate the sheet");
-  // The first sheet is the step's main action; a further variant is one choice among others.
-  regen.classList.toggle("primary-btn", !variants.length);
-  regen.classList.toggle("secondary-btn", !!variants.length);
-  regen.disabled = !d || busy;
-  section.querySelector(".sheet-prompt").disabled = !d || busy;
-  section.querySelector(".sheet-import").disabled = !d;
-}
-
-function refreshSheetUI(kind) {
-  renderVariantStrip(kind);
-  updateGate();
-}
-
-// Choosing another sheet asks for a new approval, like a regeneration.
-function setActiveVariant(kind, idx) {
-  if (!d) return;
-  const owner = kind === "char" ? curChar() : null;
-  if ((owner ? owner.active : d.locActive) === idx) return;
-  if (owner) owner.active = idx; else d.locActive = idx;
-  d.validated = false;
-  refreshSheetUI(kind);
-  save();
-}
-
-// Regenerates a sheet from the edited fields: a NEW variant (the history is never
-// replaced), seed of the last generated one + 1. `promptOverride` (prompt editor) is
-// sent verbatim and kept on the variant.
-function regenerateSheet(kind, promptOverride) {
-  if (!d) return;
-  const isChar = kind === "char", owner = isChar ? curChar() : null;
-  const variants = isChar ? owner.variants : d.locVariants;
-  if (variants.some(v => v.status === "pending")) return;
-  const lastGen = [...variants].reverse().find(v => v.source === "generated");
-  // A subject added by hand has no variant to start from: a seed of its own, so two
-  // new subjects do not look alike.
-  const base = isChar ? F.seedPlus(d.seed, d.charIdx ? 211 + d.charIdx : 0) : F.seedPlus(d.seed, 101);
-  const seed = lastGen ? F.seedPlus(lastGen.seed, 1) : base;
-  // A subject described only in the prompt editor would leave its fields empty, and the
-  // fields are what shot images and cuts read: the description goes into the first field.
-  const fields = isChar ? owner.fields : d.locFields;
-  const keys = isChar ? P.charFieldKeys(fields) : P.LOC_FIELD_KEYS;
-  if (promptOverride && !(isChar ? P.charDescFromFields(fields) : P.locDescFromFields(fields))) {
-    const back = P.stripSheetSkeleton(promptOverride, skeleton(kind));
-    if (back) { fields[keys[0]] = back; renderSheetMenu(kind); }
-  }
-  const prompt = promptOverride || (isChar ? charSheetPrompt(fields) : locSheetPrompt());
-  const variant = { seed, source: "generated", prompt, edited: !!promptOverride, status: "pending" };
-  variants.push(variant);
-  if (isChar) owner.active = variants.length - 1; else d.locActive = variants.length - 1;
-  d.validated = false;
-  refreshSheetUI(kind);
-  watchVariant(kind, variant, sheetJob(kind, prompt, seed));
-}
-
-const skeleton = kind => P.sheetSkeleton(kind, kind === "char" ? P.charKindOf(curChar().fields) : undefined, d.sheetTemplate, d.style);
-
-async function importSheet(kind, file) {
-  if (!d) return;
-  try {
-    const ref = await F.imageRef({ name: file.name, blob: file });
-    const owner = kind === "char" ? curChar() : null, variants = owner ? owner.variants : d.locVariants;
-    variants.push({ ref, seed: null, source: "imported", prompt: null, status: "ready" });
-    if (owner) owner.active = variants.length - 1; else d.locActive = variants.length - 1;
-    d.validated = false;
-    refreshSheetUI(kind);
-    log("ok", kind === "char" ? "Subject sheet imported: {name}." : "Setting sheet imported: {name}.", { name: file.name });
-    save();
-  } catch (err) { warn(err); }
-}
-
-// A subject sheet drawn by Qwen Image 2.1 from a photo or drawing of the subject: a new
-// variant, the subject's fields giving the description, the photo its look.
-async function sheetFromPhoto(file) {
-  if (!d) return;
-  const owner = curChar();
-  if (owner.variants.some(v => v.status === "pending")) return;
-  try {
-    const photo = await F.imageRef({ name: file.name, blob: file });
-    const lastGen = [...owner.variants].reverse().find(v => v.source === "generated");
-    const seed = F.seedPlus(lastGen ? lastGen.seed : d.seed, 1);
-    const prompt = P.charsheetFromPhotoPrompt(charDesc(owner), P.charKindOf(owner.fields), d.style);
-    const variant = { seed, source: "generated", prompt, edited: false, status: "pending" };
-    owner.variants.push(variant);
-    owner.active = owner.variants.length - 1;
-    d.validated = false;
-    refreshSheetUI("char");
-    log("req", "Subject sheet from a photo: {name} (Qwen Image 2.1)…", { name: file.name });
-    watchVariant("char", variant, runJob("qwen-image-2.1", { prompt, images: [photo], ...P.SHEET_SIZE, count: 1, seed }, {
-      origin: origin(), label: ["Subject sheet"], sub: ["{info} · seed {seed}", { info: "Qwen Image 2.1", seed }] }));
-  } catch (err) { warn(err); }
-}
-
-function openSheetPrompt(kind) {
-  if (!d) return;
-  const isChar = kind === "char", owner = isChar ? curChar() : null;
-  const v = isChar ? activeVariant(owner) : locVariant();
-  const what = isChar ? P.charKindOf(owner.fields) : "location";
-  openPromptEditor({
-    title: isChar ? "Subject sheet prompt" : "Setting sheet prompt",
-    hint: "Krea 2 encodes no negative prompt: say every constraint positively. Enriching again rewrites only the subject's description; the sheet layout is always put back.",
-    text: (v?.source === "generated" && v.prompt) || (isChar ? charSheetPrompt(owner.fields) : locSheetPrompt()),
-    enrich: text => P.enrichSheetText(F.llm, text, what, skeleton(kind), promptLog),
-    apply: text => regenerateSheet(kind, text),
-  });
-}
-
 // ── Gate ──────────────────────────────────────────────────────────────────────
-// Reference to video: the launch opens once the active sheets are ready AND approved. A
-// long take has nothing to approve.
+// A long take has nothing to approve: its Relay opens with the session.
 function updateGate() {
-  const unlocked = anchorsReady() && !!d?.validated;
-  $("directorValidateBtn").hidden = !!d?.validated;
-  $("directorValidateBtn").disabled = !anchorsReady();
-  const lock = (name, open) => { const b = navBtn(name); b.disabled = !open; b.classList.toggle("locked", !open); };
-  if (isR2V()) {
-    // The last video stays under the button, which then starts a new one.
-    const video = d?.r2vVideo;
-    $("directorR2VLaunchBtn").disabled = !unlocked || video === "pending";
-    tx($("directorR2VLaunchBtn"), video?.ref ? "Regenerate the video" : "Start the video");
-    tx($("studioVideoR2VStatus"), !unlocked ? "Approve the character and setting sheets to enable the launch."
-      : video === "pending" ? "The video is rendering: its progress shows in the job queue."
-      : video?.ref ? "Video ready. Regenerating it keeps the same sheets and draws a new seed."
-      : "Ready to start the video.");
-    lock("video", unlocked);
-  } else {
-    lock("relay", !!d);
-    updateRelayButtons();
-  }
+  const b = navBtn("relay");
+  b.disabled = !d;
+  b.classList.toggle("locked", !d);
+  updateRelayButtons();
   updateNavMarks();
-  refreshSessionBar();
 }
-// The menu reads as a checklist: ✓ on each step that has its result.
-function updateNavMarks() {
-  const marks = { character: !!d && d.chars.every(c => activeVariant(c)?.status === "ready"), location: locVariantReady(),
-    relay: !!d?.relay?.video?.ref, video: !!d?.r2vVideo?.ref };
-  for (const [name, done] of Object.entries(marks)) navBtn(name).classList.toggle("done", done);
-}
-const locVariantReady = () => !!d && locVariant()?.status === "ready";
+// The menu reads as a checklist: ✓ once the take is assembled.
+function updateNavMarks() { navBtn("relay").classList.toggle("done", !!d?.relay?.video?.ref); }
 
 function player(wrap, ref) {
   wrap.replaceChildren();
@@ -1041,7 +716,7 @@ async function renderTextSegment(s, seg, i, total, began) {
   const aspect = F.QWEN21_RATIOS[s.ratio] ? s.ratio : "16:9";
   const job = await tracked(seg, "video", sub => runJob("h3-t2v",
     { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], aspect },
-    { origin: origin(), label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
+    { origin: "relay", label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
       sub: ["{info} · seed {seed}", { info: `T2VA · ${aspect} · ${seg.duration} s`, seed: seg.seed }] }));
   if (!sameSession(s)) return;
   const frame = out(job, ".png");
@@ -1093,7 +768,7 @@ function relayR2vJob(s, seg, i, total, refs, from = null) {
   return tracked(seg, "video", sub => runJob("h3-r2v",
     { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref),
       ...(from?.image ? { image: from.image } : from?.continue_from ? { continue_from: from.continue_from } : { aspect: s.ratio }) },
-    { origin: origin(), label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
+    { origin: "relay", label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
       sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref.${how} · ${seg.duration} s`, seed: seg.seed }] }));
 }
 
@@ -1211,7 +886,7 @@ async function assembleRelay() {
     // video-stitch: the segments joined by latent continuation are decoded in one go (their
     // joins carry on), the others are cuts; the sound of every clip, at one loudness.
     const refs = r.segments.map(seg => seg.ref);
-    const ref = out(await runJob("video-stitch", { clips: refs }, { origin: origin(), label: ["Relay · sequence"],
+    const ref = out(await runJob("video-stitch", { clips: refs }, { origin: "relay", label: ["Relay · sequence"],
       sub: ["{n} clip(s)", { n: refs.length }] }), ".mp4");
     if (!sameSession(s)) return;
     r.video = { ref };
@@ -1223,65 +898,6 @@ async function assembleRelay() {
   save();
 }
 
-// ── Reference to video ────────────────────────────────────────────────────────
-// Ref2VA job: the six-field block with every subject defined on its picture. Extra
-// references (F.r2vPlan: {item, media, kind}) follow: an image is the next subject,
-// described by Gemma's vision; a clip is a subject or its camera movement (<Video N>),
-// a sound a voice, the music or the ambience (<Audio N>).
-async function r2vJob({ subjects, refs, extras, seed, duration, loras, aspect, text }) {
-  const images = extras.filter(e => e.media === "image");
-  const found = await F.describeRefs(images.map(e => e.item));
-  const all = P.h3AssignRefs(subjects.concat(extras.map(e => ({
-    media: e.media, kind: e.kind, desc: e.media === "image" ? found[images.indexOf(e)] : "" }))));
-  const prompt = F.capH3(P.buildH3RefPrompt({ subjects: all, summary: P.h3Summary(text), body: P.h3RefBody(all, text) }));
-  const extraRefs = await Promise.all(extras.map(e => F.imageRef(e.item)));
-  return runJob("h3-r2v", { prompt, duration, seed, loras, aspect, references: [...refs, ...extraRefs] }, {
-    origin: "reference2video", label: ["Consistent character + setting (MiniMax H3)"],
-    sub: ["{info} · seed {seed}", { info: extras.length ? `${duration} s · +${extras.length} ref.` : `${duration} s`, seed }] });
-}
-
-async function launchR2V() {
-  if (!isR2V() || !anchorsReady() || !d.validated) return;
-  const s = d, last = s.r2vVideo;
-  // The first video keeps the session's seed (as before); each regeneration draws the next one.
-  const seed = last?.ref ? F.seedPlus(last.seed, 1) : F.seedPlus(s.seed, 201);
-  s.r2vVideo = "pending";
-  updateGate();
-  try {
-    const { extras } = F.r2vPlan(false);
-    const job = await r2vJob({
-      subjects: [{ kind: "character", desc: charDesc(s.chars[0]) }, { kind: "environment", desc: locDesc() }],
-      refs: [activeVariant(s.chars[0]).ref, locVariant().ref], extras, seed,
-      duration: s.duration, loras: s.loras, aspect: s.ratio, text: F.brief() });
-    const ref = out(job, ".mp4");
-    s.r2vVideo = ref ? { ref, seed } : last;
-    log("ok", "Video ready: {name}.", { name: ref });
-  } catch (err) { s.r2vVideo = last; warn(err); }
-  if (!sameSession(s)) return;
-  player($("r2vPlayer"), s.r2vVideo?.ref);
-  updateGate();
-}
-
-// "Skip the sheets": nothing generated, nothing to review; the first reference image
-// is the character, the next ones are free references, and the brief gives the place.
-// Gemma's vision description is all that tells the model what each image is.
-export async function r2vWithoutSheets(seed) {
-  const text = F.brief();
-  if (!text) throw new Error(t("Describe the character and the setting in the brief before generating."));
-  const { anchors, extras } = F.r2vPlan(true);
-  if (!anchors.length) throw new Error(t("Skipping the sheets needs at least one image in “Extra references”: the character."));
-  const [charD] = await F.describeRefs(anchors);
-  const refs = await Promise.all(anchors.map(F.imageRef));
-  runJobDetached(r2vJob({
-    subjects: [{ kind: "character", desc: charD }], refs, extras,
-    seed: F.seedPlus(seed, 201), duration: F.formDuration(), loras: F.formLoras(), aspect: $("ratioSelect").value, text }));
-}
-const runJobDetached = p => { p.catch(warn); };
-
-// ── Form changes during a session ─────────────────────────────────────────────
-export function setStyle(style) { if (d) { d.style = style; save(); } }
-export function setTemplate(id) { if (d) { d.sheetTemplate = id; save(); } }
-
 // ── Saving and resuming (long take only) ──────────────────────────────────────
 // The project is kept by file references (server files): nothing volatile is written.
 // A "pending" status is not saved; on resume, an item with its file is ready.
@@ -1291,7 +907,7 @@ function replacer(key, value) {
   return value;
 }
 function save() {
-  if (!d || isR2V()) return;
+  if (!d) return;
   try {
     const p = { version: 2, savedAt: new Date().toISOString(), brief: F.brief(), wfId: d.wf.id, ...d };
     localStorage.setItem(SAVE_KEY, JSON.stringify(p, replacer));
@@ -1325,13 +941,12 @@ export async function restoreProject() {
   const revive = it => it && { ...it, status: !it.status || it.status === "missing" ? (it.ref ? "ready" : "error") : it.status };
   d = {
     // A project saved with an engine since dropped (Qwen Edit 2509) takes the pipeline's engine.
-    ...p, wf: F.workflow(p.wfId), validated: true,
+    ...p, wf: F.workflow(p.wfId),
     chars: p.chars.map(c => newChar(c.fields, c.variants.map(revive), c.active ?? 0)),
-    locVariants: p.locVariants.map(revive), charIdx: 0,
+    locVariants: p.locVariants.map(revive),
     relay: newRelay(p.relay || {}),
   };
   const s = d;
-  updateNavForPipeline();
   enterStudio();
   selectSection("relay");
   showRelayComposer();
@@ -1354,33 +969,6 @@ export async function restoreProject() {
 export function initDirector(h) {
   hooks = h;
   savedCache = loadSaved();
-  for (const kind of ["char", "loc"]) {
-    const section = sheetSection(kind);
-    section.addEventListener("change", e => {
-      const input = e.target.closest("[data-field]");
-      if (!input || !d) return;
-      (kind === "char" ? curChar().fields : d.locFields)[input.dataset.field] = input.value.trim();
-    });
-    section.querySelector(".sheet-regen").addEventListener("click", () => regenerateSheet(kind));
-    section.querySelector(".sheet-prompt").addEventListener("click", () => openSheetPrompt(kind));
-    const file = section.querySelector(".sheet-import-input");
-    section.querySelector(".sheet-import").addEventListener("click", () => file.click());
-    file.addEventListener("change", () => { if (file.files[0]) importSheet(kind, file.files[0]); file.value = ""; });
-    const photo = section.querySelector(".sheet-photo-input");  // subject menu only
-    section.querySelector(".sheet-photo")?.addEventListener("click", () => photo.click());
-    photo?.addEventListener("change", () => { if (photo.files[0]) sheetFromPhoto(photo.files[0]); photo.value = ""; });
-    const img = section.querySelector(".sheet-preview img");
-    img.addEventListener("click", () => { if (img.getAttribute("src")) openLightbox({ url: img.src, type: "image" }); });
-  }
-  $("charKindToggle").addEventListener("click", e => { const b = e.target.closest("[data-kind]"); if (b) switchKind(b.dataset.kind); });
-  $("directorValidateBtn").addEventListener("click", () => {
-    if (!anchorsReady()) return;
-    d.validated = true;
-    updateGate();
-    // Approved: on to the video.
-    selectSection("video");
-  });
-  $("directorR2VLaunchBtn").addEventListener("click", launchR2V);
   $("relayAddBtn").addEventListener("click", () => {
     const r = d?.relay;
     if (!r || r.segments.length >= RELAY_MAX_SEGMENTS) return;
@@ -1441,10 +1029,6 @@ export function initDirector(h) {
   });
   // Leaving keeps the session: Generate starts a new one, Resume reopens the saved one.
   $("studioExitBtn").addEventListener("click", exitStudio);
-  document.querySelectorAll(".sb-thumb").forEach(b => b.addEventListener("click", () => {
-    const img = b.querySelector("img");
-    if (img.getAttribute("src")) openLightbox({ url: img.src, type: "image" });
-  }));
   placeProjectActions();
   reset();
 }

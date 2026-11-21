@@ -37,6 +37,7 @@ const FP = {
   H3_VIDEO_ENRICH_SYSTEM: "5d26d56b546c13cc599f7e23ba1792b0322561b4e744064eb3a37452b142b36e",
   R2V_BRIEF_ENRICH_SYSTEM: "d55d0fc3d08606df97bec3600dfce7fed44c93486c9f9ccfc64287667700bdea",
   SHEET_BRIEF_ENRICH_SYSTEM: "a3799383a92581605fcae4da6ffb3b017246e31f622063d0d3d1be00d2b9800a",
+  REF_VISION_SYSTEM: "14c68fdba3150548308d4ee260f24c1c1b4fc6e236463a971a731d9d0f030b95",
   CHARACTER_SYSTEM: "4d78da3e105a0d0d31692a5578cfa35ca8982f8db8dab5684715ecbfec20f267",
   "CHARACTER_SYSTEM(forceKind=human)": "59ca22976439b39bdacad85e602757319e1f91d8fee4763dba34448e753c70e5",
 };
@@ -108,10 +109,10 @@ const SCENARIOS = [
          { auto: true, job: "krea2-t2i" }),
   studio("S-auto-moss", "campaign", "text2image", "moss_t2i", "a red fox in the snow", ["ENRICH_SYSTEM"],
          { auto: true, job: "moss-image" }),
-  // A workflow that builds its own prompts is never enriched generically: Gemma's first
-  // call writes the character sheet.
+  // A workflow that builds its own prompts is never enriched generically: Gemma only
+  // describes the reference image (vision), and the job gets the brief as written.
   studio("S-auto-r2v", "campaign", "reference2video", "h3_r2v", "a fox hunts at dawn",
-         ["CHARACTER_SYSTEM", null], { auto: true }),
+         ["REF_VISION_SYSTEM"], { auto: true, refs: 1, job: "h3-r2v", verbatim: true }),
   // Instructions replaced in the settings: used for their engine, and for it only.
   studio("S-mine-krea2", "campaign", "text2image", "krea2_t2i", "a red fox in the snow", ["MINE"], { instructions: { krea2: MINE } }),
   studio("S-mine-other", "campaign", "text2image", "qwen21_t2i", "a red fox in the snow", ["ENRICH_SYSTEM"], { instructions: { krea2: MINE } }),
@@ -144,6 +145,8 @@ async function runStudio(page, s) {
   if (await page.isVisible("#modelSelect")) await page.selectOption("#modelSelect", s.model);
   else if (await page.inputValue("#modelSelect") !== s.model) throw new Error(`${s.pipeline}: engine ${await page.inputValue("#modelSelect")}, expected ${s.model}`);
   await page.fill("#brief", s.brief);
+  for (let i = 0; i < (s.refs || 0); i++)
+    await page.setInputFiles("#refImagesInput", { name: `ref${i + 1}.png`, mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
   await page.evaluate(() => { document.querySelector(".generate-more").open = true; });  // ✨ is under "Advanced options"
   if (s.auto) { await page.click("#autoEnrichBtn"); await page.click("#generateBtn"); }
   else await page.click("#enrichBtn");
@@ -201,7 +204,8 @@ async function runCanvas(page, s) {
     if (s.job) {
       const job = rec.jobs.find(j => j.pipeline === s.job);
       if (!job) fails.push(`no ${s.job} job`);
-      else if (s.auto && !job.params.prompt.includes("ENRICHED")) fails.push("the job did not get the enriched prompt");
+      else if (s.verbatim ? job.params.prompt.includes("ENRICHED") || !job.params.prompt.includes(s.brief)
+                          : s.auto && !job.params.prompt.includes("ENRICHED")) fails.push(s.verbatim ? "the brief was not sent as written" : "the job did not get the enriched prompt");
     }
     if (errors.length) fails.push("page errors: " + errors.join(" | "));
     console.log(`${fails.length ? "FAIL" : "ok  "} ${s.id}${fails.length ? "\n      " + fails.join("\n      ") : ""}`);

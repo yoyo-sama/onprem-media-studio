@@ -20,7 +20,7 @@ export const ENGINE_LABELS = {
 };
 export const ORIGIN_LABELS = {
   studio: "Studio", campaign: L("Campaign"), markets: L("Local versions"), sequence: L("Multi-image sequence"),
-  storyboard: L("Storyboard"), relay: L("Long take (Relay)"), reference2video: L("Reference to video"), canvas: "Canvas",
+  storyboard: L("Storyboard"), relay: L("Long take (Relay)"), reference2video: L("Video from references"), canvas: "Canvas",
   assistant: L("Assistant"),
 };
 

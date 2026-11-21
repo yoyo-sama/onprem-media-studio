@@ -20,7 +20,8 @@ end driving ComfyUI and Ollama). The goals set by the project owner (GitHub `yoy
 - **Self-contained**: no ComfyUI, no Ollama, no cloud generation. The app runs the models itself
   and downloads the weights it needs on first use.
 - **Same feature coverage as 1.4**: Text2Image, Image2Image, campaign, subject and setting
-  sheets, reference to video, the long take (Relay; the 1.4 storyboard was folded into it on
+  sheets, reference to video (one form and one click since 2026-11-21, "Video from references":
+  no sheet to approve), the long take (Relay; the 1.4 storyboard was folded into it on
   2026-11-21 and stays on the Canvas), the Canvas, the gallery, the in-app update. Plus, new in 2.0: the creative assistant
   (a chat with roles), MOSS-Image, Upscale ×2, LoRA stacks on every engine.
 - **The 1.4 lessons carry over** ([LESSONS.md](LESSONS.md)).
@@ -241,6 +242,9 @@ Nothing below was asked to be done now; each waits for the owner.
   storyboard pipeline and the assistant's storyboard card were removed after it. The framing
   rule that keeps the main subject's face in frame, and a screenplay file's `[Shot N]` scenes,
   are not rendered yet.
+- "Video from references" in the Studio form (2026-11-21, [FRONTEND.md](FRONTEND.md)): one
+  `h3-r2v` job from the References list, the prompt built as the assistant's card does; not
+  rendered from the form on a GB10 yet.
 - Character sheet from a photo (Qwen Image 2.1, PR #9; five-view prompt adapted from H3 Character
   Sheet Designer since 2026-11-13): never qualified.
 - The SPAN upscaler weights are not yet downloaded on promaxgb10-95c7 (automatic on first use).

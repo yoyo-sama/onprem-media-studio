@@ -282,6 +282,13 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     left out, H3 kept the boots of the sheet. Asked to keep only what every scene shares, Gemma
     still wrote a light and sounds spanning all places: with new scenes, the code leaves those
     two shared fields empty instead. docs/LONG-VIDEO.md. (2026-11-21)
+54. **References go to Ref2VA as they are; a review step is only worth what it catches.** The
+    1.4 reference-to-video made the user write, generate and approve a subject sheet and a
+    setting sheet before the video, then sent them as two fixed anchors plus 7 extra images.
+    H3 OmniRef reads its references directly (Gemma's vision describes each one, since PR #11),
+    and the assistant's card already rendered from them in one click. The Studio pipeline is now
+    the same: one list with a role per item (9 images, 3 clips, 3 sounds), one job, and a sheet
+    only when the user asks for one (one click, no approval). docs/FRONTEND.md. (2026-11-21)
 
 ## 8. Front end (for the port in step 4)
 

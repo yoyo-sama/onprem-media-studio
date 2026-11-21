@@ -25,7 +25,8 @@ export const QWEN21_RATIOS = { "16:9": [1344, 768], "9:16": [768, 1344], "1:1": 
 // One entry per engine choice of a pipeline. `loras`: the LoRA folder (studio/loras.py)
 // of the engine the form's LoRA stack goes to; none = no LoRA control. `enrich: "builtin"`: never enriched
 // automatically (the Ref2VA flow writes its own prompts; its ✨ button has its own
-// instruction, see Prompts.briefEnrichSystem). "storyboard_qwen21" is in no Studio
+// instruction, see Prompts.briefEnrichSystem). `engines`: every engine the pipeline's
+// buttons submit to (the reference sheets are Krea 2 and Qwen Image 2.1 jobs). "storyboard_qwen21" is in no Studio
 // pipeline: it routes the ✨ of the Canvas storyboard and sheet cards.
 export const WORKFLOWS = [
   { id: "krea2_t2i", pipeline: "text2image", label: "Krea 2 Turbo", engine: "krea2-t2i", loras: "krea2" },
@@ -38,24 +39,22 @@ export const WORKFLOWS = [
   { id: "storyboard_qwen21", pipeline: "storyboard", label: L("Shot images: Qwen Image 2.1"),
     keyframes: "qwen-image-2.1", enrich: "builtin", engines: ["krea2-t2i", "qwen-image-2.1", "h3-i2v"] },
   { id: "h3_r2v", pipeline: "reference2video", label: L("MiniMax H3 · references"), engine: "h3-r2v", loras: "h3", enrich: "builtin",
-    engines: ["krea2-t2i", "h3-r2v"] },
+    engines: ["krea2-t2i", "qwen-image-2.1", "h3-r2v"] },
   { id: "campaign", pipeline: "campaign", label: L("Krea 2 + MiniMax H3"), engines: ["krea2-t2i", "h3-t2v"] },
 ];
 
 // `scenario`: the goal cards a pipeline is offered under (none = all). `own`: the pipeline
 // of one goal card (long take, ad campaign); that card shows it alone, with no
 // Pipeline menu, and the other cards do not list it.
-// Controls: duration, variants, ratio, style, image, markets, seq,
-// sheetTemplate, skipSheets. The extra references and the LoRA stack follow the engine
-// (refCtx, WORKFLOWS[].loras).
+// Controls: duration, variants, ratio, style, image, markets, seq. The references and
+// the LoRA stack follow the engine (refCtx, WORKFLOWS[].loras).
 export const PIPELINES = [
   { id: "text2image", label: L("Image from a text (Text2Image)"), controls: ["variants", "ratio", "style"] },
   { id: "image2image", label: L("Image editing (Image2Image)"), controls: ["image", "markets"] },
   { id: "text2video", label: L("Video from a text (Text2Video)"), controls: ["duration", "ratio"] },
   { id: "image2video", label: L("Video from an image (Image2Video)"), controls: ["duration", "image"] },
   { id: "sequence", label: L("Long take (Relay)"), scenario: ["narrative"], own: true, controls: ["seq", "image"] },
-  { id: "reference2video", label: L("Consistent character + setting (MiniMax H3)"),
-    controls: ["duration", "ratio", "sheetTemplate", "skipSheets", "style"] },
+  { id: "reference2video", label: L("Video from references (MiniMax H3)"), controls: ["duration", "ratio"] },
   { id: "campaign", label: L("Full campaign (posters + thumbnails + teaser)"), scenario: ["campaign"], own: true,
     controls: ["duration", "variants", "style"] },
 ];
@@ -78,7 +77,6 @@ export const brief = () => $("brief").value.trim();
 
 // Style of the form: "none" where the pipeline has no style control.
 export const currentStyleId = () => (hasControl("style") ? $("styleSelect").value || "cinematic" : "none");
-export const currentTemplateId = () => $("sheetTemplateSelect").value || "auto";
 
 // Seeds: "Auto" draws one below 2^31, so the offsets the flows add (seed + 501 + i…)
 // stay far from the server's limit; seedPlus wraps around anyway.
@@ -128,10 +126,11 @@ export async function imageBlob(img) {
   return res.blob();
 }
 
-// ── Extra references ──────────────────────────────────────────────────────────
-// One list per use: "r2v" (reference to video), "i2i" (Qwen Image 2.1 editing: 10 images with the input image), "seq" (a long
-// take's references, each with its role). A list never leaks into another pipeline, and
-// nothing is lost when the engine changes.
+// ── References ────────────────────────────────────────────────────────────────
+// One list per use: "r2v" (video from references: images, clips and sounds), "i2i" (Qwen
+// Image 2.1 editing: 10 images with the input image), "seq" (a long take's references, each
+// with its role). A list never leaks into another pipeline, and nothing is lost when the
+// engine changes. REF_CAPS.r2v is the Canvas card's (two sheets come first there).
 export const REF_CAPS = { r2v: 7, i2i: 9, seq: 7 };
 const refLists = { r2v: [], i2i: [], seq: [] };
 export function refCtx(wf = currentWorkflow()) {
@@ -144,9 +143,9 @@ export function refCtx(wf = currentWorkflow()) {
 export const refList = (ctx = refCtx()) => refLists[ctx] || [];
 
 // ── Clips and sounds as Ref2VA references ─────────────────────────────────────
-// FastH3 OmniRef also takes clips and sounds (9 images, 3 clips, 3 sounds, 12 in all;
-// server h3.py). The assistant's card and the Studio's reference-to-video list share
-// these roles: `REF_KINDS` maps a role to its prompt kind (P.h3AssignRefs) and label.
+// FastH3 OmniRef takes 9 images, 3 clips and 3 sounds, 12 in all (server h3.py). The
+// assistant's card and the Studio's reference-to-video list share these roles: `REF_KINDS`
+// maps a role to its prompt kind (P.h3AssignRefs) and label.
 export const VIDEO_RE = /\.(mp4|webm|mov)$/i, AUDIO_RE = /\.(wav|mp3|m4a|flac|ogg)$/i;
 export const REF_KINDS = { character: ["character", L("Character")], setting: ["environment", L("Setting")],
                            object: ["reference", L("Object or other")], motion: ["motion", L("Camera movement and pacing")],
@@ -154,28 +153,33 @@ export const REF_KINDS = { character: ["character", L("Character")], setting: ["
                            ambience: ["ambience", L("Ambience and sounds")] };
 export const MEDIA_KINDS = { image: ["character", "setting", "object"], video: ["motion", "character", "setting", "object"],
                              audio: ["voice", "music", "ambience"] };
-export const R2V_MEDIA_CAPS = { image: REF_CAPS.r2v, video: 3, audio: 3 };
+export const R2V_MEDIA_CAPS = { image: 9, video: 3, audio: 3 }, R2V_MAX_REFS = 12;
 export const refMedia = ref => VIDEO_RE.test(ref || "") ? "video" : AUDIO_RE.test(ref || "") ? "audio" : "image";
 // Media of a list item ({name, blob | ref, media?, kind?}).
 export const itemMedia = it => it.media
   || (it.blob?.type ? (/^video\//.test(it.blob.type) ? "video" : /^audio\//.test(it.blob.type) ? "audio" : "image")
                     : refMedia(it.ref || it.name));
-// Role of a clip or a sound of the list (its own, else the first of its media).
+// Role of a list item (its own, else the first of its media).
 export const itemRole = it => MEDIA_KINDS[itemMedia(it)].includes(it.kind) ? it.kind : MEDIA_KINDS[itemMedia(it)][0];
 
-// The reference-to-video plan of the form, in the order sent: the two anchors (the
-// sheets; with "skip the sheets", only the character: the first image of the list),
-// then the other items of the list, free references, capped per media. `anchors` holds list items only when
-// the sheets are skipped. Each entry: {item, media, kind} (kind as P.h3AssignRefs).
-export function r2vPlan(skip, list = refList("r2v")) {
-  const room = { ...R2V_MEDIA_CAPS }, kept = list.filter(it => room[itemMedia(it)]-- > 0);
-  const images = kept.filter(it => itemMedia(it) === "image");
-  const anchors = skip ? images.slice(0, 1) : [];
-  const extras = kept.filter(it => !anchors.includes(it)).map(item => ({
-    item, media: itemMedia(item), kind: itemMedia(item) === "image" ? "reference" : REF_KINDS[itemRole(item)][0] }));
-  const lead = [{ media: "image", kind: "character", item: anchors[0] || null },
-                { media: "image", kind: "environment", item: null }].slice(0, skip ? 1 : 2);
-  return { anchors, extras, dropped: list.length - kept.length, entries: P.h3AssignRefs([...lead, ...extras]) };
+// The reference-to-video plan of the form: the list in its order, capped per media and in
+// all as the server is. Each entry: {item, media, kind (as P.h3AssignRefs), label…}.
+export function r2vPlan(list = refList("r2v")) {
+  const room = { ...R2V_MEDIA_CAPS };
+  const kept = list.filter(it => room[itemMedia(it)]-- > 0).slice(0, R2V_MAX_REFS);
+  return { dropped: list.length - kept.length,
+           entries: P.h3AssignRefs(kept.map(item => ({ item, media: itemMedia(item), kind: REF_KINDS[itemRole(item)][0] }))) };
+}
+
+// The six-field Ref2VA prompt of a list of references (entries of P.h3AssignRefs, each with
+// its `item` {name, ref | blob}): Gemma's vision describes each image for
+// subject_definitions (an undescribed one still goes). The Studio form and the assistant's
+// card build it here, the same way.
+export async function r2vPrompt(entries, text, music) {
+  const images = entries.filter(e => e.media === "image");
+  const found = await describeRefs(images.map(e => e.item));
+  const subjects = entries.map(e => ({ ...e, desc: e.media === "image" ? found[images.indexOf(e)] || "" : "" }));
+  return capH3(P.buildH3RefPrompt({ subjects, summary: P.h3Summary(text), body: P.h3RefBody(subjects, text), music }));
 }
 
 // The first `REF_CAPS` images of a list, uploaded. The cap is applied here too: the

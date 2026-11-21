@@ -2,9 +2,8 @@
 // picks the role best placed to answer and streams its reply; every tool call the role
 // makes arrives as a card. A card runs only on the user's click, through the same
 // functions as the Studio form (generate.js), and its result is reported back so later
-// turns can use it (C3#1…). Long take and reference-to-video cards can run the director:
-// their click switches to the Studio, fills the form and opens the long take, or the
-// step-by-step review of the sheets.
+// turns can use it (C3#1…). A long take card runs the director: its click switches to the
+// Studio, fills the form and opens the long take on its segments.
 
 import { api, chatStream, on, refURL } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
@@ -44,7 +43,8 @@ const roleName = id => { const r = roles.find(x => x.id === id); return r ? t(r.
 // `text`: the argument shown in the card's text box; `fields`: settings the user can
 // change; `images`: arguments holding image ids; `enrich`: the workflow whose Gemma
 // instruction ✨ uses; `form`: the Studio form can take the card over; `director`: the
-// card's Generate is the director's, in the Studio.
+// card has its own buttons (`launch`: opens the long take in the Studio; `video`: renders
+// the clip from the card).
 // The Studio workflow of each engine of the image card.
 export const CARD_IMAGE_WORKFLOWS = { krea2: "krea2_t2i", qwen: "qwen21_t2i", moss: "moss_t2i" };
 const imageWorkflow = a => CARD_IMAGE_WORKFLOWS[a.engine] || "krea2_t2i";
@@ -68,7 +68,7 @@ const CARD_UI = {
   join_videos: { title: L("Joined clips"), images: ["clips"] },
   campaign: { title: L("Campaign"), text: "brief", fields: ["variants", "duration", "style"], form: true,
               enrich: () => "campaign" },
-  reference_video: { title: L("Reference to video"), text: "brief", images: ["references"], fields: ["duration", "ratio", "music"],
+  reference_video: { title: L("Video from references"), text: "brief", images: ["references"], fields: ["duration", "ratio", "music"],
                      form: true, director: true, video: true, wf: () => "h3_r2v" },
 };
 // LoRAs turned on on a card, per folder. They stay in the page (the card's arguments are
@@ -83,11 +83,11 @@ function cardStack(card, a) {
   return (stacks[folder] ??= []);
 }
 const cardLorasParam = (card, a) => stackParams(cardStack(card, a));
-// Reference to video straight from the card. Images, clips and sounds, in one ordered
+// Video from references straight from the card. Images, clips and sounds, in one ordered
 // list: each gets its H3 label (the numbers are the app's, never typed), <Subject N>
 // for a subject, else its own <Video N> or <Audio N>, with the role the user or Gemma
 // gave it.
-const R2V_MAX = { image: 9, video: 3, audio: 3 }, R2V_MAX_REFS = 12;  // FastH3 OmniRef's limits (server h3.py)
+const { R2V_MEDIA_CAPS: R2V_MAX, R2V_MAX_REFS } = F;  // FastH3 OmniRef's limits (server h3.py)
 const { REF_KINDS, MEDIA_KINDS, AUDIO_RE: AUDIO } = F;
 const mediaOf = id => F.refMedia(refOf(id));
 function kindOf(a, i) {
@@ -318,15 +318,15 @@ function renderCard(card, live = false) {
       g.disabled = blocked || !(a.references || []).some(id => mediaOf(id) !== "audio");
       actions.appendChild(g);
     }
-    const b = ui.launch
-      ? button(ui.launch, "Switches to the Studio and opens the long take on its segments, without rendering anything",
-        () => openInStudio(card, true), "primary-btn")
-      : button("🎬 Launch the director", "Switches to the Studio and starts the step-by-step review with this brief",
-        () => openInStudio(card, true), ui.video ? "secondary-btn" : "primary-btn");
-    b.disabled = blocked;
+    if (ui.launch) {
+      const b = button(ui.launch, "Switches to the Studio and opens the long take on its segments, without rendering anything",
+        () => openInStudio(card, true), "primary-btn");
+      b.disabled = blocked;
+      actions.append(b);
+    }
     const o = button("Open in the Studio", "Fills the Studio form without starting anything", () => openInStudio(card));
-    o.disabled = b.disabled;
-    actions.append(b, o);
+    o.disabled = blocked;
+    actions.append(o);
   } else {
     const again = ["done", "error", "cancelled"].includes(st.status);
     const b = button(again ? "Generate again" : "Generate", null, () => runCard(card), "primary-btn");
@@ -452,17 +452,18 @@ function conversationMedia() {
 // <Video N> or <Audio N> of a clip or sound that is not a subject). Gemma's vision
 // describes each image for subject_definitions (an undescribed one still goes).
 async function r2vCardPrompt(a) {
-  const refs = a.references.map(need), images = refs.filter((_, i) => mediaOf(a.references[i]) === "image");
-  const found = await F.describeRefs(images.map(ref => ({ name: fileName(ref), ref })));
-  const descs = refs.map(ref => found[images.indexOf(ref)] || "");
-  const subjects = refLabels(a).map((sub, i) => ({ ...sub, desc: descs[i] }));
-  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const entries = refLabels(a).map((sub, i) => ({ ...sub, item: { name: fileName(need(a.references[i])), ref: need(a.references[i]) } }));
+  return F.r2vPrompt(entries, r2vCardBrief(a), a.music);
+}
+// The card's brief with each reference id replaced by its H3 label (also what the Studio
+// form shows when the card is opened there).
+export function r2vCardBrief(a) {
+  const labels = refLabels(a), esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   let text = String(a.brief || "");
-  a.references.forEach((id, i) => {
-    if (!id.includes("/")) text = text.replace(new RegExp(`(?<![\\w#])${esc(id)}(?![\\w#])`, "g"), subjects[i].label);
+  (a.references || []).forEach((id, i) => {
+    if (!id.includes("/")) text = text.replace(new RegExp(`(?<![\\w#])${esc(id)}(?![\\w#])`, "g"), labels[i].label);
   });
-  return F.capH3(P.buildH3RefPrompt({ subjects, summary: P.h3Summary(text), body: P.h3RefBody(subjects, text),
-                                       music: a.music }));
+  return text;
 }
 
 // ── Progress of a card ────────────────────────────────────────────────────────

@@ -313,6 +313,14 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     scènes partagent, Gemma écrivait encore une lumière et des sons couvrant tous les lieux :
     avec de nouvelles scènes, le code laisse plutôt ces deux champs communs vides.
     docs/fr/LONG-VIDEO.md. (2026-11-21)
+54. **Les références partent telles quelles vers Ref2VA ; une étape de validation ne vaut que ce
+    qu'elle rattrape.** La référence vers vidéo de la 1.4 faisait écrire, générer et valider une
+    planche du sujet et une planche du décor avant la vidéo, puis les envoyait comme deux ancres
+    fixes plus 7 images en plus. H3 OmniRef lit ses références directement (la vision de Gemma
+    décrit chacune, depuis la PR #11), et la carte de l'assistant rendait déjà à partir d'elles en
+    un clic. Le pipeline du Studio fait maintenant de même : une liste avec un rôle par élément
+    (9 images, 3 vidéos, 3 sons), un job, et une planche seulement quand l'utilisateur en demande
+    une (un clic, sans validation). docs/fr/FRONTEND.md. (2026-11-21)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

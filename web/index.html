@@ -144,12 +144,6 @@
   </header>
 
   <section id="sessionBar" aria-label="Session state">
-    <div class="sb-anchors" id="sbAnchors" hidden>
-      <span class="sb-state">Identity anchored</span>
-      <button type="button" class="sb-thumb" data-kind="char"><img alt=""></button>
-      <button type="button" class="sb-thumb" data-kind="loc"><img alt=""></button>
-    </div>
-    <ol class="sb-steps" id="sbSteps" hidden></ol>
     <span id="sbJobs" hidden></span>
     <span id="sbGpu"><span>GPU memory</span> <strong data-raw>—</strong></span>
   </section>
@@ -300,7 +294,7 @@
             </div>
             <div class="form-stack gb-block" id="refExtrasWrap" hidden>
               <h3 class="section-title" id="refExtrasTitle">Extra references</h3>
-              <p class="hint r2v-only">In addition to the character and setting sheets. None required.</p>
+              <p class="hint r2v-only">Who or what the video keeps: photos or sheets of the characters, a setting, objects; clips (a camera movement, or a subject) and sounds (a voice, music, ambience). Each one gets its role. No image yet? Make a sheet from the brief below. Nothing to review: Generate renders the video at once.</p>
               <p class="hint seq-only" hidden>Who or what must stay the same from one segment to the next: a photo or a sheet of a character, an object, a setting. Each one gets its role; they are never shown as they are. With no first frame, the first segment is made from them.</p>
               <p class="hint i2i-only" hidden>Qwen Image 2.1 takes up to 10 images in all. The input image is &lt;image1&gt;; your references are &lt;image2&gt;, &lt;image3&gt;… in the order of the list below. Cite them in your instruction, for example: “put the character of &lt;image1&gt; in the setting of &lt;image2&gt;”. The result keeps the input image's size; each reference makes the render longer.</p>
               <div class="form-stack" id="refDropZone">
@@ -310,17 +304,12 @@
                 </label>
                 <p class="hint r2v-only">Each image gets a subject number, each clip and sound its own label, used automatically in the prompt. A clip is sent silent: to use its sound, add the sound itself.</p>
                 <div class="ref-subjects" id="refSubjects"></div>
-                <div class="seq-only seq-sheet-row" hidden>
+                <div class="sheets-only seq-sheet-row" hidden>
                   <button type="button" class="secondary-btn" id="seqCharSheetBtn" title="Gemma describes the main subject of the brief, Krea 2 draws its sheet: one job, added to the references as a character">✨ Subject sheet from the brief</button>
                   <button type="button" class="secondary-btn" id="seqSetSheetBtn" title="Gemma describes the place of the brief, Krea 2 draws its sheet: one job, added to the references as the setting">✨ Setting sheet from the brief</button>
                 </div>
               </div>
             </div>
-            <label id="skipSheetsWrap" class="check-row" hidden>
-              <input type="checkbox" id="skipSheetsToggle">
-              <span>Skip the sheets: use my references only</span>
-            </label>
-            <p class="hint" id="skipSheetsHint" hidden>The first image of “Extra references” becomes the character, the others stay free references.</p>
             <details class="generate-more">
               <summary>Advanced options</summary>
               <div class="gb-more">
@@ -328,11 +317,6 @@
                   Seed
                   <input type="text" id="seed" value="Auto">
                 </label>
-                <div class="gb-field tpl-field" id="sheetTemplateWrap" hidden>
-                  <span class="tpl-caption">Sheet layout</span>
-                  <select id="sheetTemplateSelect" hidden></select>
-                  <div class="tpl-grid" role="group" aria-label="Sheet layout"></div>
-                </div>
               </div>
               <p class="hint">No engine of this studio encodes a negative prompt: say every constraint positively in the brief.</p>
               <div class="actions">
@@ -414,11 +398,7 @@
   <section id="studioShell">
     <nav id="studioNav">
       <h3 class="section-title">Director mode</h3>
-      <button type="button" class="studio-nav-btn active" data-section="character">Character</button>
-      <button type="button" class="studio-nav-btn" data-section="location">Setting</button>
-      <button type="button" class="primary-btn" id="directorValidateBtn" disabled>Approve the sheets</button>
       <button type="button" class="studio-nav-btn locked" data-section="relay" disabled>Long take (Relay)</button>
-      <button type="button" class="studio-nav-btn locked" data-section="video" disabled hidden>Video</button>
       <div class="studio-nav-foot">
         <div class="studio-project-actions">
           <button type="button" class="secondary-btn" id="studioCancelBtn" hidden>Cancel the project</button>
@@ -429,53 +409,6 @@
     </nav>
 
     <div id="studioPanel">
-      <section id="studioCharacter" class="studio-section">
-        <h3 class="section-title">Character sheet</h3>
-        <p class="hint">Edit the fields then regenerate to make a new variant; click a thumbnail to choose the active sheet.</p>
-        <div class="subject-tabs" id="charKindToggle" hidden>
-          <span class="kind-label">Subject type</span>
-          <button type="button" class="subject-tab" data-kind="human">Human</button>
-          <button type="button" class="subject-tab" data-kind="other">Other (animal, creature, robot, object…)</button>
-        </div>
-        <div class="sheet-layout">
-          <div class="form-stack">
-            <div class="sheet-fields"></div>
-            <div class="sheet-actions">
-              <button type="button" class="secondary-btn sheet-regen">🔄 Regenerate the sheet</button>
-              <button type="button" class="secondary-btn sheet-prompt">✎ Prompt</button>
-              <button type="button" class="secondary-btn sheet-import" title="Use an image that is already a finished sheet, as it is">📥 Import an image</button>
-              <input type="file" class="sheet-import-input" accept="image/*" hidden>
-              <button type="button" class="secondary-btn sheet-photo" title="Draws a five-view sheet (two portraits, three full-body views) from a photo or a drawing of the subject, keeping its look and its style; the sheet layout menu does not apply (Qwen Image 2.1)">📷 Sheet from a photo</button>
-              <input type="file" class="sheet-photo-input" accept="image/*" hidden>
-            </div>
-          </div>
-          <div class="sheet-right">
-            <div class="sheet-preview"><img alt="" hidden><div class="thumb-missing" hidden></div><div class="sheet-status hint"></div></div>
-            <div class="variant-strip"></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="studioLocation" class="studio-section" hidden>
-        <h3 class="section-title">Setting sheet</h3>
-        <p class="hint">Edit the fields then regenerate to make a new variant; click a thumbnail to choose the active sheet.</p>
-        <div class="sheet-layout">
-          <div class="form-stack">
-            <div class="sheet-fields"></div>
-            <div class="sheet-actions">
-              <button type="button" class="secondary-btn sheet-regen">🔄 Regenerate the sheet</button>
-              <button type="button" class="secondary-btn sheet-prompt">✎ Prompt</button>
-              <button type="button" class="secondary-btn sheet-import">📥 Import an image</button>
-              <input type="file" class="sheet-import-input" accept="image/*" hidden>
-            </div>
-          </div>
-          <div class="sheet-right">
-            <div class="sheet-preview"><img alt="" hidden><div class="thumb-missing" hidden></div><div class="sheet-status hint"></div></div>
-            <div class="variant-strip"></div>
-          </div>
-        </div>
-      </section>
-
       <section id="studioRelay" class="studio-section" hidden>
         <h3 class="section-title">Long take (Relay)</h3>
         <p class="hint">A long video made of short segments rendered one after the other: the subjects and the look are given once, each segment holds one action.</p>
@@ -524,12 +457,6 @@
         </div>
       </section>
 
-      <section id="studioVideoR2V" class="studio-section" hidden>
-        <h3 class="section-title">Video</h3>
-        <p class="hint" id="studioVideoR2VStatus">Approve the character and setting sheets to enable the launch.</p>
-        <button type="button" class="primary-btn" id="directorR2VLaunchBtn" disabled>Start the video</button>
-        <div id="r2vPlayer"></div>
-      </section>
     </div>
 
   </section>

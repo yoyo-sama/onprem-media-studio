@@ -7,10 +7,11 @@
 // Generate on a card submits exactly one job with the card's edited settings and reports it
 // (running, then done with its files); a card that needs another card's result waits for
 // it; "Open in the Studio" switches to the Studio and fills the form, starting nothing (Undo
-// puts the brief back); a choice button answers the question; "Launch the director" switches
-// to the Studio, fills the form and starts the director; a reference-to-video clip plays in
-// the director, whose button then regenerates it; the gallery's "→ Use as input" goes to the
-// pipeline on screen (r2v references, sequence, input image) and starts nothing. With a folder, screenshots of the
+// puts the brief back); a choice button answers the question; a video-from-references card
+// renders from the card or opens in the Studio form, where Generate submits one h3-r2v job
+// with the same references (refused with no image, nothing to review; a sheet button submits
+// only its sheet's job); the gallery's "→ Use as input" goes to the pipeline on screen (r2v
+// references, sequence, input image) and starts nothing. With a folder, screenshots of the
 // assistant in light and dark at 390, 768, 1250 and 1440 px.
 // Exit 0 = all green, 1 = a check failed.
 "use strict";
@@ -223,12 +224,15 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(JSON.stringify(jobs[1]?.params.loras) === JSON.stringify([{ name: "neon.safetensors", strength: 1 }, { name: "anime.safetensors", strength: 0.6 }]),
     "C3: the job does not carry the LoRAs turned on: " + JSON.stringify(jobs[1]?.params.loras));
   check((await page.$$('.chat-card[data-card="C3"] .cc-outputs figure')).length === 1, "C3 should show the clip only (last frame hidden)");
+  // A video-from-references card has no director button: Generate and Open in the Studio.
+  check(JSON.stringify(await page.$$eval('.chat-card[data-card="C5"] .cc-actions button', bs => bs.map(b => b.textContent)))
+    === '["🎞 Générer la vidéo","Ouvrir dans le Studio"]', "C5 buttons: " + await page.textContent('.chat-card[data-card="C5"] .cc-actions'));
   // Open in the Studio: switches to the Studio, fills the form, starts nothing.
-  await page.click('.chat-card[data-card="C5"] .cc-actions button >> nth=2');
+  await page.click('.chat-card[data-card="C5"] .cc-actions button >> nth=1');
   await page.waitForTimeout(300);
   check(await page.evaluate(() => document.body.dataset.mode) === "studio", "Open in the Studio did not switch to the Studio");
-  check(await page.inputValue("#brief") === "A detective enters a studio", "director card brief not in the form");
-  check(await page.inputValue("#pipelineSelect") === "reference2video" && await page.inputValue("#videoDuration") === "7", "director card settings not in the form");
+  check(await page.inputValue("#brief") === "A detective enters a studio", "C5 brief not in the form");
+  check(await page.inputValue("#pipelineSelect") === "reference2video" && await page.inputValue("#videoDuration") === "7", "C5 settings not in the form");
   check(jobs.length === 2, "Open in the Studio submitted a job");
   await page.click("#undoToastBtn");
   check(await page.inputValue("#brief") === "", "undo did not restore the brief");
@@ -246,38 +250,6 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   await page.waitForTimeout(500);
   check(chatBodies[1]?.answer_to === "C4" && chatBodies[1].text === "Night", "answer not sent: " + JSON.stringify(chatBodies[1]));
   check(jobs.length === 2, "jobs after the answer");
-  // Launch the director: one click switches to the Studio, fills the form and starts the
-  // director (its first step asks Gemma for the sheets, stubbed out here).
-  check(llmBodies.length === 0, "Gemma called before the director was launched");
-  const jobsAtLaunch = jobs.length;
-  await page.click('.chat-card[data-card="C5"] .cc-actions button >> nth=1');
-  await page.waitForTimeout(800);
-  check(await page.evaluate(() => document.body.dataset.mode) === "studio", "Launch the director did not switch to the Studio");
-  check(await page.inputValue("#brief") === "A detective enters a studio" && await page.inputValue("#pipelineSelect") === "reference2video", "director brief not in the form");
-  check(llmBodies.some(b => b.includes("A detective enters a studio")), "the director did not start");
-  check(cardPosts.some(([id, b]) => id === "C5" && b.status === "launched"), "launch not reported");
-  // While Gemma prepares the director, the button says so; then it comes back.
-  const waiting = await page.textContent("#generateBtn");
-  check(waiting.includes("prépare le réalisateur"), "Generate button does not say Gemma is working: " + waiting);
-  // Each Gemma call of the first step waits 1.5 s here, then fails: the button comes back.
-  const back = await page.waitForFunction(() => !document.getElementById("generateBtn").textContent.includes("prépare le réalisateur"),
-    null, { timeout: 20000 }).then(() => true, () => false);
-  check(back, "Generate button label not restored");
-  // The first step opens the studio and draws nothing; a sheet renders on its own click.
-  check(await page.evaluate(() => document.body.dataset.studio) === "1", "the director's studio did not open");
-  check(!jobs.slice(jobsAtLaunch).some(j => j.pipeline === "krea2-t2i"), "the first step drew a sheet");
-  await page.click("#studioCharacter .sheet-regen");
-  await page.waitForTimeout(400);
-  const sheetJob = jobs[jobs.length - 1];
-  check(jobs.length === jobsAtLaunch + 1 && sheetJob?.pipeline === "krea2-t2i" && sheetJob.params.width === 1920,
-    "subject sheet on click: " + JSON.stringify(jobs.slice(jobsAtLaunch).map(j => j.pipeline)));
-  // The director's "Sheet from a photo": one Qwen Image 2.1 job on the chosen image, as a new variant.
-  const beforeDir = jobs.length;
-  await page.setInputFiles("#studioCharacter .sheet-photo-input", { name: "me.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
-  await page.waitForTimeout(600);
-  const jd = jobs[beforeDir];
-  check(jobs.length === beforeDir + 1 && jd.pipeline === "qwen-image-2.1" && jd.params.images?.length === 1 && jd.params.width === 1920
-    && jd.params.prompt.startsWith("Using <image1>"), "director sheet from a photo: " + JSON.stringify(jd));
   // A subject sheet from a photo: one Qwen Image 2.1 edit of the photo into five views, at the sheets' size.
   await page.click('.rail-mode[data-mode="assistant"]');
   const before8 = jobs.length;
@@ -287,44 +259,53 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(jobs.length === before8 + 1 && j8.pipeline === "qwen-image-2.1" && JSON.stringify(j8.params.images) === '["inputs/att.png"]'
     && j8.params.width === 1920 && j8.params.height === 1088 && j8.params.prompt.startsWith("Using <image1> as the only identity reference, create one character reference sheet of the person from <image1>: a woman in a red coat.")
     && j8.params.prompt.includes("Five views, each appearing exactly once. On the left, a column of two close views stacked"), "sheet from a photo: " + JSON.stringify(j8));
-  // Reference to video: once rendered, the clip plays under the button, which becomes
-  // "Regenerate the video" and starts one new job with the next seed.
+  // Video from references in the Studio form: nothing to review. With no reference image,
+  // Generate refuses on screen without a job; the sheet button submits only its sheet's job
+  // and the sheet joins the references as the character; Generate is then one h3-r2v job.
   await page.click('.rail-mode[data-mode="studio"]');
   if (await page.isVisible("#studioExitBtn")) await page.click("#studioExitBtn");
   await page.click('.usecase[data-pipeline="text2image"]');
   await page.fill("#brief", "A detective walks through a dark forest");
   await page.selectOption("#pipelineSelect", "reference2video");
+  check((await page.textContent("#generateBtn")).trim() === "Générer la vidéo" && await page.isHidden("#styleWrap")
+    && !(await page.$("#skipSheetsToggle")) && !(await page.$("#sheetTemplateWrap")) && await page.isVisible("#seqCharSheetBtn"),
+    "video from references: form (" + (await page.textContent("#generateBtn")).trim() + ")");
+  const beforeF = jobs.length;
   await page.click("#generateBtn");
-  const r2vOpen = await page.waitForFunction(() => document.body.dataset.studio === "1", null, { timeout: 20000 }).then(() => true, () => false);
-  check(r2vOpen, "reference to video: the studio did not open");
-  for (const sec of ["#studioCharacter", "#studioLocation"])
-    await page.setInputFiles(`${sec} .sheet-import-input`, { name: "s.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
-  await page.waitForSelector("#directorValidateBtn:not([disabled])");
-  // The menu is a checklist: both sheets are marked, and approving them opens the next step.
-  check(await page.$$eval('#studioNav [data-section="character"], #studioNav [data-section="location"]', bs => bs.every(b => b.classList.contains("done"))),
-    "reference to video: the menu does not mark the ready sheets");
-  const beforeApprove = jobs.length;
-  await page.click("#directorValidateBtn");
-  check(await page.isVisible("#studioVideoR2V") && await page.isHidden("#directorValidateBtn") && jobs.length === beforeApprove,
-    "reference to video: approving the sheets does not open the Video step, or submits a job");
-  const beforeR2V = jobs.length;
-  await page.click("#directorR2VLaunchBtn");
   await page.waitForTimeout(400);
-  const r2v = Object.values(done).find(j => j.status === "queued");
-  check(jobs.length === beforeR2V + 1 && jobs[beforeR2V].pipeline === "h3-r2v" && await page.isDisabled("#directorR2VLaunchBtn"),
-    "reference to video: one job, button disabled while it renders");
-  Object.assign(r2v, { status: "done", progress: 1, outputs: r2v.later });
-  send(r2v);
-  const played = await page.waitForSelector("#r2vPlayer video", { timeout: 5000 }).then(() => true, () => false);
-  check(played && (await page.getAttribute("#r2vPlayer video", "src")).endsWith(r2v.later[0]), "reference to video: no player after the render");
-  check((await page.textContent("#directorR2VLaunchBtn")).trim() === "Régénérer la vidéo" && !(await page.isDisabled("#directorR2VLaunchBtn")),
-    "reference to video: the button does not offer to regenerate");
-  if (SHOTS) await page.screenshot({ path: `${SHOTS}/r2v-player-1440.png` });
-  await page.click("#directorR2VLaunchBtn");
-  await page.waitForTimeout(400);
-  check(jobs.length === beforeR2V + 2 && jobs[beforeR2V + 1].params.seed === (jobs[beforeR2V].params.seed + 1) % 2 ** 32,
-    "reference to video: regenerating did not submit one job with the next seed");
-  check(await page.isVisible("#r2vPlayer video"), "reference to video: the last clip disappeared while the new one renders");
+  check(jobs.length === beforeF && /au moins une image/.test(await page.textContent("#generateError"))
+    && await page.evaluate(() => document.body.dataset.studio) !== "1",
+    "video from references with no image: " + JSON.stringify({ jobs: jobs.length - beforeF, error: await page.textContent("#generateError") }));
+  await page.click("#seqCharSheetBtn");
+  const sheetIn = await page.waitForFunction(() => document.querySelectorAll("#refSubjects .ref-subject").length === 1, null, { timeout: 20000 })
+    .then(() => true, () => false);
+  const jSheet = jobs[beforeF];
+  check(sheetIn && jobs.length === beforeF + 1 && jSheet.pipeline === "krea2-t2i" && jSheet.params.width === 1920
+    && await page.inputValue("#refSubjects .rs-role") === "character", "video from references: the subject sheet: " + JSON.stringify(jobs.slice(beforeF)));
+  const beforeG = jobs.length;
+  await page.click("#generateBtn");
+  for (let i = 0; i < 50 && jobs.length === beforeG; i++) await page.waitForTimeout(200);
+  const jG = jobs[beforeG], pG = jG?.params.prompt || "";
+  check(jobs.length === beforeG + 1 && jG.pipeline === "h3-r2v" && JSON.stringify(jG.params.references) === `["outputs/job-${n - 1}.png"]`
+    && pG.startsWith("subject_definitions:\n<Subject 1> is the main character in <Picture 1>.") && pG.includes("A detective walks through a dark forest")
+    && jG.params.aspect === "16:9" && await page.evaluate(() => document.body.dataset.studio) !== "1",
+    "video from references: not one h3-r2v job on the sheet: " + JSON.stringify(jG));
+  // A character photo becomes its five-view sheet in its place: one Qwen Image 2.1 job.
+  await page.setInputFiles("#refImagesInput", { name: "me.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  check(JSON.stringify(await page.$$eval("#refSubjects .rs-role", els => els.map(e => e.value))) === '["character","object"]',
+    "video from references: a second image is not an object by default");
+  await page.selectOption("#refSubjects .ref-subject >> nth=1 >> select", "character");
+  const beforeP = jobs.length;
+  await page.click("#refSubjects .ref-subject >> nth=1 >> .rs-sheet");
+  await page.waitForFunction(() => !document.querySelector("#refSubjects .ref-subject:nth-child(2) .rs-sheet"), null, { timeout: 20000 }).catch(() => {});
+  const jP = jobs[beforeP];
+  check(jobs.length === beforeP + 1 && jP.pipeline === "qwen-image-2.1" && jP.params.images?.length === 1 && jP.params.prompt.startsWith("Using <image1>")
+    && (await page.$$("#refSubjects .ref-subject")).length === 2, "video from references: sheet from a photo: " + JSON.stringify(jP));
+  for (const j of Object.values(done).filter(j => j.status === "queued")) {
+    Object.assign(j, { status: "done", progress: 1, outputs: j.later });
+    send(j);
+  }
+  while (await page.$("#refSubjects .rs-x")) await page.click("#refSubjects .rs-x >> nth=0");
   // Reference to video from the card: a reference added from the computer, its role set,
   // then one h3-r2v job whose prompt is the six-field block with A1 as <Subject 1>.
   await page.click('.rail-mode[data-mode="assistant"]');
@@ -366,24 +347,21 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
     "C10: prompt not in the H3 grammar: " + p10);
   check(j10?.params.duration === 5 && j10.params.aspect === "16:9", "C10: settings");
   check(JSON.stringify(j10?.params.loras) === "[]", "C10: LoRAs sent though none was turned on: " + JSON.stringify(j10?.params.loras));
-  // The same card opened in the Studio: its clip and sound go to the reference list with
-  // their roles; skipping the sheets, the two images are subjects 1 and 2 and one job
-  // carries the four references.
+  // The same card opened in the Studio: its references go to the list with their roles, the
+  // brief names them by their labels, and one job carries the four references.
   for (const j of Object.values(done).filter(j => j.status === "queued")) {
     Object.assign(j, { status: "done", progress: 1, outputs: j.later });
     send(j);
   }
-  await page.waitForSelector(`${c10} .cc-actions button:nth-child(3):not([disabled])`, { timeout: 5000 });
-  await page.click(`${c10} .cc-actions button >> nth=2`);
+  await page.waitForSelector(`${c10} .cc-actions button:nth-child(2):not([disabled])`, { timeout: 5000 });
+  await page.click(`${c10} .cc-actions button >> nth=1`);
   await page.waitForFunction(() => document.querySelectorAll("#refSubjects .ref-subject").length === 4, null, { timeout: 5000 }).catch(() => {});
   const tags = () => page.$$eval("#refSubjects .rs-tag", els => els.map(e => e.textContent));
-  let st = await tags();
-  check(JSON.stringify(st) === JSON.stringify(["Sujet 3", "Sujet 4", "Vidéo 1", "Son 1"]), "Studio r2v: reference labels with the sheets: " + st);
-  check(JSON.stringify(await page.$$eval("#refSubjects .rs-role", els => els.map(e => e.value))) === '["motion","voice"]',
-    "Studio r2v: the clip and sound roles did not follow the card");
-  await page.$eval("#skipSheetsToggle", el => { el.checked = true; el.dispatchEvent(new Event("change", { bubbles: true })); });
-  st = await tags();
-  check(JSON.stringify(st) === JSON.stringify(["Sujet 1", "Sujet 2", "Vidéo 1", "Son 1"]), "Studio r2v: reference labels without the sheets: " + st);
+  const st = await tags();
+  check(JSON.stringify(st) === JSON.stringify(["Sujet 1", "Sujet 2", "Vidéo 1", "Son 1"]), "Studio r2v: reference labels: " + st);
+  check(JSON.stringify(await page.$$eval("#refSubjects .rs-role", els => els.map(e => e.value))) === '["character","setting","motion","voice"]',
+    "Studio r2v: the roles did not follow the card");
+  check((await page.inputValue("#brief")).startsWith("<Subject 1> rides a motorcycle"), "Studio r2v: the brief still names A1: " + await page.inputValue("#brief"));
   if (SHOTS) await (await page.$("#refExtrasWrap")).screenshot({ path: `${SHOTS}/r2v-studio-refs-1440.png` });
   const beforeS = jobs.length;
   check(beforeS === jobs.length, "Studio r2v: opening the card submitted a job");
@@ -395,8 +373,9 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(jobs.length === beforeS + 1 && jS.pipeline === "h3-r2v"
     && JSON.stringify(jS.params.references) === JSON.stringify(["inputs/att.png", "inputs/att.png", "inputs/clip.mp4", "inputs/voice.wav"]),
     "Studio r2v: not one job with the four references in order: " + JSON.stringify(jS));
-  check(pS.includes("<Subject 1> is the main character in <Picture 1>") && pS.includes("<Subject 2> is an additional reference in <Picture 2>")
-    && !pS.includes("is the location"), "Studio r2v without the sheets: the second image is not a free reference: " + pS.slice(0, 300));
+  check(pS.includes("<Subject 1> is the main character in <Picture 1>") && pS.includes("<Subject 2> is the location as defined by <Picture 2>")
+    && pS.includes("detailed_description:\n<Subject 1> is in <Subject 2>. <Subject 1> rides a motorcycle"),
+    "Studio r2v: the images are not the character and the setting: " + pS.slice(0, 600));
   check(pS.includes("\n<Video 1> is the camera-movement and pacing reference for the target video.\n<Audio 1> is the voice-timbre reference for <Subject 1> (S1).\n")
     && pS.includes("summary:\n[reference generation + audio reference] "), "Studio r2v: prompt: " + pS);
   // "→ Use as input" from the gallery goes to the pipeline on screen: in reference to
@@ -475,7 +454,7 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(jobs.length === afterU, "the inputs view submitted a job");
   await page.click("#assetChipClear");
   await page.selectOption("#pipelineSelect", "reference2video");
-  // "Skip the sheets" with no image is refused on screen, without a job; one image is
+  // With no reference left, Generate is refused on screen, without a job; one image is
   // enough: it is the character, and the brief alone gives the place.
   while (await page.$("#refSubjects .rs-x")) await page.click("#refSubjects .rs-x >> nth=0");
   const beforeK = jobs.length;
@@ -483,17 +462,16 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   await page.waitForTimeout(500);
   check(jobs.length === beforeK && await page.isVisible("#generateError")
     && /au moins une image/.test(await page.textContent("#generateError")),
-    "skip the sheets without an image: " + JSON.stringify({ jobs: jobs.length - beforeK, error: await page.textContent("#generateError") }));
+    "video from references without an image: " + JSON.stringify({ jobs: jobs.length - beforeK, error: await page.textContent("#generateError") }));
   await page.setInputFiles("#refImagesInput", { name: "her.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
-  check(JSON.stringify(await tags()) === '["Sujet 1"]', "one reference without the sheets: " + JSON.stringify(await tags()));
+  check(JSON.stringify(await tags()) === '["Sujet 1"]', "one reference: " + JSON.stringify(await tags()));
   await page.click("#generateBtn");
   for (let i = 0; i < 50 && jobs.length === beforeK; i++) await page.waitForTimeout(200);
   const jK = jobs[beforeK], pK = jK?.params.prompt || "";
   check(jobs.length === beforeK + 1 && jK.pipeline === "h3-r2v" && jK.params.references.length === 1
     && pK.includes("<Subject 1> is the main character in <Picture 1>") && !pK.includes("<Subject 2>")
     && await page.isHidden("#generateError"),
-    "skip the sheets with one image: " + JSON.stringify(jK && { refs: jK.params.references, prompt: pK.slice(0, 400) }));
-  await page.$eval("#skipSheetsToggle", el => { el.checked = false; el.dispatchEvent(new Event("change", { bubbles: true })); });
+    "video from references with one image: " + JSON.stringify(jK && { refs: jK.params.references, prompt: pK.slice(0, 400) }));
   // MOSS-Image: the Mode field shows for that engine only (Standard on a card that has
   // none), and the chosen mode reaches the job.
   await page.click('.rail-mode[data-mode="assistant"]');
