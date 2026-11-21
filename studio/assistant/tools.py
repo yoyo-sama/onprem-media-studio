@@ -48,19 +48,17 @@ DURATION = _int("Clip length in seconds", MIN_SECONDS, MAX_SECONDS, 5)
 RATIO = _enum("Aspect ratio", RATIOS, "16:9")
 STYLE = _enum("Style preset added to the prompt", STYLES, "none")
 
-# The layout the Studio reads a long take's screenplay in (web/js/prompts.js parseScreenplay),
-# the same one a user imports from a file.
+# A long take's screenplay from the assistant is prose, scene by scene: the Studio's "✨ Split
+# the screenplay" cuts it into 10 s segments (a cut where a new scene starts). Gemma wrote the
+# H3 field layout unreliably in a tool argument (fields run together, segments under
+# lighting: GB10 2026-11-21), so the layout stays for files a user imports.
 SCREENPLAY_HELP = (
-    "The whole long take in English, in this exact layout, one field name per line followed by its text: "
-    "subject_definitions: (<Subject 1> is …: who the main subject is and what about them must stay the same), "
-    "summary: (one sentence), retention_analysis: (what must not change across segments), camera_direction: "
-    "(shot size and camera height, the same for the whole take), lighting: (empty when the take has several "
-    "scenes: each scene's light goes on its shot line), detailed_description: then one "
-    "line per segment, 'Segment 1 (00:00.000–00:10.000) – title', followed on the next lines by that segment's "
-    "action and its own camera movement, 10 s each, each segment going on from where the previous one ended, "
-    "the subject always written <Subject 1>; where the story moves to another place or time, a line "
-    "'[Shot N] where, when and its light' before that segment's line starts a new scene (a cut); "
-    "overall_soundscape: (empty when the take has several scenes), non_diegetic_music: (N/A when none)")
+    "The user's story in English, scene by scene: one paragraph per scene, starting with where it happens, "
+    "the time of day and the light, then what happens in order. Describe each subject by what they look like "
+    "(face, hair, build, clothes) the first time and keep the same words after; say any change of appearance "
+    "(a hat taken off, shoes in hand) where it happens. Never write reference ids (A1, C2#1) in it: the "
+    "references go in their own field")
+LONG_TAKE_SECONDS = _int("Total length of the long take in seconds, about 10 per beat of the story", 10, 150, 30)
 
 # name → (description, properties, required). The order is the order the model sees.
 SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
@@ -125,9 +123,10 @@ SCHEMAS: dict[str, tuple[str, dict, list[str]]] = {
         "Card: a long take (plan-séquence): one continuous video of 10 s segments chained by MiniMax H3, up to "
         "150 s, keeping the subjects and the place. Two kinds of images, both optional: the first frame, where "
         "the video starts as it is, and references, who or what stays the same (never shown as they are); with "
-        "neither, it starts from the text alone. Opens the Studio's long take on its segments; the user reads "
-        "them and starts the chain.",
+        "neither, it starts from the text alone. Opens the Studio's long take at its total length, the screenplay "
+        "split into segments; the user reads them and starts the chain.",
         {"screenplay": _str(SCREENPLAY_HELP),
+         "total": LONG_TAKE_SECONDS,
          "first_frame": _str("Optional. " + IMAGE_ID + " the video starts on, as it is (a picture of the opening "
                              "scene, never a character sheet)"),
          "references": _ids("Optional. Reference images, main character first: photos or sheets of the characters, "
@@ -182,7 +181,8 @@ ENGINE_NOTES = {
                         "native sound. Each clip also leaves its last frame as an image.",
     "long_take": "long_take: a long continuous video (up to 150 s) as chained 10 s H3 segments that keep the "
                  "subjects and the place, starting on a first frame, from references (character sheets, "
-                 "objects, a setting) or from the text alone; the screenplay gives one timed segment per 10 s.",
+                 "objects, a setting) or from the text alone; the screenplay is the story scene by scene, split by the "
+                 "Studio into 10 s segments with a cut at each new scene.",
     "join_videos": "join_videos: clips end to end, hard cuts.",
     "campaign": "campaign: posters, thumbnails and a social image (Krea 2) plus a 9:16 H3 teaser from one brief.",
     "reference_video": "reference_video: H3 keeps characters, places and objects from up to 9 reference images "

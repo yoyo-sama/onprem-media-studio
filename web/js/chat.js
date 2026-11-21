@@ -63,7 +63,7 @@ const CARD_UI = {
                       form: true, enrich: () => "h3_i2v", wf: () => "h3_i2v" },
   // The long take opens in the Studio (the Relay), where the user reads its segments and
   // starts the chain: the card renders nothing itself.
-  long_take: { title: L("Long take"), text: "screenplay", images: ["first_frame", "references"], form: true, director: true,
+  long_take: { title: L("Long take"), text: "screenplay", fields: ["total"], images: ["first_frame", "references"], form: true, director: true,
                launch: L("🎞 Open the long take"), wf: () => "h3_sequence" },
   join_videos: { title: L("Joined clips"), images: ["clips"] },
   campaign: { title: L("Campaign"), text: "brief", fields: ["variants", "duration", "style"], form: true,
@@ -113,6 +113,7 @@ const FIELDS = {
   count: { label: L("Variants"), min: 1, max: 4 },
   variants: { label: L("Variants"), min: 1, max: 4 },
   duration: { label: L("Video length (s)"), min: 5, max: 15 },
+  total: { label: L("Total length (s)"), min: 10, max: 150, dflt: 30 },
   music: { label: L("Music"), text: true },
 };
 const STATUS = {
@@ -272,7 +273,7 @@ function renderCard(card, live = false) {
         input.addEventListener("input", () => setDraft(card, key, input.value));
       } else {
         input = document.createElement("input");
-        input.type = "number"; input.min = def.min; input.max = def.max; input.value = a[key];
+        input.type = "number"; input.min = def.min; input.max = def.max; input.value = a[key] ?? def.dflt ?? "";
         input.addEventListener("change", () => {
           const v = Math.min(def.max, Math.max(def.min, parseInt(input.value, 10) || def.min));
           input.value = v;

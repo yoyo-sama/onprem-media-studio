@@ -290,6 +290,16 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     the same: one list with a role per item (9 images, 3 clips, 3 sounds), one job, and a sheet
     only when the user asks for one (one click, no approval). docs/FRONTEND.md. (2026-11-21)
 
+55. **A structured layout in a tool argument is not reliable from Gemma; prose is.** Asked for a
+    long take screenplay in the H3 field layout inside the `long_take` card's argument, Gemma
+    26B-A4B ran the fields together, put the segments under `lighting:` and wrote no
+    `detailed_description:`, and named the subjects by their reference ids (C2#1). The Studio
+    could not read it, and the card carried no length, so the long take opened at 10 s, one
+    segment, and nothing rendered (GB10 control test, 2026-11-21). The card now takes the story
+    as prose, one paragraph per scene, and a `total` length; opening it splits the prose with the
+    same Gemma call as "✨ Split the screenplay", which gave clean cuts on the narrative tests. The
+    layout stays for files a user imports. (2026-11-21)
+
 ## 8. Front end (for the port in step 4)
 
 39. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes

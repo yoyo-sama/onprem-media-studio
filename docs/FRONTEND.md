@@ -189,7 +189,8 @@ to it.
   segment 2 on, a link can be "🎞 Cut (new shot from the references)", as in the director's
   Relay (below); the form's H3 LoRA stack goes to every segment; the
   project is saved and resumed (one project at a time), under its own pipeline. The assistant's `long_take` card opens this long take (no render of its own), with
-  its `first_frame` and its `references` and their `kinds`. ✨ uses the H3 video instruction,
+  its `first_frame` and its `references` and their `kinds`, at its `total` length, and splits its
+  prose screenplay as "✨ Split the screenplay" does (`splitLongTake`). ✨ uses the H3 video instruction,
   as 1.4's sequence did with LTX.
 - Since 2026-11-20 a long take also starts with **no image**, imports a **screenplay file**, and
   opens from the assistant (docs/LONG-VIDEO.md § Screenplay files, text start and the

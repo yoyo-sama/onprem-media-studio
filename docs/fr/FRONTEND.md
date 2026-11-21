@@ -201,7 +201,8 @@ ajoute une carte Import d'image reliée à elle.
   (ci-dessous) ; la pile de LoRA H3 du formulaire va à chaque segment ; le projet
   est enregistré et repris (un projet à la fois), sous son propre pipeline.
   La carte `long_take` de l'assistant ouvre ce plan-séquence (elle ne rend rien elle-même), avec
-  sa `first_frame`, ses `references` et leurs `kinds`. ✨ utilise la consigne vidéo H3, comme la
+  sa `first_frame`, ses `references` et leurs `kinds`, à sa durée `total`, et découpe son
+  scénario en prose comme « ✨ Découper le scénario » (`splitLongTake`). ✨ utilise la consigne vidéo H3, comme la
   séquence de la 1.4 avec LTX.
 - Depuis le 2026-11-20, un plan-séquence part aussi **sans image**, importe un **fichier de
   scénario**, et s'ouvre depuis l'assistant (docs/fr/LONG-VIDEO.md § Fichiers de scénario,

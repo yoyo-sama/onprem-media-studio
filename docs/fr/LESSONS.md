@@ -322,6 +322,17 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     (9 images, 3 vidéos, 3 sons), un job, et une planche seulement quand l'utilisateur en demande
     une (un clic, sans validation). docs/fr/FRONTEND.md. (2026-11-21)
 
+55. **Une mise en page structurée dans un argument d'outil n'est pas fiable avec Gemma ; la prose
+    l'est.** Prié d'écrire le scénario d'un plan-séquence au format H3 dans l'argument de la carte
+    `long_take`, Gemma 26B-A4B a collé les champs, mis les segments sous `lighting:`, omis
+    `detailed_description:` et nommé les sujets par leur id de référence (C2#1). Le Studio ne
+    pouvait pas le lire, et la carte ne portait pas de durée : le plan-séquence s'ouvrait sur 10 s,
+    un segment, et rien n'était rendu (test de contrôle sur le GB10, 2026-11-21). La carte prend
+    maintenant l'histoire en prose, un paragraphe par scène, et une durée `total` ; son ouverture
+    découpe la prose par le même appel à Gemma que « ✨ Découper le scénario », qui a donné des
+    coupes nettes aux tests narratifs. Le format reste pour les fichiers qu'importe l'utilisateur.
+    (2026-11-21)
+
 ## 8. Front end (pour le portage de l'étape 4)
 
 39. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
