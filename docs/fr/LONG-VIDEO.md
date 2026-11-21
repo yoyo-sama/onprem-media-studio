@@ -331,6 +331,17 @@ l'utilisateur y a écrit reste. Encore vu dans les deux rendus : la tête hors c
 secondes autour du raccord continu sur la plage (le travelling latéral bascule vers les pieds),
 dépendant de la graine.
 
+**Troisième rendu, 2026-11-21** (b61f593, 26,5 min, même brief). Plus aucun lieu ne déborde :
+une rue de maisons en brique à l'aube bleue avec les fenêtres allumées, des champs verts sous
+une lumière grise par la fenêtre du train, une plage dans les lueurs du couchant, rien d'un lieu
+dans un autre ; pieds nus tenu, les deux coupes franches, le raccord continu invisible,
+l'identité tenue, -18,1 LUFS. Avec la lumière et le son communs vides, Gemma n'a cette fois nommé
+aucun son, si bien que chaque segment a reçu la ligne d'ambiance générique. Défaut restant : la
+tête hors cadre environ 11 s sur la plage, demandée par le segment 4 de Gemma lui-même (« zoom
+lent sur les pieds nus »). Le découpage demande maintenant un mouvement de caméra qui garde le
+visage du sujet principal dans le cadre, un gros plan sur les pieds, les mains ou un objet
+seulement là où le scénario le demande (non rendu).
+
 ## Résultats
 
 ### Étape 1, continuation latente (GB10, 2026-11-19)

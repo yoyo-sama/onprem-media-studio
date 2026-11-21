@@ -306,6 +306,16 @@ Soundscape fields are not filled (each scene's segment names its own); what the 
 there stays. Still seen in both renders: the head out of frame for a few seconds around the
 continuous join on the beach (the lateral track tilts down to the feet), seed-driven.
 
+**Third render, 2026-11-21** (b61f593, 26.5 min, same brief). No place leaked any more: a
+street of terraces at blue dawn with lit windows, green fields under grey daylight through the
+train window, a beach in the sunset afterglow, nothing of one place in another; barefoot held,
+both cuts clean, the continuous join invisible, identity held, -18.1 LUFS. With the shared
+light and sound empty, Gemma named no sounds this time, so each segment got the generic
+ambience line. Remaining defect: the head out of frame for about 11 s on the beach, asked by
+Gemma's own segment 4 ("zooms in slowly on the bare feet"). The split now asks for a camera
+motion that keeps the main subject's face in frame, a close shot of feet, hands or an object
+only where the scenario asks for one (not rendered).
+
 ## Results
 
 ### Step 1, latent continuation (GB10, 2026-11-19)
