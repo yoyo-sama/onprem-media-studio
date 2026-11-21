@@ -333,6 +333,27 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     coupes nettes aux tests narratifs. Le format reste pour les fichiers qu'importe l'utilisateur.
     (2026-11-21)
 
+56. **Un indicateur à côté de l'élément vaut mieux qu'une liste de numéros à part, et la règle du
+    visage ne souffre pas d'exception.** Le découpage de Gemma listait les segments qui ouvrent
+    un nouveau plan dans un tableau `cuts` séparé : sur les trois scènes du pêcheur, il n'a listé
+    que le segment 2, si bien que la maison au crépuscule a été enchaînée en continu et que H3 a
+    coupé de lui-même 1 s plus tard ; sur la prise du café, un segment continu a sauté vers une
+    autre place. Chaque segment est maintenant `{"new_shot", "text"}`, et le scénario d'une carte,
+    un paragraphe par scène, donne au découpage le nombre de scènes (un segment par scène :
+    chacun après le premier est un nouveau plan, par le code). La règle de cadrage permettait « un
+    plan serré des pieds, des mains ou d'un objet quand le scénario le demande » : Gemma a lu
+    « pose son sac » et « une tasse à la main » comme une demande, et le visage est sorti du cadre
+    la moitié de la prise. La caméra ne peut plus s'approcher que du visage, visible dès le
+    premier instant. (2026-11-21)
+
+57. **Un plan-séquence à plusieurs scènes n'envoie aucune référence de décor.** Casting a fait
+    quatre planches pour l'histoire du pêcheur (lui, la barque, le port, la maison) ; chaque
+    segment les recevait toutes, et le prompt Ref2VA ancre le personnage dans le premier décor
+    (« <Subject 1> is in <Subject 3> », la maison) : en mer, une maison sur un ponton avec le mur
+    du port derrière, le pêcheur en double, et 9 min par segment au lieu de 5. Avec des scènes
+    découpées, les segments ne prennent plus que les personnages et les objets ; chaque lieu est
+    dans le texte de sa scène. Un plan-séquence en un seul lieu garde son décor. (2026-11-21)
+
 ## 8. Front end (pour le portage de l'étape 4)
 
 39. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
