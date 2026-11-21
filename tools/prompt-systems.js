@@ -100,9 +100,8 @@ const SCENARIOS = [
          { user: "Q21IMAGEREF1", written: "<image2>" }),
   studio("S-h3-t2v", "campaign", "text2video", "h3_t2v", "a fox runs; slow push-in.", ["H3_VIDEO_ENRICH_SYSTEM"]),
   studio("S-h3-i2v", "campaign", "image2video", "h3_i2v", "the fox turns its head", ["H3_VIDEO_ENRICH_SYSTEM"]),
-  studio("S-sequence", "storyboard", "sequence", "h3_sequence", "the fox walks between the frames", ["H3_VIDEO_ENRICH_SYSTEM"]),
-  studio("S-storyboard", "storyboard", "storyboard", "storyboard_qwen21", "a fox hunts at dawn", ["SHEET_BRIEF_ENRICH_SYSTEM"]),
-  studio("S-r2v", "storyboard", "reference2video", "h3_r2v", "<Subject 1> walks through <Subject 2>", ["R2V_BRIEF_ENRICH_SYSTEM"],
+  studio("S-sequence", "narrative", "sequence", "h3_sequence", "the fox walks between the frames", ["H3_VIDEO_ENRICH_SYSTEM"]),
+  studio("S-r2v", "campaign", "reference2video", "h3_r2v", "<Subject 1> walks through <Subject 2>", ["R2V_BRIEF_ENRICH_SYSTEM"],
          { user: "SUBJECTREF1", written: "<Subject 2>" }),
   // Automatic enrichment: one call before the job, and the job gets the enriched prompt.
   studio("S-auto-krea2", "campaign", "text2image", "krea2_t2i", "a red fox in the snow", ["KREA2_ENRICH_SYSTEM"],
@@ -111,7 +110,7 @@ const SCENARIOS = [
          { auto: true, job: "moss-image" }),
   // A workflow that builds its own prompts is never enriched generically: Gemma's first
   // call writes the character sheet.
-  studio("S-auto-storyboard", "storyboard", "storyboard", "storyboard_qwen21", "a fox hunts at dawn",
+  studio("S-auto-r2v", "campaign", "reference2video", "h3_r2v", "a fox hunts at dawn",
          ["CHARACTER_SYSTEM", null], { auto: true }),
   // Instructions replaced in the settings: used for their engine, and for it only.
   studio("S-mine-krea2", "campaign", "text2image", "krea2_t2i", "a red fox in the snow", ["MINE"], { instructions: { krea2: MINE } }),
@@ -140,12 +139,7 @@ async function runStudio(page, s) {
   // through the general card's menu.
   const card = `.usecase[data-pipeline="${s.pipeline}"]`;
   await page.click(await page.$(card) ? card : '.usecase[data-pipeline="text2image"]');
-  // The storyboard has no card any more (only the assistant's storyboard card opens it):
-  // select it as that card does, its pipeline alone in the menu.
-  if (s.pipeline === "storyboard" && !(await page.$(card)))
-    await page.evaluate(() => { const sel = document.querySelector("#pipelineSelect");
-      sel.replaceChildren(new Option("storyboard", "storyboard")); sel.value = "storyboard"; sel.dispatchEvent(new Event("change")); });
-  else if (await page.isVisible("#pipelineSelect")) await page.selectOption("#pipelineSelect", s.pipeline);
+  if (await page.isVisible("#pipelineSelect")) await page.selectOption("#pipelineSelect", s.pipeline);
   // A pipeline with one engine shows no engine menu: that engine is the one in use.
   if (await page.isVisible("#modelSelect")) await page.selectOption("#modelSelect", s.model);
   else if (await page.inputValue("#modelSelect") !== s.model) throw new Error(`${s.pipeline}: engine ${await page.inputValue("#modelSelect")}, expected ${s.model}`);

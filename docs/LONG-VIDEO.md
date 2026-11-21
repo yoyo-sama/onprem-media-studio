@@ -274,10 +274,8 @@ redundant and chose to merge them along this plan:
    approval step: a sheet is redrawn by clicking again, or removed with ✕.
 3. The per-shot still images and the animatic of the storyboard leave the card: the story is
    rendered directly as chained or cut segments.
-4. Next: a three-scene story with cuts rendered on the GB10, its frames inspected.
-5. If that render is good, the storyboard pipeline goes (code, the assistant's storyboard card,
-   docs). Until then it opens from the assistant's storyboard card, and a saved storyboard
-   project resumes from the narrative card.
+4. A three-scene story with cuts rendered on the GB10, its frames inspected (below).
+5. That render being good, the storyboard pipeline went (below, § Storyboard removed).
 
 **GB10 render, 2026-11-21** (`tools/qualify/narrative_take.js` drives the real Studio with
 Playwright: card, subject sheet from the brief, Generate, 40 s, split, chain). A French brief:
@@ -315,6 +313,17 @@ ambience line. Remaining defect: the head out of frame for about 11 s on the bea
 Gemma's own segment 4 ("zooms in slowly on the bare feet"). The split now asks for a camera
 motion that keeps the main subject's face in frame, a close shot of feet, hands or an object
 only where the scenario asks for one (not rendered).
+
+**Storyboard removed, 2026-11-21.** On the owner's go after the third render, the Studio's
+storyboard pipeline is gone: shot list, shot images, cuts from shot images, animatic, the
+subject tabs and the sheets handed over by the assistant. The director keeps reference to
+video (sheets, approval, video) and the long take; a storyboard project saved before is not
+offered for resuming. The assistant's storyboard card is gone too: the Director role takes a
+story in several scenes to a `long_take` card, the conversation's sheets going in its
+`references`. In a screenplay in the H3 layout (a file or the assistant's card), the first
+segment of a later `[Shot N]` is now a new scene, as a split's is: from the references, with no
+frame of the previous place (it was a cut that took the previous segment's last frame as its
+setting when there was no setting sheet). The Canvas keeps its storyboard card.
 
 ## Results
 

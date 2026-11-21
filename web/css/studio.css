@@ -759,30 +759,6 @@ body:not([data-gallery-use]) .ref-use, body[data-mode="assistant"] .ref-use { di
 
 .secondary-btn.active { background: var(--grad); color: var(--on-grad); border-color: transparent; }
 
-.shot-edit-list { display: grid; gap: 12px; }
-.shot-edit-item {
-  display: grid;
-  gap: 8px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  background: var(--card-2);
-}
-
-.shot-edit-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: start; }
-.shot-edit-body:has(.shot-kf > *) { grid-template-columns: minmax(0, 1fr) auto; }
-.shot-edit-fields { display: grid; gap: 8px; min-width: 0; }
-
-.shot-action-btn { justify-self: start; padding: 5px 10px; font-size: .78rem; margin-top: -2px; }
-.shot-kf { width: 280px; }
-.shot-kf:empty { display: none; }
-
-.shot-kf .asset .meta strong { display: none; }
-@media screen and (max-width: 900px) {
-  .shot-edit-body:has(.shot-kf > *) { grid-template-columns: minmax(0, 1fr); }
-  .shot-kf { width: auto; }
-}
-
 .asset .asset-actions button.active { background: var(--grad); color: var(--on-grad); border-color: transparent; }
 .asset.locked img, .asset.locked video { outline: 3px solid var(--highlight); outline-offset: -3px; }
 
@@ -1546,7 +1522,7 @@ body[data-studio="1"] main.layout { display: none; }
 body[data-studio="1"] #studioShell { display: grid; }
 #studioShell {
   grid-template-columns: 220px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   gap: 18px;
   height: calc(100vh - 218px);
   min-height: 480px;
@@ -1599,17 +1575,6 @@ body[data-studio="1"] #studioShell { display: grid; }
   box-shadow: var(--shadow);
   padding: 22px;
 }
-#studioTimeline {
-  border: 1px solid var(--border-light);
-  background: var(--card);
-  backdrop-filter: blur(12px);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  min-height: 46px;
-  padding: 10px 16px;
-}
-
-#studioTimeline:empty { display: none; }
 .output-panel > .job-queue:has(> #jobList:empty) { display: none; }
 .sheet-layout {
   display: grid;
@@ -1717,46 +1682,8 @@ body[data-studio="1"] #studioShell { display: grid; }
   font-weight: 600;
   cursor: pointer;
 }
-.subject-tab.active { border-color: var(--highlight); color: var(--highlight); }
-.subject-tab.add { border-style: dashed; }
-.subject-tab.del { color: var(--text-3, var(--text-2)); }
 .subject-tab:disabled, .subj-chip:disabled { opacity: .45; cursor: not-allowed; }
-.shot-subjects { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
-.shot-subjects .shot-subjects-lbl { margin: 0; }
 .subj-chip.on { border-color: var(--highlight); color: var(--highlight); }
-
-.shot-strip { display: flex; gap: 8px; overflow-x: auto; min-width: 0; padding: 2px 2px 8px; margin-bottom: 12px; scrollbar-width: thin; scrollbar-color: var(--border-dark) transparent; }
-.shot-strip[hidden] { display: none; }
-.shot-thumb {
-  flex: 0 0 auto;
-  width: 108px;
-  display: grid;
-  gap: 3px;
-  padding: 6px;
-  text-align: left;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  background: var(--card-2);
-  color: var(--text);
-  cursor: pointer;
-}
-.shot-thumb:hover { border-color: var(--highlight); }
-.shot-thumb .st-img {
-  display: block;
-  aspect-ratio: 16 / 9;
-  border-radius: 8px;
-  background: repeating-linear-gradient(135deg, var(--bg-light), var(--bg-light) 8px, var(--bg-mid) 8px, var(--bg-mid) 16px);
-  background-size: cover;
-  background-position: center;
-}
-.shot-thumb .st-n { font-size: 12px; font-weight: 700; }
-.shot-thumb .st-s { font-size: 11px; font-weight: 600; color: var(--text-2); }
-.shot-thumb.ready .st-s { color: var(--ok-text); }
-.shot-thumb.locked .st-s { color: var(--highlight); }
-.shot-thumb.pending .st-s { color: var(--run-text); }
-.shot-thumb.error .st-s { color: var(--hot-text); }
-.shot-thumb.missing .st-s { color: var(--warn-text); }
-.shot-edit-item:focus-visible { outline: 2px solid var(--highlight); outline-offset: 2px; }
 
 .undo-toast { position: fixed; left: 0; right: 0; bottom: max(20px, env(safe-area-inset-bottom)); display: flex; justify-content: center; padding: 0 16px; pointer-events: none; z-index: 120; }
 .undo-toast-box {
@@ -1789,56 +1716,6 @@ body[data-studio="1"] #studioShell { display: grid; }
 .drop-toast { bottom: calc(max(20px, env(safe-area-inset-bottom)) + 56px); }
 .drop-toast .undo-toast-box { padding: 10px 18px; border-radius: 16px; max-width: 100%; }
 
-.montage-list { display: grid; gap: 12px; margin: 12px 0; }
-.montage-clip {
-  display: grid;
-  gap: 8px;
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  padding: 12px;
-  background: var(--card-2);
-  box-shadow: var(--shadow-sm);
-}
-.montage-clip video { width: 100%; max-height: 240px; border-radius: 10px; background: var(--bg-mid); display: block; }
-.montage-clip .clip-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.montage-clip .clip-head strong { font-size: 13px; }
-.montage-clip .clip-head .clip-meta { font-size: 11px; color: var(--text-2); }
-.montage-clip .clip-meta .stale { color: var(--warn-text); font-weight: 700; }
-.montage-clip label { flex-direction: row; align-items: center; gap: 8px; }
-.montage-clip label input { width: 90px; }
-.clip-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.clip-actions button {
-  border: 1px solid var(--border-light);
-  background: var(--card-2);
-  color: var(--text-2);
-  border-radius: var(--pill);
-  padding: 5px 12px;
-  font-size: 11px;
-  cursor: pointer;
-}
-.clip-actions button:hover:not(:disabled) { color: var(--highlight); background: var(--selected); border-color: transparent; }
-.clip-actions button:disabled { opacity: 0.45; cursor: default; }
-#montagePlayer video { width: 100%; border-radius: var(--radius); margin-top: 12px; background: var(--bg-mid); display: block; }
-.timeline-strip { display: flex; gap: 8px; align-items: center; overflow-x: auto; }
-.timeline-thumb {
-  position: relative;
-  flex: 0 0 auto;
-  width: 92px;
-  border: 1px solid var(--border-light);
-  border-radius: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  background: var(--card-2);
-  padding: 0;
-}
-.timeline-thumb video { width: 100%; height: 52px; object-fit: cover; display: block; background: var(--bg-mid); }
-.timeline-thumb .timeline-cap { display: block; padding: 3px 5px; font-size: 10px; color: var(--text-2); white-space: nowrap; }
-.timeline-thumb .timeline-dot { position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 0 2px var(--card); }
-.timeline-dot.ready { background: var(--ok); }
-.timeline-dot.stale { background: var(--warn); }
-.timeline-dot.pending { background: var(--text-2); }
-.timeline-dot.missing { background: var(--hot); }
-
 .thumb-missing {
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -1853,13 +1730,11 @@ body[data-studio="1"] #studioShell { display: grid; }
   background: repeating-linear-gradient(135deg, var(--bg-light), var(--bg-light) 10px, var(--bg-mid) 10px, var(--bg-mid) 20px);
 }
 .variant-thumb .thumb-missing { aspect-ratio: 16 / 9; }
-.montage-clip .thumb-missing { aspect-ratio: auto; height: 120px; border-radius: 10px; }
-.timeline-thumb .thumb-missing { aspect-ratio: auto; height: 52px; font-size: 9px; padding: 2px; }
 .thumb-missing[hidden] { display: none; }
 @media screen and (max-width: 1180px) {
   body[data-studio="1"] #studioShell {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     height: auto;
   }
   #studioNav { grid-row: auto; grid-column: 1; flex-direction: row; flex-wrap: wrap; align-items: center; overflow: visible; }
@@ -1868,7 +1743,7 @@ body[data-studio="1"] #studioShell { display: grid; }
   .studio-nav-foot { margin-top: 4px; flex: 1 0 100%; display: flex; flex-wrap: wrap; align-items: center; }
   .studio-nav-foot > * { flex: 1 1 150px; }
   .studio-nav-foot > .studio-project-actions { flex: 2 1 308px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  #studioPanel, #studioTimeline { grid-column: 1; }
+  #studioPanel { grid-column: 1; }
   #studioPanel { overflow: visible; }
   .sheet-layout { grid-template-columns: 1fr; }
 }

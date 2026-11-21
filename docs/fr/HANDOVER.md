@@ -20,8 +20,8 @@ fixés par le propriétaire du projet (GitHub `yoyo-sama`) le 2026-10-29 :
 - **Autonome** : ni ComfyUI, ni Ollama, ni génération dans le cloud. L'application fait tourner
   les modèles elle-même et télécharge les poids nécessaires à la première utilisation.
 - **Même couverture fonctionnelle que la 1.4** : Text2Image, Image2Image, campagne, planches de
-  sujet et de décor, le réalisateur de storyboard (planches, images de plan, cuts, animatic),
-  référence vers vidéo, Relay, le Canvas, la galerie, la mise à jour depuis l'interface. En plus,
+  sujet et de décor, référence vers vidéo, le plan-séquence (Relay ; le storyboard de la 1.4 y a
+  été fondu le 2026-11-21 et reste sur le Canvas), le Canvas, la galerie, la mise à jour depuis l'interface. En plus,
   nouveau en 2.0 : l'assistant de création (un chat à rôles), MOSS-Image, l'agrandissement ×2,
   les piles de LoRA sur tous les moteurs.
 - **Les leçons de la 1.4 sont reprises** ([LESSONS.md](LESSONS.md)).
@@ -251,8 +251,11 @@ Rien ci-dessous n'a été demandé pour maintenant ; chaque point attend le prop
   GB10.
 - Une seule carte « Vidéo narrative » (2026-11-20 dans la nuit, [LONG-VIDEO.md](LONG-VIDEO.md)
   § Une seule carte de vidéo narrative) : une histoire en trois scènes avec les coupes du
-  découpage de Gemma, et les planches en un clic, à rendre sur promaxgb10-95c7 ; le pipeline
-  storyboard n'est retiré que si ce rendu est bon.
+  découpage de Gemma et une planche sujet en un clic, rendue trois fois sur promaxgb10-95c7
+  (2026-11-21) ; la troisième est bonne, et le pipeline storyboard du Studio et la carte
+  storyboard de l'assistant ont été retirés après elle. La règle de cadrage qui garde le visage
+  du sujet principal dans le champ, et les scènes `[Shot N]` d'un fichier de scénario, ne sont
+  pas encore rendues.
 - Planche personnage depuis une photo (Qwen Image 2.1, PR #9 ; prompt à cinq vues adapté de H3
   Character Sheet Designer depuis le 2026-11-13) : jamais qualifiée.
 - Les poids de l'upscaler SPAN ne sont pas encore téléchargés sur promaxgb10-95c7
@@ -280,7 +283,7 @@ Rien ci-dessous n'a été demandé pour maintenant ; chaque point attend le prop
   (Docker tourne sur le torch 2.10 de NGC).
 - **L'assistant dans le Canvas** est sur la feuille de route, pas commencé.
 - Cibles Omarchy et Windows 11 : pas commencées.
-- Les LoRA d'image ne sont pas envoyées par les flux storyboard, campagne et planches (non
+- Les LoRA d'image ne sont pas envoyées par les flux storyboard du Canvas, campagne et planches (non
   demandé).
 
 **Écart de documentation** : [ROADMAP.md](ROADMAP.md) indique encore pour l'étape 1 « premier

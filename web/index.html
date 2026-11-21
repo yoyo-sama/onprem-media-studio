@@ -212,7 +212,7 @@
             <span>Posters, thumbnails and a video teaser from a single brief.</span>
             <small>Social media / Marketing</small>
           </button>
-          <button type="button" class="usecase" data-scenario="storyboard" data-pipeline="sequence" aria-pressed="false">
+          <button type="button" class="usecase" data-scenario="narrative" data-pipeline="sequence" aria-pressed="false">
             <strong>Narrative video (long take)</strong>
             <span>A story in one continuous take or in several shots, from your text, a photo or a sheet of the characters.</span>
             <small>Director / Videographer</small>
@@ -268,10 +268,6 @@
               Video length (s)
               <input type="number" id="videoDuration" min="5" max="15" value="5">
             </label>
-            <label class="gb-field" id="shotCountWrap" hidden>
-              Number of shots
-              <input type="number" id="shotCount" min="4" max="16" value="6">
-            </label>
             <div class="gb-field lora-field" id="loraWrap" role="group" aria-labelledby="loraCaption" hidden>
               <span class="lora-caption" id="loraCaption">LoRA (up to 4, each with its strength)</span>
               <div id="loraStack"></div>
@@ -302,16 +298,10 @@
               <div class="market-chips" id="marketChips"></div>
               <p class="hint">One job per selected market, with the prompt adapted to it. None selected: the prompt as it is.</p>
             </div>
-            <div class="form-stack gb-block" id="givenSheetsWrap" hidden>
-              <h3 class="section-title">Sheets from the assistant</h3>
-              <p class="hint">The director keeps these sheets and draws only the missing ones.</p>
-              <div class="ref-subjects" id="givenSheets"></div>
-            </div>
             <div class="form-stack gb-block" id="refExtrasWrap" hidden>
               <h3 class="section-title" id="refExtrasTitle">Extra references</h3>
               <p class="hint r2v-only">In addition to the character and setting sheets. None required.</p>
               <p class="hint seq-only" hidden>Who or what must stay the same from one segment to the next: a photo or a sheet of a character, an object, a setting. Each one gets its role; they are never shown as they are. With no first frame, the first segment is made from them.</p>
-              <p class="hint sb-only" hidden>Added to every Qwen Image 2.1 shot image, after the sheets: &lt;image3&gt;, &lt;image4&gt;… (one rank further in a two-subject shot). Name them in the shot's action.</p>
               <p class="hint i2i-only" hidden>Qwen Image 2.1 takes up to 10 images in all. The input image is &lt;image1&gt;; your references are &lt;image2&gt;, &lt;image3&gt;… in the order of the list below. Cite them in your instruction, for example: “put the character of &lt;image1&gt; in the setting of &lt;image2&gt;”. The result keeps the input image's size; each reference makes the render longer.</p>
               <div class="form-stack" id="refDropZone">
                 <label>
@@ -337,10 +327,6 @@
                 <label class="gb-field">
                   Seed
                   <input type="text" id="seed" value="Auto">
-                </label>
-                <label class="gb-field" id="holdWrap" hidden>
-                  Hold on the last shot (s), 0 for none
-                  <input type="number" id="holdDuration" min="0" max="15" value="0">
                 </label>
                 <div class="gb-field tpl-field" id="sheetTemplateWrap" hidden>
                   <span class="tpl-caption">Sheet layout</span>
@@ -431,8 +417,6 @@
       <button type="button" class="studio-nav-btn active" data-section="character">Character</button>
       <button type="button" class="studio-nav-btn" data-section="location">Setting</button>
       <button type="button" class="primary-btn" id="directorValidateBtn" disabled>Approve the sheets</button>
-      <button type="button" class="studio-nav-btn locked" data-section="storyboard" disabled>Storyboard</button>
-      <button type="button" class="studio-nav-btn locked" data-section="montage" disabled>Montage</button>
       <button type="button" class="studio-nav-btn locked" data-section="relay" disabled>Long take (Relay)</button>
       <button type="button" class="studio-nav-btn locked" data-section="video" disabled hidden>Video</button>
       <div class="studio-nav-foot">
@@ -448,7 +432,6 @@
       <section id="studioCharacter" class="studio-section">
         <h3 class="section-title">Character sheet</h3>
         <p class="hint">Edit the fields then regenerate to make a new variant; click a thumbnail to choose the active sheet.</p>
-        <div class="subject-tabs" id="subjectTabs" hidden></div>
         <div class="subject-tabs" id="charKindToggle" hidden>
           <span class="kind-label">Subject type</span>
           <button type="button" class="subject-tab" data-kind="human">Human</button>
@@ -491,26 +474,6 @@
             <div class="variant-strip"></div>
           </div>
         </div>
-      </section>
-
-      <section id="studioStoryboard" class="studio-section" hidden>
-        <h3 class="section-title">Storyboard</h3>
-        <div class="form-stack">
-          <div class="shot-strip" id="shotStrip" role="group" aria-label="Shots overview" hidden></div>
-          <div class="shot-edit-list" id="shotEditList" hidden></div>
-        </div>
-        <div class="step-foot">
-          <button type="button" class="primary-btn" id="directorKeyframesBtn" hidden>Generate the shot images</button>
-        </div>
-      </section>
-
-      <section id="studioMontage" class="studio-section" hidden>
-        <h3 class="section-title">Montage</h3>
-        <p class="hint">Generate the cuts, reorder or regenerate each shot, then assemble the animatic. Reordering starts nothing.</p>
-        <button type="button" class="primary-btn" id="directorLaunchBtn" disabled>Generate the cuts</button>
-        <div class="montage-list" id="montageList"></div>
-        <button type="button" class="primary-btn" id="directorAssembleBtn" disabled>Assemble the animatic</button>
-        <div id="montagePlayer"></div>
       </section>
 
       <section id="studioRelay" class="studio-section" hidden>
@@ -569,7 +532,6 @@
       </section>
     </div>
 
-    <footer id="studioTimeline"></footer>
   </section>
 
   <!-- The MiniMax H3 licence asks products built on it to show its name. -->

@@ -20,8 +20,8 @@ end driving ComfyUI and Ollama). The goals set by the project owner (GitHub `yoy
 - **Self-contained**: no ComfyUI, no Ollama, no cloud generation. The app runs the models itself
   and downloads the weights it needs on first use.
 - **Same feature coverage as 1.4**: Text2Image, Image2Image, campaign, subject and setting
-  sheets, the storyboard director (sheets, shot images, cuts, animatic), reference to video,
-  Relay, the Canvas, the gallery, the in-app update. Plus, new in 2.0: the creative assistant
+  sheets, reference to video, the long take (Relay; the 1.4 storyboard was folded into it on
+  2026-11-21 and stays on the Canvas), the Canvas, the gallery, the in-app update. Plus, new in 2.0: the creative assistant
   (a chat with roles), MOSS-Image, Upscale ×2, LoRA stacks on every engine.
 - **The 1.4 lessons carry over** ([LESSONS.md](LESSONS.md)).
 - **Targets**: DGX OS on a GB10 (ARM64, unified memory) first, in Docker. Ubuntu next. Omarchy
@@ -236,8 +236,11 @@ Nothing below was asked to be done now; each waits for the owner.
 - Long take with a First frame field and a References list with roles (2026-11-20 evening,
   [LONG-VIDEO.md](LONG-VIDEO.md) § First frame and references): not rendered on a GB10 yet.
 - One "Narrative video" card (2026-11-20 night, [LONG-VIDEO.md](LONG-VIDEO.md) § One narrative
-  video card): a three-scene story with cuts from Gemma's split, and the one-click sheets, to be
-  rendered on promaxgb10-95c7; the storyboard pipeline is removed only if that render is good.
+  video card): a three-scene story with cuts from Gemma's split and a one-click subject sheet,
+  rendered three times on promaxgb10-95c7 (2026-11-21); the third is good, and the Studio's
+  storyboard pipeline and the assistant's storyboard card were removed after it. The framing
+  rule that keeps the main subject's face in frame, and a screenplay file's `[Shot N]` scenes,
+  are not rendered yet.
 - Character sheet from a photo (Qwen Image 2.1, PR #9; five-view prompt adapted from H3 Character
   Sheet Designer since 2026-11-13): never qualified.
 - The SPAN upscaler weights are not yet downloaded on promaxgb10-95c7 (automatic on first use).
@@ -261,7 +264,7 @@ Nothing below was asked to be done now; each waits for the owner.
   `docker/constraints.txt` and use an unqualified PyPI torch 2.12 (Docker runs NGC torch 2.10).
 - **The assistant in the Canvas** is on the roadmap, not started.
 - Omarchy and Windows 11 targets: not started.
-- Image LoRAs are not sent by the storyboard, campaign and sheet flows (not asked).
+- Image LoRAs are not sent by the Canvas storyboard, campaign and sheet flows (not asked).
 
 **Documentation drift**: [ROADMAP.md](ROADMAP.md) still marks step 1 "first build on GB10
 pending" and step 4 "full pass on the GB10 pending"; both happened on 2026-10-30 (step 4's

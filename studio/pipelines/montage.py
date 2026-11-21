@@ -1,7 +1,7 @@
 """Montage: CPU jobs on files that other jobs rendered, run with ffmpeg and Pillow.
 
-- `video-concat` joins clips with hard cuts, sound included: the storyboard
-  animatic, the Relay sequence and the multi-image sequence. For one continuous
+- `video-concat` joins clips with hard cuts, sound included: the assistant's joined
+  clips, the Relay sequence and the multi-image sequence. For one continuous
   take (`smooth_audio`), every clip's sound is brought to one loudness first
   (TAKE_LUFS), under a limiter.
 - `image-grid` lays shot images out as one contact sheet.

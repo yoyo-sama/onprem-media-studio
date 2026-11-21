@@ -2,13 +2,14 @@
 // NODE_PATH=$(npm root -g) node tools/relay-ui.js [screenshot folder]
 //
 // The Relay (long take) of the director in a headless Chromium (Playwright), /api stubbed,
-// on a restored storyboard project with approved sheets: the total length and the maximum
-// per segment give the segment plan; the screenplay split fills the segments and only the
-// shared fields left empty, and submits no job; editing a shared field submits nothing;
-// "Generate the chain" sends one shot image then one H3 clip per segment, a continuous one
-// continuing the previous clip (continue_from, no start image, no transition frames), each
-// prompt carrying the shared look once and no default light or camera; the take is
-// assembled by video-stitch. The production board: one
+// on a restored long take whose references are a subject sheet and a setting sheet: the
+// total length and the maximum per segment give the segment plan; the screenplay split fills
+// the segments and only the shared fields left empty, and submits no job; editing a shared
+// field submits nothing; "Generate the chain" sends one H3 clip per segment, the first from
+// the references, a continuous one continuing the previous clip (continue_from, no start
+// image, no transition frames), each prompt carrying the shared look once and no default
+// light or camera; the take is assembled by video-stitch. A storyboard saved before it was
+// folded into the long take is not offered for resuming. The production board: one
 // tile per segment, its progress from the job events, a click goes to the segment and
 // submits nothing; after a regenerated segment the chain continues from the next one;
 // "Stop after this segment" ends the chain once the running segment is done. A long take
@@ -44,13 +45,15 @@ const server = http.createServer((req, res) => {
 const sheet = ref => ({ ref, status: "ready", seed: 1 });
 const PROJECT = {
   version: 2, savedAt: new Date().toISOString(), brief: "A woman walks through a walled garden at dawn.",
-  wfId: "storyboard_qwen21", pipeline: "storyboard", seed: 42, n: 4, segDur: 5, holdDur: 0, ratio: "16:9", style: "none",
-  sheetTemplate: "auto", validated: true, charIdx: 0, locActive: 0,
+  wfId: "h3_sequence", pipeline: "sequence", seed: 42, ratio: "16:9", style: "none", sheetTemplate: "auto",
+  validated: true, charIdx: 0, locActive: 0, loras: [], startImage: null, refsGiven: 2,
   chars: [{ fields: { kind: "human", face: "oval face, freckles", hair: "auburn bob", outfit: "green wool coat" }, variants: [sheet("outputs/char.png")], active: 0 }],
   locVariants: [sheet("outputs/loc.png")], locFields: { place: "a walled garden with a gravel path" },
-  shots: [], keyframes: null, cuts: null, order: null, animatic: null,
   relay: { scenario: "", segments: [{ prompt: "", duration: 5 }] },
 };
+// A storyboard project saved before the storyboard was folded into the long take.
+const OLD_STORYBOARD = { ...PROJECT, wfId: "storyboard_qwen21", pipeline: "storyboard", n: 4, segDur: 5, holdDur: 0,
+  shots: [], keyframes: null, cuts: null, order: null, animatic: null };
 // A screenplay file in the H3 layout (the owner's, 2026-11-20), shortened to three segments.
 const SCREENPLAY = `subject_definitions:
 <Subject 1> is an adult woman with auburn hair. Same outfit throughout.
@@ -162,7 +165,7 @@ const SPLIT = {
 
   await page.goto(base + "index.html#studio", { waitUntil: "load" });
   // The trailer card is folded into the narrative video's: no card opens the storyboard,
-  // and a saved storyboard project resumes from the narrative video card.
+  // and a saved long take resumes from the narrative video card.
   check(!(await page.$('.usecase[data-pipeline="storyboard"]')), "the trailer card is still there");
   await page.click('.usecase[data-pipeline="campaign"]');
   check(await page.inputValue("#pipelineSelect") === "campaign" && await page.isHidden("#pipelineWrap"), "the short ad card shows a Pipeline menu");
@@ -237,29 +240,28 @@ const SPLIT = {
     await page.setViewportSize({ width: 1440, height: 900 });
   }
 
-  // The chain: shot image and clip for segment 1, then a clip continuing the one before for
-  // segments 2 and 3 (no transition frames to extract), then the take.
+  // The chain: a clip from the references for segment 1, then a clip continuing the one before
+  // for segments 2 and 3 (no transition frames to extract), then the take.
   await page.click("#relayRunBtn");
   await page.waitForFunction(() => document.querySelectorAll("#relayList .seg-status").length === 3
     && [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 15000 });
   // The finished chain is assembled at once, by the same click.
   await page.waitForSelector("#relayPlayer video", { timeout: 5000 });
   const kinds = jobs.map(j => j.pipeline);
-  check(JSON.stringify(kinds) === JSON.stringify(["qwen-image-2.1", "h3-r2v", "h3-r2v", "h3-r2v", "video-stitch"]),
+  check(JSON.stringify(kinds) === JSON.stringify(["h3-r2v", "h3-r2v", "h3-r2v", "video-stitch"]),
     `chain jobs: ${JSON.stringify(kinds)}`);
-  check(JSON.stringify(jobs[4]?.params) === JSON.stringify({ clips: [1, 2, 3].map(k => `outputs/${jobs[k].id}.mp4`) }),
-    `assembly at the end of the chain: ${JSON.stringify(jobs[4]?.params)}`);
+  check(JSON.stringify(jobs[3]?.params) === JSON.stringify({ clips: [0, 1, 2].map(k => `outputs/${jobs[k].id}.mp4`) }),
+    `assembly at the end of the chain: ${JSON.stringify(jobs[3]?.params)}`);
   check(await page.$eval('#studioNav [data-section="relay"]', b => b.classList.contains("done")), "the menu does not mark the assembled long take");
-  // Each segment is H3 Ref2VA on the sheets: segment 1 on its start frame (the shot image),
-  // the next ones continuing the previous clip; the canvas follows the start frame, then the clip.
+  // Each segment is H3 Ref2VA on the sheets: segment 1 from them alone, at the take's format,
+  // the next ones continuing the previous clip, whose canvas they follow.
   const clips = jobs.filter(j => j.pipeline === "h3-r2v");
-  const from = [{ image: `outputs/${jobs[0].id}.png` }, { continue_from: `outputs/${jobs[1].id}.mp4` },
-    { continue_from: `outputs/${jobs[2].id}.mp4` }];
+  const from = [null, `outputs/${jobs[0].id}.mp4`, `outputs/${jobs[1].id}.mp4`];
   for (const [i, j] of clips.entries()) {
-    const pr = j.params.prompt, [key, value] = Object.entries(from[i])[0];
-    check(j.params[key] === value && !("image" in j.params && key !== "image") && !("continue_from" in j.params && key !== "continue_from")
+    const pr = j.params.prompt;
+    check(j.params.continue_from === (from[i] ?? undefined) && !("image" in j.params)
       && JSON.stringify(j.params.references) === JSON.stringify(["outputs/char.png", "outputs/loc.png"])
-      && !("aspect" in j.params), `segment ${i + 1} start and references: ${JSON.stringify(j.params)}`);
+      && (i === 0 ? j.params.aspect === "16:9" : !("aspect" in j.params)), `segment ${i + 1} start and references: ${JSON.stringify({ ...j.params, prompt: undefined })}`);
     check(/<Subject 1> is the main character in <Picture 1>/.test(pr) && /<Subject 2> is the location as defined by <Picture 2>/.test(pr),
       `segment ${i + 1} names the sheets: ${pr}`);
     check(j.params.duration === 10, `segment ${i + 1} duration ${j.params.duration}`);
@@ -268,7 +270,6 @@ const SPLIT = {
     check(pr.includes(`overall_soundscape:\n${SPLIT.soundscape}`) && pr.includes("non_diegetic_music:\nNone."), `segment ${i + 1} sound fields`);
     check(pr.split("Warm candle light.").length === 2, `segment ${i + 1} repeats the lighting`);
   }
-  check(/Warm candle light/.test(jobs[0].params.prompt), "the first shot image does not take the shared lighting");
   // A continuous segment takes no frame of the one before: no transition image to choose.
   check(await page.$$eval("#relayList .relay-thumb", els => els.length) === 0, "transition images offered before continuous segments");
 
@@ -340,20 +341,15 @@ const SPLIT = {
   push({ id: first.id, status: "running", progress: 0.5, outputs: [] });
   await page.waitForFunction(() => document.querySelector("#relayBoard .relay-tile .tile-bar i").style.width === "50%");
   const st = await page.textContent('#relayList .relay-seg[data-seg="0"] .seg-status');
-  check(st === "Shot image 50%", `card status while running: "${st}"`);
+  check(st === "Video 50%", `card status while running: "${st}"`);
   check(JSON.stringify(await tiles()) === JSON.stringify(["st-pending", "st-stale", "st-stale"]), `tiles while running: ${JSON.stringify(await tiles())}`);
   await page.click("#relayStopBtn");
   check((await page.textContent("#relayStopBtn")).trim() === "Stopping after this segment…", "the stop button does not say it is stopping");
-  // Segment 1 ends (shot image, clip): the chain stops there.
+  // Segment 1 ends: the chain stops there.
   done.set(first.id, first); push(first);
-  for (let k = 0; k < 1; k++) {
-    for (let w = 0; w < 50 && !held.length; w++) await page.waitForTimeout(50);
-    const j = held.shift();
-    if (j) { done.set(j.id, j); push(j); }
-  }
   await page.waitForFunction(() => document.getElementById("relayStopBtn").hidden);
   await page.waitForTimeout(200);
-  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["qwen-image-2.1", "h3-r2v"]),
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]),
     `jobs of the stopped chain: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
   check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-stale", "st-stale"]), `tiles after the stop: ${JSON.stringify(await tiles())}`);
   check((await page.textContent("#relayRunBtn")).trim() === "Continue the chain from segment 2", `run button after the stop: "${await page.textContent("#relayRunBtn")}"`);
@@ -370,13 +366,14 @@ const SPLIT = {
   }
 
   // ── Long take from a first frame (the "sequence" pipeline) ──
-  // A fresh page: no saved project. The input image is the first frame: segment 1 starts on
-  // it in i2v; an end image set on the segment's card makes it FL2VA.
+  // A fresh page with only an old storyboard saved: it is not offered for resuming. The input
+  // image is the first frame: segment 1 starts on it in i2v; an end image set on the
+  // segment's card makes it FL2VA.
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.evaluate(p => { localStorage.setItem("studioProject", p); }, JSON.stringify(OLD_STORYBOARD));
   await page.reload({ waitUntil: "load" });
   await page.click('.usecase[data-pipeline="sequence"]');
-  check(await page.isHidden("#resumeProjectBtn"), "a resume button shows with no saved long take");
+  check(await page.isHidden("#resumeProjectBtn"), "a resume button shows for an old storyboard project");
   check(await page.isVisible("#imageInputWrap") && (await page.textContent("#imageInputLabel")).trim() === "First frame (optional)"
     && await page.isVisible("#refExtrasWrap") && (await page.textContent("#refExtrasTitle")).trim() === "References (optional)"
     && await page.isVisible("#imageInputWrap .seq-only") && await page.isVisible("#refExtrasWrap .seq-only") && await page.isHidden("#refExtrasWrap .r2v-only"),
@@ -602,11 +599,15 @@ const SPLIT = {
     && lt[1]?.params.continue_from === `outputs/${lt[0]?.id}.mp4`,
     `described scene, segment 1 does not start on its picture: ${JSON.stringify(lt.map(j => ({ ...j.params, prompt: undefined })))}`);
 
-  // The Relay's own import splits the file as written, without Gemma.
+  // The Relay's own import splits the file as written, without Gemma; a later [Shot N] opens a
+  // new scene, as a split's does.
   chatsBefore = chats.length;
-  await page.setInputFiles("#relayImportFile", { name: "garden.txt", mimeType: "text/plain", buffer: Buffer.from(SCREENPLAY) });
+  const twoShots = SCREENPLAY.replace("Segment 3 (", "[Shot 2] A beach at sunset, warm light.\nSegment 3 (");
+  await page.setInputFiles("#relayImportFile", { name: "garden.txt", mimeType: "text/plain", buffer: Buffer.from(twoShots) });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 3);
   check(chats.length === chatsBefore && dialogs > 0, `the Relay import: ${chats.length - chatsBefore} Gemma call(s), confirmation asked: ${dialogs > 0}`);
+  const shotLinks = await page.$$eval("#relayList .relay-seg .seg-link", els => els.map(e => e.hidden ? "-" : e.textContent.trim()));
+  check(shotLinks[1] === "🔗 Continuous" && shotLinks[2] === "🎞 New scene (from the references)", `links of a two-shot screenplay: ${JSON.stringify(shotLinks)}`);
 
   // A new long take holds its screenplay in its card: splitting it loses nothing, so nothing
   // is asked; a card rewritten by hand is asked about before it is replaced.

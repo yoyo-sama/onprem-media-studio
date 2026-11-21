@@ -72,10 +72,10 @@ Un rôle est un fichier Markdown : un en-tête entre deux lignes `---`, puis ses
 ---
 id: director
 name: Director
-when: A story told in several shots: a script or scene to storyboard, a short film, a trailer…
-tools: storyboard, reference_video, video_from_image, long_take
+when: A story told in several shots or scenes: a script, a short film, a trailer…
+tools: long_take, reference_video, video_from_image
 ---
-You are a storyboard artist and director of photography…
+You are a director and director of photography…
 ```
 
 - `when` est ce que lit le routeur pour choisir le rôle ; `tools` les outils de génération que
@@ -140,10 +140,9 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
 | `character_sheet`, `location_sheet` | Description, type de sujet, style ; une photo du sujet (planche sujet seulement) | `krea2-t2i` 1920×1088 avec les gabarits de planche de la 1.4 ; avec une photo, `qwen-image-2.1` la transforme en planche à cinq vues à la même taille (une colonne à gauche de deux portraits tête et épaules, face au-dessus du profil, puis le corps entier de face, de profil et de dos, chaque vue une fois, dans le style de l'image ; méthode adaptée de H3 Character Sheet Designer, MIT ; `charsheetFromPhotoPrompt`, pas encore qualifié). Quand Gemma omet la photo alors que le message de l'utilisateur porte une seule image, cette image sert de photo (avec un avertissement sur la carte). Le menu du sujet du réalisateur a la même action : « 📷 Planche depuis une photo » |
 | `video_from_text` | Prompt, durée, ratio | `h3-t2v` |
 | `video_from_image` | Prompt, première image, dernière image facultative, durée | `h3-i2v` (I2VA ou FL2VA) |
-| `long_take` | Scénario au format H3 (un segment minuté de 10 s par temps du récit), une `first_frame` facultative (l'image dont part la vidéo, jamais une planche) et jusqu'à 7 `references` avec leurs `kinds` (personnage, lieu, objet) | le plan-séquence du Studio : « 🎞 Ouvrir le plan-séquence » passe dans le Studio et ouvre le Relay sur ses segments, sans rien générer ; la chaîne se lance de là (elle remplace depuis le 2026-11-20 `image_sequence`, qui rendait des paires d'images clés sans le plan-séquence) |
+| `long_take` | Scénario au format H3 (un segment minuté de 10 s par temps du récit, une ligne `[Shot N]` avant le premier segment de chaque scène suivante), une `first_frame` facultative (l'image dont part la vidéo, jamais une planche) et jusqu'à 7 `references` avec leurs `kinds` (personnage, lieu, objet) | le plan-séquence du Studio : « 🎞 Ouvrir le plan-séquence » passe dans le Studio et ouvre le Relay sur ses segments, sans rien générer ; la chaîne se lance de là (elle remplace depuis le 2026-11-20 `image_sequence`, qui rendait des paires d'images clés sans le plan-séquence) |
 | `join_videos` | Clips | `video-concat` |
 | `campaign` | Brief, variantes, durée, style | la campagne complète (affiches, miniatures, image sociale, teaser) |
-| `storyboard` | Brief et réglages | le réalisateur : « Lancer le Réalisateur » passe au Studio, remplit le formulaire et y lance la revue étape par étape, comme le fait Générer dans le formulaire |
 | `reference_video` | Brief, références avec chacune son rôle, durée, ratio : jusqu'à 9 images (personnage, décor, objet), 3 vidéos (mouvement de caméra et rythme, ou personnage, décor, objet) et 3 sons (voix d'un personnage, musique, ambiance et bruitages), 12 en tout ; musique demandée en mots (facultative) | « 🎞 Générer la vidéo » : un job `h3-r2v` depuis la carte. Chaque référence reçoit son repère H3, numéros donnés par l'app (`P.h3AssignRefs`) : un sujet est `<Subject N>` dans son ordre ; une vidéo gardée pour son mouvement de caméra reste `<Video N>`, un son `<Audio N>`. Le brief nomme les références par leur id (`A1 rides…`), chacun remplacé par son repère ; la vision de Gemma décrit chaque image pour `subject_definitions`, et le bloc Ref2VA à six champs est construit par `buildH3RefPrompt`, comme dans le réalisateur : une voix est le timbre du n-ième personnage (`(S1)`…), une musique est reprise comme partition (`non_diegetic_music`), une ambiance guide `overall_soundscape`, le champ musique de la carte va dans `non_diegetic_music` (sinon « None. »), et le résumé ajoute `audio reuse` ou `audio reference` (guide « full-reference » de MiniMax). On peut retirer des références, ou en ajouter depuis les images et vidéos de la conversation ou l'ordinateur. Gemma ne propose que des images et des vidéos ; les sons viennent de l'ordinateur. « Lancer le Réalisateur » et « Ouvrir dans le Studio » ouvrent toujours la revue étape par étape, chaque référence gardant son rôle |
 | `ask_choices` | Une question avec 2 à 4 boutons et « Autre… » | rien : le choix part comme réponse de l'utilisateur |
 
@@ -164,14 +163,14 @@ Les conversations sont des fichiers JSON dans `STUDIO_DATA_DIR/chats/` (`GET/DEL
   rechargement repart sans.
 - « Ouvrir dans le Studio » passe au Studio et remplit le formulaire (pipeline, moteur, réglages,
   images, brief, les LoRA activées), sans rien lancer ; Annuler remet le brief et le pipeline.
-- « Lancer le Réalisateur » (cartes storyboard et référence vers vidéo) remplit le formulaire de
-  la même façon, puis son clic vaut le clic sur Générer : la première étape du réalisateur démarre
-  et chaque étape suivante attend l'accord de l'utilisateur, comme toujours.
-- Une carte storyboard porte les planches que la conversation contient déjà (`subject_sheets`,
-  sujet principal en premier, et `setting_sheet`). Le formulaire les liste sous « Planches venues
-  de l'assistant » (✕ en retire une) ; le réalisateur les garde comme variantes importées, fait
-  lire chacune par Gemma (vision) pour remplir ses champs, et ne dessine que les planches qui
-  manquent. Avec plusieurs sujets, chaque plan part avec les deux premiers.
+- « Lancer le Réalisateur » (cartes référence vers vidéo) et « 🎞 Ouvrir le plan-séquence »
+  remplissent le formulaire de la même façon, puis leur clic vaut le clic sur Générer : la
+  première étape du réalisateur démarre et chaque étape suivante attend le clic de
+  l'utilisateur, comme toujours.
+- La carte storyboard a été retirée avec le storyboard du Studio (2026-11-21) : le rôle
+  Réalisateur mène une histoire en plusieurs scènes à une carte `long_take`, les planches que
+  contient la conversation allant dans ses `references` avec leur rôle. Une carte enregistrée
+  dans une ancienne conversation n'est plus affichée.
 - Le navigateur signale ce qu'est devenue une carte (`POST /api/chats/{id}/cards/{card}` : en
   cours avec les réglages utilisés, terminée avec ses fichiers, erreur, annulée, ouverte, réalisateur
 lancé). Les

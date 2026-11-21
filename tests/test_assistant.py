@@ -44,10 +44,10 @@ def test_shipped_roles():
 
 def test_role_replaced_added_and_restored(tmp_path):
     roles = Roles(tmp_path)
-    text = "---\nid: director\nname: My director\nwhen: stories\ntools: storyboard\n---\nBe brief."
+    text = "---\nid: director\nname: My director\nwhen: stories\ntools: long_take\n---\nBe brief."
     roles.set("director", text)
     d = roles.get("director")
-    assert (d.name, d.tools, d.prompt, d.replaced) == ("My director", ("storyboard",), "Be brief.", True)
+    assert (d.name, d.tools, d.prompt, d.replaced) == ("My director", ("long_take",), "Be brief.", True)
     roles.set("poet", "---\nid: poet\nname: Poet\nwhen: poems\n---\nWrite verse.")
     poet = roles.get("poet")
     assert not poet.builtin and poet.tools == tuple(T.GENERATION_TOOLS)  # no tools line: all of them
@@ -279,11 +279,11 @@ def test_a_call_written_as_json_text_becomes_its_card(tmp_path, files):
     assert cards[0]["args"]["image"] == "A1" and cards[0]["args"]["duration"] == 5
     assert conv["messages"][-1]["text"] == "You want the cat falling asleep."
     # A tool the role does not have, or plain JSON, stays text.
-    assert C.text_tool_calls('```json\n{"name": "campaign", "arguments": {"brief": "x"}}\n```', ["storyboard"])[0] == []
-    assert C.text_tool_calls('{"a": 1}', ["storyboard"]) == ([], '{"a": 1}')
-    calls, rest = C.text_tool_calls('Here.\n{"function": {"name": "storyboard", "arguments": "{\\"brief\\": \\"x\\"}"}}',
-                                    ["storyboard"])
-    assert calls[0]["name"] == "storyboard" and calls[0]["arguments"] == {"brief": "x"} and rest == "Here."
+    assert C.text_tool_calls('```json\n{"name": "campaign", "arguments": {"brief": "x"}}\n```', ["long_take"])[0] == []
+    assert C.text_tool_calls('{"a": 1}', ["long_take"]) == ([], '{"a": 1}')
+    calls, rest = C.text_tool_calls('Here.\n{"function": {"name": "long_take", "arguments": "{\\"screenplay\\": \\"x\\"}"}}',
+                                    ["long_take"])
+    assert calls[0]["name"] == "long_take" and calls[0]["arguments"] == {"screenplay": "x"} and rest == "Here."
     # The instructions say a card is a call, never JSON in the text.
     assert "Never write a card, a tool call or JSON in your message" in llm.calls[0][1][0]["content"]
 
@@ -423,10 +423,12 @@ def test_character_sheet_takes_a_photo():
     assert "photo" not in args
 
 
-def test_storyboard_card_takes_the_conversation_sheets():
-    args, warnings = T.normalize("storyboard", {"brief": "x", "subject_sheets": ["C2#1", "A1"], "setting_sheet": ["C9#1"]},
-                                 lambda r: r != "C9#1")
-    assert args["subject_sheets"] == ["C2#1", "A1"] and args["setting_sheet"] == ["C9#1"]
+def test_long_take_card_takes_the_conversation_sheets():
+    # The storyboard card was folded into the long take (2026-11-21): sheets are its references.
+    assert "storyboard" not in T.SCHEMAS
+    args, warnings = T.normalize("long_take", {"screenplay": "x", "references": ["C2#1", "C9#1"],
+                                               "kinds": ["character", "setting"]}, lambda r: r != "C9#1")
+    assert args["references"] == ["C2#1", "C9#1"] and args["kinds"] == ["character", "setting"]
     assert warnings == ["C9#1 is not in the reference table"]
-    _, warnings = T.normalize("storyboard", {"brief": "x", "setting_sheet": ["A1", "A2"]}, lambda r: True)
-    assert warnings == ["setting_sheet: only the first 1 kept"]
+
+
