@@ -39,7 +39,7 @@ requête LLM.
 | `studio/pipelines/krea2.py`, `qwen.py`, `moss.py` | Moteurs d'image (Krea 2, Qwen Image 2.1, MOSS-Image) : [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/h3.py` | Moteurs vidéo (MiniMax H3 : texte, image, première/dernière image et références vers vidéo), géométrie et plan d'affinage : [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | Adaptateur FastVideo : recettes Spark, profil NVFP4, sortie latente et réglages de la passe d'affinage, annulation |
-| `studio/pipelines/h3_start_frame.py` | Patch, dans le processus, de trois étapes H3 de FastVideo : une image de départ avec des références Ref2VA (le premier segment d'un plan-séquence) |
+| `studio/pipelines/h3_start_frame.py` | Patch, dans le processus, de trois étapes H3 de FastVideo : une image de départ avec des références Ref2VA, tenue immobile 22 images au début de la cible (le premier segment d'un plan-séquence avec une première image et des références) |
 | `studio/pipelines/h3_continue.py` | Continuation latente : les latents que garde chaque clip H3, l'enveloppe de la préparation des latents de FastVideo qui fait qu'`h3-r2v` `continue_from` un clip, et l'arithmétique de `video-stitch` (un seul décodage des clips d'une prise qui se continuent) |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | Upscaler latent H3 (convolutions 3D, checkpoint LBH v1) et pile de LoRA (fusion exacte en une seule branche parallèle) |
 | `studio/pipelines/image_lora.py` | Piles de LoRA de style de Krea 2 et Qwen Image 2.1 en adaptateurs PEFT non fusionnés (MOSS-Image les accroche dans `moss.py`) : [IMAGE-ENGINES.md](IMAGE-ENGINES.md#lora-de-style) |

@@ -685,13 +685,15 @@ async function renderSegment(i) {
   seg.start = { ref: start };
   const last = seg.endImage?.ref || null;
   // With the subjects' sheets, a segment starts on its frame AND sees the sheets (Ref2VA with a
-  // start frame): i2v sees only its first frame, so a face drifted segment after segment.
-  // An end image (FL2VA) stays i2v: Ref2VA takes no last frame. So does a long take's first
-  // frame: Ref2VA kept an empty garden 2 frames, then cut to the people the screenplay
-  // describes (GB10 2026-11-20); i2v starts on it and keeps it. In a described scene that
-  // frame is the place, and the segments after it see it as the location.
+  // start frame, held still for its first 0.9 s: h3_start_frame.py): i2v sees only its first
+  // frame, so the person drifted from the sheet until the next segment (GB10 2026-11-21).
+  // An end image (FL2VA) stays i2v: Ref2VA takes no last frame. A long take's first frame
+  // takes only the references the user gave for who or what stays the same, never a setting:
+  // the frame is the place, and a place image framed otherwise wins over it (GB10 2026-11-16).
+  // With none, or in a described scene (that frame is the place, and the segments after it
+  // see it as the location), segment 1 stays i2v on its frame.
   const firstFrame = i === 0, place = firstFrame && describedScene();
-  const refs = last || firstFrame ? [] : relayRefs(settingSheet());
+  const refs = last ? [] : firstFrame ? firstFrameRefs(s) : relayRefs(settingSheet());
   let job;
   if (refs.length) {
     seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
@@ -773,6 +775,11 @@ function relayRefs(setting) {
   const kept = all.filter(x => x.kind !== "environment");
   return kept.length ? kept : all;
 }
+// The references segment 1 sees with a long take's first frame: the subjects the user gave
+// (characters, objects), no setting, and never the frame itself (with a setting alone, the
+// first frame stands for the main character).
+const firstFrameRefs = s => (s.refsGiven && !describedScene()
+  ? relayRefs(null).filter(x => x.kind !== "environment" && x.ref !== s.startImage.ref) : []);
 const describedScene = () => !d.refsGiven && !!P.parseScreenplay(d.relay.scenario) && !namesSubjects();
 const namesSubjects = () => [...d.relay.segments.map(seg => seg.prompt), d.relay.look.subjects, d.relay.look.retention]
   .some(x => new RegExp(P.H3_TOKEN_RE.source, "i").test(x || ""));

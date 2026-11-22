@@ -325,6 +325,13 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     first. Four renders, four different gaps in Gemma's card: what the app can fill, it fills.
     (2026-11-21)
 
+58. **A start frame is held, not shown once.** One image row at the target's frame-0 time
+    in Ref2VA was let go of in 7 clips out of 11 (1 or 2 frames, then a cut); the 22-frame tail
+    of latent continuation, at the time of the target's first 7 latent frames, never was. The
+    first frame of a long take with references is now that tail made of the picture held still
+    (about 0.9 s), so segment 1 sees the sheets: in i2v it saw only the frame, and the take kept
+    the frame's person rather than the sheet's. Not rendered yet. (2026-11-22)
+
 ## 8. Front end (for the port in step 4)
 
 39. Interface text is translated (FR/EN/ES/DE, informal "you"); every string set by code goes

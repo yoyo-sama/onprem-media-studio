@@ -258,7 +258,9 @@ de départ, images de fin, avec une devinette planche ou photo sur la première)
 demande maintenant chaque sorte d'image dans son propre champ, toutes deux facultatives :
 
 - **Première image**, une seule : la vidéo part exactement d'elle et la respecte (le segment 1
-  est `h3-i2v` sur elle). Une planche de personnage n'est pas une première image.
+  est `h3-i2v` sur elle ; avec des références, `h3-r2v` qui part d'elle depuis le 2026-11-22,
+  voir § Première image avec références). Une planche de personnage n'est pas une première
+  image.
 - **Références**, jusqu'à 7 (comme en référence vers vidéo, puisque H3 Ref2VA les prend
   directement ; le plafond de 3 venait des deux sujets par image de plan du réalisateur), chacune
   avec son rôle : personnage, lieu ou objet. Qui ou quoi doit rester identique ; jamais montrée
@@ -351,6 +353,26 @@ au format H3 (un fichier ou la carte de l'assistant), le premier segment d'un `[
 est désormais une nouvelle scène, comme celles du découpage : à partir des références, sans
 image du lieu précédent (c'était une coupe qui prenait la dernière image du segment précédent
 comme décor faute de planche décor). Le Canvas garde sa carte storyboard.
+
+## Première image avec références (2026-11-22)
+
+Le rendu de contrôle C3 (PR #55, GB10 2026-11-21) démarrait une prise au café sur une première
+image Krea 2 avec une planche du sujet dans les Références : le segment 1 était un `h3-i2v` sur
+l'image et ne voyait jamais la planche, si bien que la femme de toute la prise était celle de
+l'image, pas celle de la planche (lunettes, chemise, sac), les continuations la reprenant.
+Le segment 1 d'un plan-séquence avec une première image et des références est maintenant un
+`h3-r2v` avec `image` (la première image) et les références que l'utilisateur a données pour
+qui ou quoi reste identique : personnages et objets, jamais un lieu (l'image est le lieu ; une
+image de lieu cadrée autrement l'emporte sur elle, LESSONS n°51), jamais l'image elle-même. Avec
+une seule référence de lieu, sans référence, dans une scène décrite ou avec une image de fin, le
+segment 1 reste un `h3-i2v`.
+
+L'image de départ elle-même a changé (`h3_start_frame.py`) : une seule ligne d'image au temps de
+l'image 0 de la cible était lâchée dans 7 clips sur 11 (méthode B plus haut). L'image est
+maintenant tenue immobile 22 images, comme un clip muet dont les lignes prennent le temps des 7
+premières images latentes de la cible : la disposition de la continuation latente (étape 2b),
+qui n'a jamais lâché sa queue. Le clip part de l'image, la tient environ 0,9 s, puis bouge. Pas
+encore rendu sur le GB10.
 
 ## Résultats
 

@@ -15,7 +15,8 @@
 // "Stop after this segment" ends the chain once the running segment is done. A long take
 // from images opens the Relay alone without a job, its subject described by Gemma's
 // vision; its first segment runs from image 1 to image 2 (FL2VA), a segment added after
-// the end continues it, and it resumes as saved.
+// the end continues it, and it resumes as saved. With references as well, its first segment
+// starts on the first frame and sees the subjects (Ref2VA with a start frame), no setting.
 // The shared fields are folded while empty and open once filled; a chain that ends with
 // every segment ready assembles the sequence, a stopped one does not; the "Narrative video"
 // goal card opens the long take (no trailer card any more), whose screenplay is split without
@@ -457,6 +458,35 @@ const SPLIT = {
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 2);
   check(await page.isVisible("#studioRelay"), "the resumed long take does not open on the Relay");
   if (SHOTS) await page.screenshot({ path: path.join(SHOTS, "longtake-1440-light.png") });
+
+  // ── Long take from a first frame AND references ──
+  // Segment 1 starts on the first frame and sees the subjects given (Ref2VA with a start
+  // frame): i2v saw only the frame, and the person drifted from the sheet (GB10 2026-11-21).
+  // A setting reference is left out: the frame is the place.
+  await page.click("#studioExitBtn");
+  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.reload({ waitUntil: "load" });
+  await page.click('.usecase[data-pipeline="sequence"]');
+  await page.setInputFiles("#imageInput", { name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.setInputFiles("#refImagesInput", [{ name: "sheet.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") },
+                                               { name: "cafe.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.waitForFunction(() => document.querySelectorAll("#refSubjects .rs-role").length === 2);
+  await page.selectOption("#refSubjects .ref-subject:nth-child(2) .rs-role", "setting");
+  await page.fill("#brief", "She sits at a cafe table.");
+  await page.click("#generateBtn");
+  await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
+  before = jobs.length;
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => document.querySelector("#relayList .seg-status")?.textContent === "Ready", null, { timeout: 10000 });
+  lt = jobs.slice(before);
+  const ffr = lt[0]?.params || {};
+  check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]) && /^inputs\/up-\d+\.png$/.test(ffr.image)
+    && ffr.references?.length === 1 && ffr.references[0] !== ffr.image && /^inputs\/up-\d+\.png$/.test(ffr.references[0])
+    && !("aspect" in ffr) && !("continue_from" in ffr) && !("last_image" in ffr),
+    `first frame and references, segment 1: ${JSON.stringify(lt.map(j => ({ pipeline: j.pipeline, ...j.params, prompt: undefined })))}`);
+  check(/<Subject 1> is the main character in <Picture 1>/.test(ffr.prompt || "") && !/location as defined/.test(ffr.prompt || "")
+    && /cafe table/.test(ffr.prompt || ""), `first frame and references, segment 1 prompt: ${ffr.prompt}`);
 
   // ── Long take from references, with no first frame ──
   // Each reference has its role (a character sheet, an object); none is ever a frame.

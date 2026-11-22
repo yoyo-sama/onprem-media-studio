@@ -361,6 +361,14 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     d'abord. Quatre rendus, quatre trous différents dans la carte de Gemma : ce que l'application
     peut remplir, elle le remplit. (2026-11-21)
 
+58. **Une image de départ se tient, elle ne se montre pas une fois.** Une seule ligne d'image
+    au temps de l'image 0 de la cible en Ref2VA était lâchée dans 7 clips sur 11 (1 ou 2 images,
+    puis une coupe) ; la queue de 22 images de la continuation latente, au temps des 7 premières
+    images latentes de la cible, ne l'a jamais été. La première image d'un plan-séquence avec
+    références est maintenant cette queue faite de l'image tenue immobile (environ 0,9 s), et le
+    segment 1 voit les planches : en i2v il ne voyait que l'image, et la prise gardait la
+    personne de l'image plutôt que celle de la planche. Pas encore rendu. (2026-11-22)
+
 ## 8. Front end (pour le portage de l'étape 4)
 
 39. Le texte de l'interface est traduit (FR/EN/ES/DE, tutoiement) ; toute chaîne posée par le code
