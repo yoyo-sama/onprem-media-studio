@@ -367,7 +367,10 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     images latentes de la cible, ne l'a jamais été. La première image d'un plan-séquence avec
     références est maintenant cette queue faite de l'image tenue immobile (environ 0,9 s), et le
     segment 1 voit les planches : en i2v il ne voyait que l'image, et la prise gardait la
-    personne de l'image plutôt que celle de la planche. Pas encore rendu. (2026-11-22)
+    personne de l'image plutôt que celle de la planche. Sur le GB10 la terrasse a tenu 0,92 s, sans
+    coupe, et la femme était celle de sa planche dès sa première apparition (C4). Et un segment
+    qui envoie moins de références que le découpage n'en a numéroté doit renuméroter ses
+    `<Subject N>` : les planches de lieu retirées restaient citées sans image (A6). (2026-11-22)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

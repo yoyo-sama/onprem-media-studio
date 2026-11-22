@@ -371,8 +371,34 @@ L'image de départ elle-même a changé (`h3_start_frame.py`) : une seule ligne 
 l'image 0 de la cible était lâchée dans 7 clips sur 11 (méthode B plus haut). L'image est
 maintenant tenue immobile 22 images, comme un clip muet dont les lignes prennent le temps des 7
 premières images latentes de la cible : la disposition de la continuation latente (étape 2b),
-qui n'a jamais lâché sa queue. Le clip part de l'image, la tient environ 0,9 s, puis bouge. Pas
-encore rendu sur le GB10.
+qui n'a jamais lâché sa queue. Le clip part de l'image, la tient environ 0,9 s, puis bouge.
+
+Un segment qui envoie moins de références que la légende du découpage (aucun lieu dans un
+plan-séquence à plusieurs scènes, aucun sur une première image) renumérote les `<Subject N>`
+qu'il envoie et écrit celui qu'il laisse de côté par sa description : le port et la maison
+restaient cités sans image.
+
+Rendus de contrôle sur le GB10 (promaxgb10-95c7, 2026-11-22, f3608f4, rapport
+`control-tests/inspection-pr56.md` sur la machine) :
+- **C4**, la prise au café de C3 (une terrasse vide comme première image, la planche de la femme
+  comme référence), 30 s : segment 1 `h3-r2v` avec l'image et la planche seulement. L'image 0 est
+  la terrasse, tenue environ 0,92 s, aucune coupe dans les 2 premières secondes ; la femme
+  ressemble à sa planche (lunettes rondes écaille, marinière, trench beige, sac rouge) de sa
+  première apparition à la fin, sans métamorphose aux raccords. −18,0 LUFS, aucun creux aux
+  raccords. Le segment 1 a pris 491 s avec le chargement de H3 (la tenue ajoute environ 60 à
+  70 s). Reste faux : un saut de luminosité à la fin de la tenue (luma −11, même plan) ; H3 a
+  coupé vers une autre place 1,2 s après le début du segment 3 (mêmes paramètres que C3, qui
+  tenait : pas ce changement).
+- **A6**, le pêcheur depuis l'assistant (Réalisateur → quatre planches → carte plan-séquence →
+  découpage → chaîne), jamais rendu avec les corrections de la PR #55 : la carte portait les
+  quatre planches avec leurs rôles, le segment 1 était un `h3-r2v` depuis la planche du sujet, les
+  deux changements de scène étaient des coupes, chaque segment n'a reçu que la planche du sujet.
+  Aucune fuite de lieu, pas de pêcheur en double, aucune coupe dans un clip, le même homme que sa
+  planche dans les trois scènes, −18,0 LUFS ; 1410 s en tout, le passage le plus rapide. Reste
+  faux : les prompts citaient les planches de lieu retirées (corrigé ci-dessus, pas re-rendu) ; la
+  planche a dessiné un chapeau feutre au lieu du bonnet de l'histoire, disparu à l'intérieur sans
+  geste ; il tourne le dos à la caméra environ 4 s au port ; la barque n'est pas la même au port
+  et en mer.
 
 ## Résultats
 

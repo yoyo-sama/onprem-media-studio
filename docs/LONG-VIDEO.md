@@ -341,7 +341,30 @@ The start frame itself changed (`h3_start_frame.py`): one image row at the targe
 time was let go of in 7 clips out of 11 (method B above). The picture is now held still for 22
 frames as a silent clip whose rows take the time of the target's first 7 latent frames: the
 layout of latent continuation (step 2b), which never let go of its tail. The clip starts on the
-picture, holds it about 0.9 s, then moves. Not rendered on the GB10 yet.
+picture, holds it about 0.9 s, then moves.
+
+A segment that sends fewer references than the split's legend (no setting in a take of several
+scenes, none on a first frame) renumbers the `<Subject N>` it sends and writes a left-out one as
+its description: the harbour and the cottage stayed cited with no picture.
+
+GB10 control renders (promaxgb10-95c7, 2026-11-22, f3608f4, report
+`control-tests/inspection-pr56.md` there):
+- **C4**, the café take of C3 (an empty terrace as first frame, the woman's sheet as reference),
+  30 s: segment 1 `h3-r2v` with the frame and the sheet only. Frame 0 is the terrace, held about
+  0.92 s, no cut in the first 2 s; the woman matches her sheet (round tortoiseshell glasses,
+  Breton top, beige trench, red bag) from her first appearance to the end, no morph at the
+  joins. −18.0 LUFS, no dip at the joins. Segment 1 took 491 s with the H3 load (the hold adds
+  about 60–70 s). Still wrong: a brightness pop where the hold ends (luma −11, same shot); H3 cut
+  to another square 1.2 s into segment 3 (same parameters as C3, which held: not this change).
+- **A6**, the fisherman from the assistant (Director → four sheets → long take card → split →
+  chain), never rendered before with the PR #55 fixes: the card carried the four sheets with
+  their roles, segment 1 was `h3-r2v` from the subject sheet, both scene changes were cuts,
+  every segment got the subject sheet only. No place leak, no doubled fisherman, no cut inside a
+  clip, the same man as his sheet in the three scenes, −18.0 LUFS; 1410 s in all, the fastest
+  run. Still wrong: the prompts cited the dropped setting sheets (fixed above, not re-rendered);
+  the sheet drew a fedora rather than the story's beanie, gone indoors with no gesture; he turns
+  his back to the camera for about 4 s at the harbour; the boat differs between the harbour and
+  the sea.
 
 ## Results
 

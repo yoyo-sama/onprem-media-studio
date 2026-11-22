@@ -744,7 +744,11 @@ const SPLIT = {
   check(r.length === 3 && r[2]?.name === `${sj[0]?.id}.png` && r[2]?.role === "character" && !r[2]?.sheet,
     `the photo's sheet does not take its place: ${JSON.stringify(r)}`);
   // A take of several scenes sends no setting reference, in any segment: each scene's place
-  // is in its text (every setting sheet in every segment put the cottage at sea, GB10).
+  // is in its text (every setting sheet in every segment put the cottage at sea, GB10). A
+  // segment that cites the setting by its number gets its description instead (the harbour
+  // and the cottage stayed cited with no picture, GB10 2026-11-22).
+  const lastSeg = SPLIT.segments[2];
+  SPLIT.segments[2] = "SUBJECTREF1 rests in SUBJECTREF3 and looks at SUBJECTREF2.";
   before = jobs.length;
   await page.click("#generateBtn");
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
@@ -758,6 +762,10 @@ const SPLIT = {
   const scenes = jobs.slice(before).filter(j => j.pipeline === "h3-r2v");
   check(scenes.length === 3 && scenes.every(j => j.params.references?.length === 2 && !/is in <Subject|is the location/.test(j.params.prompt || "")),
     `a take of several scenes sends a setting: ${JSON.stringify(scenes.map(j => j.params.references))}`);
+  const rest = scenes[2]?.params.prompt || "";
+  check(!/<Subject 3>/.test(rest) && /<Subject 1> rests in (?!<Subject)\S/.test(rest) && /looks at <Subject 2>/.test(rest),
+    `a left-out setting stays cited by its number: ${rest}`);
+  SPLIT.segments[2] = lastSeg;
   if (SHOTS) {
     await page.selectOption("#langSelect", "fr");
     await page.setInputFiles("#refImagesInput", { name: "lea.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });

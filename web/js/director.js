@@ -696,7 +696,7 @@ async function renderSegment(i) {
   const refs = last ? [] : firstFrame ? firstFrameRefs(s) : relayRefs(settingSheet());
   let job;
   if (refs.length) {
-    seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), look, refs, s.style, h3Warn);
+    seg.prompt_used = relayCutPrompt(seg, look, refs, s.style);
     job = await relayR2vJob(s, seg, i, total, refs, { image: start });
   } else {
     seg.prompt_used = place
@@ -716,7 +716,7 @@ async function renderLatentSegment(s, seg, i, total, before, began) {
   const refs = relayRefs(settingSheet());
   log("req", "Relay, segment {n}/{total}: video continuing the previous segment…", { n: i + 1, total });
   seg.start = null;
-  seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), s.relay.look, refs, s.style, h3Warn);
+  seg.prompt_used = relayCutPrompt(seg, s.relay.look, refs, s.style);
   const job = await relayR2vJob(s, seg, i, total, refs, { continue_from: before.ref });
   await segmentDone(s, seg, i, total, job, began);
 }
@@ -766,14 +766,37 @@ async function segmentDone(s, seg, i, total, job, began) {
 // own segments. Every setting sheet went to every segment, and the subject was anchored in
 // the first one: the cottage stood in the open sea (GB10 2026-11-21). With only settings
 // given, they stay.
-function relayRefs(setting) {
+// Each reference keeps `n`, its number in the split's legend (the subjects, then the setting).
+function relayRefsAll(setting) {
   const scene = describedScene();
-  const all = [...relaySubjects().map((x, k) => ({ kind: k === 0 && scene ? "environment" : x.role || (k === 0 || x.kind === "human" ? "character" : "reference"),
+  return [...relaySubjects().map((x, k) => ({ kind: k === 0 && scene ? "environment" : x.role || (k === 0 || x.kind === "human" ? "character" : "reference"),
     desc: x.desc, ref: x.ref })),
-    ...(setting ? [{ kind: "environment", ...setting }] : [])];
+    ...(setting ? [{ kind: "environment", ...setting }] : [])].map((x, k) => ({ ...x, n: k + 1 }));
+}
+function relayRefs(setting) {
+  const all = relayRefsAll(setting);
   if (!d.relay.segments.some(seg => seg.scene)) return all;
   const kept = all.filter(x => x.kind !== "environment");
   return kept.length ? kept : all;
+}
+// The split numbered every subject of the take (<Subject N>, its legend). A segment sent fewer
+// references (no setting in a take of several scenes, none on a first frame) renumbers the ones
+// it sends and writes a left-out one as its description: the harbour and the cottage stayed
+// cited with no picture (GB10 2026-11-22), and an object listed after a setting would have
+// taken the setting's number.
+function refTokens(text, refs) {
+  const all = relayRefsAll(settingSheet()), sent = new Map(refs.map((x, k) => [x.n, k + 1]));
+  return String(text || "").replace(new RegExp(P.H3_TOKEN_RE.source, "gi"), (tok, n) => {
+    n = Number(n);
+    if (sent.has(n)) return `<Subject ${sent.get(n)}>`;
+    const left = all.find(x => x.n === n);
+    return left?.desc?.trim() || (left?.kind === "environment" ? "the place" : tok);
+  });
+}
+// A Ref2VA segment's prompt, its text and shared fields numbered for the references it sends.
+function relayCutPrompt(seg, look, refs, style) {
+  const lk = Object.fromEntries(Object.entries(look || {}).map(([k, v]) => [k, typeof v === "string" ? refTokens(v, refs) : v]));
+  return P.buildRelayCutPrompt(refTokens(seg.prompt.trim(), refs), lk, refs, style, h3Warn);
 }
 // The references segment 1 sees with a long take's first frame: the subjects the user gave
 // (characters, objects), no setting, and never the frame itself (with a setting alone, the
@@ -813,7 +836,7 @@ async function renderCutSegment(s, seg, i, total, before, began) {
   const refs = relayRefs(settingSheet() || (frame ? { ref: frame, desc: "" } : null));
   log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });
   seg.start = null;
-  seg.prompt_used = P.buildRelayCutPrompt(seg.prompt.trim(), s.relay.look, refs, s.style, h3Warn);
+  seg.prompt_used = relayCutPrompt(seg, s.relay.look, refs, s.style);
   const job = await relayR2vJob(s, seg, i, total, refs);
   await segmentDone(s, seg, i, total, job, began);
 }

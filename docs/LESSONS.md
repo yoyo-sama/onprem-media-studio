@@ -330,7 +330,10 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     of latent continuation, at the time of the target's first 7 latent frames, never was. The
     first frame of a long take with references is now that tail made of the picture held still
     (about 0.9 s), so segment 1 sees the sheets: in i2v it saw only the frame, and the take kept
-    the frame's person rather than the sheet's. Not rendered yet. (2026-11-22)
+    the frame's person rather than the sheet's. On the GB10 the terrace held 0.92 s, no cut, and
+    the woman was her sheet's from her first appearance (C4). And a segment that sends fewer
+    references than the split numbered must renumber its `<Subject N>`: the dropped setting
+    sheets stayed cited with no picture (A6). (2026-11-22)
 
 ## 8. Front end (for the port in step 4)
 

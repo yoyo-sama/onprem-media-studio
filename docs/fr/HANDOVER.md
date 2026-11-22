@@ -250,7 +250,7 @@ Rien ci-dessous n'a été demandé pour maintenant ; chaque point attend le prop
 - Plan-séquence avec un champ Première image et une liste Références avec rôles (2026-11-20 au
   soir, [LONG-VIDEO.md](LONG-VIDEO.md) § Première image et références) : pas encore rendu sur un
   GB10. Avec des références, le segment 1 est un `h3-r2v` sur la première image tenue 0,9 s
-  (2026-11-22, § Première image avec références) : pas encore rendu non plus.
+  (2026-11-22, § Première image avec références) : rendu sur promaxgb10-95c7 (C4, A6), première image tenue et identité de la planche gardée.
 - Une seule carte « Vidéo narrative » (2026-11-20 dans la nuit, [LONG-VIDEO.md](LONG-VIDEO.md)
   § Une seule carte de vidéo narrative) : une histoire en trois scènes avec les coupes du
   découpage de Gemma et une planche sujet en un clic, rendue trois fois sur promaxgb10-95c7
