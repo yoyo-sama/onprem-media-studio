@@ -235,7 +235,9 @@ Nothing below was asked to be done now; each waits for the owner.
   scene's segment 1 in i2v on its picture rendered alone (holds the picture); a whole take
   starting in i2v, and a file with a start image, are not rendered yet.
 - Long take with a First frame field and a References list with roles (2026-11-20 evening,
-  [LONG-VIDEO.md](LONG-VIDEO.md) § First frame and references): not rendered on a GB10 yet.
+  [LONG-VIDEO.md](LONG-VIDEO.md) § First frame and references): not rendered on a GB10 yet. With
+  references, segment 1 is `h3-r2v` on the first frame held still for 0.9 s (2026-11-22,
+  § First frame with references): rendered on promaxgb10-95c7 (C4, A6), first frame held and sheet identity kept.
 - One "Narrative video" card (2026-11-20 night, [LONG-VIDEO.md](LONG-VIDEO.md) § One narrative
   video card): a three-scene story with cuts from Gemma's split and a one-click subject sheet,
   rendered three times on promaxgb10-95c7 (2026-11-21); the third is good, and the Studio's

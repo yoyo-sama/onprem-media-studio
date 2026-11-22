@@ -261,6 +261,24 @@ def test_start_frame_rows_take_the_time_of_the_target_frame_0():
     assert pos[4, 0] == pos[8, 0]  # start frame = target frame 0
 
 
+def test_a_held_start_picture_takes_the_place_of_the_target_first_frames():
+    """[text | sheet | held picture, 2 latent frames | audio | video]: the held picture's rows
+    take the times and spatial positions of the target's first 2 latent frames, and the target
+    and its audio go back by the 2 slots Ref2VA gave it (a pure Ref2VA layout)."""
+    # times: text 0, sheet 1, held picture 2-3, target audio and video from 4; 2 rows per frame
+    pos = np.zeros((16, 3))
+    pos[:, 0] = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 5, 5, 6, 6, 6][:16]
+    pos[:, 1] = [0, 0, 1, 9, 9, 9, 9, 0, 0, 0, 1, 0, 1, 0, 1, 0][:16]  # the picture's own grid
+    layout = SimpleNamespace(num_condition_video_rows=6, num_condition_audio_rows=0, position_ids=pos,
+                             video_indices=np.array([1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14]),
+                             audio_indices=np.array([7, 8]))
+    h3_start_frame.move_start_frame(layout, 4)
+    assert list(pos[[1, 2], 0]) == [1, 1]  # the sheet keeps its slot
+    assert list(pos[[7, 8, 9, 10, 11, 12], 0]) == [2, 2, 2, 2, 3, 3]  # back by 2
+    assert np.array_equal(pos[[3, 4, 5, 6]], pos[[9, 10, 11, 12]])  # picture = target frames 0, 1
+    assert h3_start_frame.START_FRAMES == 22
+
+
 def test_t2v_progress_follows_the_denoising_steps_then_the_decoding(client, engines):
     run(client, "h3-t2v", {"prompt": "p"})
     seen = engines["progress"]

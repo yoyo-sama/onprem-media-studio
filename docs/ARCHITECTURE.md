@@ -38,7 +38,7 @@ request.
 | `studio/pipelines/krea2.py`, `qwen.py`, `moss.py` | Image engines (Krea 2, Qwen Image 2.1, MOSS-Image): [IMAGE-ENGINES.md](IMAGE-ENGINES.md) |
 | `studio/pipelines/h3.py` | Video engines (MiniMax H3: text, image, first/last image and references to video), geometry and refine schedule: [H3.md](H3.md) |
 | `studio/pipelines/h3_runtime.py` | FastVideo adapter: Spark recipes, NVFP4 profile, latent output and refine-pass overrides, cancellation |
-| `studio/pipelines/h3_start_frame.py` | In-process patch of three FastVideo H3 stages: a start frame with Ref2VA references (the first segment of a long take) |
+| `studio/pipelines/h3_start_frame.py` | In-process patch of three FastVideo H3 stages: a start frame with Ref2VA references, held still for 22 frames at the target's start (the first segment of a long take with a first frame and references) |
 | `studio/pipelines/h3_continue.py` | Latent continuation: the latents every H3 clip keeps, the wrapper of FastVideo's latent preparation that makes `h3-r2v` `continue_from` a clip, and the arithmetic of `video-stitch` (one decode of a take's continuing clips) |
 | `studio/pipelines/h3_upscaler.py`, `h3_lora.py` | H3 latent upscaler (3D conv, LBH v1 checkpoint) and LoRA stack (exact merge into one side branch) |
 | `studio/pipelines/image_lora.py` | Style LoRA stacks of Krea 2 and Qwen Image 2.1 as unmerged PEFT adapters (MOSS-Image hooks them in `moss.py`): [IMAGE-ENGINES.md](IMAGE-ENGINES.md#style-loras) |
