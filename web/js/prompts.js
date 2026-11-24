@@ -457,6 +457,16 @@
       + `${h3RealDuration(seconds).toFixed(2)}-second mark of the target video.`;
   }
 
+  // A prompt that already opens on the alignment sentences the app writes (a prompt reused
+  // from the gallery) without them: they are written once, by the code (the sentence came
+  // twice, GB10 2026-11-24). The rest of the text is the user's, untouched.
+  const H3_ALIGNMENT_RE = /^\s*(?:For the target video, at 0\.00 seconds into the target video, <Picture 1> \(from \[Shot 1\]\) is fully referenced\.|How the reference pictures align with the target video — <Picture 1> \(from \[Shot 1\]\) aligns with the 0\.00-second mark of the target video; <Picture 2> \(from \[Shot 1\]\) aligns with the [\d.]+-second mark of the target video\.)[ \t]*\n*/;
+  function stripH3Alignment(text) {
+    let out = String(text || "");
+    while (H3_ALIGNMENT_RE.test(out)) out = out.replace(H3_ALIGNMENT_RE, "");
+    return out;
+  }
+
   // A storyboard cut is image to video from a keyframe that already holds the subjects and
   // the setting, so every subject is defined on <Picture 1>.
   function h3CutSubjects(subjects, locDesc) {
@@ -1340,7 +1350,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     compileRelayKeyframePrompt, HOLD_MOTION,
     H3_PROMPT_CHARS, h3Subject, h3Picture, H3_TOKEN_STUB, H3_TOKEN_RE, h3TokensOut, h3TokensIn, h3NormalizeTokens,
     h3AssignSubjects, h3AssignRefs, h3Summary, h3RefBody, buildH3RefPrompt, capH3Prompt, h3VideoFrames, h3RealDuration,
-    h3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, h3CutBodyOf, restoreCameraClause,
+    h3Alignment, stripH3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, h3CutBodyOf, restoreCameraClause,
     normalizeShotList, fallbackShots,
     SHEET_CLEAN, SHEET_TEMPLATES, SHEET_SIZE, sheetWords, charsheetPromptFrom, charsheetFromPhotoPrompt, locsheetPromptFrom,
     sheetSkeleton, stripSheetSkeleton, wrapSheetDesc,

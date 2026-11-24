@@ -85,6 +85,13 @@ request.
    waiting for a job reads its state, failed if a restart cut it, instead of keeping its last
    progress forever. An assistant card stored as running before the server started is read
    back as failed for the same reason, so its button works again.
+5. A job may take another job's output before it exists: a parameter value, or a list item,
+   written `{"job": "<id>", "output": ".mp4"}` stands for that job's first output with that
+   extension. Such a job (`after` lists what it waits for) is validated when its turn comes, once
+   the output exists, and fails if that job failed or was cancelled; one already done gives its
+   file at submission. Both jobs must run on the same worker, where submission order is run
+   order. This is how a long take's click queues its whole chain at once (LONG-VIDEO.md): it runs
+   to its end with the page closed.
 
 No code path creates a job by itself.
 

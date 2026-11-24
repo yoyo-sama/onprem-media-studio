@@ -49,7 +49,7 @@ export function runPlain(wf, { specs, origin, ratio, count = 1, duration = 5, lo
       info = `${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`;
     } else {
       // H3 expects at the head of the prompt the moment each input image stands for.
-      params = { prompt: F.capH3(`${P.h3Alignment(!!last, duration)}\n\n${spec.prompt}`), duration, seed: s, loras, image,
+      params = { prompt: F.capH3(`${P.h3Alignment(!!last, duration)}\n\n${P.stripH3Alignment(spec.prompt)}`), duration, seed: s, loras, image,
                  ...(last ? { last_image: last } : {}) };
       info = `${last ? "FL2VA" : "I2VA"} · ${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`;
     }

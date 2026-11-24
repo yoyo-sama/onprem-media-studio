@@ -3,7 +3,7 @@
 // it: workflow, style, seed, durations, LoRA stack, uploads and extra references.
 
 import { api, blobToBase64, llmJSON, refURL } from "./api.js";
-import { L } from "./i18n.js";
+import { L, t } from "./i18n.js";
 import { $, LLM, clampInt, log } from "./ui.js";
 import { stackParams } from "./lora-stack.js";
 
@@ -53,7 +53,7 @@ export const PIPELINES = [
   { id: "image2image", label: L("Image editing (Image2Image)"), controls: ["image", "markets"] },
   { id: "text2video", label: L("Video from a text (Text2Video)"), controls: ["duration", "ratio"] },
   { id: "image2video", label: L("Video from an image (Image2Video)"), controls: ["duration", "image"] },
-  { id: "sequence", label: L("Long take (Relay)"), scenario: ["narrative"], own: true, controls: ["seq", "image"] },
+  { id: "sequence", label: L("Long take (Relay)"), scenario: ["narrative"], own: true, controls: ["duration", "seq", "image"] },
   { id: "reference2video", label: L("Video from references (MiniMax H3)"), controls: ["duration", "ratio"] },
   { id: "campaign", label: L("Full campaign (posters + thumbnails + teaser)"), scenario: ["campaign"], own: true,
     controls: ["duration", "variants", "style"] },
@@ -90,7 +90,25 @@ export function formSeed() {
 }
 // MiniMax H3 renders 5 to 15 seconds.
 export const clampDuration = (v, dflt = 5) => clampInt(v, 5, 15, dflt);
-export const formDuration = () => clampDuration($("videoDuration").value);
+// The video length of the form, never brought silently into range (a 30 s ask rendered 15 s,
+// 2026-11-24). One H3 clip lasts 5 to 15 s; longer, a video of these pipelines is a long take
+// (clips chained on the server, up to 150 s): Generate opens it at that length.
+export const CLIP_MAX = 15, LONG_MAX = 150;
+const LONG_PIPELINES = ["text2video", "image2video", "reference2video", "sequence"];
+export const lengthMax = (p = currentPipeline()) => (LONG_PIPELINES.includes(p) ? LONG_MAX : CLIP_MAX);
+export function formLength() {
+  const v = Number($("videoDuration").value), max = lengthMax();
+  if (!Number.isFinite(v) || v < 5 || v > max) throw new Error(t("The video length is {min} to {max} s.", { min: 5, max }));
+  return Math.round(v);
+}
+// A clip's length (5 to 15 s; refused otherwise, never cut down).
+export function formDuration() {
+  const v = formLength();
+  if (v > CLIP_MAX) throw new Error(t("The video length is {min} to {max} s.", { min: 5, max: CLIP_MAX }));
+  return v;
+}
+// Generate makes a long take: the long take pipeline, or a video over one clip's length.
+export const longVideo = () => currentPipeline() === "sequence" || (lengthMax() > CLIP_MAX && formLength() > CLIP_MAX);
 
 // LoRA stack of the form: one per folder, so switching engines loses nothing; what is
 // sent is the stack of the current workflow's folder, none if it takes no LoRA.

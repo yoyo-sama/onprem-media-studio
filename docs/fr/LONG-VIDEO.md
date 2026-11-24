@@ -489,3 +489,39 @@ latents.
 - Avis du propriétaire sur la prise (2026-11-20) : « ce n'est pas parfait mais le résultat est
   satisfaisant ». Le critère absolu de 10 pour un raccord ne convient pas à une prise qui bouge
   autant ; les raccords ont été jugés à l'œil.
+
+## La chaîne tourne sur le serveur ; durées des vidéos (2026-11-24)
+
+Deux signalements du propriétaire sur promaxgb10-95c7 (main 756bc78) :
+
+- **Un plan-séquence de 5 segments n'en a rendu qu'un.** Le segment 1 (10 s, quatre références)
+  s'est terminé sans erreur, puis plus rien : la page qui menait la chaîne a envoyé sa dernière
+  requête pendant ce rendu (onglet fermé, ordinateur en veille ou onglet gelé par le navigateur),
+  le segment 2 n'a donc jamais été soumis, et le projet repris ne connaissait même pas le
+  segment 1. Désormais le clic sur « Générer la chaîne » met toute la chaîne en file d'un coup :
+  le job de chaque segment, puis `video-stitch`. Un fichier qu'un segment prend au précédent (son
+  clip pour `continue_from`, sa dernière image comme image de départ, comme lieu ou, après un
+  départ texte, comme référence du sujet) s'écrit `{"job": "<id>", "output": ".mp4" | ".png"}` ;
+  le serveur y met le fichier quand vient le tour du job (ARCHITECTURE.md § Cycle de vie d'un job). Un segment en
+  échec fait échouer la suite de la chaîne (la page retire ces jobs de la file) ; « Arrêter après
+  ce segment » annule les segments pas encore commencés et l'assemblage (une chaîne arrêtée
+  pendant son dernier segment est quand même assemblée). La page ne fait que suivre les jobs :
+  chaque segment garde l'identifiant de son job (`job`, et `stitchJob` pour l'assemblage), et un
+  projet repris les suit de nouveau, sans rien soumettre. Les images de transition sont encore
+  extraites quand la page est ouverte, pour un choix ultérieur ; la chaîne elle-même prend la
+  dernière image, le choix par défaut. Une image de transition n'est extraite que pour un segment
+  qui part d'une image (une coupe qui a son propre lieu n'en prend pas).
+- **30 s demandées, 15 s rendues (Text2Video et Image2Video).** Un clip H3 dure de 5 à 15 s
+  (FastVideo) : le formulaire ramenait toute durée dans cet intervalle sans rien dire et envoyait
+  15 s. Idem dans Vidéo à partir de références, la campagne et toutes les cartes de l'assistant.
+  Une vidéo Text2Video, Image2Video ou Vidéo à partir de références plus longue est maintenant un
+  plan-séquence : « Générer » l'ouvre à la durée demandée (jusqu'à 150 s), le brief découpé en
+  segments par Gemma, et « Générer la chaîne » la rend. Le formulaire du plan-séquence prend aussi
+  cette durée (il ouvrait tout plan-séquence comme une carte de 10 s contenant tout le brief) ; un
+  plan-séquence d'un seul segment garde le brief mot pour mot. Le teaser de la campagne reste un
+  clip : au-delà de 15 s, c'est refusé, comme toute durée hors limites.
+- La phrase d'alignement d'un prompt Image2Video apparaissait deux fois quand le brief commençait
+  déjà par elle (un prompt réutilisé depuis la galerie) : elle est retirée du brief avant d'être
+  écrite (`stripH3Alignment`), dans le Studio comme sur le Canvas.
+
+Pas encore rendu sur le GB10.

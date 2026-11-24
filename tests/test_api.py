@@ -276,3 +276,83 @@ def test_a_cpu_job_does_not_wait_behind_a_render(settings, store):
 def test_montage_jobs_run_on_the_cpu_worker():
     from studio.pipelines import REGISTRY
     assert {p.id for p in REGISTRY.values() if not p.gpu} == {"video-concat", "image-grid", "video-frames"}
+
+
+class Append(Echo):
+    """Takes the text files `sources` (and an optional `extra` one) and writes them followed by its prompt."""
+
+    id = "append"
+    models = []
+
+    def validate(self, params, files):
+        if set(params) - {"prompt", "sources", "extra", "wait", "fail"}:
+            raise ValueError("Unknown parameter")
+        for ref in [*params.get("sources", []), *([params["extra"]] if "extra" in params else [])]:
+            files.resolve(ref)
+        return params
+
+    def run(self, params, models, ctx):
+        if params.get("wait"):
+            time.sleep(0.3)
+        if params.get("fail"):
+            raise RuntimeError("render failed")
+        text = "".join(ctx.files.resolve(r).read_text() for r in params.get("sources", []))
+        out = ctx.output_dir / f"{ctx.job.id}.txt"
+        out.write_text(text + params["prompt"])
+        return [out]
+
+
+@pytest.fixture
+def chain(settings, store):
+    app = create_app(settings, models=store, pipelines={"append": Append(), "montage": Montage()}, llm=FakeLlm())
+    with TestClient(app) as c:
+        yield c
+
+
+def read_output(settings, job):
+    return (settings.data_dir / "output" / job["outputs"][0].split("/", 1)[1]).read_text()
+
+
+def test_a_chain_submitted_at_once_runs_on_the_server_in_order(chain, settings):
+    """A long take is queued whole by its click: each job takes the previous one's output,
+    and nothing more is asked of the page (it may be closed)."""
+    first = chain.post("/api/jobs", json={"pipeline": "append", "params": {"prompt": "a", "wait": True}}).json()
+    out = lambda job: {"job": job["id"], "output": ".txt"}
+    second = chain.post("/api/jobs", json={"pipeline": "append", "params": {"prompt": "b", "sources": [out(first)]}}).json()
+    assert second["status"] == "queued" and second["after"] == [first["id"]]
+    third = chain.post("/api/jobs", json={"pipeline": "append", "params": {"prompt": "c", "sources": [out(second)],
+                                                                         "extra": out(first)}}).json()
+    assert sorted(third["after"]) == sorted([first["id"], second["id"]])
+    done = wait_for(chain, third["id"])
+    assert done["status"] == "done" and read_output(settings, done) == "abc"
+    # Its parameters now hold the files, so "launch again" would render the same thing.
+    assert done["after"] == [] and done["request"]["sources"] == wait_for(chain, second["id"])["outputs"]
+    # A job that waits for a finished one takes its output at once.
+    late = chain.post("/api/jobs", json={"pipeline": "append", "params": {"prompt": "d", "sources": [out(third)]}}).json()
+    assert late["after"] == [] and late["params"]["sources"] == done["outputs"]
+
+
+def test_a_chain_stops_where_a_job_failed(chain):
+    first = chain.post("/api/jobs", json={"pipeline": "append", "params": {"prompt": "a", "fail": True, "wait": True}}).json()
+    second = chain.post("/api/jobs", json={"pipeline": "append",
+                                           "params": {"prompt": "b", "sources": [{"job": first["id"], "output": ".txt"}]}}).json()
+    assert wait_for(chain, first["id"])["status"] == "error"
+    lost = wait_for(chain, second["id"])
+    assert lost["status"] == "error" and first["id"] in lost["error"] and "failed" in lost["error"]
+    # Waiting for a failed job is refused at once.
+    again = chain.post("/api/jobs", json={"pipeline": "append",
+                                          "params": {"prompt": "c", "sources": [{"job": first["id"], "output": ".txt"}]}})
+    assert again.status_code == 422 and "failed" in again.json()["detail"]
+
+
+def test_waiting_for_an_unknown_job_another_worker_or_a_bad_output_is_refused(chain):
+    def submit(pipeline, sources):
+        return chain.post("/api/jobs", json={"pipeline": pipeline, "params": {"prompt": "x", "sources": sources}})
+    assert submit("append", [{"job": "job-nope-1", "output": ".txt"}]).status_code == 422
+    render = chain.post("/api/jobs", json={"pipeline": "append", "params": {"prompt": "a", "wait": True}}).json()
+    other = submit("montage", [{"job": render["id"], "output": ".txt"}])
+    assert other.status_code == 422 and "other worker" in other.json()["detail"]
+    assert submit("append", [{"job": render["id"], "output": "txt; rm"}]).status_code == 422
+    wait_for(chain, render["id"])
+    missing = submit("append", [{"job": render["id"], "output": ".mp4"}])
+    assert missing.status_code == 422 and "no .mp4" in missing.json()["detail"]
