@@ -3,8 +3,8 @@
 Version anglaise : [../HANDOVER.md](../HANDOVER.md).
 
 Cette page permet à quelqu'un (une personne ou un modèle d'IA) de reprendre le développement
-d'OnPrem Media Studio sans contexte préalable. C'est un instantané du **2026-11-23, `main` à
-`756bc78`** (PR #56, la dernière fusionnée ; aucune pull request ouverte). Elle résume les
+d'OnPrem Media Studio sans contexte préalable. C'est un instantané du **2026-11-25, `main` après
+la PR #58** (`9ff92e0`, puis la mise à jour précédente de cette page, PR #57). Elle résume les
 documents de référence et y renvoie ; en cas de désaccord, le code et les documents de référence
 l'emportent. À lire ensuite, dans cet ordre : [AGENTS.md](../../AGENTS.md),
 [ARCHITECTURE.md](ARCHITECTURE.md), [LESSONS.md](LESSONS.md),
@@ -120,7 +120,9 @@ Références : jusqu'à 9 images, 3 clips, 3 sons, chacun avec un rôle ; le pro
 champs construit par `buildH3RefPrompt`, le même que la carte `reference_video` de l'assistant),
 et deux pipelines propres à leur carte d'objectif (sans menu Pipeline) : le **plan-séquence**
 (carte « Vidéo narrative ») et la **campagne complète**. La galerie propose « → Première image »
-et « → Référence » sur les images là où le formulaire les prend.
+et « → Référence » sur les images là où le formulaire les prend. Text2Video, Image2Video et Vidéo
+à partir de références plus longs qu'un clip H3 (15 s, jusqu'à 150 s) ouvrent un plan-séquence de
+cette durée ; une durée hors limites est refusée, jamais ramenée dans les limites.
 
 **Le plan-séquence** ([LONG-VIDEO.md](LONG-VIDEO.md), `web/js/director.js`), résultat du travail
 du 2026-11-14 au 22 :
@@ -135,8 +137,15 @@ du 2026-11-14 au 22 :
    `{"new_shot", "text"}` ; un nouveau plan devient une coupe 🎞. Quand le nombre de scènes est
    connu (paragraphes, fichier), c'est le code qui pose les coupes. Éclairage et Ambiance sonore
    communs restent vides quand il y a plusieurs scènes ; la caméra garde le visage du sujet
-   principal dans le cadre.
-3. Un clic lance la chaîne. **Segment 1** : ni image ni référence → `h3-t2v` ; références
+   principal dans le cadre. Sans référence de sujet, le découpage écrit aussi une fois
+   l'apparence des sujets (champ partagé Sujets), envoyée à chaque segment.
+3. Un clic met toute la chaîne en file sur le serveur : chaque segment et le `video-stitch`, un
+   job prenant la sortie à venir du précédent (paramètres `{"job", "output"}`, PR #58). La page ne
+   fait que suivre les jobs : le plan-séquence se termine page fermée, et une page rouverte sur une
+   chaîne qui a encore des jobs y revient. La durée d'une carte est ce qu'elle ajoute au
+   plan-séquence : une continuation latente demande à H3 en plus les 22 images qu'elle refait
+   (30 s prévus, 29,96 s rendus).
+   **Segment 1** : ni image ni référence → `h3-t2v` ; références
    seules → `h3-r2v` ; une première image seule, avec un décor seulement, ou une scène décrite →
    `h3-i2v` sur elle ; une première image **et** des références de sujet → `h3-r2v` avec `image`
    (l'image tenue immobile environ 0,9 s, puis en mouvement) et seulement les personnages et
@@ -207,7 +216,7 @@ l'autre : chemins, utilisateurs, état.**
 | Machine | Utilisateur | Rôle |
 |---|---|---|
 | `gb10-demo` | `spark` | Première machine de test de la 2.0 (qualifications du 2026-10-30, agrandissement ×2). Manquait de disque le 2026-10-30. Plus utilisée depuis mi-novembre. |
-| `promaxgb10-95c7` | `spark` | La machine du propriétaire avec l'installation Docker (dépôt `/home/spark/onprem-media-studio`, conteneur `studio`). Tous les rendus depuis le 2026-11-07. **Tourne sur `main` 756bc78**, reconstruite le 2026-11-22 à 21:39 UTC après la PR #56 (file vide, santé OK). Accessible par Remote Control, que le propriétaire active depuis Claude Desktop. Contient `control-tests/` (les rendus de contrôle des PR #55/#56, rapports `inspection-*.md`) : ne supprimer que sur parole du propriétaire. Contient aussi ~200 Go de modèles ComfyUI d'un autre outil dans `~/.zcode` : pas à nous, ne pas y toucher. |
+| `promaxgb10-95c7` | `spark` | La machine du propriétaire avec l'installation Docker (dépôt `/home/spark/onprem-media-studio`, conteneur `studio`). Tous les rendus depuis le 2026-11-07. **Tourne sur `main` 9ff92e0**, reconstruite le 2026-11-25 à 22:42 UTC après la PR #58 (file vide, santé OK). Accessible par Remote Control, que le propriétaire active depuis Claude Desktop. Contient `control-tests/` (les rendus de contrôle des PR #55/#56/#58, rapports `inspection*.md`) : ne supprimer que sur parole du propriétaire. Contient aussi ~200 Go de modèles ComfyUI d'un autre outil dans `~/.zcode` : pas à nous, ne pas y toucher. |
 | `promaxgb10-6c5f` | `sparks` | Héberge la **1.4** (ComfyUI, `comfyui-nvidia`, open-webui, spark-control-center). Pas une machine de test de la 2.0. |
 
 Travailler sur promaxgb10-95c7 :
@@ -346,6 +355,8 @@ techniques dans [LESSONS.md](LESSONS.md). Celles qui reviennent le plus souvent 
 | #53 | 2026-11-21 | Le formulaire « Vidéo à partir de références » remplace « Personnage + décor cohérents » (un clic, un job) |
 | #54, #55 | 2026-11-21 | Carte plan-séquence de l'assistant en prose avec une durée totale ; segments du découpage marqués `new_shot`, visage gardé dans le cadre, aucune référence de décor entre scènes, références de la carte complétées par l'application |
 | #56 | 2026-11-22 | Le segment 1 d'un plan-séquence sur une première image voit les références de sujet (`h3-r2v` + image de départ tenue 22 images) ; références écartées renumérotées dans les prompts |
+| #57 | 2026-11-25 | Cette passation mise à jour sur `main` 756bc78 |
+| #58 | 2026-11-25 | Chaîne du plan-séquence mise en file entière sur le serveur (se termine page fermée) ; au-delà de 15 s, Text2Video, Image2Video et Vidéo à partir de références deviennent un plan-séquence ; chevauchement latent compté dans les durées ; apparence des sujets écrite par le découpage sans référence ; phrase d'alignement une seule fois en Image2Video. Deux rendus de contrôle page fermée sur 95c7 |
 
 ## 10. Points ouverts
 
