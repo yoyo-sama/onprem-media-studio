@@ -1,0 +1,22 @@
+summary: A cheerful courier girl and her teapot robot pick up a giant spotted egg in a desert village and race it across the dunes toward a mountain of giant mushrooms.
+camera_direction: Hand-drawn 1990s Japanese TV anime, flat cel shading, bold clean black outlines, bright saturated colors, simple painted backgrounds, lively cartoon timing with squash and stretch; medium and wide shots that keep the main character's face in frame.
+lighting: Bright clean anime daylight with crisp two-tone cel shadows, clear blue sky.
+retention_analysis:
+Every character stays a hand-drawn 2D anime cel character with the exact design, colors and proportions of its sheet, never realistic, never 3D, never photographic.
+detailed_description:
+[Shot 1] A sunny desert village of round white dome houses with blue doors, palm trees and a dusty main street, at midday.
+Segment 1 (00:00.000–00:10.000) – Arrival
+<Subject 1> zooms down the dusty main street on a small round orange hover-scooter with one headlight and stubby fins, <Subject 2> sitting on the back seat and holding on with both little arms, steam puffing from its spout; she waves cheerfully at the villagers as the camera tracks alongside them.
+Segment 2 (00:10.000–00:20.000) – The post office
+<Subject 1> skids to a stop in a cloud of dust in front of a little post office with a round red mailbox; she hops off, pushes her goggles up and salutes; <Subject 2> tumbles off the seat, lands upside down on its lid and wobbles back upright, dizzy.
+Segment 3 (00:20.000–00:30.000) – The giant egg
+A chubby old postmaster with a round white beard rolls a giant white egg with big orange spots out of the post office, the egg as tall as <Subject 1>; she hugs it with both arms, eyes sparkling, while <Subject 2> jumps up and down with excitement, its lid rattling.
+[Shot 2] Open desert of orange sand dunes and tall rock pillars under a blue sky with puffy white clouds, early afternoon.
+Segment 4 (00:30.000–00:40.000) – Across the dunes
+<Subject 1> rides the small round orange hover-scooter fast across the dunes, the giant spotted egg strapped behind her with ropes and <Subject 2> clinging to the egg; wide shot following them from the side, sand spraying behind.
+Segment 5 (00:40.000–00:50.000) – The jump
+The scooter jumps off the crest of a big dune and flies through the air; <Subject 1> laughs with joy, the lid of <Subject 2> pops up and its eyes go wide in panic as the egg wobbles; they land with a big bounce.
+Segment 6 (00:50.000–01:00.000) – Mushroom Mountain
+Far ahead, a tall mountain covered in giant red and white mushrooms rises above the desert; <Subject 1> points at it and grins, <Subject 2> whistles a happy puff of steam; the camera pushes in slowly on her excited face.
+overall_soundscape: Lively cartoon sound effects (whooshes, boings, rattles, puffs of steam), wind, the hum of the little hover-scooter, cheerful shouts and laughter.
+non_diegetic_music: None.

@@ -1,0 +1,22 @@
+summary: A pompous sky pirate in a patched balloon airship snatches the giant egg from the courier girl, who chases him through a canyon of giant mushrooms with her teapot robot.
+camera_direction: Hand-drawn 1990s Japanese TV anime, flat cel shading, bold clean black outlines, bright saturated colors, simple painted backgrounds, lively cartoon timing with squash and stretch; medium and wide shots that keep the main character's face in frame.
+lighting: Bright clean anime afternoon light with crisp two-tone cel shadows, clear blue sky.
+retention_analysis:
+Every character stays a hand-drawn 2D anime cel character with the exact design, colors and proportions of its sheet, never realistic, never 3D, never photographic.
+detailed_description:
+[Shot 1] A rocky canyon road at the foot of a mountain of giant mushrooms, bright afternoon.
+Segment 1 (00:00.000–00:10.000) – The shadow
+<Subject 1> rides a small round orange hover-scooter with one headlight and stubby fins along the canyon road, a giant white egg with big orange spots strapped behind her and <Subject 2> sitting on top of the egg; a huge shadow slides over them and she looks up in surprise.
+Segment 2 (00:10.000–00:20.000) – The airship
+A patched purple balloon airship with a wooden gondola and two spinning propellers comes down out of the sky; <Subject 3> leans over the gondola railing, twirling his huge moustache and laughing loudly.
+Segment 3 (00:20.000–00:30.000) – The claw
+A long mechanical claw drops from the gondola, grabs the giant spotted egg off the scooter and yanks it up into the sky; <Subject 1> jumps for it too late and shakes her fist, <Subject 2> blows furious steam from its spout.
+[Shot 2] A canyon of giant red and white mushrooms, some as tall as houses, bright afternoon, the patched purple balloon airship flying above.
+Segment 4 (00:30.000–00:40.000) – The chase
+<Subject 1> chases the airship on the small round orange hover-scooter, weaving between the giant mushrooms at full speed; high above, <Subject 3> sticks his tongue out from the gondola, the giant spotted egg dangling in the mechanical claw.
+Segment 5 (00:40.000–00:50.000) – Steam boost
+<Subject 2> climbs onto the back of the scooter, points its spout backward and blasts a jet of white steam like a rocket; the scooter shoots forward with a burst of speed, the yellow scarf of <Subject 1> flapping straight back as she shouts with determination.
+Segment 6 (00:50.000–01:00.000) – The leap
+<Subject 1> bounces off the cap of a giant mushroom like a trampoline and leaps high into the air, catching the airship's rope ladder with one hand, <Subject 2> hanging on to her satchel; up in the gondola <Subject 3> looks down at them, eyes popping in shock.
+overall_soundscape: Lively cartoon sound effects (whooshes, boings, rattles, puffs of steam), wind, the hum of the little hover-scooter, cheerful shouts and laughter.
+non_diegetic_music: None.

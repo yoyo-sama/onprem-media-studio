@@ -1,0 +1,22 @@
+summary: On the sky pirate's airship the courier girl fights him for the giant egg; it hatches a tiny pink baby dinosaur whose sneeze of fire burns his moustache and brings the airship down near a mushroom cottage at sunset.
+camera_direction: Hand-drawn 1990s Japanese TV anime, flat cel shading, bold clean black outlines, bright saturated colors, simple painted backgrounds, lively cartoon timing with squash and stretch; medium and wide shots that keep the main character's face in frame.
+lighting: Clean anime light with crisp two-tone cel shadows, the time of day each shot states.
+retention_analysis:
+Every character stays a hand-drawn 2D anime cel character with the exact design, colors and proportions of its sheet, never realistic, never 3D, never photographic.
+detailed_description:
+[Shot 1] On the wooden deck of a patched purple balloon airship's gondola, high above a canyon of giant mushrooms, blue sky, late afternoon.
+Segment 1 (00:00.000–00:10.000) – Aboard
+<Subject 1> climbs over the railing onto the gondola deck with <Subject 2> on her back; <Subject 3> hugs a giant white egg with big orange spots and backs away from her, his huge moustache quivering.
+Segment 2 (00:10.000–00:20.000) – Tug of war
+<Subject 1> and <Subject 3> both pull the giant spotted egg in opposite directions, faces red with effort, while <Subject 2> pulls on the yellow scarf of <Subject 1> to help.
+Segment 3 (00:20.000–00:30.000) – Hatching
+The egg cracks with a loud crunch; a tiny round pink baby dinosaur with big shiny eyes pops out with a piece of eggshell on its head; <Subject 1>, <Subject 2> and <Subject 3> freeze and stare at it.
+Segment 4 (00:30.000–00:40.000) – The sneeze
+The tiny pink baby dinosaur sneezes a big puff of fire right into the face of <Subject 3>; his huge moustache is singed and smoking and his face is black with soot, he blinks in shock while <Subject 1> covers her mouth to hold back her laughter.
+[Shot 2] The grassy summit of the mushroom mountain at sunset, golden-orange sky, a cozy cottage shaped like a red and white mushroom, the deflated purple balloon hanging from a tree nearby.
+Segment 5 (00:40.000–00:50.000) – Safe landing
+<Subject 1> stands in front of the mushroom cottage holding the tiny pink baby dinosaur in her arms, <Subject 2> beside her; she gently rubs the baby's head and it closes its eyes happily.
+Segment 6 (00:50.000–01:00.000) – Happy ending
+The tiny pink baby dinosaur licks the cheek of <Subject 1> and she bursts out laughing, <Subject 2> whistles a happy puff of steam, and behind them <Subject 3> dangles upside down from a tree branch by his coat tails, his moustache still smoking; the camera slowly pulls back as they wave.
+overall_soundscape: Lively cartoon sound effects (whooshes, boings, rattles, puffs of steam), wind, the hum of the little hover-scooter, cheerful shouts and laughter.
+non_diegetic_music: None.
