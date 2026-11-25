@@ -54,8 +54,23 @@ def test_compose_scenario_returns_segments_and_look():
       const res = await P.composeScenario(llm, "a walk", 2, "a garden", 10, [{desc: "a woman"}]);
       console.log(JSON.stringify({res, system: calls[0]}));""")
     assert out["res"]["segments"] == ["<Subject 1> walks.", "<Subject 1> stops."]
-    assert out["res"]["look"] == {"camera": "medium shots", "lighting": "soft light", "sound": "birdsong", "music": ""}
+    assert out["res"]["look"] == {"camera": "medium shots", "lighting": "soft light", "sound": "birdsong", "music": "", "subjects": ""}
     assert "exactly 2 segments" in out["system"] and '"soundscape"' in out["system"]
+    # A subject with a reference: its look comes from it, the split is not asked for it.
+    assert '"subjects"' not in out["system"]
+
+
+def test_compose_scenario_asks_the_subjects_look_with_no_reference():
+    # A take from the text: the look is only in the scenario, written once in the shared
+    # fields (the jacket changed at segment 3 on the GB10, 2026-11-25).
+    out = run("""const answer = {framing: "medium shots", lighting: "soft light", soundscape: "birdsong", music: "",
+                   subjects: "A woman with short red hair, a denim jacket over a green sweater.", segments: ["She walks.", "She stops."]};
+      const calls = [];
+      const llm = async (system, user) => { calls.push(system); return answer; };
+      const res = await P.composeScenario(llm, "a walk", 2, "", 10, []);
+      console.log(JSON.stringify({res, system: calls[0]}));""")
+    assert out["res"]["look"]["subjects"] == "A woman with short red hair, a denim jacket over a green sweater."
+    assert '"subjects": one English paragraph' in out["system"] and '"subjects": "..."' in out["system"]
 
 
 # ── Screenplay files (the owner's layout, 2026-11-20) ─────────────────────────

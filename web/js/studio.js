@@ -74,13 +74,19 @@ function refreshPipelineOptions(pipeline = F.currentPipeline()) {
   updateModelOptions();
 }
 
-let lastPipeline = null;
+let lastPipeline = null, lengthKind = "clip";
+const lengths = { clip: "5", take: "30" };
 function updateModelOptions() {
   const p = F.currentPipeline(), def = F.pipelineDef(p);
   fillSelect($("modelSelect"), F.WORKFLOWS.filter(w => w.pipeline === p).map(w => [w.id, w.label]), $("modelSelect").value);
   // One engine: nothing to choose, the menu is left out (the Monitor names the engine).
   $("modelWrap").hidden = $("modelSelect").options.length < 2;
   for (const [name, id] of Object.entries(CONTROL_WRAPS)) $(id).hidden = !def?.controls.includes(name);
+  // One field, two lengths kept apart: a clip's (5 s) and a long take's (30 s, its plan).
+  const kind = p === "sequence" ? "take" : "clip";
+  if (kind !== lengthKind) { lengths[lengthKind] = $("videoDuration").value; $("videoDuration").value = lengths[kind]; lengthKind = kind; }
+  $("videoDuration").max = String(F.lengthMax(p));
+  refreshDurationHint();
   brief.placeholder = p === "sequence" ? MOTION_EXAMPLE : SCENARIOS[activeScenario].example;
   document.querySelectorAll(".usecase").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.pipeline === p)));
   refreshGenerateLabel();
@@ -88,6 +94,12 @@ function updateModelOptions() {
   if (lastPipeline !== null && p !== lastPipeline) D.reset();
   lastPipeline = p;
   updateModelLabel();
+}
+
+// Over one clip's length (15 s), a video is a long take: said under the field.
+function refreshDurationHint() {
+  const p = F.currentPipeline(), v = Number($("videoDuration").value);
+  $("durationHint").hidden = p === "sequence" || F.lengthMax(p) <= F.CLIP_MAX || !(v > F.CLIP_MAX);
 }
 
 function updateModelLabel() {
@@ -167,6 +179,34 @@ async function longTakeImages() {
   const file = $("imageInput").files[0];
   const first = selectedAsset ? { name: selectedAsset.filename, ref: selectedAsset.ref } : file ? { name: file.name, blob: file } : null;
   return { first, refs: F.refList("seq").slice(0, F.REF_CAPS.seq).map(it => ({ ...it, kind: F.itemRole(it) })) };
+}
+
+// A long take: the long take pipeline, or a video longer than one H3 clip (Text2Video,
+// Image2Video, Video from references). Its images keep their roles: Image2Video's image is the
+// first frame and its end image the last segment's; the images of Video from references are
+// references (a long take takes no clip or sound). Generate opens it at the length asked, the
+// brief split into segments: nothing renders before "Generate the chain".
+async function longTake(wf, seed) {
+  const total = F.formLength();
+  let images = { first: null, refs: [] }, end = null;
+  if (wf.pipeline === "sequence") images = await longTakeImages();
+  else if (wf.pipeline === "image2video") {
+    images.first = (await longTakeImages()).first;
+    if (!images.first) throw new Error(t("Choose an input image (a file, or a gallery image with “→ Use as input”)."));
+    const lastFile = $("lastImageInput").files[0];
+    if (lastFile) end = { ref: await F.imageRef({ name: lastFile.name, blob: lastFile }), name: lastFile.name };
+  } else if (wf.pipeline === "reference2video") {
+    const list = F.refList("r2v"), imgs = list.filter(it => F.itemMedia(it) === "image");
+    if (!imgs.length)
+      throw new Error(t("Add at least one reference image or clip: a photo or a sheet of the subject, or make a sheet from the brief."));
+    const left = list.length - Math.min(imgs.length, D.LONG_TAKE_REFS);
+    if (left) log("warn", "A long take takes up to {max} reference images, no clip or sound: {n} reference(s) left out.", { max: D.LONG_TAKE_REFS, n: left });
+    images.refs = imgs.slice(0, D.LONG_TAKE_REFS).map(it => ({ ...it, kind: F.itemRole(it) }));
+  }
+  if (wf.pipeline !== "sequence")
+    log("ok", "{n} s is longer than one clip (15 s at most): the video is made as a long take, its segments chained. Read them, then generate the chain.", { n: total });
+  await D.startLongTake(seed, { ...images, from: wf.pipeline === "sequence" ? null : wf.pipeline });
+  await D.splitLongTake(total, { end, scenes: launchingCard });
 }
 
 // ── Target markets ────────────────────────────────────────────────────────────
@@ -456,12 +496,16 @@ async function generate() {
     brief.focus();
     return;
   }
+  // A length out of range is said, never brought silently into range; over one clip's
+  // length, the video is a long take.
+  let long;
+  try { long = F.hasControl("duration") && F.longVideo(); }
+  catch (err) { generateError(err.message); return; }
   const btn = $("generateBtn");
   btn.disabled = true;
   // The director's first step and the auto enrichment wait on Gemma before any job:
   // the button says so, with the time spent.
-  const busy = (wf.pipeline === "sequence" && (hasInputImage() || F.refList("seq").length))
-      || (wf.pipeline === "reference2video" && F.refList("r2v").some(it => F.itemMedia(it) === "image"))
+  const busy = ((long && hasInputImage()) || ((long || wf.pipeline === "reference2video") && F.refList().some(it => F.itemMedia(it) === "image")))
     ? L("{llm} is describing the images… {time}")
     : autoEnrich && wf.enrich !== "builtin" ? L("{llm} is enriching the brief… {time}") : null;
   const start = Date.now();
@@ -478,8 +522,8 @@ async function generate() {
       await enrich(wf);
     } else if (autoEnrich) log("sys", "{workflow} builds its own prompts: brief sent as it is.", { workflow: t(wf.label) });
     const seed = F.formSeed();
-    if (wf.pipeline === "reference2video") await generateR2V(seed);
-    else if (wf.pipeline === "sequence") await D.startLongTake(seed, await longTakeImages());
+    if (long) await longTake(wf, seed);
+    else if (wf.pipeline === "reference2video") await generateR2V(seed);
     else if (wf.pipeline === "campaign") generateCampaign(seed);
     else await generatePlain(wf, seed);
   } catch (err) { warn(err); generateError(err?.message ?? String(err)); }
@@ -555,7 +599,7 @@ async function openCardInForm(tool, a, image, quiet = false) {
   if (a.ratio) $("ratioSelect").value = a.ratio;
   if (a.mode) $("mossModeSelect").value = a.mode;
   if (a.count || a.variants) $("variants").value = a.count || a.variants;
-  if (a.duration) $("videoDuration").value = a.duration;
+  if (a.duration || a.total) { $("videoDuration").value = a.duration || a.total; refreshDurationHint(); }
   if (a.style && F.hasControl("style")) $("styleSelect").value = a.style;
   const img = id => image(id) && { name: image(id).name, ref: image(id).ref };
   if (a.image) setSelectedAsset({ ref: img(a.image).ref, filename: img(a.image).name });
@@ -590,12 +634,13 @@ async function openCardInForm(tool, a, image, quiet = false) {
 // A long take card's own button: the form takes the card over, then its click is the
 // Generate click, which opens the long take, at the card's length, its screenplay split into
 // segments (Gemma; nothing renders before "Generate the chain").
+let launchingCard = false;
 async function launchDirector(tool, a, image) {
   await openCardInForm(tool, a, image, true);
   log("sys", "Director started from an assistant card.");
   window.scrollTo({ top: 0, behavior: "smooth" });
-  await generate();
-  await D.splitLongTake(a.total);
+  launchingCard = true;
+  try { await generate(); } finally { launchingCard = false; }
 }
 
 // ── Modes ─────────────────────────────────────────────────────────────────────
@@ -628,7 +673,7 @@ const inAssistant = () => document.body.dataset.mode === "assistant";
 
 // ── Project buttons (resume, cancel) ──────────────────────────────────────────
 function updateResumeButton() {
-  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && F.currentPipeline() === D.savedPipeline());
+  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && D.savedPipelines().includes(F.currentPipeline()));
   updateCancelButton();
 }
 function updateCancelButton() {
@@ -946,6 +991,7 @@ function initForm() {
     if (card.dataset.scenario === "localization") $("galleryBlock").scrollIntoView({ behavior: "smooth", block: "start" });
   }));
   $("pipelineSelect").addEventListener("change", updateModelOptions);
+  $("videoDuration").addEventListener("input", refreshDurationHint);
   $("modelSelect").addEventListener("change", () => { updateModelLabel(); });
   $("assetChipClear").addEventListener("click", clearSelectedAsset);
   $("seqCharSheetBtn").addEventListener("click", () => makeSheet("char"));
@@ -1052,6 +1098,8 @@ function boot() {
   pollMonitor();
   setInterval(pollMonitor, 4000);
   MOBILE.addEventListener("change", () => D.placeProjectActions());
+  // A long take whose chain went on with the page closed: back on it, its jobs followed.
+  if (D.savedChainRunning()) D.restoreProject().catch(err => log("warn", "Restore failed: {error}", { error: err.message }));
 }
 
 boot();

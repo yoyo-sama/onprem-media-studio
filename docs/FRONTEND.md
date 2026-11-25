@@ -142,8 +142,13 @@ to it.
 
 ## Differences from 1.4
 
-- No ComfyUI and no LTX 2.5: every video is MiniMax H3, 5 to 15 seconds (17n+5 frame grid, the
-  actual duration is shown).
+- No ComfyUI and no LTX 2.5: every video is MiniMax H3, 5 to 15 seconds per clip (17n+5 frame
+  grid, the actual duration is shown). Longer, up to 150 s, a Text2Video, Image2Video or Video
+  from references is a long take: Generate opens it at that length, the brief split into
+  segments (its image is the first frame, its end image the last segment's, its reference images
+  stay references); a length out of range is refused under Generate, never brought into range
+  (the field once sent 15 s for 30, 2026-11-24). The long take form has the same field, its total
+  length (30 s by default, kept apart from a clip's 5 s).
 - Qwen-Image-Edit 2509 is gone (2026-10-29): image editing and the Canvas shot images use Qwen
   Image 2.1, whose sizes are multiples of 32 (`QWEN21_RATIOS`: 1344×768, 768×1344, 1024², 896×1120).
 - No storyboard in the Studio (2026-11-21): a story told in video is a long take, whose new

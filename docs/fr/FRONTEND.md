@@ -148,8 +148,14 @@ ajoute une carte Import d'image reliée à elle.
 
 ## Différences avec la 1.4
 
-- Ni ComfyUI ni LTX 2.5 : toute vidéo est MiniMax H3, de 5 à 15 secondes (grille de 17n+5
-  images, la durée réelle est affichée).
+- Ni ComfyUI ni LTX 2.5 : toute vidéo est MiniMax H3, de 5 à 15 secondes par clip (grille de
+  17n+5 images, la durée réelle est affichée). Plus longue, jusqu'à 150 s, une vidéo Text2Video,
+  Image2Video ou Vidéo à partir de références est un plan-séquence : « Générer » l'ouvre à cette
+  durée, le brief découpé en segments (son image est la première image, son image de fin celle du
+  dernier segment, ses images de référence restent des références) ; une durée hors limites est
+  refusée sous « Générer », jamais ramenée dans les limites (le champ envoyait 15 s pour 30,
+  2026-11-24). Le formulaire du plan-séquence a le même champ, sa durée totale (30 s par défaut,
+  gardée à part des 5 s d'un clip).
 - Qwen-Image-Edit 2509 est retiré (2026-10-29) : édition d'image et images des plans du Canvas
   passent par Qwen Image 2.1, dont les tailles sont des multiples de 32 (`QWEN21_RATIOS` :
   1344×768, 768×1344, 1024², 896×1120).

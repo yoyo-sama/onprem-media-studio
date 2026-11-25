@@ -1712,10 +1712,15 @@ export const DICT = {
     es: "Relay: {got} segmentos escritos ({n} pedidos): léelos antes de lanzar la cadena.",
     de: "Relay: {got} Segmente geschrieben ({n} angefragt): Lies sie, bevor du die Kette startest.",
   },
-  "Relay: {n} segments generated: assembling the sequence.": {
-    fr: "Relay : {n} segments générés : assemblage de la séquence.",
-    es: "Relay: {n} segmentos generados: ensamblando la secuencia.",
-    de: "Relay: {n} Segmente generiert: Die Sequenz wird zusammengesetzt.",
+  "Relay: the chain went on on the server: following it.": {
+    fr: "Relay : la chaîne a continué sur le serveur : suivi repris.",
+    es: "Relay: la cadena siguió en el servidor: seguimiento reanudado.",
+    de: "Relay: Die Kette lief auf dem Server weiter: Verfolgung wieder aufgenommen.",
+  },
+  "Relay: {n} job(s) queued on the server: the chain goes on even if this page is closed.": {
+    fr: "Relay : {n} tâche(s) en file sur le serveur : la chaîne continue même si cette page est fermée.",
+    es: "Relay: {n} tarea(s) en cola en el servidor: la cadena sigue aunque cierres esta página.",
+    de: "Relay: {n} Auftrag/Aufträge in der Warteschlange des Servers: Die Kette läuft weiter, auch wenn du diese Seite schließt.",
   },
   "Relay: {n} segments written: read them before starting the chain.": {
     fr: "Relay : {n} segments écrits : relis-les avant de lancer la chaîne.",
@@ -2286,6 +2291,11 @@ export const DICT = {
     fr: "Vidéos ({n})",
     es: "Vídeos ({n})",
     de: "Videos ({n})",
+  },
+  "Queued": {
+    fr: "En file",
+    es: "En cola",
+    de: "In der Warteschlange",
   },
   "Waiting": {
     fr: "En attente",
@@ -3661,5 +3671,25 @@ export const DICT = {
     fr: "Jusqu'à 9 images, 3 vidéos et 3 sons (12 en tout)",
     es: "Hasta 9 imágenes, 3 vídeos y 3 sonidos (12 en total)",
     de: "Bis zu 9 Bilder, 3 Videos und 3 Töne (12 insgesamt)",
+  },
+  "The video length is {min} to {max} s.": {
+    fr: "La durée de la vidéo va de {min} à {max} s.",
+    es: "La duración del vídeo va de {min} a {max} s.",
+    de: "Die Videolänge liegt zwischen {min} und {max} s.",
+  },
+  "Over 15 s, the video is a long take: segments of up to 10 s chained one after the other. Generate opens it to read them first.": {
+    fr: "Au-delà de 15 s, la vidéo est un plan-séquence : des segments de 10 s au plus, enchaînés. « Générer » l'ouvre pour que tu les relises d'abord.",
+    es: "Más allá de 15 s, el vídeo es un plano secuencia: segmentos de 10 s como máximo, encadenados. «Generar» lo abre para que los revises primero.",
+    de: "Über 15 s wird das Video eine Plansequenz: Segmente von höchstens 10 s, aneinandergereiht. „Generieren“ öffnet sie, damit du sie zuerst liest.",
+  },
+  "A long take takes up to {max} reference images, no clip or sound: {n} reference(s) left out.": {
+    fr: "Un plan-séquence prend jusqu'à {max} images de référence, ni vidéo ni son : {n} référence(s) laissée(s) de côté.",
+    es: "Un plano secuencia admite hasta {max} imágenes de referencia, ni vídeos ni sonidos: {n} referencia(s) descartada(s).",
+    de: "Eine Plansequenz nimmt bis zu {max} Referenzbilder, keine Videos oder Töne: {n} Referenz(en) weggelassen.",
+  },
+  "{n} s is longer than one clip (15 s at most): the video is made as a long take, its segments chained. Read them, then generate the chain.": {
+    fr: "{n} s, c'est plus qu'un clip (15 s au plus) : la vidéo est faite en plan-séquence, ses segments enchaînés. Relis-les, puis génère la chaîne.",
+    es: "{n} s es más que un clip (15 s como máximo): el vídeo se hace como plano secuencia, con sus segmentos encadenados. Revísalos y genera la cadena.",
+    de: "{n} s ist länger als ein Clip (höchstens 15 s): Das Video wird als Plansequenz mit aneinandergereihten Segmenten erstellt. Lies sie, dann generiere die Kette.",
   },
 };

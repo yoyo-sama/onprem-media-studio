@@ -334,6 +334,15 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     the woman was her sheet's from her first appearance (C4). And a segment that sends fewer
     references than the split numbered must renumber its `<Subject N>`: the dropped setting
     sheets stayed cited with no picture (A6). (2026-11-22)
+59. **A chain the user asked for in one click runs on the server, not in the page.** A long take
+    of 5 × 10 s takes about an hour; the page that submitted its segments one by one stopped
+    after segment 1 when the computer slept, and nothing said so. The click now queues every job
+    at once, a job naming the output to come of the one before it; the page only follows. And a
+    form field never brings a value silently into range: a 30 s ask sent 15 s for weeks. Refuse,
+    or do what was asked another way (over 15 s, a long take). (2026-11-24) The control render
+    (page closed) held, and showed what a length must count: a latent continuation redoes 22
+    frames the take drops, so a 30 s plan made 28.5 s while the page said 30.4 s. A length shown
+    to the user is the one the file will have. (2026-11-25)
 
 ## 8. Front end (for the port in step 4)
 

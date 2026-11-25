@@ -525,6 +525,7 @@ body[data-gallery-use="first"]:not([data-mode="assistant"]) .input-use,
 body:not([data-gallery-use]) .ref-use, body[data-mode="assistant"] .ref-use { display: none !important; }
 .generate-bar > .hint { flex: 1 1 100%; margin: -4px 0 0; }
 /* What a pipeline takes besides the brief (images of a long take, references), before the button. */
+.generate-bar .gb-note { flex: 1 1 100%; margin: 0; }
 .generate-bar .gb-block { flex: 1 1 100%; gap: 6px; padding-top: 10px; border-top: 1px solid var(--border-light); }
 .gb-block .section-title, .gb-block .hint { margin: 0; }
 .gb-block .form-stack { gap: 6px; }

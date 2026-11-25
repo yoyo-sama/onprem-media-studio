@@ -418,7 +418,7 @@ export const CARDS = {
       if (!text) return setStatus(node, "error", "Error: write the prompt first.");
       let capped = false;
       // H3 expects at the head of the prompt the moment the input image stands for.
-      const prompt = P.capH3Prompt(`${P.h3Alignment(false, p.duration)}\n\n${text}`, () => { capped = true; });
+      const prompt = P.capH3Prompt(`${P.h3Alignment(false, p.duration)}\n\n${P.stripH3Alignment(text)}`, () => { capped = true; });
       setStatus(node, "running", "{engine} running…", { engine: "MiniMax H3" });
       const job = await run(node, "h3-i2v", { prompt, duration: p.duration, seed: seedOf(node), loras: lorasOf(node, "h3"), image });
       done(node, output(job, ".mp4"), capped ? "Done: {name}. H3 prompt cut to 7,000 characters (model limit)." : undefined);
