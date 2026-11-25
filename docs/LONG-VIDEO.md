@@ -503,3 +503,8 @@ silence, no jump at the joins, the covered market kept. Three defects, fixed sin
   tile, not under Text2Video where it was asked. It shows under both now, and a page opened while
   a saved chain still has jobs to follow goes back to that long take by itself and follows them
   (it submits nothing).
+
+Rendered again on 928b7fc (same brief, page closed during segment 1): clips of 243 + 260 + 260
+frames, take 29.96 s (719 frames), −18.1 LUFS, no silence; the same red-haired woman in the denim
+jacket over the green sweater in every frame, the market kept, no jump at the joins; the reopened
+page went back to the take by itself, with no job queued.

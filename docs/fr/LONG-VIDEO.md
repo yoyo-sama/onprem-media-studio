@@ -545,3 +545,8 @@ silence, sans saut aux raccords, le marché couvert gardé. Trois défauts, corr
   sous la carte du plan-séquence, pas sous Text2Video où il avait été demandé. Il apparaît sous les
   deux, et une page ouverte alors qu'une chaîne enregistrée a encore des jobs à suivre revient
   d'elle-même sur ce plan-séquence et les suit (sans rien soumettre).
+
+Rendu de nouveau sur 928b7fc (même brief, page fermée pendant le segment 1) : clips de 243 + 260 +
+260 images, plan-séquence de 29,96 s (719 images), −18,1 LUFS, sans silence ; la même femme rousse
+en veste en jean sur pull vert sur toutes les images, le marché gardé, aucun saut aux raccords ; la
+page rouverte est revenue d'elle-même sur le plan-séquence, sans mettre de job en file.
