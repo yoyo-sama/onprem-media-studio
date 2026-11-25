@@ -524,4 +524,24 @@ Deux signalements du propriétaire sur promaxgb10-95c7 (main 756bc78) :
   déjà par elle (un prompt réutilisé depuis la galerie) : elle est retirée du brief avant d'être
   écrite (`stripH3Alignment`), dans le Studio comme sur le Canvas.
 
-Pas encore rendu sur le GB10.
+**Rendu GB10, 2026-11-25** (`tools/qualify/closed_page_take.js`, promaxgb10-95c7 sur ebffb48) : un
+Text2Video de 30 s, navigateur fermé quelques secondes après « Générer la chaîne », pendant le segment 1. Le
+serveur a rendu seul les trois segments et l'assemblage (592 + 432 + 302 + 136 s), −17,9 LUFS, sans
+silence, sans saut aux raccords, le marché couvert gardé. Trois défauts, corrigés depuis :
+
+- **28,5 s pour 30 s, la page annonçant 30,4 s.** Un segment qui continue le clip précédent dans
+  l'espace latent refait les 22 dernières images de ce clip, et l'assemblage les retire : 243 + 221
+  + 221 images. La durée d'une carte est maintenant ce que le segment ajoute au plan-séquence : une
+  continuation latente demande à H3 ces 22 images en plus, sa partie neuve sur le pas le plus proche
+  de la grille de 17 images (une carte de 10 s : un clip de 260 images, 238 neuves, 9,9 s), dans la
+  limite de 15 s par clip. Le plan, les horaires des cartes et le tableau comptent pareil : 30 s
+  donne 30,0 s.
+- **La veste a changé au segment 3.** Sans référence, l'apparence du sujet n'était que dans le
+  brief, et le découpage n'écrit aucune apparence dans un segment : le segment 1 est parti avec « une
+  femme aux cheveux roux courts », sans tenue. Sans référence de sujet, le découpage écrit maintenant
+  aussi une fois l'apparence des sujets (`"subjects"`, le champ partagé Sujets, recopiée du
+  scénario, rien d'ajouté), envoyée dans le subject_definitions de chaque segment.
+- **Rouverte, la page ne montrait pas le plan-séquence.** « Reprendre le projet » n'apparaissait que
+  sous la carte du plan-séquence, pas sous Text2Video où il avait été demandé. Il apparaît sous les
+  deux, et une page ouverte alors qu'une chaîne enregistrée a encore des jobs à suivre revient
+  d'elle-même sur ce plan-séquence et les suit (sans rien soumettre).

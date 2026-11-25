@@ -205,7 +205,7 @@ async function longTake(wf, seed) {
   }
   if (wf.pipeline !== "sequence")
     log("ok", "{n} s is longer than one clip (15 s at most): the video is made as a long take, its segments chained. Read them, then generate the chain.", { n: total });
-  await D.startLongTake(seed, images);
+  await D.startLongTake(seed, { ...images, from: wf.pipeline === "sequence" ? null : wf.pipeline });
   await D.splitLongTake(total, { end, scenes: launchingCard });
 }
 
@@ -673,7 +673,7 @@ const inAssistant = () => document.body.dataset.mode === "assistant";
 
 // ── Project buttons (resume, cancel) ──────────────────────────────────────────
 function updateResumeButton() {
-  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && F.currentPipeline() === D.savedPipeline());
+  $("resumeProjectBtn").hidden = !(D.hasSavedProject() && D.savedPipelines().includes(F.currentPipeline()));
   updateCancelButton();
 }
 function updateCancelButton() {
@@ -1098,6 +1098,8 @@ function boot() {
   pollMonitor();
   setInterval(pollMonitor, 4000);
   MOBILE.addEventListener("change", () => D.placeProjectActions());
+  // A long take whose chain went on with the page closed: back on it, its jobs followed.
+  if (D.savedChainRunning()) D.restoreProject().catch(err => log("warn", "Restore failed: {error}", { error: err.message }));
 }
 
 boot();

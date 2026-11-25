@@ -196,6 +196,9 @@ const SPLIT = {
   // A queued job's output to come, as a job of the same chain takes it.
   const outOf = (job, ext = ".mp4") => ({ job: job?.id, output: ext });
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  // A segment continuing the previous clip in latent space redoes its last 22 frames, dropped
+  // from the take: a 10 s card is a clip of 260 frames (238 new ones, 14 steps of 17), 12 s 311.
+  const LINK10 = 260 / 24, LINK12 = 311 / 24;
   // Generate on a long take of one 10 s segment: the brief stays whole, as the segment's text.
   const openTake = async (length = "10") => { await page.fill("#videoDuration", length); await page.click("#generateBtn"); };
   const errs = [];
@@ -231,7 +234,7 @@ const SPLIT = {
   check(await cardDurs() === "10", `cards for 10 s: ${await cardDurs()}`);
   await page.fill("#relayTotal", "30");
   await page.dispatchEvent("#relayTotal", "change");
-  check(/3 segment\(s\): 10 \+ 10 \+ 10 s, 30\.4 s rendered/.test(await page.textContent("#relayPlan")), `plan for 30 s: "${await page.textContent("#relayPlan")}"`);
+  check(/3 segment\(s\): 10 \+ 10 \+ 10 s, 30\.0 s rendered/.test(await page.textContent("#relayPlan")), `plan for 30 s: "${await page.textContent("#relayPlan")}"`);
 
   // The shared fields are folded while they are all empty, and "Max per segment" sits under
   // the composer's advanced options.
@@ -248,6 +251,7 @@ const SPLIT = {
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .relay-seg textarea")].map(a => a.value.trim()).filter(Boolean).length === 3);
   check(jobs.length === 0, `the split or a shared field submitted ${jobs.length} job(s)`);
   check(chats.length === 1 && /exactly 3 segments/.test(chats[0].system), "the split did not ask Gemma for 3 segments");
+  check(!/"subjects"/.test(chats[0].system), "with the subjects' sheets, the split asks for their look");
   const look = await page.$$eval("#relayLook textarea", els => Object.fromEntries(els.map(e => [e.dataset.look, e.value])));
   check(look.lighting === "Warm candle light.", `the user's lighting was overwritten: "${look.lighting}"`);
   check(await page.$eval("#relayLook", el => el.open), "the shared fields the split filled are folded");
@@ -257,7 +261,7 @@ const SPLIT = {
   check(look.camera === SPLIT.framing && look.sound === SPLIT.soundscape && look.music === "",
     `empty shared fields not filled as expected: ${JSON.stringify(look)}`);
   const heads = await page.$$eval("#relayList .seg-head strong", els => els.map(e => e.textContent));
-  check(JSON.stringify(heads) === JSON.stringify(["Segment 1/3 · 00:00.0–00:10.1", "Segment 2/3 · 00:10.1–00:20.3", "Segment 3/3 · 00:20.3–00:30.4"]),
+  check(JSON.stringify(heads) === JSON.stringify(["Segment 1/3 · 00:00.0–00:10.1", "Segment 2/3 · 00:10.1–00:20.0", "Segment 3/3 · 00:20.0–00:30.0"]),
     `segment headers: ${JSON.stringify(heads)}`);
   const durs = await page.$$eval('#relayList input[type="number"]', els => els.map(e => e.value));
   check(JSON.stringify(durs) === JSON.stringify(["10", "10", "10"]), `segment lengths: ${JSON.stringify(durs)}`);
@@ -306,7 +310,7 @@ const SPLIT = {
       && (i === 0 ? j.params.aspect === "16:9" : !("aspect" in j.params)), `segment ${i + 1} start and references: ${JSON.stringify({ ...j.params, prompt: undefined })}`);
     check(/<Subject 1> is the main character in <Picture 1>/.test(pr) && /<Subject 2> is the location as defined by <Picture 2>/.test(pr),
       `segment ${i + 1} names the sheets: ${pr}`);
-    check(j.params.duration === 10, `segment ${i + 1} duration ${j.params.duration}`);
+    check(j.params.duration === (i === 0 ? 10 : LINK10), `segment ${i + 1} duration ${j.params.duration}`);
     check(!/golden|steady framing/i.test(pr), `segment ${i + 1} prompt carries a default look`);
     check(pr.includes("Warm candle light.") && pr.includes(`Framing: ${SPLIT.framing}`), `segment ${i + 1} prompt lacks the shared look`);
     check(pr.includes(`overall_soundscape:\n${SPLIT.soundscape}`) && pr.includes("non_diegetic_music:\nNone."), `segment ${i + 1} sound fields`);
@@ -319,7 +323,7 @@ const SPLIT = {
   const tiles = () => page.$$eval("#relayBoard .relay-tile", ts => ts.map(t => t.className.replace("relay-tile ", "")));
   check(await page.isVisible("#relayBoard"), "the board is hidden");
   check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-ready", "st-ready"]), `tiles after the chain: ${JSON.stringify(await tiles())}`);
-  check(/3\/3 segments ready · 30\.4 s of 30\.4 s/.test(await page.textContent("#relayBoard .relay-summary")),
+  check(/3\/3 segments ready · 30\.0 s of 30\.0 s/.test(await page.textContent("#relayBoard .relay-summary")),
     `summary: "${await page.textContent("#relayBoard .relay-summary")}"`);
   check((await page.textContent("#relayRunBtn")).trim() === "Generate the chain again", `run button: "${await page.textContent("#relayRunBtn")}"`);
   check(await page.isHidden("#relayStopBtn"), "the stop button shows with no chain running");
@@ -411,10 +415,8 @@ const SPLIT = {
   check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-r2v", "h3-r2v", "video-stitch"]), "continuing the stopped chain");
   const seg2Job = held.shift();
   done.set(seg2Job.id, seg2Job);
+  // Reopened, the page goes back to the long take by itself and follows its jobs.
   await page.reload({ waitUntil: "load" });
-  await page.click('.usecase[data-pipeline="sequence"]');
-  await page.waitForSelector("#resumeProjectBtn:not([hidden])", { timeout: 5000 });
-  await page.click("#resumeProjectBtn");
   await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "Ready"
     && document.querySelectorAll("#relayBoard .relay-tile.st-pending").length === 1, null, { timeout: 5000 });
   for (const job of held.splice(0)) { done.set(job.id, job); push(job); }
@@ -666,7 +668,7 @@ const SPLIT = {
     && /retention_analysis:\nPreserve the same facial identity/.test(t2v.prompt || ""), `segment 1 from text: ${JSON.stringify(t2v)}`);
   const after1 = lt[1]?.params || {};
   check(same(after1.continue_from, outOf(lt[0])) && same(after1.references, [outOf(lt[0], ".png")])
-    && after1.duration === 12 && /<Subject 1> is the main character in <Picture 1>\.\n<Subject 1> is an adult woman/.test(after1.prompt || ""),
+    && after1.duration === LINK12 && /<Subject 1> is the main character in <Picture 1>\.\n<Subject 1> is an adult woman/.test(after1.prompt || ""),
     `segment 2 after text: ${JSON.stringify(after1)}`);
   check(same(lt[2]?.params.continue_from, outOf(lt[1])), "segment 3 does not continue segment 2");
 
@@ -841,14 +843,28 @@ const SPLIT = {
   check(await page.isVisible("#durationHint"), "nothing says that 30 s makes a long take");
   before = jobs.length;
   let chatsAt = chats.length;
+  // With no reference, the split writes the subject's look once, in the shared fields (a take
+  // from the text changed jacket at segment 3, GB10 2026-11-25).
+  SPLIT.subjects = "A woman in her thirties with short red hair, a denim jacket over a green sweater.";
   await page.click("#generateBtn");
   await splitOpen();
   check(jobs.length === before && chats.slice(chatsAt).some(c => /exactly 3 segments/.test(c.system || "")) && await page.inputValue("#relayTotal") === "30",
     `Text2Video at 30 s: ${jobs.length - before} job(s), total ${await page.inputValue("#relayTotal")}`);
+  check(chats.slice(chatsAt).some(c => /"subjects": one English paragraph/.test(c.system || ""))
+    && await page.inputValue('#relayLook textarea[data-look="subjects"]') === SPLIT.subjects, "with no reference, the split leaves the subject's look out");
   lt = await runAll(before);
-  check(same(lt.map(j => j.pipeline), ["h3-t2v", "h3-r2v", "h3-r2v", "video-stitch"]) && lt.slice(0, 3).every(j => j.params.duration === 10)
+  delete SPLIT.subjects;
+  check(same(lt.map(j => j.pipeline), ["h3-t2v", "h3-r2v", "h3-r2v", "video-stitch"]) && same(lt.slice(0, 3).map(j => j.params.duration), [10, LINK10, LINK10])
     && same(lt[1]?.params.continue_from, outOf(lt[0])) && same(lt[2]?.params.continue_from, outOf(lt[1])),
     `Text2Video at 30 s, the chain: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.duration]))}`);
+  check(lt.slice(0, 3).every(j => (j.params.prompt || "").split("\n\nsummary:")[0].includes("a denim jacket over a green sweater")),
+    "a segment of the take from the text lacks the subject's look");
+  // Reopened later, the take is resumed from Text2Video too, where it was asked.
+  await page.reload({ waitUntil: "load" });
+  if (await page.isVisible("#studioExitBtn")) await page.click("#studioExitBtn");
+  await page.click('.usecase[data-pipeline="text2image"]');
+  await page.selectOption("#pipelineSelect", "text2video");
+  check(await page.isVisible("#resumeProjectBtn"), "a long take asked from Text2Video cannot be resumed from it");
 
   // Image2Video: its image is the first frame, its end image the last segment's (FL2VA).
   await fresh("image2video");

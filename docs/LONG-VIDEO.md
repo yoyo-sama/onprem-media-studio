@@ -483,4 +483,23 @@ Two reports from the owner on promaxgb10-95c7 (main 756bc78):
   (a prompt reused from the gallery): it is left out of the brief before it is written
   (`stripH3Alignment`), in the Studio and on the Canvas.
 
-Not rendered on the GB10 yet.
+**GB10 render, 2026-11-25** (`tools/qualify/closed_page_take.js`, promaxgb10-95c7 on ebffb48): a
+30 s Text2Video, the browser closed a few seconds after "Generate the chain", segment 1 running. The server
+rendered the three segments and the take on its own (592 + 432 + 302 + 136 s), −17.9 LUFS, no
+silence, no jump at the joins, the covered market kept. Three defects, fixed since:
+
+- **28.5 s for 30 s, the page saying 30.4 s.** A segment that continues the clip before it in
+  latent space redoes that clip's last 22 frames, and the take drops them: 243 + 221 + 221 frames.
+  A card's length is now what the segment adds to the take: a latent link asks H3 for those 22
+  frames on top, its new part on the nearest step of the 17-frame grid (a 10 s card: a 260-frame
+  clip, 238 new frames, 9.9 s), within 15 s per clip. The plan, the card times and the board count
+  the same: 30 s plans as 30.0 s.
+- **The jacket changed at segment 3.** With no reference, the subject's look was only in the brief,
+  and the split writes no appearance inside a segment: segment 1 went with "a woman, short red hair"
+  and no outfit. With no subject reference, the split now also writes the subjects' look once
+  (`"subjects"`, the shared Subjects field, copied from the scenario, nothing added), sent in every
+  segment's subject_definitions.
+- **Reopened, the page did not show the take.** "Resume the project" showed only under the long take
+  tile, not under Text2Video where it was asked. It shows under both now, and a page opened while
+  a saved chain still has jobs to follow goes back to that long take by itself and follows them
+  (it submits nothing).

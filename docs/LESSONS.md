@@ -339,7 +339,10 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     after segment 1 when the computer slept, and nothing said so. The click now queues every job
     at once, a job naming the output to come of the one before it; the page only follows. And a
     form field never brings a value silently into range: a 30 s ask sent 15 s for weeks. Refuse,
-    or do what was asked another way (over 15 s, a long take). (2026-11-24)
+    or do what was asked another way (over 15 s, a long take). (2026-11-24) The control render
+    (page closed) held, and showed what a length must count: a latent continuation redoes 22
+    frames the take drops, so a 30 s plan made 28.5 s while the page said 30.4 s. A length shown
+    to the user is the one the file will have. (2026-11-25)
 
 ## 8. Front end (for the port in step 4)
 

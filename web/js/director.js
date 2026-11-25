@@ -101,7 +101,7 @@ function enterSession(s) {
 // the shared fields at once, word for word. End images are set on each segment's card.
 // The H3 LoRA stack of the form goes to every segment.
 export const LONG_TAKE_REFS = 7;
-export async function startLongTake(seed, { first = null, refs = [] } = {}) {
+export async function startLongTake(seed, { first = null, refs = [], from = null } = {}) {
   const text = F.brief(), play = P.parseScreenplay(text);
   const place = refs.find(x => x.kind === "setting") || null, subjects = refs.filter(x => x !== place).slice(0, LONG_TAKE_REFS - (place ? 1 : 0));
   const ROLES = { character: "character", object: "reference", setting: "environment" };
@@ -112,7 +112,7 @@ export async function startLongTake(seed, { first = null, refs = [] } = {}) {
     ? subjects.map(x => newChar({ kind: "other", subject: desc(x), role: ROLES[x.kind] || "character" }, [imported({ ref: up(x) })]))
     : [newChar({ kind: "other", subject: first ? desc(first) : "" }, first ? [imported({ ref: up(first) })] : [])];
   const s = {
-    pipeline: "sequence", wf: F.workflow("h3_sequence"), seed, ratio: $("ratioSelect").value, style: "none",
+    pipeline: "sequence", ...(from ? { from } : {}), wf: F.workflow("h3_sequence"), seed, ratio: $("ratioSelect").value, style: "none",
     loras: F.formLoras(), startImage: first ? { ref: up(first) } : null, refsGiven: subjects.length + (place ? 1 : 0),
     chars, locFields: place ? { place: desc(place) } : {}, locVariants: place ? [imported({ ref: up(place) })] : [],
     locActive: 0,
@@ -220,7 +220,20 @@ function relayDurations(total, segMax) {
   const base = Math.floor(total / n), extra = total - base * n;
   return Array.from({ length: n }, (_, i) => F.clampDuration(Math.min(segMax, base + (i >= n - extra ? 1 : 0))));
 }
-const realSeconds = durs => durs.reduce((sum, v) => sum + P.h3RealDuration(v), 0);
+// A segment that continues the clip before it in latent space redoes that clip's last 22
+// frames, and the take drops them (studio/pipelines/h3_continue.py). Its card length is what it
+// adds to the take: H3 renders those 22 frames on top, the new part on the nearest step of the
+// 17-frame grid, within H3's 15 s. Counted as a whole clip, a 30 s take came out 28.5 s while
+// the plan said 30.4 s (GB10, 2026-11-25).
+const TAIL_FRAMES = 22, CLIP_FRAMES_MAX = P.h3VideoFrames(15);
+const linkFrames = sec => Math.min(CLIP_FRAMES_MAX, 17 * Math.round(sec * 24 / 17) + TAIL_FRAMES);
+const linkSeconds = sec => Math.min(15, linkFrames(sec) / 24);
+// Segment i continues the one before it in latent space, as the chain will send it: a long
+// take from the text has its subject (segment 1's last frame) once segment 1 is queued.
+const linked = i => latentLink(i) || (i > 0 && continuous(d.relay.segments[i]) && !d.relay.segments[i].endImage && !d.startImage);
+// Seconds segment i adds to the take.
+const takeSeconds = (seg, i) => linked(i) ? (linkFrames(seg.duration) - TAIL_FRAMES) / 24 : P.h3RealDuration(seg.duration);
+const takeLength = (segs, keep = () => true) => segs.reduce((sum, seg, i) => sum + (keep(seg) ? takeSeconds(seg, i) : 0), 0);
 // "00:10.1": a position in the sequence, from the durations H3 really renders.
 const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${(sec % 60).toFixed(1).padStart(4, "0")}`;
 // The subjects the Relay follows: the long take's references, sent straight to Ref2VA.
@@ -377,7 +390,7 @@ function renderRelayPlan() {
   const r = d?.relay;
   if (!r) { $("relayPlan").textContent = ""; return; }
   const durs = r.segments.map(seg => seg.duration), empty = r.segments.filter(seg => !seg.prompt.trim()).length;
-  const line = t("→ {n} segment(s): {list} s, {real} s rendered", { n: durs.length, list: durs.join(" + "), real: realSeconds(durs).toFixed(1) });
+  const line = t("→ {n} segment(s): {list} s, {real} s rendered", { n: durs.length, list: durs.join(" + "), real: takeLength(r.segments).toFixed(1) });
   $("relayPlan").textContent = empty ? `${line} · ${t("{n} segment(s) still to write", { n: empty })}` : line;
 }
 // The total length is the sum of the cards: kept so after a card is added, removed or
@@ -416,7 +429,7 @@ function renderRelay() {
   let at = 0;
   list.replaceChildren(...r.segments.map((seg, i) => {
     const from = at;
-    at += P.h3RealDuration(seg.duration);
+    at += takeSeconds(seg, i);
     const el = document.createElement("div");
     el.className = "relay-seg";
     el.dataset.seg = String(i);
@@ -550,7 +563,7 @@ function renderBoard() {
   let at = 0;
   strip.replaceChildren(...segs.map((seg, i) => {
     const from = at, live = relayLive.get(seg);
-    at += P.h3RealDuration(seg.duration);
+    at += takeSeconds(seg, i);
     const b = document.createElement("button");
     b.type = "button";
     b.className = `relay-tile st-${seg.status}`;
@@ -571,9 +584,9 @@ function renderBoard() {
     return b;
   }));
   // Summary: segments ready, seconds rendered, the segment running and the time left.
-  const ready = segs.filter(seg => seg.status === "ready"), done = realSeconds(ready.map(seg => seg.duration));
+  const ready = segs.filter(seg => seg.status === "ready"), done = takeLength(segs, seg => seg.status === "ready");
   const parts = [t("{n}/{total} segments ready · {done} s of {all} s", { n: ready.length, total: segs.length,
-    done: done.toFixed(1), all: realSeconds(segs.map(seg => seg.duration)).toFixed(1) })];
+    done: done.toFixed(1), all: takeLength(segs).toFixed(1) })];
   const timed = segs.filter(seg => seg.renderSec > 0);
   if (relayRunning && timed.length) {
     const avg = timed.reduce((sum, seg) => sum + seg.renderSec, 0) / timed.length;
@@ -685,7 +698,7 @@ function segmentJob(s, i) {
   const label = [L("Relay · segment {n}/{total}"), { n: i + 1, total }];
   const noLink = () => new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
   const r2v = (refs, from, how) => ({ pipeline: "h3-r2v",
-    params: { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref), ...from },
+    params: { prompt: seg.prompt_used, duration: from.continue_from ? linkSeconds(seg.duration) : seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref), ...from },
     meta: { label, sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref.${how} · ${seg.duration} s`, seed: seg.seed }] } });
   seg.textStart = false;
   seg.start = null;
@@ -1085,8 +1098,13 @@ function loadSaved() {
   return p;
 }
 export const hasSavedProject = () => !!savedCache;
-// Pipeline of the saved project: "Resume the project" shows under that pipeline only.
-export const savedPipeline = () => savedCache?.pipeline || null;
+// Pipelines of the saved project: "Resume the project" shows under the long take's, and under
+// the one a long take was opened from (Text2Video, Image2Video, Video from references).
+export const savedPipelines = () => (savedCache ? [savedCache.pipeline, savedCache.from].filter(Boolean) : []);
+// The saved long take has jobs on the server not followed to the end (the page was closed
+// while its chain ran): the page opens on it and follows them. Nothing is submitted.
+export const savedChainRunning = () => !!savedCache?.relay
+  && ((savedCache.relay.segments || []).some(seg => seg.job) || (!!savedCache.relay.stitchJob && !savedCache.relay.video));
 
 const exists = ref => fetch(refURL(ref), { method: "HEAD" }).then(r => r.ok, () => false);
 
