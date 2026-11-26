@@ -337,6 +337,8 @@ const SPLIT = {
     const P = require(path.join(__dirname, "..", "web", "js", "prompts.js"));
     check(pr.split(P.H3_GUARD_ANATOMY).length === 2 && /retention_analysis:\n[^]*\nAnatomy and scale: fully_preserved - [^]*\n\ndetailed_description:/.test(pr)
       && pr.split(P.H3_GUARD_SHOT).length === 2 && pr.includes(` ${P.H3_GUARD_SHOT}\n\noverall_soundscape:`), `segment ${i + 1} coherence guards: ${pr}`);
+    // A segment continuing the previous clip opens on that join; the first one does not.
+    check(pr.includes(P.H3_CONTINUES) === (i > 0), `segment ${i + 1} join sentence: ${pr}`);
   }
   // A continuous segment takes no frame of the one before: no transition image to choose.
   check(await page.$$eval("#relayList .relay-thumb", els => els.length) === 0, "transition images offered before continuous segments");

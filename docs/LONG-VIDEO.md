@@ -508,3 +508,50 @@ Rendered again on 928b7fc (same brief, page closed during segment 1): clips of 2
 frames, take 29.96 s (719 frames), −18.1 LUFS, no silence; the same red-haired woman in the denim
 jacket over the green sweater in every frame, the market kept, no jump at the joins; the reopened
 page went back to the take by itself, with no job queued.
+
+## Drifts of a 3-minute take (2026-11-26)
+
+A 3-minute original anime (three 60 s long takes from screenplays, then `video-concat`, on
+promaxgb10-95c7) kept the 2D style and the three characters, but showed drifts the brief never
+asked for: a character drawn twice in a busy shot, a third hand left on the handlebar while the
+rider waved, a small robot grown to a girl's height, hard cuts and a ghost dissolve inside links
+marked continuous, and props (an egg, a scooter, an airship) whose design changed from shot to
+shot. They come from the prompt, not from the seed: re-rendering with new seeds kept the double.
+What changed, for every H3 video (LESSONS #60):
+
+- **Coherence guards in every H3 prompt.** `capH3Prompt`, the one function every H3 prompt goes
+  through (Text2Video, Image2Video, Video from references, every long take segment, the Canvas,
+  the assistant's cards, the campaign teaser), closes `retention_analysis` with an anatomy and
+  scale line (each character once in the frame, its own number of heads, arms, hands and legs, a
+  hand that rises leaving its place, sizes relative to one another kept) and
+  `detailed_description` with a one-shot sentence (none when a clip is the camera-movement
+  reference); plain prose gets both at its end. Written once, given back exactly by
+  `stripH3Guards`, never trimmed.
+- **A reference sheet is described once.** Gemma's vision wrote "shown from four different
+  angles", "against a pale off-white background": H3 drew the subject twice. The instruction now
+  asks for the one subject, its size against an adult and every distinctive accessory, never
+  its views, poses or background; `stripSheetLayout` removes what slips through.
+- **A continuous join opens on the previous clip.** A segment that continues the previous clip
+  in latent space opens its body on that join (`H3_CONTINUES`): same place, framing and light.
+- **Props written once.** With subject references, the split now also writes the recurring
+  objects, vehicles and animals with no reference in the shared Subjects field (with none, the
+  subjects themselves, with their size), sent in every segment's `subject_definitions`. A
+  screenplay is read as written: its `subject_definitions` must name them.
+
+**Bench on the GB10** (`tools/qualify/anime_take/drift_bench.py`, same seed and same request,
+only the prompt changed; cut = scdet score over 0.3):
+
+| Case | Before | After |
+|---|---|---|
+| Sheet descriptions with layout words (3 sheets × 3 runs) | 8 of 9 | 0 of 9 |
+| Egg hatch (job-28 → 36): Riko per frame, 9 frames | 2 Riko in 7 frames, a cut at 1.75 s | 1 Riko in all 9, no cut |
+| Arrival at the mountain (job-9 → 37) | cuts at 1.0 s and 7.25 s | cut at 1.0 s only, one continuous push-in |
+| The claw (job-13 → 38) | cut at 1.42 s | same |
+| Jump to the ladder (job-16 → 39) | cut at 1.0 s | same |
+
+The one-shot sentence removed the cut inside the clip; the cut right after the ~1 s of context
+stayed: the segment's text started in another framing or place than the previous clip's end.
+That is what the join sentence answers (not benched yet). The first description of the new
+vision instruction dropped the Baron's monocle, and the monocle left the clip after 2.5 s: the
+instruction now names distinctive accessories. The airship stayed a red and white flying boat:
+the bench re-rendered screenplay segments that never defined it.

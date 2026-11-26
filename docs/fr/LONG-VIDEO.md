@@ -550,3 +550,54 @@ Rendu de nouveau sur 928b7fc (même brief, page fermée pendant le segment 1) : 
 260 images, plan-séquence de 29,96 s (719 images), −18,1 LUFS, sans silence ; la même femme rousse
 en veste en jean sur pull vert sur toutes les images, le marché gardé, aucun saut aux raccords ; la
 page rouverte est revenue d'elle-même sur le plan-séquence, sans mettre de job en file.
+
+## Dérives d'une vidéo de 3 minutes (2026-11-26)
+
+Un animé original de 3 minutes (trois plans-séquences de 60 s à partir de scénarios, puis
+`video-concat`, sur promaxgb10-95c7) a gardé le style 2D et les trois personnages, mais a montré
+des dérives que le brief ne demandait pas : un personnage dessiné deux fois dans une scène
+chargée, une troisième main restée sur le guidon pendant que la conductrice saluait, un petit
+robot devenu aussi grand qu'une jeune fille, des coupes franches et un fondu fantôme dans des
+raccords marqués continus, et des accessoires (un œuf, un scooter, un dirigeable) dont le design
+changeait d'un plan à l'autre. Elles viennent du prompt, pas de la graine : refaire avec d'autres
+graines gardait le double. Ce qui change, pour toute vidéo H3 (LESSONS n°60) :
+
+- **Des garde-fous de cohérence dans chaque prompt H3.** `capH3Prompt`, la seule fonction par où
+  passe tout prompt H3 (Text2Video, Image2Video, Vidéo à partir de références, chaque segment de
+  plan-séquence, le Canvas, les cartes de l'assistant, le teaser de campagne), termine
+  `retention_analysis` par une ligne d'anatomie et d'échelle (chaque personnage une seule fois
+  dans l'image, son propre nombre de têtes, bras, mains et jambes, une main qui se lève quittant
+  sa place, les tailles relatives gardées) et `detailed_description` par une phrase de plan unique
+  (aucune quand un clip sert de référence de mouvement de caméra) ; la prose simple reçoit les
+  deux à la fin. Écrites une seule fois, rendues à l'identique par `stripH3Guards`, jamais rognées.
+- **Une planche de référence est décrite une seule fois.** La vision de Gemma écrivait « shown
+  from four different angles », « against a pale off-white background » : H3 dessinait le sujet
+  deux fois. La consigne demande maintenant le sujet unique, sa taille comparée à un adulte et
+  chaque accessoire distinctif, jamais ses vues, poses ou fond ; `stripSheetLayout` retire ce qui
+  passe quand même.
+- **Un raccord continu s'ouvre sur le clip précédent.** Un segment qui continue le clip précédent
+  dans l'espace latent ouvre son texte sur ce raccord (`H3_CONTINUES`) : même lieu, même cadrage,
+  même lumière.
+- **Les accessoires écrits une fois.** Avec des références de sujets, le découpage écrit aussi
+  les objets, véhicules et animaux récurrents sans référence dans le champ partagé Sujets (sans
+  référence, les sujets eux-mêmes, avec leur taille), envoyé dans le `subject_definitions` de
+  chaque segment. Un scénario est lu tel qu'écrit : son `subject_definitions` doit les nommer.
+
+**Banc sur le GB10** (`tools/qualify/anime_take/drift_bench.py`, même graine et même requête,
+seul le prompt change ; coupe = score scdet au-dessus de 0,3) :
+
+| Cas | Avant | Après |
+|---|---|---|
+| Descriptions de planche avec des mots de mise en page (3 planches × 3 essais) | 8 sur 9 | 0 sur 9 |
+| Éclosion de l'œuf (job-28 → 36) : Riko par image, 9 images | 2 Riko dans 7 images, une coupe à 1,75 s | 1 Riko dans les 9, aucune coupe |
+| Arrivée à la montagne (job-9 → 37) | coupes à 1,0 s et 7,25 s | coupe à 1,0 s seulement, un travelling avant continu |
+| La griffe (job-13 → 38) | coupe à 1,42 s | pareil |
+| Saut vers l'échelle (job-16 → 39) | coupe à 1,0 s | pareil |
+
+La phrase de plan unique a supprimé la coupe à l'intérieur du clip ; la coupe juste après la
+seconde de contexte est restée : le texte du segment commençait dans un autre cadrage ou un autre
+lieu que la fin du clip précédent. C'est ce que vise la phrase de raccord (pas encore passée au
+banc). La première version de la nouvelle consigne de vision a oublié le monocle du Baron, et le
+monocle a quitté le clip après 2,5 s : la consigne nomme maintenant les accessoires distinctifs.
+Le dirigeable est resté un bateau volant rouge et blanc : le banc refaisait des segments de
+scénario qui ne le définissaient jamais.

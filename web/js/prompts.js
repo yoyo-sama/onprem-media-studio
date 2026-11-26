@@ -1255,11 +1255,16 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // themselves (`refs`: [{kind: "character" | "reference" | "environment", desc}], in
   // the order sent: subjects first, then the setting), so H3 keeps every sheet in view
   // for the whole clip; the shared look as in buildRelaySegmentPrompt.
-  function buildRelayCutPrompt(action, look, refs, styleId, onWarn) {
+  // `continues`: the clip continues the previous one in latent space (continue_from). Its
+  // body then opens on that join: a segment whose text starts in another framing or place
+  // made H3 cut right after the ~1 s of context, even with the one-shot guard (GB10 2026-11-26).
+  const H3_CONTINUES = "The clip opens on the last moment of the previous clip, in the same place, framing and light, "
+    + "and the action below follows on from it.";
+  function buildRelayCutPrompt(action, look, refs, styleId, onWarn, continues = false) {
     const lk = look || {}, all = h3AssignRefs(refs.map(x => ({ media: "image", kind: x.kind, desc: x.desc })));
     const sentence = v => { const x = String(v || "").trim(); return x && !/[.!?…]$/.test(x) ? x + "." : x; };
     const camera = String(lk.camera || "").trim();
-    const text = [sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "", styleTextFor(styleId)]
+    const text = [continues ? H3_CONTINUES : "", sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "", styleTextFor(styleId)]
       .filter(Boolean).join(" ");
     return capH3Prompt(buildH3RefPrompt({ subjects: all, summary: h3Summary(action), body: h3RefBody(all, text),
       sound: lk.sound, music: lk.music, defs: lk.subjects, retention: lk.retention }), onWarn);
@@ -1422,7 +1427,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     isKrea2Workflow, briefEnrichSystem, enrichBrief, ENRICH_INSTRUCTIONS, setInstructionOverrides,
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage,
-    buildRelaySegmentPrompt, buildRelayCutPrompt, buildRelayTextPrompt, relaySubjectLegend, composeScenario, parseScreenplay,
+    buildRelaySegmentPrompt, buildRelayCutPrompt, H3_CONTINUES, buildRelayTextPrompt, relaySubjectLegend, composeScenario, parseScreenplay,
   };
   if (typeof module === "object" && module.exports) module.exports = Prompts;
   else global.Prompts = Prompts;

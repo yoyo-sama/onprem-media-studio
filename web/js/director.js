@@ -710,7 +710,7 @@ function segmentJob(s, i) {
     if (!prev) throw noLink();
     const refs = relayRefs(settingSheet());
     log("req", "Relay, segment {n}/{total}: video continuing the previous segment…", { n: i + 1, total });
-    seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style);
+    seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style, true);
     return r2v(refs, { continue_from: prev }, " + continuation");
   }
   // A cut: H3 Ref2VA with no start image and no end image. Its setting is the setting's sheet,
@@ -908,9 +908,9 @@ function refTokens(text, refs) {
   });
 }
 // A Ref2VA segment's prompt, its text and shared fields numbered for the references it sends.
-function relayCutPrompt(seg, look, refs, style) {
+function relayCutPrompt(seg, look, refs, style, continues = false) {
   const lk = Object.fromEntries(Object.entries(look || {}).map(([k, v]) => [k, typeof v === "string" ? refTokens(v, refs) : v]));
-  return P.buildRelayCutPrompt(refTokens(seg.prompt.trim(), refs), lk, refs, style, h3Warn);
+  return P.buildRelayCutPrompt(refTokens(seg.prompt.trim(), refs), lk, refs, style, h3Warn, continues);
 }
 // The references segment 1 sees with a long take's first frame: the subjects the user gave
 // (characters, objects), no setting, and never the frame itself (with a setting alone, the
