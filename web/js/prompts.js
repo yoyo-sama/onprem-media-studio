@@ -457,6 +457,16 @@
       + `${h3RealDuration(seconds).toFixed(2)}-second mark of the target video.`;
   }
 
+  // A prompt that already opens on the alignment sentences the app writes (a prompt reused
+  // from the gallery) without them: they are written once, by the code (the sentence came
+  // twice, GB10 2026-11-24). The rest of the text is the user's, untouched.
+  const H3_ALIGNMENT_RE = /^\s*(?:For the target video, at 0\.00 seconds into the target video, <Picture 1> \(from \[Shot 1\]\) is fully referenced\.|How the reference pictures align with the target video — <Picture 1> \(from \[Shot 1\]\) aligns with the 0\.00-second mark of the target video; <Picture 2> \(from \[Shot 1\]\) aligns with the [\d.]+-second mark of the target video\.)[ \t]*\n*/;
+  function stripH3Alignment(text) {
+    let out = String(text || "");
+    while (H3_ALIGNMENT_RE.test(out)) out = out.replace(H3_ALIGNMENT_RE, "");
+    return out;
+  }
+
   // A storyboard cut is image to video from a keyframe that already holds the subjects and
   // the setting, so every subject is defined on <Picture 1>.
   function h3CutSubjects(subjects, locDesc) {
@@ -891,14 +901,15 @@ Answer ONLY with JSON: {"prompt": "..."}`;
   // Scenario split into Relay segments: Gemma writes the look shared by the whole sequence
   // once (camera, lighting, sounds, music) and one action per segment; the H3 structure
   // is assembled at render time, subjects arrive as bare stand-ins.
-  const H3_SCENARIO_SYSTEM = (n, legend, scenes = 0) => `You are a shot-list writer for the MiniMax H3 video model.
+  const H3_SCENARIO_SYSTEM = (n, legend, scenes = 0, describe = false) => `You are a shot-list writer for the MiniMax H3 video model.
 Split the user's scenario into exactly ${n} consecutive video segments, in chronological order: one continuous shot, or several shots when the scenario has several scenes. Each segment is rendered on its own, a few seconds long, so it holds one simple action.
 Also write, once, the look that every segment shares, so that no segment repeats it.
 Rules:
 - "framing": one English sentence of 5 to 20 words, the framing of the whole sequence: shot size, camera height and lens. Never a camera movement: each segment gives its own.
 - "lighting": one English sentence of 8 to 25 words, the light of the whole sequence, the same in every segment. When the scenario has several scenes at different moments or places, only what their light has in common (its quality, the colour grade), never a change of time of day.
 - "soundscape": one English sentence of 8 to 25 words, the natural sounds heard throughout the sequence. When the scenario has several scenes in different places, only what is heard in all of them, or "".
-- "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.
+- "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.${!describe ? "" : `
+- "subjects": one English paragraph of 15 to 60 words, the look of the recurring subjects as the scenario gives it, the same in every segment: for a person, apparent age, face, hair, build and every piece of clothing; for an animal or a thing, its kind, shape, colours and marks. Copy what the scenario says and add nothing it does not say; "" when the scenario describes no subject.`}
 - Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement during which the face of the main subject stays in view from the first moment to the last: the camera may come closer to that face, never to an object, the hands or the feet. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
 - Two exceptions. A segment that starts a new shot opens by naming its place, its light and its sounds in a few words. And when the scenario changes a subject's appearance (a coat taken off, bare feet, wet hair), state that change in every segment where it holds.
 - A segment acts within the place of its shot: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
@@ -911,7 +922,7 @@ ${legend}
 - Use ONLY positive phrasing (never "no", "without", "avoid").
 - Plain prose only: no field name, no heading, no numbering, no timestamp, no angle bracket, no square bracket.
 - Never write "masterpiece", "best quality", "8k" or "ultra detailed".
-Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "segments": [{"new_shot": false, "text": "..."}, {"new_shot": false, "text": "..."}]} with exactly ${n} segments, in order.`;
+Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...",${!describe ? "" : ` "subjects": "...",`} "segments": [{"new_shot": false, "text": "..."}, {"new_shot": false, "text": "..."}]} with exactly ${n} segments, in order.`;
 
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
   const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
@@ -1226,7 +1237,8 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // hold, one per paragraph (an assistant card's screenplay), else 0.
   const NO_MUSIC_RE = /^(none|n\/a|no music|silence)\.?$/i;
   async function composeScenario(llm, text, n, locDesc, max, subjects, scenes = 0) {
-    const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects), scenes), text);
+    // No subject reference: the subjects' look is asked for, written once in the shared fields.
+    const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects), scenes, !subjects?.length), text);
     const clean = v => h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(v))));
     // A segment is {"new_shot", "text"}: the flag next to its text (a separate list of cut
     // numbers missed the home at dusk, GB10 2026-11-21); a bare string is read too.
@@ -1242,8 +1254,10 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const known = scenes > 1 && segments.length === scenes ? segments.map((_, i) => i) : [];
     const cuts = [...new Set([...list.flatMap((seg, i) => (seg.cut ? [i] : [])), ...listed, ...known])]
       .filter(k => k >= 1 && k < segments.length).sort((a, b) => a - b);
+    // With no reference, the subjects' look is only in the scenario: Gemma writes it once (a
+    // 30 s take from the text lost the outfit and changed jacket at segment 3, GB10 2026-11-25).
     return { segments, cuts, look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
-                                     music: NO_MUSIC_RE.test(music) ? "" : music } };
+                                     music: NO_MUSIC_RE.test(music) ? "" : music, subjects: clean(out.subjects) } };
   }
 
   // A screenplay written in the H3 layout (a file the user imports, or pasted as the brief):
@@ -1340,7 +1354,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     compileRelayKeyframePrompt, HOLD_MOTION,
     H3_PROMPT_CHARS, h3Subject, h3Picture, H3_TOKEN_STUB, H3_TOKEN_RE, h3TokensOut, h3TokensIn, h3NormalizeTokens,
     h3AssignSubjects, h3AssignRefs, h3Summary, h3RefBody, buildH3RefPrompt, capH3Prompt, h3VideoFrames, h3RealDuration,
-    h3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, h3CutBodyOf, restoreCameraClause,
+    h3Alignment, stripH3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, h3CutBodyOf, restoreCameraClause,
     normalizeShotList, fallbackShots,
     SHEET_CLEAN, SHEET_TEMPLATES, SHEET_SIZE, sheetWords, charsheetPromptFrom, charsheetFromPhotoPrompt, locsheetPromptFrom,
     sheetSkeleton, stripSheetSkeleton, wrapSheetDesc,

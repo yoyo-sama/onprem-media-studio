@@ -450,3 +450,61 @@ per clip, 224 s for the stitch (1127 frames, 332 latents decoded once in 214 s).
 - Owner's verdict on the take (2026-11-20): "not perfect, but the result is satisfying". The
   absolute join criterion of 10 does not fit a take that moves this much; the joins were judged
   by eye.
+
+## The chain runs on the server; video lengths (2026-11-24)
+
+Two reports from the owner on promaxgb10-95c7 (main 756bc78):
+
+- **A 5-segment long take rendered one segment.** Segment 1 (10 s, four references) ended without
+  error, then nothing: the page that drove the chain sent its last request during that render
+  (tab closed, computer asleep or tab frozen by the browser), so segment 2 was never submitted,
+  and the resumed project did not even know segment 1. Now the click on "Generate the chain"
+  queues the whole chain at once: each segment's job, then `video-stitch`. A file a segment takes
+  from the one before it (its clip for `continue_from`, its last frame as a start image, a
+  setting or, after a text start, the subject's reference) is written `{"job": "<id>",
+  "output": ".mp4" | ".png"}`; the server writes the file in when the job's turn comes
+  (ARCHITECTURE.md § Job lifecycle). A failed segment fails the rest of the chain (the page takes those
+  jobs off the queue); "Stop after this segment" cancels the segments not started and the take
+  (a chain stopped during its last segment is still assembled). The page only follows the jobs:
+  each segment keeps its job id (`job`, and `stitchJob` for the take), and a resumed project
+  follows them again, submitting nothing. Transition frames are still extracted when the page is
+  open, for a later choice; the chain itself takes the last frame, the default choice. A
+  transition frame is extracted only for a segment that starts on one (a cut with a setting of its
+  own takes none).
+- **30 s asked, 15 s rendered (Text2Video and Image2Video).** One H3 clip lasts 5 to 15 s
+  (FastVideo): the form brought any length into that range without a word and sent 15 s. Same in
+  Video from references, the campaign and every assistant card. A longer Text2Video, Image2Video
+  or Video from references is now a long take: Generate opens it at the length asked (up to
+  150 s), the brief split into segments by Gemma, and "Generate the chain" renders it. The long
+  take form takes that length too (it opened every long take as one 10 s card holding the whole
+  brief); a long take of one segment keeps the brief word for word. The campaign teaser stays a
+  clip: over 15 s is refused, as is any length out of range.
+- The alignment sentence of an Image2Video prompt came twice when the brief already opened on it
+  (a prompt reused from the gallery): it is left out of the brief before it is written
+  (`stripH3Alignment`), in the Studio and on the Canvas.
+
+**GB10 render, 2026-11-25** (`tools/qualify/closed_page_take.js`, promaxgb10-95c7 on ebffb48): a
+30 s Text2Video, the browser closed a few seconds after "Generate the chain", segment 1 running. The server
+rendered the three segments and the take on its own (592 + 432 + 302 + 136 s), −17.9 LUFS, no
+silence, no jump at the joins, the covered market kept. Three defects, fixed since:
+
+- **28.5 s for 30 s, the page saying 30.4 s.** A segment that continues the clip before it in
+  latent space redoes that clip's last 22 frames, and the take drops them: 243 + 221 + 221 frames.
+  A card's length is now what the segment adds to the take: a latent link asks H3 for those 22
+  frames on top, its new part on the nearest step of the 17-frame grid (a 10 s card: a 260-frame
+  clip, 238 new frames, 9.9 s), within 15 s per clip. The plan, the card times and the board count
+  the same: 30 s plans as 30.0 s.
+- **The jacket changed at segment 3.** With no reference, the subject's look was only in the brief,
+  and the split writes no appearance inside a segment: segment 1 went with "a woman, short red hair"
+  and no outfit. With no subject reference, the split now also writes the subjects' look once
+  (`"subjects"`, the shared Subjects field, copied from the scenario, nothing added), sent in every
+  segment's subject_definitions.
+- **Reopened, the page did not show the take.** "Resume the project" showed only under the long take
+  tile, not under Text2Video where it was asked. It shows under both now, and a page opened while
+  a saved chain still has jobs to follow goes back to that long take by itself and follows them
+  (it submits nothing).
+
+Rendered again on 928b7fc (same brief, page closed during segment 1): clips of 243 + 260 + 260
+frames, take 29.96 s (719 frames), −18.1 LUFS, no silence; the same red-haired woman in the denim
+jacket over the green sweater in every frame, the market kept, no jump at the joins; the reopened
+page went back to the take by itself, with no job queued.

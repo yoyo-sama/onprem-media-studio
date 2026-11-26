@@ -89,6 +89,13 @@ requête LLM.
    garder sa dernière progression indéfiniment. Une carte
    de l'assistant enregistrée comme en cours avant le démarrage du serveur est relue en échec pour
    la même raison, et son bouton fonctionne de nouveau.
+5. Un job peut prendre la sortie d'un autre job avant qu'elle existe : une valeur de paramètre,
+   ou un élément de liste, écrite `{"job": "<id>", "output": ".mp4"}` désigne la première sortie
+   de ce job avec cette extension. Un tel job (`after` liste ce qu'il attend) est validé quand vient
+   son tour, une fois la sortie écrite, et échoue si ce job a échoué ou a été annulé ; un job déjà
+   terminé donne son fichier dès la soumission. Les deux jobs doivent tourner sur le même worker,
+   où l'ordre de soumission est l'ordre d'exécution. C'est ainsi que le clic d'un plan-séquence met
+   toute sa chaîne en file d'un coup (LONG-VIDEO.md) : elle va jusqu'au bout page fermée.
 
 Aucun chemin de code ne crée un job de lui-même.
 

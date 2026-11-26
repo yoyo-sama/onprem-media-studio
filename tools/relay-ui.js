@@ -12,7 +12,9 @@
 // folded into the long take is not offered for resuming. The production board: one
 // tile per segment, its progress from the job events, a click goes to the segment and
 // submits nothing; after a regenerated segment the chain continues from the next one;
-// "Stop after this segment" ends the chain once the running segment is done. A long take
+// "Stop after this segment" ends the chain once the running segment is done (it takes the jobs
+// not started off the queue). The click queues the whole chain at once, each job naming the
+// output to come of the one before it, and a resumed project follows a chain still running. A long take
 // from images opens the Relay alone without a job, its subject described by Gemma's
 // vision; its first segment runs from image 1 to image 2 (FL2VA), a segment added after
 // the end continues it, and it resumes as saved. With references as well, its first segment
@@ -137,7 +139,7 @@ const SPLIT = {
     check(JSON.stringify(r.cuts) === "[2]", `known scenes, several segments each, keep Gemma's flags: ${JSON.stringify(r.cuts)}`);
     check(/never to an object, the hands or the feet/.test(r.system), "the split's framing rule");
   }
-  const jobs = [], chats = [], done = new Map(), held = [];
+  const jobs = [], chats = [], done = new Map(), held = [], cancels = [];
   let n = 0, hold = false, sock = null, visionSheet = false;
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   await ctx.addInitScript(p => { if (!sessionStorage.getItem("seeded")) { localStorage.setItem("studioProject", p); sessionStorage.setItem("seeded", "1"); } },
@@ -155,7 +157,14 @@ const SPLIT = {
       else done.set(id, { id, status: "done", progress: 1, outputs });
       return json({ id, status: "queued", progress: 0, outputs: [] }, 201);
     }
-    if (p.startsWith("/api/jobs/")) { const id = p.split("/").pop(); return json(done.get(id) || { id, status: "running", progress: 0, outputs: [] }); }
+    // A cancel takes a held job off the queue: the server's "cancelled" event.
+    if (p.endsWith("/cancel") && req.method() === "POST") {
+      const id = p.split("/")[3], k = held.findIndex(j => j.id === id);
+      cancels.push(id);
+      if (k >= 0) { held.splice(k, 1); const job = { id, status: "cancelled", progress: 0, outputs: [] }; done.set(id, job); push(job); }
+      return json(done.get(id) || { id, status: "running", progress: 0, outputs: [] });
+    }
+    if (p.startsWith("/api/jobs/")) { const id = p.split("/").pop(); return json(done.get(id) || { id, status: "queued", progress: 0, outputs: [] }); }
     if (p === "/api/llm/chat") {
       const body = JSON.parse(req.postData());
       chats.push(body);
@@ -184,6 +193,14 @@ const SPLIT = {
   const page = await ctx.newPage();
   // A chain that ends with every segment ready assembles the sequence: wait for that job.
   const assembled = async from => { for (let w = 0; w < 100 && !jobs.slice(from).some(j => j.pipeline === "video-stitch"); w++) await page.waitForTimeout(50); };
+  // A queued job's output to come, as a job of the same chain takes it.
+  const outOf = (job, ext = ".mp4") => ({ job: job?.id, output: ext });
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  // A segment continuing the previous clip in latent space redoes its last 22 frames, dropped
+  // from the take: a 10 s card is a clip of 260 frames (238 new ones, 14 steps of 17), 12 s 311.
+  const LINK10 = 260 / 24, LINK12 = 311 / 24;
+  // Generate on a long take of one 10 s segment: the brief stays whole, as the segment's text.
+  const openTake = async (length = "10") => { await page.fill("#videoDuration", length); await page.click("#generateBtn"); };
   const errs = [];
   page.on("pageerror", e => errs.push(e.message));
   let dialogs = 0;
@@ -217,7 +234,7 @@ const SPLIT = {
   check(await cardDurs() === "10", `cards for 10 s: ${await cardDurs()}`);
   await page.fill("#relayTotal", "30");
   await page.dispatchEvent("#relayTotal", "change");
-  check(/3 segment\(s\): 10 \+ 10 \+ 10 s, 30\.4 s rendered/.test(await page.textContent("#relayPlan")), `plan for 30 s: "${await page.textContent("#relayPlan")}"`);
+  check(/3 segment\(s\): 10 \+ 10 \+ 10 s, 30\.0 s rendered/.test(await page.textContent("#relayPlan")), `plan for 30 s: "${await page.textContent("#relayPlan")}"`);
 
   // The shared fields are folded while they are all empty, and "Max per segment" sits under
   // the composer's advanced options.
@@ -234,6 +251,7 @@ const SPLIT = {
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .relay-seg textarea")].map(a => a.value.trim()).filter(Boolean).length === 3);
   check(jobs.length === 0, `the split or a shared field submitted ${jobs.length} job(s)`);
   check(chats.length === 1 && /exactly 3 segments/.test(chats[0].system), "the split did not ask Gemma for 3 segments");
+  check(!/"subjects"/.test(chats[0].system), "with the subjects' sheets, the split asks for their look");
   const look = await page.$$eval("#relayLook textarea", els => Object.fromEntries(els.map(e => [e.dataset.look, e.value])));
   check(look.lighting === "Warm candle light.", `the user's lighting was overwritten: "${look.lighting}"`);
   check(await page.$eval("#relayLook", el => el.open), "the shared fields the split filled are folded");
@@ -243,7 +261,7 @@ const SPLIT = {
   check(look.camera === SPLIT.framing && look.sound === SPLIT.soundscape && look.music === "",
     `empty shared fields not filled as expected: ${JSON.stringify(look)}`);
   const heads = await page.$$eval("#relayList .seg-head strong", els => els.map(e => e.textContent));
-  check(JSON.stringify(heads) === JSON.stringify(["Segment 1/3 · 00:00.0–00:10.1", "Segment 2/3 · 00:10.1–00:20.3", "Segment 3/3 · 00:20.3–00:30.4"]),
+  check(JSON.stringify(heads) === JSON.stringify(["Segment 1/3 · 00:00.0–00:10.1", "Segment 2/3 · 00:10.1–00:20.0", "Segment 3/3 · 00:20.0–00:30.0"]),
     `segment headers: ${JSON.stringify(heads)}`);
   const durs = await page.$$eval('#relayList input[type="number"]', els => els.map(e => e.value));
   check(JSON.stringify(durs) === JSON.stringify(["10", "10", "10"]), `segment lengths: ${JSON.stringify(durs)}`);
@@ -276,21 +294,23 @@ const SPLIT = {
   const kinds = jobs.map(j => j.pipeline);
   check(JSON.stringify(kinds) === JSON.stringify(["h3-r2v", "h3-r2v", "h3-r2v", "video-stitch"]),
     `chain jobs: ${JSON.stringify(kinds)}`);
-  check(JSON.stringify(jobs[3]?.params) === JSON.stringify({ clips: [0, 1, 2].map(k => `outputs/${jobs[k].id}.mp4`) }),
+  // Queued at once on the server: each job takes the output to come of the one before it.
+  const later = k => outOf(jobs[k]);
+  check(JSON.stringify(jobs[3]?.params) === JSON.stringify({ clips: [0, 1, 2].map(later) }),
     `assembly at the end of the chain: ${JSON.stringify(jobs[3]?.params)}`);
   check(await page.$eval('#studioNav [data-section="relay"]', b => b.classList.contains("done")), "the menu does not mark the assembled long take");
   // Each segment is H3 Ref2VA on the sheets: segment 1 from them alone, at the take's format,
   // the next ones continuing the previous clip, whose canvas they follow.
   const clips = jobs.filter(j => j.pipeline === "h3-r2v");
-  const from = [null, `outputs/${jobs[0].id}.mp4`, `outputs/${jobs[1].id}.mp4`];
+  const from = [undefined, later(0), later(1)];
   for (const [i, j] of clips.entries()) {
     const pr = j.params.prompt;
-    check(j.params.continue_from === (from[i] ?? undefined) && !("image" in j.params)
+    check(JSON.stringify(j.params.continue_from) === JSON.stringify(from[i]) && !("image" in j.params)
       && JSON.stringify(j.params.references) === JSON.stringify(["outputs/char.png", "outputs/loc.png"])
       && (i === 0 ? j.params.aspect === "16:9" : !("aspect" in j.params)), `segment ${i + 1} start and references: ${JSON.stringify({ ...j.params, prompt: undefined })}`);
     check(/<Subject 1> is the main character in <Picture 1>/.test(pr) && /<Subject 2> is the location as defined by <Picture 2>/.test(pr),
       `segment ${i + 1} names the sheets: ${pr}`);
-    check(j.params.duration === 10, `segment ${i + 1} duration ${j.params.duration}`);
+    check(j.params.duration === (i === 0 ? 10 : LINK10), `segment ${i + 1} duration ${j.params.duration}`);
     check(!/golden|steady framing/i.test(pr), `segment ${i + 1} prompt carries a default look`);
     check(pr.includes("Warm candle light.") && pr.includes(`Framing: ${SPLIT.framing}`), `segment ${i + 1} prompt lacks the shared look`);
     check(pr.includes(`overall_soundscape:\n${SPLIT.soundscape}`) && pr.includes("non_diegetic_music:\nNone."), `segment ${i + 1} sound fields`);
@@ -303,7 +323,7 @@ const SPLIT = {
   const tiles = () => page.$$eval("#relayBoard .relay-tile", ts => ts.map(t => t.className.replace("relay-tile ", "")));
   check(await page.isVisible("#relayBoard"), "the board is hidden");
   check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-ready", "st-ready"]), `tiles after the chain: ${JSON.stringify(await tiles())}`);
-  check(/3\/3 segments ready · 30\.4 s of 30\.4 s/.test(await page.textContent("#relayBoard .relay-summary")),
+  check(/3\/3 segments ready · 30\.0 s of 30\.0 s/.test(await page.textContent("#relayBoard .relay-summary")),
     `summary: "${await page.textContent("#relayBoard .relay-summary")}"`);
   check((await page.textContent("#relayRunBtn")).trim() === "Generate the chain again", `run button: "${await page.textContent("#relayRunBtn")}"`);
   check(await page.isHidden("#relayStopBtn"), "the stop button shows with no chain running");
@@ -360,25 +380,50 @@ const SPLIT = {
   hold = true;
   before = jobs.length;
   await page.click("#relayRunBtn");
-  await page.waitForFunction(() => document.querySelectorAll("#relayBoard .relay-tile.st-pending").length === 1);
+  // The whole chain is queued by the click (it runs on even if the page is closed).
+  await page.waitForFunction(() => document.querySelectorAll("#relayBoard .relay-tile.st-pending").length === 3);
   await page.waitForFunction(() => !document.getElementById("relayStopBtn").hidden);
   await page.waitForTimeout(100);
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-r2v", "h3-r2v", "h3-r2v", "video-stitch"]),
+    `the click did not queue the whole chain: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
+  check(/Queued/.test(await page.textContent('#relayList .relay-seg[data-seg="1"] .seg-status')), "a queued segment does not say so");
   const first = held.shift();
   push({ id: first.id, status: "running", progress: 0.5, outputs: [] });
   await page.waitForFunction(() => document.querySelector("#relayBoard .relay-tile .tile-bar i").style.width === "50%");
   const st = await page.textContent('#relayList .relay-seg[data-seg="0"] .seg-status');
   check(st === "Video 50%", `card status while running: "${st}"`);
-  check(JSON.stringify(await tiles()) === JSON.stringify(["st-pending", "st-stale", "st-stale"]), `tiles while running: ${JSON.stringify(await tiles())}`);
+  check(JSON.stringify(await tiles()) === JSON.stringify(["st-pending", "st-pending", "st-pending"]), `tiles while running: ${JSON.stringify(await tiles())}`);
   await page.click("#relayStopBtn");
+  // What has not started leaves the queue: segments 2 and 3, and the take.
+  await page.waitForTimeout(200);
+  check(JSON.stringify(cancels) === JSON.stringify(jobs.slice(before + 1).map(j => j.id)), `cancelled by the stop: ${JSON.stringify(cancels)}`);
   check((await page.textContent("#relayStopBtn")).trim() === "Stopping after this segment…", "the stop button does not say it is stopping");
   // Segment 1 ends: the chain stops there.
   done.set(first.id, first); push(first);
   await page.waitForFunction(() => document.getElementById("relayStopBtn").hidden);
   await page.waitForTimeout(200);
-  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-r2v"]),
-    `jobs of the stopped chain: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
   check(JSON.stringify(await tiles()) === JSON.stringify(["st-ready", "st-stale", "st-stale"]), `tiles after the stop: ${JSON.stringify(await tiles())}`);
   check((await page.textContent("#relayRunBtn")).trim() === "Continue the chain from segment 2", `run button after the stop: "${await page.textContent("#relayRunBtn")}"`);
+
+  // The page closed while the chain runs: the server goes on; the resumed project follows the
+  // jobs where they are, submits nothing, and gets the take.
+  before = jobs.length;
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => document.querySelectorAll("#relayBoard .relay-tile.st-pending").length === 2);
+  await page.waitForTimeout(200);
+  const queuedIds = jobs.slice(before).map(j => j.id);
+  check(JSON.stringify(jobs.slice(before).map(j => j.pipeline)) === JSON.stringify(["h3-r2v", "h3-r2v", "video-stitch"]), "continuing the stopped chain");
+  const seg2Job = held.shift();
+  done.set(seg2Job.id, seg2Job);
+  // Reopened, the page goes back to the long take by itself and follows its jobs.
+  await page.reload({ waitUntil: "load" });
+  await page.waitForFunction(() => document.querySelector('#relayList .relay-seg[data-seg="1"] .seg-status')?.textContent === "Ready"
+    && document.querySelectorAll("#relayBoard .relay-tile.st-pending").length === 1, null, { timeout: 5000 });
+  for (const job of held.splice(0)) { done.set(job.id, job); push(job); }
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 5000 });
+  await page.waitForFunction(id => document.querySelector("#relayPlayer video")?.src.endsWith(`/outputs/${id}.mp4`), queuedIds[2], { timeout: 5000 }).catch(() => {});
+  check(JSON.stringify(jobs.slice(before).map(j => j.id)) === JSON.stringify(queuedIds), `the resumed project submitted: ${JSON.stringify(jobs.slice(before).map(j => j.pipeline))}`);
+  check(await page.$eval("#relayPlayer video", (v, id) => v.src.endsWith(`/outputs/${id}.mp4`), queuedIds[2]), "the resumed project does not show the take the server assembled");
   hold = false;
   if (SHOTS) {
     for (const theme of ["light", "dark"]) {
@@ -408,7 +453,7 @@ const SPLIT = {
   await page.fill("#brief", "She walks to the gate.");
   before = jobs.length;
   const chats0 = chats.length;
-  await page.click("#generateBtn");
+  await openTake();
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
   check(jobs.length === before, `opening the long take submitted ${jobs.length - before} job(s)`);
@@ -473,7 +518,7 @@ const SPLIT = {
   await page.waitForFunction(() => document.querySelectorAll("#refSubjects .rs-role").length === 2);
   await page.selectOption("#refSubjects .ref-subject:nth-child(2) .rs-role", "setting");
   await page.fill("#brief", "She sits at a cafe table.");
-  await page.click("#generateBtn");
+  await openTake();
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
   before = jobs.length;
@@ -504,7 +549,7 @@ const SPLIT = {
   await page.selectOption("#refSubjects .ref-subject:nth-child(2) .rs-role", "object");
   await page.fill("#brief", "She walks along the garden path at dawn.");
   before = jobs.length;
-  await page.click("#generateBtn");
+  await openTake();
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
   check(await page.isVisible("#relayList .seg-start-ratio"), "a long take with no first frame does not offer its video format");
@@ -570,7 +615,7 @@ const SPLIT = {
   await page.waitForFunction(() => document.querySelectorAll("#refSubjects .rs-role").length === 2);
   await page.selectOption("#refSubjects .ref-subject:nth-child(2) .rs-role", "setting");
   await page.fill("#brief", "She sits on the bench.");
-  await page.click("#generateBtn");
+  await openTake();
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 1);
   await page.click("#relayAddBtn");
   await page.fill('#relayList .relay-seg[data-seg="1"] textarea', "She stands up.");
@@ -582,7 +627,7 @@ const SPLIT = {
   lt = jobs.slice(before);
   check(JSON.stringify(lt.map(j => j.pipeline)) === JSON.stringify(["h3-r2v", "h3-r2v", "video-stitch"])
     && lt.slice(0, 2).every(j => j.params.references?.length === 2 && /<Subject 2> is the location as defined by <Picture 2>/.test(j.params.prompt || ""))
-    && lt[1]?.params.continue_from === `outputs/${lt[0]?.id}.mp4`,
+    && same(lt[1]?.params.continue_from, outOf(lt[0])),
     `long take with a setting reference: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.references]))}`);
 
   // ── Long take with no start image, from an imported screenplay file ──
@@ -597,7 +642,7 @@ const SPLIT = {
   let chatsBefore = chats.length;
   await page.setInputFiles("#seqImportFile", { name: "garden.txt", mimeType: "text/plain", buffer: Buffer.from(SCREENPLAY) });
   await page.waitForFunction(() => /detailed_description/.test(document.getElementById("brief").value));
-  await page.click("#generateBtn");
+  await openTake();
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 3);
   check(jobs.length === before && chats.length === chatsBefore, `opening an imported screenplay: ${jobs.length - before} job(s), ${chats.length - chatsBefore} Gemma call(s)`);
@@ -622,10 +667,10 @@ const SPLIT = {
     && /subject_definitions:\n<Subject 1> is an adult woman with auburn hair/.test(t2v.prompt || "") && !/\[reference generation\]/.test(t2v.prompt || "")
     && /retention_analysis:\nPreserve the same facial identity/.test(t2v.prompt || ""), `segment 1 from text: ${JSON.stringify(t2v)}`);
   const after1 = lt[1]?.params || {};
-  check(after1.continue_from === `outputs/${lt[0]?.id}.mp4` && JSON.stringify(after1.references) === JSON.stringify([`outputs/${lt[0]?.id}.png`])
-    && after1.duration === 12 && /<Subject 1> is the main character in <Picture 1>\.\n<Subject 1> is an adult woman/.test(after1.prompt || ""),
+  check(same(after1.continue_from, outOf(lt[0])) && same(after1.references, [outOf(lt[0], ".png")])
+    && after1.duration === LINK12 && /<Subject 1> is the main character in <Picture 1>\.\n<Subject 1> is an adult woman/.test(after1.prompt || ""),
     `segment 2 after text: ${JSON.stringify(after1)}`);
-  check(lt[2]?.params.continue_from === `outputs/${lt[1]?.id}.mp4`, "segment 3 does not continue segment 2");
+  check(same(lt[2]?.params.continue_from, outOf(lt[1])), "segment 3 does not continue segment 2");
 
   // A described scene (no <Subject N>), from a picture: segment 1 starts on the picture and
   // keeps it (i2v: Ref2VA cut away from an empty place after 2 frames), the segments after it
@@ -637,7 +682,7 @@ const SPLIT = {
   await page.click('.usecase[data-pipeline="sequence"]');
   await page.setInputFiles("#imageInput", { name: "forest.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
   await page.fill("#brief", SCENE);
-  await page.click("#generateBtn");
+  await openTake();
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 2);
   before = jobs.length;
@@ -651,7 +696,7 @@ const SPLIT = {
   check(/^For the target video, at 0\.00 seconds into the target video, <Picture 1> \(from \[Shot 1\]\) is fully referenced\./.test(lt[0]?.params.prompt || "")
     && /<Subject 1> is the location as defined by <Picture 1>/.test(lt[0]?.params.prompt || "") && !/main character/.test(lt[0]?.params.prompt || "")
     && !!lt[0]?.params.image && lt[1]?.params.references?.[0] === lt[0]?.params.image
-    && lt[1]?.params.continue_from === `outputs/${lt[0]?.id}.mp4`,
+    && same(lt[1]?.params.continue_from, outOf(lt[0])),
     `described scene, segment 1 does not start on its picture: ${JSON.stringify(lt.map(j => ({ ...j.params, prompt: undefined })))}`);
 
   // The Relay's own import splits the file as written, without Gemma; a later [Shot N] opens a
@@ -675,7 +720,7 @@ const SPLIT = {
     "the long video card does not open the long take, or shows its one-engine menu");
   await page.setInputFiles("#imageInput", { name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
   await page.fill("#brief", "She walks through the garden, stops by a tree, then looks at the sun.");
-  await page.click("#generateBtn");
+  await openTake();
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.fill("#relayTotal", "30");
   await page.dispatchEvent("#relayTotal", "change");
@@ -750,7 +795,7 @@ const SPLIT = {
   const lastSeg = SPLIT.segments[2];
   SPLIT.segments[2] = "SUBJECTREF1 rests in SUBJECTREF3 and looks at SUBJECTREF2.";
   before = jobs.length;
-  await page.click("#generateBtn");
+  await openTake();
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.fill("#relayTotal", "30");
   await page.dispatchEvent("#relayTotal", "change");
@@ -766,6 +811,120 @@ const SPLIT = {
   check(!/<Subject 3>/.test(rest) && /<Subject 1> rests in (?!<Subject)\S/.test(rest) && /looks at <Subject 2>/.test(rest),
     `a left-out setting stays cited by its number: ${rest}`);
   SPLIT.segments[2] = lastSeg;
+  delete SPLIT.cuts;
+
+  // ── Video lengths (a 30 s Text2Video rendered 15 s; a long take opened as one 10 s card) ──
+  // Over one clip's 15 s, Text2Video, Image2Video and Video from references open a long take
+  // at that length, the brief split, nothing rendered; out of range, the length is refused,
+  // never brought silently into range.
+  const fresh = async pipeline => {
+    if (await page.isVisible("#studioExitBtn")) await page.click("#studioExitBtn");
+    await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+    await page.reload({ waitUntil: "load" });
+    await page.click('.usecase[data-pipeline="text2image"]');
+    await page.selectOption("#pipelineSelect", pipeline);
+  };
+  const splitOpen = async () => {
+    await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
+    await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 3
+      && [...document.querySelectorAll("#relayList .relay-seg textarea")].every(a => a.value.trim()), null, { timeout: 10000 });
+  };
+  const runAll = async from => {
+    await page.click("#relayRunBtn");
+    await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
+    await assembled(from);
+    return jobs.slice(from);
+  };
+  await fresh("text2video");
+  check(await page.getAttribute("#videoDuration", "max") === "150", "Text2Video does not take more than 15 s");
+  await page.fill("#brief", "A woman walks through a walled garden at dawn.");
+  await page.fill("#videoDuration", "30");
+  await page.dispatchEvent("#videoDuration", "input");
+  check(await page.isVisible("#durationHint"), "nothing says that 30 s makes a long take");
+  before = jobs.length;
+  let chatsAt = chats.length;
+  // With no reference, the split writes the subject's look once, in the shared fields (a take
+  // from the text changed jacket at segment 3, GB10 2026-11-25).
+  SPLIT.subjects = "A woman in her thirties with short red hair, a denim jacket over a green sweater.";
+  await page.click("#generateBtn");
+  await splitOpen();
+  check(jobs.length === before && chats.slice(chatsAt).some(c => /exactly 3 segments/.test(c.system || "")) && await page.inputValue("#relayTotal") === "30",
+    `Text2Video at 30 s: ${jobs.length - before} job(s), total ${await page.inputValue("#relayTotal")}`);
+  check(chats.slice(chatsAt).some(c => /"subjects": one English paragraph/.test(c.system || ""))
+    && await page.inputValue('#relayLook textarea[data-look="subjects"]') === SPLIT.subjects, "with no reference, the split leaves the subject's look out");
+  lt = await runAll(before);
+  delete SPLIT.subjects;
+  check(same(lt.map(j => j.pipeline), ["h3-t2v", "h3-r2v", "h3-r2v", "video-stitch"]) && same(lt.slice(0, 3).map(j => j.params.duration), [10, LINK10, LINK10])
+    && same(lt[1]?.params.continue_from, outOf(lt[0])) && same(lt[2]?.params.continue_from, outOf(lt[1])),
+    `Text2Video at 30 s, the chain: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.duration]))}`);
+  check(lt.slice(0, 3).every(j => (j.params.prompt || "").split("\n\nsummary:")[0].includes("a denim jacket over a green sweater")),
+    "a segment of the take from the text lacks the subject's look");
+  // Reopened later, the take is resumed from Text2Video too, where it was asked.
+  await page.reload({ waitUntil: "load" });
+  if (await page.isVisible("#studioExitBtn")) await page.click("#studioExitBtn");
+  await page.click('.usecase[data-pipeline="text2image"]');
+  await page.selectOption("#pipelineSelect", "text2video");
+  check(await page.isVisible("#resumeProjectBtn"), "a long take asked from Text2Video cannot be resumed from it");
+
+  // Image2Video: its image is the first frame, its end image the last segment's (FL2VA).
+  await fresh("image2video");
+  await page.setInputFiles("#imageInput", { name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.setInputFiles("#lastImageInput", { name: "end.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.fill("#brief", "She walks to the gate and opens it.");
+  await page.fill("#videoDuration", "30");
+  before = jobs.length;
+  await page.click("#generateBtn");
+  await splitOpen();
+  check(jobs.length === before && await page.isVisible('#relayList .relay-seg[data-seg="2"] .relay-endframe img')
+    && !(await page.$('#relayList .relay-seg[data-seg="0"] .relay-endframe img')), "Image2Video at 30 s: the end image is not on the last segment");
+  lt = await runAll(before);
+  const clipsOf = lt.filter(j => j.pipeline.startsWith("h3-"));
+  check(same(clipsOf.map(j => j.pipeline), ["h3-i2v", "h3-r2v", "h3-i2v"]) && /^inputs\//.test(clipsOf[0]?.params.image || "") && !clipsOf[0]?.params.last_image
+    && same(clipsOf[1]?.params.continue_from, outOf(clipsOf[0])) && same(clipsOf[2]?.params.image, outOf(clipsOf[1], ".png"))
+    && /^inputs\//.test(clipsOf[2]?.params.last_image || ""), `Image2Video at 30 s, the chain: ${JSON.stringify(clipsOf.map(j => ({ ...j.params, prompt: undefined })))}`);
+
+  // Video from references: its images are the long take's references.
+  await fresh("reference2video");
+  await page.setInputFiles("#refImagesInput", [{ name: "her.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") },
+                                               { name: "racket.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") }]);
+  await page.fill("#brief", "She plays tennis on a clay court.");
+  await page.fill("#videoDuration", "30");
+  before = jobs.length;
+  await page.click("#generateBtn");
+  await splitOpen();
+  lt = await runAll(before);
+  check(same(lt.map(j => j.pipeline), ["h3-r2v", "h3-r2v", "h3-r2v", "video-stitch"]) && lt.slice(0, 3).every(j => j.params.references?.length === 2)
+    && !lt[0]?.params.continue_from && same(lt[1]?.params.continue_from, outOf(lt[0])),
+    `Video from references at 30 s: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.references?.length]))}`);
+
+  // Out of range: refused under Generate, nothing submitted.
+  await fresh("text2video");
+  await page.fill("#brief", "A cat sleeps.");
+  await page.fill("#videoDuration", "200");
+  before = jobs.length;
+  await page.click("#generateBtn");
+  check(jobs.length === before && /5 to 150 s/.test(await page.textContent("#generateError")), `200 s: "${await page.textContent("#generateError")}"`);
+  if (await page.isVisible("#studioExitBtn")) await page.click("#studioExitBtn");
+  await page.click('.usecase[data-pipeline="campaign"]');
+  check(await page.getAttribute("#videoDuration", "max") === "15", "the campaign teaser takes more than 15 s");
+  await page.fill("#brief", "A sneaker launch.");
+  await page.fill("#videoDuration", "20");
+  await page.click("#generateBtn");
+  check(jobs.length === before && /5 to 15 s/.test(await page.textContent("#generateError")), `campaign at 20 s: "${await page.textContent("#generateError")}"`);
+
+  // A prompt that already opens on the alignment sentence (reused from the gallery) gets it once.
+  await fresh("image2video");
+  await page.setInputFiles("#imageInput", { name: "start.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  const ALIGN = "For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.";
+  await page.fill("#brief", `${ALIGN}\n\nShe smiles.`);
+  await page.fill("#videoDuration", "10");
+  before = jobs.length;
+  await page.click("#generateBtn");
+  await page.waitForFunction(n => document.querySelectorAll("#jobList .job").length > 0, before);
+  await page.waitForTimeout(300);
+  const i2v = jobs.slice(before).find(j => j.pipeline === "h3-i2v");
+  check(i2v && i2v.params.duration === 10 && i2v.params.prompt.split(ALIGN).length === 2 && i2v.params.prompt.endsWith("She smiles."),
+    `alignment sentence in Image2Video: ${JSON.stringify(i2v?.params.prompt)}`);
   if (SHOTS) {
     await page.selectOption("#langSelect", "fr");
     await page.setInputFiles("#refImagesInput", { name: "lea.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });

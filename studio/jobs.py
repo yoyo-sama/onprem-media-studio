@@ -8,6 +8,13 @@ The last jobs are kept in STUDIO_DATA_DIR/jobs.json, written at each change of
 status. After a restart they are listed again; a job the restart cut (queued or
 running) is read back as failed and `interrupted`, and runs again only on a click
 (`retry`), never by itself.
+
+A job may wait for another one: a parameter value (or a list item) written
+`{"job": "<id>", "output": ".mp4"}` stands for that job's first output with that
+extension. The whole chain of a long take is submitted at once by the click that
+asks for it, and runs on the server even when the page is closed. Such a job is
+validated when its turn comes, once the outputs exist; it fails if the job it waits
+for failed or was cancelled. Both run on the same worker, in submission order.
 """
 
 import itertools
@@ -32,6 +39,31 @@ Listener = Callable[[dict], None]
 ORIGIN = re.compile(r"[a-z0-9_-]{1,40}")
 HISTORY = 200  # jobs kept in jobs.json
 INTERRUPTED = "the server restarted during this job, which was lost: launch it again"
+
+
+def _is_output(value) -> bool:
+    return isinstance(value, dict) and set(value) == {"job", "output"}
+
+
+def _outputs_wanted(value) -> list[dict]:
+    """Every `{"job", "output"}` value in a parameter tree."""
+    if _is_output(value):
+        return [value]
+    if isinstance(value, dict):
+        return [o for v in value.values() for o in _outputs_wanted(v)]
+    if isinstance(value, list):
+        return [o for v in value for o in _outputs_wanted(v)]
+    return []
+
+
+def _with_outputs(value, outputs: Callable[[dict], str]):
+    if _is_output(value):
+        return outputs(value)
+    if isinstance(value, dict):
+        return {k: _with_outputs(v, outputs) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_with_outputs(v, outputs) for v in value]
+    return value
 
 
 class Cancelled(Exception):
@@ -65,6 +97,9 @@ class Job:
     # The parameters as the client sent them, before validate() normalised them: what
     # "launch again" submits (normalised ones hold computed keys a pipeline refuses).
     request: dict = field(default_factory=dict)
+    # The jobs whose outputs this one's parameters take (`{"job", "output"}` values),
+    # empty once those outputs are written into its parameters.
+    after: list[str] = field(default_factory=list)
 
     def public(self) -> dict:
         return asdict(self)
@@ -191,9 +226,12 @@ class JobQueue:
         if origin is not None and not ORIGIN.fullmatch(origin):
             raise ValueError("origin must be 1 to 40 lowercase letters, digits, '-' or '_'")
         request = params
-        params = self.pipelines[pipeline].validate(params, self.files)
+        after = self._waits_for(pipeline, params)
+        if not after:
+            request = params = _with_outputs(params, self._output_of)
+            params = self.pipelines[pipeline].validate(params, self.files)
         job = Job(id=f"job-{self._boot}-{next(self._ids)}", pipeline=pipeline, params=params, origin=origin,
-                  request=request)
+                  request=request, after=after)
         with self._lock:
             self.jobs[job.id] = job
             self._pending[self.pipelines[pipeline].gpu].put(job.id)
@@ -204,6 +242,39 @@ class JobQueue:
                 del self.jobs[old.id]
         self.emit(job)
         return job
+
+    def _waits_for(self, pipeline: str, params: dict) -> list[str]:
+        """The unfinished jobs whose outputs `params` take. A job that failed, was cancelled,
+        is unknown or runs on the other worker is refused: the order would not hold."""
+        after = []
+        for wanted in _outputs_wanted(params):
+            dep_id, ext = wanted["job"], wanted["output"]
+            if not isinstance(dep_id, str) or not isinstance(ext, str) or not re.fullmatch(r"\.[a-z0-9]{1,5}", ext):
+                raise ValueError('an output of another job is written {"job": "<id>", "output": ".<extension>"}')
+            dep = self.jobs.get(dep_id)
+            if dep is None:
+                raise ValueError(f"{dep_id} is not a known job")
+            if dep.status in ("error", "cancelled"):
+                raise ValueError(f"{dep_id} {'was cancelled' if dep.status == 'cancelled' else 'failed'}: "
+                                 "launch it again before the jobs that take its outputs")
+            if dep.status != "done":
+                if self.pipelines[dep.pipeline].gpu != self.pipelines[pipeline].gpu:
+                    raise ValueError(f"{dep_id} runs on the other worker: a job can only wait for one of its own worker")
+                if dep_id not in after:
+                    after.append(dep_id)
+        return after
+
+    def _output_of(self, wanted: dict) -> str:
+        """The output `{"job", "output"}` names; raises when that job did not end with one."""
+        dep = self.jobs.get(wanted["job"])
+        if dep is None or dep.status != "done":
+            state = "is unknown" if dep is None else "was cancelled" if dep.status == "cancelled" else (
+                "failed" if dep.status == "error" else "has not finished")
+            raise ValueError(f"this job takes an output of {wanted['job']}, which {state}")
+        ref = next((o for o in dep.outputs if o.endswith(wanted["output"])), None)
+        if ref is None:
+            raise ValueError(f"{wanted['job']} wrote no {wanted['output']} file")
+        return ref
 
     def retry(self, job_id: str) -> Job:
         """Submit an interrupted job again, same pipeline, parameters (seed included) and
@@ -245,6 +316,11 @@ class JobQueue:
             ctx = JobContext(job, self)
             try:
                 pipeline = self.pipelines[job.pipeline]
+                if job.after:
+                    # Its turn has come: the outputs it takes exist now (or the chain stops here).
+                    job.request = _with_outputs(job.request, self._output_of)
+                    job.params = pipeline.validate(job.request, self.files)
+                    job.after = []
                 # Missing models are fetched on first use, inside the job, so the
                 # user sees the download in the same progress bar as the render.
                 paths = self.models.ensure(pipeline.models, ctx.progress, ctx.cancelled)

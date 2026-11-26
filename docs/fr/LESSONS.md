@@ -371,6 +371,17 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     coupe, et la femme était celle de sa planche dès sa première apparition (C4). Et un segment
     qui envoie moins de références que le découpage n'en a numéroté doit renuméroter ses
     `<Subject N>` : les planches de lieu retirées restaient citées sans image (A6). (2026-11-22)
+59. **Une chaîne demandée en un clic tourne sur le serveur, pas dans la page.** Un plan-séquence de
+    5 × 10 s prend environ une heure ; la page qui soumettait ses segments un par un s'est arrêtée
+    après le segment 1 quand l'ordinateur s'est mis en veille, et rien ne l'a dit. Le clic met
+    maintenant tous les jobs en file d'un coup, chaque job nommant la sortie à venir du précédent ;
+    la page ne fait que suivre. Et un champ de formulaire ne ramène jamais une valeur dans les
+    limites sans le dire : une demande de 30 s a envoyé 15 s pendant des semaines. Refuser, ou
+    faire ce qui est demandé autrement (au-delà de 15 s, un plan-séquence). (2026-11-24) Le rendu
+    de contrôle (page fermée) a tenu, et a montré ce qu'une durée doit compter : une continuation
+    latente refait 22 images que l'assemblage retire, si bien qu'un plan de 30 s a donné 28,5 s
+    quand la page annonçait 30,4 s. Une durée montrée à l'utilisateur est celle qu'aura le fichier.
+    (2026-11-25)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

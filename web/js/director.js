@@ -8,7 +8,7 @@
 // prompt the user edited is sent verbatim and never compiled over; the anchoring
 // blocks are re-appended by code.
 
-import { blobToBase64, on, refURL } from "./api.js";
+import { api, blobToBase64, on, refURL, waitJob } from "./api.js";
 import { L, LANG, t, translateTree, tx, txAttr } from "./i18n.js";
 import { $, LLM, MOBILE, log, promptLog, runJob, warn } from "./ui.js";
 import * as F from "./form.js";
@@ -37,14 +37,6 @@ const locVariant = () => d.locVariants[d.locActive];
 const charDesc = c => P.charDescFromFields(c.fields);
 const locDesc = () => P.locDescFromFields(d.locFields);
 const h3Warn = (msg, params) => log("warn", msg, params);
-
-// ── Jobs ──────────────────────────────────────────────────────────────────────
-// A Relay segment in H3 image to video from its start frame (FL2VA with an end image).
-function cutJob(imageRef, prompt, duration, seed, label, lastRef, onSubmitted) {
-  return runJob("h3-i2v", { prompt, duration, seed, loras: d.loras || [], image: imageRef, ...(lastRef ? { last_image: lastRef } : {}) }, {
-    origin: "relay", label, onSubmitted,
-    sub: ["{info} · seed {seed}", { info: `${lastRef ? "FL2VA" : "I2VA"} · ${duration} s → ${P.h3RealDuration(duration).toFixed(2)} s`, seed }] });
-}
 
 // ── Studio shell ──────────────────────────────────────────────────────────────
 const SECTIONS = { relay: "studioRelay" };
@@ -109,7 +101,7 @@ function enterSession(s) {
 // the shared fields at once, word for word. End images are set on each segment's card.
 // The H3 LoRA stack of the form goes to every segment.
 export const LONG_TAKE_REFS = 7;
-export async function startLongTake(seed, { first = null, refs = [] } = {}) {
+export async function startLongTake(seed, { first = null, refs = [], from = null } = {}) {
   const text = F.brief(), play = P.parseScreenplay(text);
   const place = refs.find(x => x.kind === "setting") || null, subjects = refs.filter(x => x !== place).slice(0, LONG_TAKE_REFS - (place ? 1 : 0));
   const ROLES = { character: "character", object: "reference", setting: "environment" };
@@ -120,7 +112,7 @@ export async function startLongTake(seed, { first = null, refs = [] } = {}) {
     ? subjects.map(x => newChar({ kind: "other", subject: desc(x), role: ROLES[x.kind] || "character" }, [imported({ ref: up(x) })]))
     : [newChar({ kind: "other", subject: first ? desc(first) : "" }, first ? [imported({ ref: up(first) })] : [])];
   const s = {
-    pipeline: "sequence", wf: F.currentWorkflow(), seed, ratio: $("ratioSelect").value, style: "none",
+    pipeline: "sequence", ...(from ? { from } : {}), wf: F.workflow("h3_sequence"), seed, ratio: $("ratioSelect").value, style: "none",
     loras: F.formLoras(), startImage: first ? { ref: up(first) } : null, refsGiven: subjects.length + (place ? 1 : 0),
     chars, locFields: place ? { place: desc(place) } : {}, locVariants: place ? [imported({ ref: up(place) })] : [],
     locActive: 0,
@@ -212,7 +204,7 @@ function newRelay(p = {}) {
   const given = p.segments?.length ? p.segments : relayDurations(clampTotal(p.total ?? 30), segMax).map(dur => newRelaySegment("", dur));
   const segments = given.map(seg => ({ ...newRelaySegment(), ...seg, status: seg.ref ? (seg.status === "stale" ? "stale" : "ready") : "idle" }));
   return {
-    scenario: p.scenario || "", video: p.video || null, segMax, segments,
+    scenario: p.scenario || "", video: p.video || null, segMax, segments, ...(p.stitchJob ? { stitchJob: p.stitchJob } : {}),
     total: clampTotal(segments.reduce((sum, seg) => sum + seg.duration, 0)),
     look: Object.fromEntries(RELAY_LOOK_KEYS.map(k => [k, String(p.look?.[k] || "")])),
   };
@@ -228,12 +220,28 @@ function relayDurations(total, segMax) {
   const base = Math.floor(total / n), extra = total - base * n;
   return Array.from({ length: n }, (_, i) => F.clampDuration(Math.min(segMax, base + (i >= n - extra ? 1 : 0))));
 }
-const realSeconds = durs => durs.reduce((sum, v) => sum + P.h3RealDuration(v), 0);
+// A segment that continues the clip before it in latent space redoes that clip's last 22
+// frames, and the take drops them (studio/pipelines/h3_continue.py). Its card length is what it
+// adds to the take: H3 renders those 22 frames on top, the new part on the nearest step of the
+// 17-frame grid, within H3's 15 s. Counted as a whole clip, a 30 s take came out 28.5 s while
+// the plan said 30.4 s (GB10, 2026-11-25).
+const TAIL_FRAMES = 22, CLIP_FRAMES_MAX = P.h3VideoFrames(15);
+const linkFrames = sec => Math.min(CLIP_FRAMES_MAX, 17 * Math.round(sec * 24 / 17) + TAIL_FRAMES);
+const linkSeconds = sec => Math.min(15, linkFrames(sec) / 24);
+// Segment i continues the one before it in latent space, as the chain will send it: a long
+// take from the text has its subject (segment 1's last frame) once segment 1 is queued.
+const linked = i => latentLink(i) || (i > 0 && continuous(d.relay.segments[i]) && !d.relay.segments[i].endImage && !d.startImage);
+// Seconds segment i adds to the take.
+const takeSeconds = (seg, i) => linked(i) ? (linkFrames(seg.duration) - TAIL_FRAMES) / 24 : P.h3RealDuration(seg.duration);
+const takeLength = (segs, keep = () => true) => segs.reduce((sum, seg, i) => sum + (keep(seg) ? takeSeconds(seg, i) : 0), 0);
 // "00:10.1": a position in the sequence, from the durations H3 really renders.
 const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${(sec % 60).toFixed(1).padStart(4, "0")}`;
 // The subjects the Relay follows: the long take's references, sent straight to Ref2VA.
-const relaySubjects = () => d.chars.filter(c => activeVariant(c)?.ref).slice(0, LONG_TAKE_REFS)
-  .map(c => ({ desc: charDesc(c), kind: P.charKindOf(c.fields), role: c.fields.role, ref: activeVariant(c).ref }));
+// While a segment 1 made from the text is queued in the chain, its last frame to come is the
+// main subject's reference (the segments after it continue it with that frame in view).
+const textFrame = () => { const s0 = d.relay?.segments[0]; return inChain(s0) && s0.textStart ? { job: s0.job, output: ".png" } : null; };
+const relaySubjects = () => d.chars.map((c, k) => ({ c, ref: (k === 0 && textFrame()) || activeVariant(c)?.ref })).filter(x => x.ref)
+  .slice(0, LONG_TAKE_REFS).map(({ c, ref }) => ({ desc: charDesc(c), kind: P.charKindOf(c.fields), role: c.fields.role, ref }));
 const relayBusy = () => !!d?.relay?.segments.some(seg => seg.status === "pending");
 const relayReady = () => !!d?.relay?.segments.length && d.relay.segments.every(seg => seg.prompt.trim());
 const continuous = seg => seg.mode === "continue";
@@ -247,6 +255,12 @@ const latentLink = i => {
 };
 // Segment i takes no frame of the clip before it: a latent link, or a new scene of the split.
 const takesNoFrame = i => latentLink(i) || (!!d?.relay?.segments[i]?.scene && !continuous(d.relay.segments[i]));
+// Segment i starts on a frame of the clip before it: a continuous segment without a latent
+// link, or a cut with no setting of its own (no setting sheet, not a new scene).
+const usesFrame = i => {
+  const seg = d?.relay?.segments[i];
+  return i > 0 && !!seg && !latentLink(i) && (continuous(seg) || (!seg.scene && !settingSheet()));
+};
 const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min(seg.transitionIdx || 0, seg.transitions.length - 1)] : null);
 
 function updateRelayButtons() {
@@ -323,15 +337,21 @@ async function composeRelay(scenes = 0) {
   save();
 }
 
-// A long take opened from an assistant card: its total length, then its screenplay (prose,
-// scene by scene) split by Gemma as "✨ Split the screenplay" does. Nothing renders; a
-// screenplay in the H3 layout already gave its segments.
-export async function splitLongTake(total) {
+// A long take just opened by Generate: the length asked, then its screenplay split by Gemma
+// as "✨ Split the screenplay" does (the form once opened every long take as one 10 s card
+// holding the whole brief). Nothing renders; a screenplay in the H3 layout already gave its
+// segments. `scenes`: the screenplay has one paragraph per scene (an assistant card's, the
+// Director's rule). `end`: the end image of the video ({ref, name}), on its last segment.
+export async function splitLongTake(total, { scenes = false, end = null } = {}) {
   const r = d?.relay;
-  if (!r || r.segments.length > 1) return;
-  if (total) { r.total = clampTotal(total); fitRelayToPlan(); }
-  // The card's screenplay has one paragraph per scene (the Director's rule).
-  await composeRelay(r.scenario.split(/\n\s*\n/).filter(p => p.trim()).length);
+  if (!r) return;
+  if (r.segments.length === 1) {
+    if (total) { r.total = clampTotal(total); fitRelayToPlan(); }
+    // A long take of one segment keeps the brief word for word.
+    if (r.segments.length > 1) await composeRelay(scenes ? r.scenario.split(/\n\s*\n/).filter(p => p.trim()).length : 0);
+  }
+  const last = r.segments[r.segments.length - 1];
+  if (end && last && (r.segments.length === 1 || continuous(last))) { last.endImage = end; renderRelay(); save(); }
 }
 
 // A screenplay in the H3 layout becomes the chain as written: one card per segment, its
@@ -370,7 +390,7 @@ function renderRelayPlan() {
   const r = d?.relay;
   if (!r) { $("relayPlan").textContent = ""; return; }
   const durs = r.segments.map(seg => seg.duration), empty = r.segments.filter(seg => !seg.prompt.trim()).length;
-  const line = t("→ {n} segment(s): {list} s, {real} s rendered", { n: durs.length, list: durs.join(" + "), real: realSeconds(durs).toFixed(1) });
+  const line = t("→ {n} segment(s): {list} s, {real} s rendered", { n: durs.length, list: durs.join(" + "), real: takeLength(r.segments).toFixed(1) });
   $("relayPlan").textContent = empty ? `${line} · ${t("{n} segment(s) still to write", { n: empty })}` : line;
 }
 // The total length is the sum of the cards: kept so after a card is added, removed or
@@ -409,7 +429,7 @@ function renderRelay() {
   let at = 0;
   list.replaceChildren(...r.segments.map((seg, i) => {
     const from = at;
-    at += P.h3RealDuration(seg.duration);
+    at += takeSeconds(seg, i);
     const el = document.createElement("div");
     el.className = "relay-seg";
     el.dataset.seg = String(i);
@@ -510,9 +530,11 @@ function renderStartChoice(row, seg, busy) {
 const relayLive = new Map();      // segment → {phase, id, progress, start}
 const moreOpen = new WeakSet();   // segments whose advanced options are open
 let relayRunning = false, relayStop = false;
-const PHASE_WORDS = { video: L("Video"), frames: L("Transition frames") };
+const PHASE_WORDS = { queued: L("Queued"), video: L("Video"), frames: L("Transition frames") };
 on("job", job => {
   for (const live of relayLive.values()) if (live.id === job.id) {
+    live.status = job.status;
+    if (job.status === "running" && live.phase === "queued") { live.phase = "video"; live.start = Date.now(); }
     live.progress = job.status === "done" ? 1 : job.progress || 0;
     renderBoard();
   }
@@ -541,7 +563,7 @@ function renderBoard() {
   let at = 0;
   strip.replaceChildren(...segs.map((seg, i) => {
     const from = at, live = relayLive.get(seg);
-    at += P.h3RealDuration(seg.duration);
+    at += takeSeconds(seg, i);
     const b = document.createElement("button");
     b.type = "button";
     b.className = `relay-tile st-${seg.status}`;
@@ -562,13 +584,13 @@ function renderBoard() {
     return b;
   }));
   // Summary: segments ready, seconds rendered, the segment running and the time left.
-  const ready = segs.filter(seg => seg.status === "ready"), done = realSeconds(ready.map(seg => seg.duration));
+  const ready = segs.filter(seg => seg.status === "ready"), done = takeLength(segs, seg => seg.status === "ready");
   const parts = [t("{n}/{total} segments ready · {done} s of {all} s", { n: ready.length, total: segs.length,
-    done: done.toFixed(1), all: realSeconds(segs.map(seg => seg.duration)).toFixed(1) })];
+    done: done.toFixed(1), all: takeLength(segs).toFixed(1) })];
   const timed = segs.filter(seg => seg.renderSec > 0);
   if (relayRunning && timed.length) {
     const avg = timed.reduce((sum, seg) => sum + seg.renderSec, 0) / timed.length;
-    const runningIdx = segs.findIndex(seg => relayLive.has(seg));
+    const runningIdx = segs.findIndex(seg => relayLive.get(seg)?.phase === "video");
     const left = runningIdx < 0 ? 0 : Math.max(0, avg - (Date.now() - relayLive.get(segs[runningIdx]).start) / 1000)
       + avg * segs.slice(runningIdx + 1).filter(seg => seg.status !== "ready").length;
     if (left > 0) parts.push(t("about {n} min left", { n: minutes(left) }));
@@ -658,31 +680,70 @@ function markStaleFrom(from) {
   for (let k = from; k < segs.length; k++) if (segs[k].status === "ready") segs[k].status = "stale";
 }
 
-// Renders ONE segment: start image, video, then the transition candidates. The chain and
-// the regeneration of one segment both come here, so both produce the same thing.
-async function renderSegment(i) {
-  const s = d, r = s.relay, seg = r.segments[i], total = r.segments.length, began = Date.now();
-  seg.status = "pending";
-  renderRelay();
-  const before = i > 0 ? r.segments[i - 1] : null;
-  if (latentLink(i)) return renderLatentSegment(s, seg, i, total, before, began);
-  // A cut: H3 Ref2VA on the subjects' sheets and the setting, with no start image.
-  if (i > 0 && !continuous(seg)) return renderCutSegment(s, seg, i, total, before, began);
-  // A long take with no first frame starts from its references, or else from the text.
-  if (i === 0 && !s.startImage)
-    return s.refsGiven ? renderCutSegment(s, seg, i, total, null, began) : renderTextSegment(s, seg, i, total, began);
-  await ensureTransitions(before, i - 1, total);
-  if (!sameSession(s)) return;
-  const prev = before ? transitionOf(before) : null;
-  // 🔗 without a transition frame: refused rather than a silent cut.
-  if (i > 0 && continuous(seg) && !prev)
-    throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
-  const subs = relaySubjects(), look = r.look;
+// ── Relay chain ───────────────────────────────────────────────────────────────
+// The click on "Generate the chain" queues the whole chain at once on the server: every
+// segment's job, then the take (video-stitch). A file a segment takes from the one before it
+// (its clip, its last frame) is that segment's file once rendered or, while that segment is
+// queued in the same chain, its job's output to come ({job, output}: the server writes the
+// file in when its turn comes). So the chain runs to its end even when this page is closed
+// or the computer sleeps (a 5 × 10 s take stopped after segment 1, 2026-11-23); the page only
+// follows it, and picks it up again when the project is resumed.
+const inChain = seg => seg?.status === "pending" && !!seg.job;
+const clipOf = seg => (inChain(seg) ? { job: seg.job, output: ".mp4" } : seg?.ref || null);
+const frameOf = seg => (inChain(seg) ? { job: seg.job, output: ".png" } : seg?.ref ? transitionOf(seg)?.ref || seg.lastFrame : null);
+
+// Segment i's job, {pipeline, params, meta}; also writes the prompt it sends (prompt_used).
+function segmentJob(s, i) {
+  const r = s.relay, seg = r.segments[i], total = r.segments.length, before = i > 0 ? r.segments[i - 1] : null;
+  const label = [L("Relay · segment {n}/{total}"), { n: i + 1, total }];
+  const noLink = () => new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
+  const r2v = (refs, from, how) => ({ pipeline: "h3-r2v",
+    params: { prompt: seg.prompt_used, duration: from.continue_from ? linkSeconds(seg.duration) : seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref), ...from },
+    meta: { label, sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref.${how} · ${seg.duration} s`, seed: seg.seed }] } });
+  seg.textStart = false;
+  seg.start = null;
+  // A continuous segment with sheets: H3 Ref2VA on the subjects' sheets (and the setting's),
+  // continuing the previous clip in latent space. No start image, no join to check: the clip
+  // carries on from the previous one's last second, and the take is decoded in one go.
+  if (latentLink(i)) {
+    const prev = clipOf(before);
+    if (!prev) throw noLink();
+    const refs = relayRefs(settingSheet());
+    log("req", "Relay, segment {n}/{total}: video continuing the previous segment…", { n: i + 1, total });
+    seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style);
+    return r2v(refs, { continue_from: prev }, " + continuation");
+  }
+  // A cut: H3 Ref2VA with no start image and no end image. Its setting is the setting's sheet,
+  // or else the previous segment's chosen transition frame (its last frame unless another is
+  // chosen). A subject still visible in that frame is drifted already and wins over its sheet
+  // (GB10, 2026-11-15): the user picks a frame where nobody is in view. A new scene of the
+  // split (`scene`) takes no frame of the previous place: H3 kept that place (the sea at the
+  // end of the street, the town in the train window, GB10 2026-11-21). A long take with no
+  // first frame but references starts the same way.
+  if ((i > 0 && !continuous(seg)) || (i === 0 && !s.startImage && s.refsGiven)) {
+    const frame = i > 0 && !seg.scene && !settingSheet() ? frameOf(before) : null;
+    const refs = relayRefs(settingSheet() || (frame ? { ref: frame, desc: "" } : null));
+    log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });
+    seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style);
+    return r2v(refs, { aspect: s.ratio }, "");
+  }
+  // The first segment of a long take with no start image: H3 text to video at the long take's
+  // format. Its last frame becomes the subject's reference, as a long take's start picture is,
+  // so the segments after it continue it in latent space with that frame in view.
+  if (i === 0 && !s.startImage) {
+    log("req", "Relay, segment {n}/{total}: video from the text…", { n: i + 1, total });
+    seg.textStart = true;
+    seg.prompt_used = P.buildRelayTextPrompt(seg.prompt.trim(), r.look, s.style, h3Warn);
+    const aspect = F.QWEN21_RATIOS[s.ratio] ? s.ratio : "16:9";
+    return { pipeline: "h3-t2v", params: { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], aspect },
+      meta: { label, sub: ["{info} · seed {seed}", { info: `T2VA · ${aspect} · ${seg.duration} s`, seed: seg.seed }] } };
+  }
   // Segment 1 starts on the long take's first frame, as it is; a continuous one on the
-  // previous segment's transition frame.
+  // previous segment's transition frame (🔗 without one: refused rather than a silent cut).
+  const start = i === 0 ? s.startImage.ref : frameOf(before);
+  if (!start) throw noLink();
   if (i > 0) log("req", "Relay, segment {n}/{total}: video (continuous link)…", { n: i + 1, total });
-  const start = i === 0 ? s.startImage.ref : prev.ref;
-  seg.start = { ref: start };
+  if (typeof start === "string") seg.start = { ref: start };
   const last = seg.endImage?.ref || null;
   // With the subjects' sheets, a segment starts on its frame AND sees the sheets (Ref2VA with a
   // start frame, held still for its first 0.9 s: h3_start_frame.py): i2v sees only its first
@@ -694,66 +755,119 @@ async function renderSegment(i) {
   // see it as the location), segment 1 stays i2v on its frame.
   const firstFrame = i === 0, place = firstFrame && describedScene();
   const refs = last ? [] : firstFrame ? firstFrameRefs(s) : relayRefs(settingSheet());
-  let job;
   if (refs.length) {
-    seg.prompt_used = relayCutPrompt(seg, look, refs, s.style);
-    job = await relayR2vJob(s, seg, i, total, refs, { image: start });
-  } else {
-    seg.prompt_used = place
-      ? P.buildRelaySegmentPrompt(seg.prompt.trim(), look, [], subs[0].desc?.trim() || "the place in this picture", seg.duration, !!last, s.style, h3Warn)
-      : P.buildRelaySegmentPrompt(seg.prompt.trim(), look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
-    job = await tracked(seg, "video", sub => cutJob(start, seg.prompt_used, seg.duration, seg.seed,
-      ["Relay · segment {n}/{total}", { n: i + 1, total }], last, sub));
+    seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style);
+    return r2v(refs, { image: start }, " + start");
   }
-  await segmentDone(s, seg, i, total, job, began);
+  const subs = relaySubjects();
+  seg.prompt_used = place
+    ? P.buildRelaySegmentPrompt(seg.prompt.trim(), r.look, [], subs[0].desc?.trim() || "the place in this picture", seg.duration, !!last, s.style, h3Warn)
+    : P.buildRelaySegmentPrompt(seg.prompt.trim(), r.look, subs, locDesc(), seg.duration, !!last, s.style, h3Warn);
+  return { pipeline: "h3-i2v", params: { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], image: start,
+    ...(last ? { last_image: last } : {}) },
+    meta: { label, sub: ["{info} · seed {seed}", { info: `${last ? "FL2VA" : "I2VA"} · ${seg.duration} s → ${P.h3RealDuration(seg.duration).toFixed(2)} s`, seed: seg.seed }] } };
 }
 
-// A continuous segment with sheets: H3 Ref2VA on the subjects' sheets (and the setting's),
-// continuing the previous clip in latent space. No start image, no join to check: the clip
-// carries on from the previous one's last second, and the take is decoded in one go.
-async function renderLatentSegment(s, seg, i, total, before, began) {
-  if (!before?.ref) throw new Error(t("Relay, segment {n}: no continuous link possible, segment {p} has no transition frame. Regenerate it.", { n: i + 1, p: i }));
-  const refs = relayRefs(settingSheet());
-  log("req", "Relay, segment {n}/{total}: video continuing the previous segment…", { n: i + 1, total });
-  seg.start = null;
-  seg.prompt_used = relayCutPrompt(seg, s.relay.look, refs, s.style);
-  const job = await relayR2vJob(s, seg, i, total, refs, { continue_from: before.ref });
-  await segmentDone(s, seg, i, total, job, began);
+// Submits a job; resolves once the server has it with {done}, the promise of its end.
+function submitted(pipeline, params, meta, onId) {
+  return new Promise((resolve, reject) => {
+    const done = runJob(pipeline, params, { origin: "relay", ...meta, onSubmitted: job => { onId(job.id); resolve({ done }); } });
+    done.catch(reject);
+  });
 }
-
-// The first segment of a long take with no start image: H3 text to video at the long take's
-// format. Its last frame becomes the subject's reference, as a long take's start picture is,
-// so the segments after it continue it in latent space with that frame in view.
-async function renderTextSegment(s, seg, i, total, began) {
-  log("req", "Relay, segment {n}/{total}: video from the text…", { n: i + 1, total });
-  seg.start = null;
-  seg.prompt_used = P.buildRelayTextPrompt(seg.prompt.trim(), s.relay.look, s.style, h3Warn);
-  const aspect = F.QWEN21_RATIOS[s.ratio] ? s.ratio : "16:9";
-  const job = await tracked(seg, "video", sub => runJob("h3-t2v",
-    { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], aspect },
-    { origin: "relay", label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
-      sub: ["{info} · seed {seed}", { info: `T2VA · ${aspect} · ${seg.duration} s`, seed: seg.seed }] }));
-  if (!sameSession(s)) return;
-  const frame = out(job, ".png");
-  if (frame) { s.chars[0].variants = [imported({ ref: frame })]; s.chars[0].active = 0; }
-  await segmentDone(s, seg, i, total, job, began);
+// Queues segment i: "pending" (queued) from here, followed on the board.
+async function queueSegment(s, i) {
+  const r = s.relay, seg = r.segments[i], before = i > 0 ? r.segments[i - 1] : null;
+  // A rendered segment this one starts from: its transition frames, to choose from later
+  // (and the only frame of a segment saved before its last frame was kept).
+  if (before && !inChain(before) && usesFrame(i)) await ensureTransitions(before, i - 1, r.segments.length);
+  if (!sameSession(s)) throw new Error(t("Project cancelled."));
+  const spec = segmentJob(s, i);
+  seg.status = "pending";
+  const live = { phase: "queued", status: "queued", id: null, progress: 0, start: Date.now() };
+  relayLive.set(seg, live);
+  renderRelay();
+  try {
+    return await submitted(spec.pipeline, spec.params, spec.meta, id => { seg.job = id; live.id = id; save(); });
+  } catch (err) { relayLive.delete(seg); seg.status = seg.ref ? "stale" : "idle"; throw err; }
 }
+// The take of a chain, queued after its segments: their clips, or their outputs to come.
+function queueStitch(s) {
+  const r = s.relay, clips = r.segments.map(clipOf);
+  return submitted("video-stitch", { clips }, { label: ["Relay · sequence"], sub: ["{n} clip(s)", { n: clips.length }] },
+    id => { r.stitchJob = id; save(); });
+}
+const cancelJobs = ids => Promise.all(ids.filter(Boolean).map(id => api.cancel(id).catch(() => {})));
 
-// A rendered segment: its clip and last frame, then the transition frames the next segment
-// starts on, unless it continues this one in latent space. Ready only once they are there.
-async function segmentDone(s, seg, i, total, job, began) {
-  if (!sameSession(s)) return;
+// A rendered segment: its clip and last frame (and, for a segment from the text, the
+// subject's reference), then the transition frames a later choice may take, while the page is
+// open. Ready at once: the chain already goes on with its last frame.
+async function segmentDone(s, seg, i, job) {
   seg.ref = out(job, ".mp4");
-  seg.transitions = null;
   seg.lastFrame = out(job, ".png");
-  if (i < total - 1 && !takesNoFrame(i + 1)) await extractTransitions(seg, i, total);
-  if (!sameSession(s)) return;
+  seg.transitions = null;
+  seg.transitionIdx = 0;
+  if (typeof job.params?.image === "string") seg.start = { ref: job.params.image };
+  if (seg.textStart && seg.lastFrame) { s.chars[0].variants = [imported({ ref: seg.lastFrame })]; s.chars[0].active = 0; }
+  delete seg.job;
   seg.status = "ready";
-  seg.renderSec = Math.round((Date.now() - began) / 1000);
+  seg.renderSec = job.started && job.finished ? Math.round(job.finished - job.started) : 0;
   relayLive.delete(seg);
   renderRelay();
   save();
+  const total = s.relay.segments.length;
+  if (i < total - 1 && usesFrame(i + 1)) {
+    try { await extractTransitions(seg, i, total); }
+    catch (err) { relayLive.delete(seg); warn(err); }
+    if (!sameSession(s)) return;
+    renderRelay();
+    save();
+  }
 }
+
+// Follows a queued chain: `items` [{i, done}] in order, then `stitch` ({done} or null). A
+// segment that fails or is cancelled ends it: the jobs queued after it are taken off the queue.
+async function followChain(s, items, stitch) {
+  const r = s.relay;
+  for (let k = 0; k < items.length; k++) {
+    const { i, done } = items[k], seg = r.segments[i];
+    let job;
+    try { job = await done; }
+    catch (err) {
+      if (!sameSession(s)) return;
+      const stopped = err.message === "cancelled", rest = items.slice(k + 1).map(x => r.segments[x.i]);
+      await cancelJobs([...rest.map(x => x.job), stitch ? r.stitchJob : null]);
+      for (const x of [seg, ...rest]) { relayLive.delete(x); delete x.job; x.status = x.ref ? "stale" : "idle"; }
+      if (!stopped) seg.status = "error";
+      delete r.stitchJob;
+      if (stopped) log("ok", "Relay: chain stopped after segment {n}. Continue it when you want.", { n: i });
+      else warn(err);
+      renderRelay();
+      save();
+      return;
+    }
+    if (!sameSession(s)) return;
+    await segmentDone(s, seg, i, job);
+    if (!sameSession(s)) return;
+  }
+  if (!stitch) return;
+  log("req", "Relay: assembling the sequence…");
+  try {
+    const job = await stitch.done;
+    if (!sameSession(s)) return;
+    r.video = { ref: out(job, ".mp4") };
+    player($("relayPlayer"), r.video.ref);
+    updateNavMarks();
+    log("ok", "Relay: sequence assembled.");
+  } catch (err) {
+    if (!sameSession(s)) return;
+    if (err.message !== "cancelled") warn(err);
+  }
+  delete r.stitchJob;
+  updateRelayButtons();
+  save();
+}
+
 
 // The Relay's H3 Ref2VA references: the sheets of the first two subjects with one (the first
 // is the main character, a further human one a character, a non-human one a reference), then
@@ -811,36 +925,6 @@ const namesSubjects = () => [...d.relay.segments.map(seg => seg.prompt), d.relay
 // wins over that frame (the shot jumped to the place image's framing, GB10 2026-11-16).
 const settingSheet = () => (locVariant()?.ref ? { ref: locVariant().ref, desc: locDesc() } : null);
 
-// One Ref2VA clip of the Relay; `from`: { image } the frame the first segment of a long take
-// starts on, { continue_from } the clip a continuous segment continues, or none (a cut).
-function relayR2vJob(s, seg, i, total, refs, from = null) {
-  const how = from?.continue_from ? " + continuation" : from?.image ? " + start" : "";
-  return tracked(seg, "video", sub => runJob("h3-r2v",
-    { prompt: seg.prompt_used, duration: seg.duration, seed: seg.seed, loras: s.loras || [], references: refs.map(x => x.ref),
-      ...(from?.image ? { image: from.image } : from?.continue_from ? { continue_from: from.continue_from } : { aspect: s.ratio }) },
-    { origin: "relay", label: ["Relay · segment {n}/{total}", { n: i + 1, total }], onSubmitted: sub,
-      sub: ["{info} · seed {seed}", { info: `Ref2VA · ${refs.length} ref.${how} · ${seg.duration} s`, seed: seg.seed }] }));
-}
-
-// A cut: H3 Ref2VA with no start image and no end image. Its setting is the setting's sheet,
-// or else the previous segment's chosen transition frame (its last frame unless another is
-// chosen). A subject still visible in that frame is drifted already and wins over its sheet
-// (GB10, 2026-11-15): the user picks a frame where nobody is in view. A new scene of the
-// split (`scene`) takes no frame of the previous place: H3 kept that place (the sea at the
-// end of the street, the town in the train window, GB10 2026-11-21).
-async function renderCutSegment(s, seg, i, total, before, began) {
-  const carry = !seg.scene && !settingSheet();
-  if (carry) await ensureTransitions(before, i - 1, total);
-  if (!sameSession(s)) return;
-  const frame = carry && before?.ref ? transitionOf(before)?.ref || before.lastFrame : null;
-  const refs = relayRefs(settingSheet() || (frame ? { ref: frame, desc: "" } : null));
-  log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });
-  seg.start = null;
-  seg.prompt_used = relayCutPrompt(seg, s.relay.look, refs, s.style);
-  const job = await relayR2vJob(s, seg, i, total, refs);
-  await segmentDone(s, seg, i, total, job, began);
-}
-
 // A segment rendered last, or followed by a latent link, has no transition frames: they are
 // extracted when a segment after it needs one (a continuous start frame, a cut's setting).
 async function ensureTransitions(before, i, total) {
@@ -867,10 +951,10 @@ function relayFail(err) {
   warn(err);
 }
 
-// Sequential by construction: a continuous segment needs the previous one's frame. The
-// chain starts at the first segment that is not ready (a stopped or broken chain goes
+// The chain starts at the first segment that is not ready (a stopped or broken chain goes
 // on from there); when all are, it renders them all again with new seeds, once confirmed.
-// "Stop after this segment" ends the loop once the running segment is done.
+// Everything is queued at once (a continuous segment takes the previous one's output to
+// come), and "Stop after this segment" takes off the queue what has not started.
 async function runRelay() {
   const r = d?.relay;
   if (!r || !relayReady() || relayBusy()) return;
@@ -885,29 +969,35 @@ async function runRelay() {
   // its turn, so a stopped chain says where it is.
   markStaleFrom(from);
   relayRunning = true; relayStop = false;
-  $("relayRunBtn").disabled = true;
   updateRelayButtons();
+  const items = [];
+  let stitch = null;
   try {
     for (let i = from; i < r.segments.length; i++) {
       if (!r.segments[i].seed) r.segments[i].seed = F.seedPlus(s.seed, 501 + i);
-      await renderSegment(i);
-      if (!sameSession(s)) return;
-      if (relayStop && i < r.segments.length - 1) {
-        log("ok", "Relay: chain stopped after segment {n}. Continue it when you want.", { n: i + 1 });
-        break;
-      }
+      items.push({ i, ...(await queueSegment(s, i)) });
     }
-  } catch (err) { if (sameSession(s)) relayFail(err); }
+    // A finished chain is assembled: the click that started it asked for the video (one
+    // segment alone is the video already).
+    if (r.segments.length > 1) stitch = await queueStitch(s);
+    log("ok", "Relay: {n} job(s) queued on the server: the chain goes on even if this page is closed.", { n: items.length + (stitch ? 1 : 0) });
+  } catch (err) {
+    // A refused submission: what this click queued is taken off the queue.
+    if (sameSession(s)) {
+      await cancelJobs([...items.map(x => r.segments[x.i].job), r.stitchJob]);
+      for (const x of items) { const seg = r.segments[x.i]; relayLive.delete(seg); delete seg.job; seg.status = seg.ref ? "stale" : "idle"; }
+      delete r.stitchJob;
+      warn(err);
+    }
+    relayRunning = false;
+    if (sameSession(s)) { renderRelay(); save(); }
+    return;
+  }
+  try { await followChain(s, items, stitch); }
   finally { relayRunning = false; relayStop = false; }
   if (!sameSession(s)) return;
   renderRelay();
   save();
-  // A finished chain is assembled at once: the click that started it asked for the video
-  // (one segment alone is the video already).
-  if (r.segments.length > 1 && r.segments.every(seg => seg.status === "ready")) {
-    log("ok", "Relay: {n} segments generated: assembling the sequence.", { n: r.segments.length });
-    await assembleRelay();
-  }
 }
 
 // One segment again, on its current start, with a new seed. The following segments are
@@ -918,14 +1008,47 @@ async function regenerateSegment(i) {
   const s = d;
   try {
     seg.seed = F.seedPlus(seg.seed || F.seedPlus(s.seed, 501 + i), 1);
-    await renderSegment(i);
+    await followChain(s, [{ i, ...(await queueSegment(s, i)) }], null);
     if (!sameSession(s)) return;
-    markStaleFrom(i + 1);
-    log("ok", "Relay: segment {n} regenerated.", { n: i + 1 });
+    if (seg.status === "ready") {
+      markStaleFrom(i + 1);
+      log("ok", "Relay: segment {n} regenerated.", { n: i + 1 });
+    }
   } catch (err) { if (sameSession(s)) relayFail(err); }
   renderRelay();
   save();
 }
+
+// A project resumed while its chain still runs (or ran) on the server: its jobs are followed
+// again, their files written into the segments. Nothing is submitted.
+async function followSavedChain(s) {
+  const r = s.relay, items = [];
+  const read = async id => { try { return await api.job(id); } catch { return null; } };
+  for (const [i, seg] of r.segments.entries()) {
+    if (!seg.job) continue;
+    const job = await read(seg.job);
+    if (!job) { delete seg.job; continue; }
+    seg.status = "pending";
+    relayLive.set(seg, { phase: job.status === "queued" ? "queued" : "video", status: job.status, id: job.id, progress: job.progress || 0, start: Date.now() });
+    const done = waitJob(job);
+    done.catch(() => {});
+    items.push({ i, done });
+  }
+  let stitch = null;
+  const sj = r.stitchJob ? await read(r.stitchJob) : null;
+  if (sj) { const done = waitJob(sj); done.catch(() => {}); stitch = { done }; }
+  else delete r.stitchJob;
+  if (!sameSession(s) || (!items.length && !stitch)) return;
+  log("ok", "Relay: the chain went on on the server: following it.");
+  relayRunning = true;
+  renderRelay();
+  try { await followChain(s, items, stitch); }
+  finally { relayRunning = false; relayStop = false; }
+  if (!sameSession(s)) return;
+  renderRelay();
+  save();
+}
+
 
 async function assembleRelay() {
   const r = d?.relay, s = d;
@@ -975,8 +1098,13 @@ function loadSaved() {
   return p;
 }
 export const hasSavedProject = () => !!savedCache;
-// Pipeline of the saved project: "Resume the project" shows under that pipeline only.
-export const savedPipeline = () => savedCache?.pipeline || null;
+// Pipelines of the saved project: "Resume the project" shows under the long take's, and under
+// the one a long take was opened from (Text2Video, Image2Video, Video from references).
+export const savedPipelines = () => (savedCache ? [savedCache.pipeline, savedCache.from].filter(Boolean) : []);
+// The saved long take has jobs on the server not followed to the end (the page was closed
+// while its chain ran): the page opens on it and follows them. Nothing is submitted.
+export const savedChainRunning = () => !!savedCache?.relay
+  && ((savedCache.relay.segments || []).some(seg => seg.job) || (!!savedCache.relay.stitchJob && !savedCache.relay.video));
 
 const exists = ref => fetch(refURL(ref), { method: "HEAD" }).then(r => r.ok, () => false);
 
@@ -1013,6 +1141,7 @@ export async function restoreProject() {
   const missing = items.filter(it => it.status === "missing").length;
   if (missing) log("warn", "Project restored: {n} file(s) missing, regenerate them.", { n: missing });
   else log("ok", "Project restored: every file is there.");
+  await followSavedChain(s);
 }
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
@@ -1028,7 +1157,17 @@ export function initDirector(h) {
     save();
   });
   $("relayRunBtn").addEventListener("click", runRelay);
-  $("relayStopBtn").addEventListener("click", () => { relayStop = true; updateRelayButtons(); });
+  // The segment running ends; what has not started yet (segments, the take) leaves the queue.
+  $("relayStopBtn").addEventListener("click", async () => {
+    const r = d?.relay;
+    if (!r || relayStop) return;
+    relayStop = true;
+    updateRelayButtons();
+    const left = r.segments.filter(inChain), started = left.some(seg => relayLive.get(seg)?.status !== "queued");
+    const queued = left.filter(seg => relayLive.get(seg)?.status === "queued").slice(started ? 0 : 1);
+    // Stopped during its last segment, the chain is still assembled.
+    if (queued.length) await cancelJobs([...queued.map(seg => seg.job), r.stitchJob]);
+  });
   $("relayAssembleBtn").addEventListener("click", assembleRelay);
   $("relayComposeBtn").addEventListener("click", () => composeRelay());
   // A screenplay file: read into the screenplay, then split as the button would (asked first
