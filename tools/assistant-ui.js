@@ -500,12 +500,16 @@ const INPUT_IMAGE = { ...GALLERY_IMAGE, key: "inputs/ab12.png", filename: "ab12.
   check(lt12 && await page.evaluate(() => document.body.dataset.mode) === "studio" && await page.inputValue("#pipelineSelect") === "sequence",
     "the long take card did not open the long take");
   check(await page.inputValue('#relayList .relay-seg[data-seg="1"] textarea') === "She stops by a tree and smiles.", "the long take card's segments");
+  // The chain waits for the props call: started meanwhile, it went without them (GB10 2026-11-26).
+  const runWhileAsking = await page.isDisabled("#relayRunBtn");
   // A laid-out screenplay that defines no subjects: one Gemma call for its recurring props
   // (stubbed out here: the field stays empty, the segments as written), then the card is reported.
   for (let w = 0; w < 50 && !cardPosts.some(([id, b]) => id === "C12" && b.status === "launched"); w++) await page.waitForTimeout(200);
   check(jobs.length === before12 && cardPosts.some(([id, b]) => id === "C12" && b.status === "launched"), "the long take card submitted a job or was not reported");
   check(llmBodies.slice(llm12).filter(b => b.includes("Find the objects, vehicles, animals and minor characters")).length === 1
     && !llmBodies.slice(llm12).some(b => b.includes("shot-list writer")), "the long take card's screenplay: props not asked once, or split by Gemma");
+  await page.waitForFunction(() => !document.getElementById("relayRunBtn").disabled, null, { timeout: 10000 }).catch(() => {});
+  check(runWhileAsking && !(await page.isDisabled("#relayRunBtn")), "the chain could start while the props were asked, or not after");
   await page.click("#studioExitBtn");
   // With a first frame and a reference: the first frame is the form's input image (no
   // video format to choose), the reference keeps its role; still no job.

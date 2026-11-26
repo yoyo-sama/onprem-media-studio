@@ -243,6 +243,7 @@ const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${(sec % 
 const textFrame = () => { const s0 = d.relay?.segments[0]; return inChain(s0) && s0.textStart ? { job: s0.job, output: ".png" } : null; };
 const relaySubjects = () => d.chars.map((c, k) => ({ c, ref: (k === 0 && textFrame()) || activeVariant(c)?.ref })).filter(x => x.ref)
   .slice(0, LONG_TAKE_REFS).map(({ c, ref }) => ({ desc: charDesc(c), kind: P.charKindOf(c.fields), role: c.fields.role, ref }));
+let describingProps = false;   // a screenplay's recurring props asked of Gemma (defineScreenplayProps)
 const relayBusy = () => !!d?.relay?.segments.some(seg => seg.status === "pending");
 const relayReady = () => !!d?.relay?.segments.length && d.relay.segments.every(seg => seg.prompt.trim());
 const continuous = seg => seg.mode === "continue";
@@ -265,7 +266,7 @@ const usesFrame = i => {
 const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min(seg.transitionIdx || 0, seg.transitions.length - 1)] : null);
 
 function updateRelayButtons() {
-  const r = d?.relay, busy = relayBusy();
+  const r = d?.relay, busy = relayBusy() || describingProps;
   $("relayComposeBtn").disabled = !r || busy || !$("relayScenario").value.trim();
   $("relayImportBtn").disabled = !r || busy;
   document.querySelectorAll("#relayLook textarea").forEach(el => { el.disabled = !r || busy; });
@@ -376,14 +377,21 @@ function applyScreenplay(r, play, ends = []) {
 
 // The recurring props of a screenplay that defines no subjects, written once by Gemma into the
 // shared Subjects field (shown and editable; the segments stay as written). Nothing renders.
+// The chain waits for it (`describingProps`): started meanwhile, it went without them, and
+// its H3 render stopped Gemma under the call (GB10 2026-11-26).
 async function defineScreenplayProps(r, play) {
   if (play.given.includes("subjects") || r.segments.length < 2 || r.look.subjects.trim()) return;
+  describingProps = true;
+  updateRelayButtons();
   try {
     log("req", "Relay: {llm} describes the screenplay's recurring objects once…", { llm: LLM });
     const props = await P.describeScreenplayProps(F.llm, r.scenario);
     if (props) { r.look.subjects = props; log("ok", "Relay: recurring objects described once in the shared Subjects field."); }
   } catch (err) {
     log("warn", "Recurring objects not described ({error}): the screenplay is used as written.", { error: err.message });
+  } finally {
+    describingProps = false;
+    updateRelayButtons();
   }
 }
 
@@ -972,7 +980,7 @@ function relayFail(err) {
 // come), and "Stop after this segment" takes off the queue what has not started.
 async function runRelay() {
   const r = d?.relay;
-  if (!r || !relayReady() || relayBusy()) return;
+  if (!r || !relayReady() || relayBusy() || describingProps) return;
   const s = d;
   let from = relayResumeFrom();
   if (from >= r.segments.length) {
