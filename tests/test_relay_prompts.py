@@ -19,9 +19,12 @@ def run(code: str):
     return json.loads(done.stdout)
 
 
-def segment_prompt(look):
-    return run(f"""console.log(JSON.stringify(P.buildRelaySegmentPrompt("<Subject 1> walks along the path; the camera tracks backward",
-        {json.dumps(look)}, [{{desc: "a woman in a green coat"}}], "a walled garden", 10, false, "none")));""")
+# The coherence guards every H3 prompt carries are checked in test_every_prompt_carries_the_guards;
+# the other tests read the prompt they are given back from (stripH3Guards, an exact inverse).
+def segment_prompt(look, guards=False):
+    call = f"""P.buildRelaySegmentPrompt("<Subject 1> walks along the path; the camera tracks backward",
+        {json.dumps(look)}, [{{desc: "a woman in a green coat"}}], "a walled garden", 10, false, "none")"""
+    return run(f"console.log(JSON.stringify({call if guards else f'P.stripH3Guards({call})'}));")
 
 
 def field(prompt: str, name: str) -> str:
@@ -56,8 +59,10 @@ def test_compose_scenario_returns_segments_and_look():
     assert out["res"]["segments"] == ["<Subject 1> walks.", "<Subject 1> stops."]
     assert out["res"]["look"] == {"camera": "medium shots", "lighting": "soft light", "sound": "birdsong", "music": "", "subjects": ""}
     assert "exactly 2 segments" in out["system"] and '"soundscape"' in out["system"]
-    # A subject with a reference: its look comes from it, the split is not asked for it.
-    assert '"subjects"' not in out["system"]
+    # A subject with a reference: its look comes from it; the split is asked only for the
+    # recurring props with none (an egg, a scooter, an airship changed design, GB10 2026-11-26).
+    assert "the look of the recurring subjects as the scenario gives it" not in out["system"]
+    assert "the recurring objects, vehicles, animals and minor characters that have no marker" in out["system"]
 
 
 def test_compose_scenario_asks_the_subjects_look_with_no_reference():
@@ -153,10 +158,27 @@ def test_shared_subjects_and_retention_follow_the_app_definitions():
 
 
 def test_text_segment_has_no_picture_and_no_task_tag():
-    p = run("""console.log(JSON.stringify(P.buildRelayTextPrompt("<Subject 1> walks along the path",
-        {subjects: "<Subject 1> is a woman in a green coat.", lighting: "Soft light", sound: "Birdsong"}, "none")));""")
+    p = run("""console.log(JSON.stringify(P.stripH3Guards(P.buildRelayTextPrompt("<Subject 1> walks along the path",
+        {subjects: "<Subject 1> is a woman in a green coat.", lighting: "Soft light", sound: "Birdsong"}, "none"))));""")
     assert "<Picture" not in p and "[reference generation]" not in p
     assert field(p, "subject_definitions") == "<Subject 1> is a woman in a green coat."
     assert field(p, "summary") == "<Subject 1> walks along the path"
     assert field(p, "detailed_description") == "<Subject 1> walks along the path. Soft light."
     assert field(p, "retention_analysis") == "—"
+
+
+def test_every_prompt_carries_the_guards():
+    # Anatomy and scale close retention_analysis, one shot closes detailed_description, once.
+    p = segment_prompt({"lighting": "Soft light"}, guards=True)
+    anatomy, shot = run("console.log(JSON.stringify([P.H3_GUARD_ANATOMY, P.H3_GUARD_SHOT]));")
+    assert field(p, "retention_analysis").endswith("\n" + anatomy) and p.count(anatomy) == 1
+    assert field(p, "detailed_description").endswith(" " + shot) and p.count(shot) == 1
+    # Plain prose (Image2Video): both at the end; a prompt given back twice keeps them once.
+    out = run("""const g = P.capH3Prompt("A girl rides a scooter.");
+      console.log(JSON.stringify([g, P.capH3Prompt(g) === g, P.stripH3Guards(g)]));""")
+    assert out[0].endswith("\n\n" + shot) and out[1] and out[2] == "A girl rides a scooter."
+    # A continued segment opens on the join; a cut does not.
+    out = run("""const refs = [{kind: "character", desc: "a girl"}];
+      console.log(JSON.stringify([P.buildRelayCutPrompt("She waves.", {}, refs, "none", null, true),
+                                  P.buildRelayCutPrompt("She waves.", {}, refs, "none"), P.H3_CONTINUES]));""")
+    assert out[2] in out[0] and out[2] not in out[1]
