@@ -398,9 +398,11 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     planche doit décrire son sujet une seule fois : la vision de Gemma écrivait « shown in four
     poses, against a pale background », et H3 dessinait le sujet deux fois dans une scène
     chargée. La consigne de vision interdit maintenant vues, poses et fond, demande la taille
-    comparée à un adulte, et `stripSheetLayout` retire ce qui passe quand même. Un accessoire
-    récurrent sans référence (un œuf, un scooter, un dirigeable) est écrit une fois dans le champ
-    partagé Sujets du découpage, sinon son design change d'un plan à l'autre. (2026-11-26)
+    comparée à un adulte et chaque accessoire distinctif (une première version oubliait le monocle
+    du Baron), et `stripSheetLayout` retire ce qui passe quand même : sur le GB10, des mots de mise
+    en page dans 0 description sur 9 (8 sur 9 avant). Un accessoire récurrent sans référence (un
+    œuf, un scooter, un dirigeable) est écrit une fois dans le champ partagé Sujets du découpage,
+    sinon son design change d'un plan à l'autre. (2026-11-26)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
