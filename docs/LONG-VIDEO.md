@@ -569,3 +569,21 @@ vision's size guess was wrong (Riko "about four years old", Kettle "toddler-size
 looked taller than Riko in the foreground of segment 6: the size field was dropped. At the
 10 s join the setting jumped from the street to the post office wall with no cut: segment 2's
 text starts in front of the post office, a place the clip before had not reached.
+
+**Second and third control renders** (same command). On 64ce08a (take
+`video-stitch/20261126-115117-job-75fbd6-7.mp4`) the props call never reached the take: the
+chain had been started while it ran, and the H3 render stopped Gemma under it. The chain now
+waits for it (d95540b); a dry run (`DRY=1`, stops before the chain) showed the call filling
+the Subjects field with "a small round orange hover-scooter with one headlight and stubby fins,
+and a giant white egg with big orange spots that is as tall as `<Subject 1>`". On 32f0435
+(take `video-stitch/20261126-144119-job-7cc67e-7.mp4`, 59.92 s, −18.1 LUFS, 50 min), with
+that definition in all six prompts: the egg kept one design over the take (it turned beige
+with brown spots at the new scene before); the scooter stayed orange and round but still took
+three shapes; Kettle stayed at or below Riko's height, segment 6 included; no doubled
+character; the third hand was gone (2.5 to 9 s, checked on crops at 2.5, 4, 6 and 8 s), after
+staying in the two renders before with the same anatomy line. New: the egg showed in segments
+1 and 2, before the postman brings it in segment 3 (a prop defined for the whole take shows
+where its text does not have it yet), and a cut at 51.0 s, 1.1 s after segment 6's context,
+whose text starts in front of the mountain where segment 5 ended in the dunes. The 10 s jump
+stayed. Open: scope a prop to the segments that name it, and make a segment that starts
+elsewhere a planned cut instead of a continuous join.

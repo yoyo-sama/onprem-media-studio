@@ -405,9 +405,14 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     ans », un petit robot « de la taille d'un tout-petit », presque sa hauteur). Un accessoire
     récurrent sans référence (un œuf, un scooter, un dirigeable) est écrit une fois dans le champ
     partagé Sujets, par le découpage ou, pour un scénario qui ne définit aucun sujet, par un appel
-    à Gemma à l'import, sinon son design change d'un plan à l'autre. Ce que le prompt ne corrige
-    pas : une troisième main est restée sur le guidon pendant que la conductrice saluait, la ligne
-    d'anatomie envoyée et lue. (2026-11-26)
+    à Gemma à l'import, sinon son design change d'un plan à l'autre ; la chaîne attend cet appel
+    (lancée entre-temps, le rendu H3 arrêtait Gemma en plein appel et la prise partait sans
+    accessoires). Écrit une fois, l'œuf a gardé un seul design sur la prise, mais un accessoire
+    défini pour toute la prise apparaît aussi là où son texte ne l'a pas encore. La troisième main
+    est restée sur deux rendus avec la ligne d'anatomie envoyée et a disparu au troisième : la
+    ligne aide, elle ne garantit pas. Et un segment dont le texte commence ailleurs que là où finit
+    le clip précédent donne un saut ou une coupe au raccord, quoi que disent les gardes.
+    (2026-11-26)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

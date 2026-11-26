@@ -617,3 +617,22 @@ estimée par la vision était fausse (Riko « environ quatre ans », Kettle « u
 Kettle paraissait plus grand que Riko au premier plan du segment 6 : le champ de taille est
 retiré. Au raccord de 10 s, le décor saute de la rue au mur de la poste sans coupe : le texte du
 segment 2 commence devant la poste, un lieu que le clip précédent n'avait pas atteint.
+
+**Deuxième et troisième rendus de contrôle** (même commande). Sur 64ce08a (prise
+`video-stitch/20261126-115117-job-75fbd6-7.mp4`), l'appel des accessoires n'a jamais atteint la
+prise : la chaîne avait été lancée pendant qu'il tournait, et le rendu H3 a arrêté Gemma en
+plein appel. La chaîne l'attend maintenant (d95540b) ; un essai à blanc (`DRY=1`, arrêt avant
+la chaîne) a montré l'appel remplissant le champ Sujets par « a small round orange hover-scooter
+with one headlight and stubby fins, and a giant white egg with big orange spots that is as tall
+as `<Subject 1>` ». Sur 32f0435 (prise `video-stitch/20261126-144119-job-7cc67e-7.mp4`,
+59,92 s, −18,1 LUFS, 50 min), avec cette définition dans les six prompts : l'œuf a gardé un seul
+design sur la prise (il devenait beige à taches brunes à la nouvelle scène avant) ; le scooter
+est resté orange et rond mais a encore pris trois formes ; Kettle est resté à la hauteur de Riko
+ou en dessous, segment 6 compris ; aucun personnage en double ; la troisième main a disparu
+(2,5 à 9 s, vérifié sur des agrandissements à 2,5, 4, 6 et 8 s), après être restée dans les deux
+rendus précédents avec la même ligne d'anatomie. Nouveau : l'œuf apparaît aux segments 1 et 2,
+avant que le postier ne l'apporte au segment 3 (un accessoire défini pour toute la prise apparaît
+là où son texte ne l'a pas encore), et une coupe à 51,0 s, 1,1 s après le contexte du segment 6,
+dont le texte commence devant la montagne là où le segment 5 finissait dans les dunes. Le saut de
+10 s est resté. À faire : limiter un accessoire aux segments qui le nomment, et faire d'un
+segment qui commence ailleurs une coupe prévue plutôt qu'un raccord continu.
