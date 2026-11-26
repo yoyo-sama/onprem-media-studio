@@ -389,7 +389,7 @@ async function defineScreenplayProps(r, play) {
   updateRelayButtons();
   try {
     log("req", "Relay: {llm} reads the screenplay once (recurring objects, changes of place)…", { llm: LLM });
-    const { props, newPlace } = await P.describeScreenplayProps(F.llm, r.segments);
+    const { props, newPlace } = await P.describeScreenplayProps(F.llm, r.segments, P.relaySubjectLegend(locDesc(), relaySubjects()));
     if (wantProps && props) { r.look.subjects = props; log("ok", "Relay: recurring objects described once in the shared Subjects field."); }
     for (const k of newPlace) Object.assign(r.segments[k], { mode: "cut", scene: true });
     if (newPlace.length)

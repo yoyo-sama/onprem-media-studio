@@ -1359,13 +1359,16 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // prop lines above, for the shared Subjects field. And a segment that starts in another place
   // than where the previous one ends, joined continuously, jumped there or cut on its own: it
   // becomes a cut. The segments' text is never touched. `segments`: [{prompt, mode}].
-  const SCREENPLAY_PROPS_SYSTEM = `You read a screenplay for the MiniMax H3 video model, made of numbered segments rendered one by one; each one continues the previous one from its last image, unless it is marked as a new shot. Two tasks.
+  const SCREENPLAY_PROPS_SYSTEM = `You read a screenplay for the MiniMax H3 video model, made of numbered segments rendered one by one; each one continues the previous one from its last image, unless it is marked as a new shot. When the markers' subjects are listed before the segments, a part of a marked subject (a robot's spout or lid, a girl's goggles) belongs to that subject, never to a prop. Two tasks.
 1. "props": Find the objects, vehicles, animals and minor characters that appear in more than one segment and are not named by a marker (SUBJECTREF1, SUBJECTREF2…: those already have a reference image). Describe each of them ONCE so it looks the same in every segment: "names", the words the screenplay uses for it, singular, e.g. ["hover-scooter", "scooter"]; "look", one English sentence of 10 to 40 words, plain prose, positive phrasing: what it is, its shape, its size compared with the characters, its colours and marks. Take every detail the screenplay gives of that object itself, never a detail it gives of a character next to it, and add nothing it does not give; a marker may appear only to compare a size.
 2. "joins": for every segment from the second on that is not marked as a new shot, {"segment": its number, "previous_ends_on": what the last image of the previous segment shows, in a few words, "starts_on": what the first image of this segment shows, in a few words, "same_image": true or false}. "same_image" is true when the last image of the previous segment can be the first image of this one: the same spot and background, the characters where they were, even if the segment then moves on or looks far ahead. It is false when the segment opens in a place, in front of a background or at a moment the previous one never reached.
 Answer ONLY with JSON {"props": [{"names": ["..."], "look": "..."}], "joins": [{"segment": 2, "previous_ends_on": "...", "starts_on": "...", "same_image": true}]}, with [] when there is none.`;
-  async function describeScreenplayProps(llm, segments) {
+  // `legend` (optional, relaySubjectLegend): who the markers are. Without it, "steam puffing
+  // from its spout" next to a bare marker gave the teapot robot's spout to the scooter, on three
+  // calls out of three (GB10 2026-11-26).
+  async function describeScreenplayProps(llm, segments, legend = "") {
     const list = (segments || []).map((seg, i) => `Segment ${i + 1}${i > 0 && seg.mode === "cut" ? " (new shot)" : ""}: ${seg.prompt}`).join("\n");
-    const out = await llm(SCREENPLAY_PROPS_SYSTEM, h3TokensOut(list));
+    const out = await llm(SCREENPLAY_PROPS_SYSTEM, (legend ? `The markers' subjects:\n${legend}\n\n` : "") + h3TokensOut(list));
     // A marker the screenplay does not cite would define a subject with no picture.
     const cited = new Set([...list.matchAll(H3_TOKEN_RE)].map(m => m[1]));
     const props = propLines(out?.props, line => [...line.matchAll(H3_TOKEN_RE)].every(m => cited.has(m[1])));

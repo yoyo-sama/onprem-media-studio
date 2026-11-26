@@ -153,6 +153,11 @@ const SPLIT = {
       && P.scopeSubjectDefs(defs, "Two eggs roll.") === "<Subject 1> is a girl.\nA giant white egg."
       && P.scopeSubjectDefs(defs, "An eggplant.") === "<Subject 1> is a girl."
       && P.scopeSubjectDefs("[orange hover-scooter] A scooter.", "The scooter jumps.") === "A scooter.", "a prop only where its segment names it");
+    let propsUser = "";
+    await P.describeScreenplayProps(async (sys, user) => { propsUser = user; return {}; }, [{ prompt: "<Subject 2> puffs steam.", mode: "continue" }],
+      P.relaySubjectLegend("", [{ desc: "a girl" }, { desc: "a teapot robot" }]));
+    check(/^The markers' subjects:\n.*SUBJECTREF2 = the main character, a teapot robot/s.test(propsUser) && /Segment 1: SUBJECTREF2 puffs/.test(propsUser),
+      `the screenplay check knows who the markers are: ${propsUser}`);
     const scoped = P.buildRelayCutPrompt("<Subject 1> rides away.", { subjects: defs }, [{ kind: "character", desc: "a girl" }], "none");
     check(!scoped.includes("egg") && !scoped.includes("[egg") && !scoped.includes("[hover") && scoped.includes("<Subject 1> is a girl."), `a segment prompt without the egg: ${scoped}`);
     await P.composeScenario(async sys => { system = sys; return { segments: ["Port."] }; }, "a", 1, "", 15, [{ desc: "a girl" }]);
