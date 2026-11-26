@@ -9,6 +9,7 @@
 // API, then queues one video-concat of the three takes. Writes report.json and screenshots.
 //
 //   node anime_take.js http://localhost:8090/ ./out
+//   ONLY=take1 node anime_take.js http://localhost:8090/ ./out-take1   (one take, not joined)
 "use strict";
 const fs = require("fs"), path = require("path");
 const { chromium } = require("playwright");
@@ -20,7 +21,7 @@ const TAKES = [
   { name: "take1", screenplay: "take1.txt", refs: ["sheets/riko.png", "sheets/kettle.png"] },
   { name: "take2", screenplay: "take2.txt", refs: ["sheets/riko.png", "sheets/kettle.png", "sheets/baron.png"] },
   { name: "take3", screenplay: "take3.txt", refs: ["sheets/riko.png", "sheets/kettle.png", "sheets/baron.png"] },
-];
+].filter(t => !process.env.ONLY || process.env.ONLY.split(",").includes(t.name));
 const api = async (p, body) => (await fetch(BASE + p, body ? { method: "POST", headers: { "Content-Type": "application/json" },
                                                                body: JSON.stringify(body) } : undefined)).json();
 const pending = s => ["queued", "running"].includes(s);
@@ -93,7 +94,9 @@ const pending = s => ["queued", "running"].includes(s);
     Object.assign(j, { status: r.status, outputs: r.outputs, error: r.error, message: r.message, started: r.started, finished: r.finished }); }
   const stitched = takes.map(t => t.jobs.find(j => j.pipeline === "video-stitch"));
   let film = null;
-  if (stitched.every(j => j?.status === "done")) {
+  if (takes.length === 1 && stitched[0]?.status === "done") {
+    film = { id: stitched[0].id, status: "done", outputs: stitched[0].outputs };
+  } else if (stitched.every(j => j?.status === "done")) {
     const clips = stitched.map(j => j.outputs.find(o => o.endsWith(".mp4")));
     say(`joining ${clips.join(", ")}`);
     const job = await api("api/jobs", { pipeline: "video-concat", params: { clips, smooth_audio: true }, origin: "anime3min" });
