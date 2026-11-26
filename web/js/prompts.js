@@ -1243,7 +1243,10 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // (the user's own text, a subject's look) goes into every segment, as written.
   const PROP_LINE_RE = /^\s*\[([^\]]+)\]\s*(.*)$/;
   const escapeRe = v => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const namedIn = (name, text) => new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(name)}(?:e?s)?(?![\\p{L}\\p{N}])`, "iu").test(text);
+  // A name is found whole or by its last word ("hover-scooter" by "scooter", "spotted egg" by
+  // "egg"), as a word of its own, plural too: Gemma's names and the segment's words often differ.
+  const wordIn = (word, text) => new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(word)}(?:e?s)?(?![\\p{L}\\p{N}])`, "iu").test(text);
+  const namedIn = (name, text) => wordIn(name, text) || wordIn(name.split(/[\s-]+/).pop(), text);
   function scopeSubjectDefs(defs, text) {
     return String(defs || "").split("\n").flatMap(line => {
       const m = PROP_LINE_RE.exec(line);
@@ -1254,8 +1257,8 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // Gemma's props, [{names, look}], as the lines above; `ok(line)` may refuse one.
   function propLines(list, ok = () => true) {
     return (Array.isArray(list) ? list : []).map(prop => {
-      const names = (Array.isArray(prop?.names) ? prop.names : [prop?.names])
-        .map(x => String(x || "").replace(/[[\],]/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean);
+      const names = (Array.isArray(prop?.names) ? prop.names : [prop?.names]).flatMap(x => String(x || "").split(","))
+        .map(x => x.replace(/[[\]]/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean);
       const look = h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(prop?.look)))).replace(/\s+/g, " ").trim();
       return names.length && look ? `[${names.join(", ")}] ${look}` : "";
     }).filter(line => line && ok(line)).join("\n");
@@ -1356,17 +1359,20 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // prop lines above, for the shared Subjects field. And a segment that starts in another place
   // than where the previous one ends, joined continuously, jumped there or cut on its own: it
   // becomes a cut. The segments' text is never touched. `segments`: [{prompt, mode}].
-  const SCREENPLAY_PROPS_SYSTEM = `You read a screenplay for the MiniMax H3 video model, made of numbered segments rendered one by one; each one continues the previous one unless it is marked as a new shot. Two tasks.
-1. "props": Find the objects, vehicles, animals and minor characters that appear in more than one segment and are not named by a marker (SUBJECTREF1, SUBJECTREF2…: those already have a reference image). Describe each of them ONCE so it looks the same in every segment: "names", the words the screenplay uses for it, singular, e.g. ["hover-scooter", "scooter"]; "look", one English sentence of 10 to 40 words, plain prose, positive phrasing: what it is, its shape, its size compared with the characters, its colours and marks. Take every detail the screenplay gives and add nothing it does not give; a marker may appear only to compare a size.
-2. "new_place": the numbers of the segments, not marked as a new shot, whose first sentence shows the characters in another place than where the previous segment ends: another room, building, street or landscape, or later in time. A segment that goes on in the same place, or that follows the characters as they move on, is not one.
-Answer ONLY with JSON {"props": [{"names": ["..."], "look": "..."}], "new_place": [3]}, with [] when there is none.`;
+  const SCREENPLAY_PROPS_SYSTEM = `You read a screenplay for the MiniMax H3 video model, made of numbered segments rendered one by one; each one continues the previous one from its last image, unless it is marked as a new shot. Two tasks.
+1. "props": Find the objects, vehicles, animals and minor characters that appear in more than one segment and are not named by a marker (SUBJECTREF1, SUBJECTREF2…: those already have a reference image). Describe each of them ONCE so it looks the same in every segment: "names", the words the screenplay uses for it, singular, e.g. ["hover-scooter", "scooter"]; "look", one English sentence of 10 to 40 words, plain prose, positive phrasing: what it is, its shape, its size compared with the characters, its colours and marks. Take every detail the screenplay gives of that object itself, never a detail it gives of a character next to it, and add nothing it does not give; a marker may appear only to compare a size.
+2. "joins": for every segment from the second on that is not marked as a new shot, {"segment": its number, "previous_ends_on": what the last image of the previous segment shows, in a few words, "starts_on": what the first image of this segment shows, in a few words, "same_image": true or false}. "same_image" is true when the last image of the previous segment can be the first image of this one: the same spot and background, the characters where they were, even if the segment then moves on or looks far ahead. It is false when the segment opens in a place, in front of a background or at a moment the previous one never reached.
+Answer ONLY with JSON {"props": [{"names": ["..."], "look": "..."}], "joins": [{"segment": 2, "previous_ends_on": "...", "starts_on": "...", "same_image": true}]}, with [] when there is none.`;
   async function describeScreenplayProps(llm, segments) {
     const list = (segments || []).map((seg, i) => `Segment ${i + 1}${i > 0 && seg.mode === "cut" ? " (new shot)" : ""}: ${seg.prompt}`).join("\n");
     const out = await llm(SCREENPLAY_PROPS_SYSTEM, h3TokensOut(list));
     // A marker the screenplay does not cite would define a subject with no picture.
     const cited = new Set([...list.matchAll(H3_TOKEN_RE)].map(m => m[1]));
     const props = propLines(out?.props, line => [...line.matchAll(H3_TOKEN_RE)].every(m => cited.has(m[1])));
-    const newPlace = [...new Set((Array.isArray(out?.new_place) ? out.new_place : []).map(Number).filter(Number.isInteger).map(k => k - 1))]
+    // Gemma says, join by join, what the last image shows and what the next first one does
+    // before it decides: a bare list of segment numbers came back different on every call.
+    const newPlace = [...new Set((Array.isArray(out?.joins) ? out.joins : []).filter(j => j?.same_image === false)
+      .map(j => Number(j.segment) - 1).filter(Number.isInteger))]
       .filter(k => k >= 1 && k < (segments || []).length && segments[k].mode !== "cut").sort((a, b) => a - b);
     return { props, newPlace };
   }

@@ -151,7 +151,8 @@ const SPLIT = {
     const defs = "<Subject 1> is a girl.\n[egg] A giant white egg.\n[hover-scooter, scooter] A round orange hover-scooter.";
     check(P.scopeSubjectDefs(defs, "She parks her scooter.") === "<Subject 1> is a girl.\nA round orange hover-scooter."
       && P.scopeSubjectDefs(defs, "Two eggs roll.") === "<Subject 1> is a girl.\nA giant white egg."
-      && P.scopeSubjectDefs(defs, "An eggplant.") === "<Subject 1> is a girl.", "a prop only where its segment names it");
+      && P.scopeSubjectDefs(defs, "An eggplant.") === "<Subject 1> is a girl."
+      && P.scopeSubjectDefs("[orange hover-scooter] A scooter.", "The scooter jumps.") === "A scooter.", "a prop only where its segment names it");
     const scoped = P.buildRelayCutPrompt("<Subject 1> rides away.", { subjects: defs }, [{ kind: "character", desc: "a girl" }], "none");
     check(!scoped.includes("egg") && !scoped.includes("[egg") && !scoped.includes("[hover") && scoped.includes("<Subject 1> is a girl."), `a segment prompt without the egg: ${scoped}`);
     await P.composeScenario(async sys => { system = sys; return { segments: ["Port."] }; }, "a", 1, "", 15, [{ desc: "a girl" }]);
@@ -200,7 +201,7 @@ const SPLIT = {
       // A screenplay read once: its recurring props, and the segments that start elsewhere
       // (`newPlace`, set by the test that wants one).
       if (/Find the objects, vehicles, animals and minor characters/.test(body.system || ""))
-        return json({ content: JSON.stringify({ props: [{ names: ["hover-scooter", "scooter"], look: PROPS }], new_place: newPlace }) });
+        return json({ content: JSON.stringify({ props: [{ names: ["hover-scooter", "scooter"], look: PROPS }], joins: newPlace.map(k => ({ segment: k, previous_ends_on: "a path", starts_on: "a beach", same_image: false })) }) });
       return json({ content: JSON.stringify(SPLIT) });
     }
     if (p === "/api/inputs") return json({ ref: `inputs/up-${++n}.png` }, 201);

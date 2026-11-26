@@ -582,13 +582,15 @@ graines gardait le double. Ce qui change, pour toute vidéo H3 (LESSONS n°60) :
   les objets, véhicules et animaux récurrents sans référence dans le champ partagé Sujets (sans
   référence, aussi les sujets eux-mêmes, avec leur taille, dans chaque segment). Un accessoire
   est une ligne `[egg, eggs] A giant white egg…` : elle va dans le `subject_definitions` des
-  segments dont le texte le nomme, et de ceux-là seulement (`scopeSubjectDefs` ; une ligne sans
+  segments dont le texte le nomme (en entier ou par son dernier mot : « hover-scooter » par
+  « scooter »), et de ceux-là seulement (`scopeSubjectDefs` ; une ligne sans
   `[noms]`, tapée par l'utilisateur ou non, va partout, telle qu'écrite). Un scénario est lu tel
   qu'écrit ; un appel à Gemma à l'import (`describeScreenplayProps`) écrit ses accessoires de la
   même façon quand il ne définit aucun sujet, sans toucher aux segments.
-- **Un segment qui commence ailleurs est une coupe.** Le même appel désigne les segments, pas
-  déjà un nouveau plan, dont la première phrase montre les personnages dans un autre lieu que
-  celui où finit le précédent : ils deviennent une coupe (🎞, affichée, l'utilisateur peut la
+- **Un segment qui commence ailleurs est une coupe.** Le même appel dit, raccord par raccord, ce
+  que montre la dernière image du segment précédent, ce que montre la première image du suivant,
+  et si l'une peut être l'autre (une simple liste de numéros revenait différente à chaque appel).
+  Un segment dont la première image n'a jamais été atteinte par le précédent devient une coupe (🎞, affichée, l'utilisateur peut la
   remettre en raccord) au lieu d'un raccord continu qui sautait ou coupait de lui-même. Un
   découpage le décide lui-même (`new_shot`).
 

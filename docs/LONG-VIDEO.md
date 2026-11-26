@@ -537,13 +537,14 @@ What changed, for every H3 video (LESSONS #60):
   objects, vehicles and animals with no reference in the shared Subjects field (with no
   reference, the subjects themselves too, with their size, in every segment). A prop is one
   line `[egg, eggs] A giant white egg…`: it goes into the `subject_definitions` of the segments
-  whose text names it, and only those (`scopeSubjectDefs`; a line with no `[names]`, typed by
+  whose text names it (whole or by its last word: "hover-scooter" by "scooter"), and only those (`scopeSubjectDefs`; a line with no `[names]`, typed by
   the user or not, goes everywhere, as written). A screenplay is read as written; one Gemma
   call at import (`describeScreenplayProps`) writes its props the same way when it defines no
   subjects, the segments untouched.
-- **A segment that starts elsewhere is a cut.** The same call names the segments, not already
-  a new shot, whose first sentence shows the characters in another place than where the
-  previous one ends: they become a cut (🎞, shown, the user can turn it back) instead of a
+- **A segment that starts elsewhere is a cut.** The same call says, join by join, what the last
+  image of the previous segment shows, what the first image of the next one shows, and whether
+  the one can be the other (a bare list of segment numbers came back different on every call).
+  A segment whose first image the previous one never reached becomes a cut (🎞, shown, the user can turn it back) instead of a
   continuous join that jumped there or cut on its own. A split decides this itself (`new_shot`).
 
 **Bench on the GB10** (`tools/qualify/anime_take/drift_bench.py`, same seed and same request,
