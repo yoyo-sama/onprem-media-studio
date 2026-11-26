@@ -133,6 +133,19 @@ function same(group, old, now, input) {
   }
 }
 const safe = f => { try { return f(); } catch (e) { return { error: e.message }; } };
+// Intended departure (2026-11-26): every 2.0 H3 prompt carries the coherence guards
+// (withH3Guards in web/js/prompts.js), which 1.4 did not write. Given back, the prompt is
+// 1.4's; over the 7,000-character limit the trimmed body is shorter by the guards' room, so
+// 2.0's text must then be 1.4's with only the end of detailed_description cut further.
+function unguarded(old, now) {
+  if (typeof now !== "string" || typeof old !== "string") return now;
+  const b = B.Prompts.stripH3Guards(now);
+  if (b === old || now.length > B.Prompts.H3_PROMPT_CHARS || old.length < B.Prompts.H3_PROMPT_CHARS - 8) return b;
+  const k = "detailed_description:\n", e = "\n\noverall_soundscape:";
+  const io = old.indexOf(k), ib = b.indexOf(k), eo = old.lastIndexOf(e), eb = b.lastIndexOf(e);
+  if (io < 0 || ib < 0 || eo < 0 || eb < 0) return old.startsWith(b) ? old : b;
+  return old.slice(0, io) === b.slice(0, ib) && old.slice(eo) === b.slice(eb) && old.slice(io, eo).startsWith(b.slice(ib, eb)) ? old : b;
+}
 const product = (...lists) => lists.reduce((acc, l) => acc.flatMap(x => l.map(y => [...x, y])), [[]]);
 
 // Runs one Gemma flow on both sides with the same scripted answers; compares calls,
@@ -185,7 +198,10 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
   for (const n of ["KEYFRAME_ANCHOR_SOLO", "KEYFRAME_ANCHOR_DUAL", "SHEET_CLEAN", "KREA2_ENRICH_SYSTEM", "H3_VIDEO_ENRICH_SYSTEM",
     "R2V_BRIEF_ENRICH_SYSTEM", "QWEN_EDIT_INSTRUCTION_ENRICH_SYSTEM", "SHEET_BRIEF_ENRICH_SYSTEM", "LOC_FIELD_KEYS"])
     same("constants", O[n], P[n], n);
-  for (const n of ["ENRICH_SYSTEM", "HOLD_MOTION", "REF_VISION_SYSTEM"]) same("constants", S[n], P[n], n);
+  // REF_VISION_SYSTEM is 2.0's own since 2026-11-26 (one subject described once, with its
+  // size; a sheet's views and background left out): the describeRefImage flow below
+  // compares what is sent and written back, not the instruction.
+  for (const n of ["ENRICH_SYSTEM", "HOLD_MOTION"]) same("constants", S[n], P[n], n);
   same("constants", S.CUT_ENRICH_SYSTEM("minimax_h3"), P.CUT_ENRICH_SYSTEM, "CUT_ENRICH_SYSTEM");
   for (const lib of ["CAMERA_LIB", "LIGHTING_LIB", "STYLE_PACKS"])
     same("libraries", Object.entries(O[lib]).map(([k, v]) => [k, v.frame, v.motion, v.text]),
@@ -220,17 +236,18 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
   for (const [shot, subjects, loc, hold, dur, body, last, style] of product(SHOTS.slice(0, 30), SUBJECT_SETS, [LOC, ""],
     [undefined, S.HOLD_MOTION], [5, 7.5, 15], [null, "A custom body."], [false, true], ["none", "cinematic"])) {
     const warnsA = [], warnsB = [];
-    same("buildH3CutPrompt", [safe(() => O.buildH3CutPrompt(shot, subjects, loc, hold, dur, body, last, style, () => warnsA.push(1))), warnsA],
-      [safe(() => P.buildH3CutPrompt(shot, subjects, loc, hold, dur, body, last, style, () => warnsB.push(1))), warnsB],
-      [shot, subjects, loc, hold, dur, body, last, style]);
+    const a = safe(() => O.buildH3CutPrompt(shot, subjects, loc, hold, dur, body, last, style, () => warnsA.push(1)));
+    const b = safe(() => P.buildH3CutPrompt(shot, subjects, loc, hold, dur, body, last, style, () => warnsB.push(1)));
+    same("buildH3CutPrompt", [a, warnsA], [unguarded(a, b), warnsB], [shot, subjects, loc, hold, dur, body, last, style]);
   }
   for (const subjects of [[{ desc: LONG }], [{ desc: LONG }, { desc: LONG }]]) {
     const warnsA = [], warnsB = [];
-    same("buildH3CutPrompt (over 7,000 characters)", [O.buildH3CutPrompt(SHOTS[0], subjects, LONG, null, 5, null, false, "noir", () => warnsA.push(1)), warnsA],
-      [P.buildH3CutPrompt(SHOTS[0], subjects, LONG, null, 5, null, false, "noir", () => warnsB.push(1)), warnsB]);
+    const a = O.buildH3CutPrompt(SHOTS[0], subjects, LONG, null, 5, null, false, "noir", () => warnsA.push(1));
+    const b = P.buildH3CutPrompt(SHOTS[0], subjects, LONG, null, 5, null, false, "noir", () => warnsB.push(1));
+    same("buildH3CutPrompt (over 7,000 characters)", [a, warnsA, true], [unguarded(a, b), warnsB, b.length <= P.H3_PROMPT_CHARS]);
   }
   for (const t of ["short", LONG, `${LONG} <Subject 12>`, `detailed_description:\n${LONG}\n\noverall_soundscape:\nx`])
-    same("capH3Prompt", O.capH3Prompt(t), P.capH3Prompt(t), t.slice(0, 40));
+    same("capH3Prompt", O.capH3Prompt(t), unguarded(O.capH3Prompt(t), P.capH3Prompt(t)), t.slice(0, 40));
   for (const s of [0, 1, 2, 4.9, 5, 5.2, 6, 7.5, 10, 12.3, 15, 20]) {
     same("h3 durations", [O.h3VideoFrames(s), O.h3RealDuration(s), O.h3Alignment(false, s), O.h3Alignment(true, s)],
       [P.h3VideoFrames(s), P.h3RealDuration(s), P.h3Alignment(false, s), P.h3Alignment(true, s)], s);
@@ -334,7 +351,8 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
   for (const answer of [{ prompt: "SUBJECTREF1 kneels by SUBJECTREF3 , masterpiece, as SUBJECTREF2 watches ." }, { prompt: "short" }, fail()])
     await flow("enrichCutText", [answer], () => S.enrichCutText(cut, "minimax_h3"), () => P.enrichCutText(B.llm, cut, B.log), answer);
   for (const answer of [{ subject: "a red umbrella", appearance: "open, 8k", materials: { a: "nylon" }, palette: "red" }, {}])
-    await flow("describeRefImage", [answer], () => S.describeRefImage({ b64: "QUJD", name: "x.png" }), () => P.describeRefImage(B.llm, "QUJD"), answer);
+    await flow("describeRefImage", [answer], () => S.describeRefImage({ b64: "QUJD", name: "x.png" }),
+      async () => { const r = await P.describeRefImage(B.llm, "QUJD"); B.calls = B.calls.map(c => [S.REF_VISION_SYSTEM, ...c.slice(1)]); return r; }, answer);
   const SCENES = ["A lighthouse keeper repairs the lamp at dusk.", "Un lion traverse la savane au crépuscule."];
   const CHAR_ANSWERS = [
     { kind: "human", label: "keeper", face: "weathered face", hair: "grey hair", outfit: "navy sweater, 8k", accessories: "", palette: "navy" },

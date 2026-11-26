@@ -8,7 +8,8 @@
 // field submits nothing; "Generate the chain" sends one H3 clip per segment, the first from
 // the references, a continuous one continuing the previous clip (continue_from, no start
 // image, no transition frames), each prompt carrying the shared look once and no default
-// light or camera; the take is assembled by video-stitch. A storyboard saved before it was
+// light or camera, and the coherence guards (one exemplar, anatomy, relative size, one shot)
+// once; the take is assembled by video-stitch. A storyboard saved before it was
 // folded into the long take is not offered for resuming. The production board: one
 // tile per segment, its progress from the job events, a click goes to the segment and
 // submits nothing; after a regenerated segment the chain continues from the next one;
@@ -138,6 +139,22 @@ const SPLIT = {
     r = await split({ segments: [seg("Port.", false), seg("Port again.", false), seg("Sea.", true), seg("Sea again.", false)] }, 2);
     check(JSON.stringify(r.cuts) === "[2]", `known scenes, several segments each, keep Gemma's flags: ${JSON.stringify(r.cuts)}`);
     check(/never to an object, the hands or the feet/.test(r.system), "the split's framing rule");
+    // With references, the recurring props with none are written once in the shared subjects;
+    // with none, the subjects themselves, with their size.
+    let system = "";
+    const withRefs = await P.composeScenario(async sys => { system = sys; return { subjects: "A small white egg.", segments: ["Port."] }; },
+      "a", 1, "", 15, [{ desc: "a girl" }]);
+    check(withRefs.look.subjects === "A small white egg.", `the props of a split with references: ${JSON.stringify(withRefs.look)}`);
+    await P.composeScenario(async sys => { system = sys; return { segments: ["Port."] }; }, "a", 1, "", 15, [{ desc: "a girl" }]);
+    check(/the recurring objects, vehicles, animals and minor characters that have no marker/.test(system), "the split asks for the props");
+    await P.composeScenario(async sys => { system = sys; return { segments: ["Port."] }; }, "a", 1, "", 15, []);
+    check(/size compared with the other subjects/.test(system), "the split asks for the subjects' size");
+    // The guards: once, given back exactly, in plain prose too; a camera-movement clip keeps its cuts.
+    const plain = "A girl rides a scooter.";
+    const g = P.capH3Prompt(plain);
+    check(g.endsWith(P.H3_GUARD_SHOT) && P.capH3Prompt(g) === g && P.stripH3Guards(g) === plain, `guards in plain prose: ${g}`);
+    const motion = P.buildH3RefPrompt({ subjects: P.h3AssignRefs([{ media: "video", kind: "motion" }]), summary: "x", body: "y" });
+    check(!P.capH3Prompt(motion).includes(P.H3_GUARD_SHOT) && P.capH3Prompt(motion).includes(P.H3_GUARD_ANATOMY), "a motion clip keeps its own cuts");
   }
   const jobs = [], chats = [], done = new Map(), held = [], cancels = [];
   let n = 0, hold = false, sock = null, visionSheet = false;
@@ -251,7 +268,8 @@ const SPLIT = {
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .relay-seg textarea")].map(a => a.value.trim()).filter(Boolean).length === 3);
   check(jobs.length === 0, `the split or a shared field submitted ${jobs.length} job(s)`);
   check(chats.length === 1 && /exactly 3 segments/.test(chats[0].system), "the split did not ask Gemma for 3 segments");
-  check(!/"subjects"/.test(chats[0].system), "with the subjects' sheets, the split asks for their look");
+  check(!/the look of the recurring subjects as the scenario gives it/.test(chats[0].system) && /that have no marker below/.test(chats[0].system),
+    "with the subjects' sheets, the split asks for their look, or not for the props");
   const look = await page.$$eval("#relayLook textarea", els => Object.fromEntries(els.map(e => [e.dataset.look, e.value])));
   check(look.lighting === "Warm candle light.", `the user's lighting was overwritten: "${look.lighting}"`);
   check(await page.$eval("#relayLook", el => el.open), "the shared fields the split filled are folded");
@@ -315,6 +333,10 @@ const SPLIT = {
     check(pr.includes("Warm candle light.") && pr.includes(`Framing: ${SPLIT.framing}`), `segment ${i + 1} prompt lacks the shared look`);
     check(pr.includes(`overall_soundscape:\n${SPLIT.soundscape}`) && pr.includes("non_diegetic_music:\nNone."), `segment ${i + 1} sound fields`);
     check(pr.split("Warm candle light.").length === 2, `segment ${i + 1} repeats the lighting`);
+    // The coherence guards every H3 prompt carries, written once by the code (GB10 2026-11-26).
+    const P = require(path.join(__dirname, "..", "web", "js", "prompts.js"));
+    check(pr.split(P.H3_GUARD_ANATOMY).length === 2 && /retention_analysis:\n[^]*\nAnatomy and scale: fully_preserved - [^]*\n\ndetailed_description:/.test(pr)
+      && pr.split(P.H3_GUARD_SHOT).length === 2 && pr.includes(` ${P.H3_GUARD_SHOT}\n\noverall_soundscape:`), `segment ${i + 1} coherence guards: ${pr}`);
   }
   // A continuous segment takes no frame of the one before: no transition image to choose.
   check(await page.$$eval("#relayList .relay-thumb", els => els.length) === 0, "transition images offered before continuous segments");
@@ -923,7 +945,8 @@ const SPLIT = {
   await page.waitForFunction(n => document.querySelectorAll("#jobList .job").length > 0, before);
   await page.waitForTimeout(300);
   const i2v = jobs.slice(before).find(j => j.pipeline === "h3-i2v");
-  check(i2v && i2v.params.duration === 10 && i2v.params.prompt.split(ALIGN).length === 2 && i2v.params.prompt.endsWith("She smiles."),
+  check(i2v && i2v.params.duration === 10 && i2v.params.prompt.split(ALIGN).length === 2
+    && require(path.join(__dirname, "..", "web", "js", "prompts.js")).stripH3Guards(i2v.params.prompt).endsWith("She smiles."),
     `alignment sentence in Image2Video: ${JSON.stringify(i2v?.params.prompt)}`);
   if (SHOTS) {
     await page.selectOption("#langSelect", "fr");

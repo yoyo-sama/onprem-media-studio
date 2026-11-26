@@ -343,6 +343,23 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     (page closed) held, and showed what a length must count: a latent continuation redoes 22
     frames the take drops, so a 30 s plan made 28.5 s while the page said 30.4 s. A length shown
     to the user is the one the file will have. (2026-11-25)
+60. **What must hold in every clip is written by the code into every H3 prompt, not left to
+    the brief.** A 3-minute take (three 60 s long takes, 2026-11-26) drew a character twice,
+    left a third hand on the handlebar while the rider waved, grew a small robot to a girl's
+    height, and cut or dissolved inside clips meant as one shot. None of it was in the brief,
+    and a fix in one pipeline would have left the others drifting. `capH3Prompt`, which every
+    H3 prompt goes through (text, image or references to video, long take, Canvas, assistant),
+    now closes retention_analysis with an anatomy and scale line (each character once, its own
+    number of heads, arms, hands and legs, sizes relative to one another kept) and
+    detailed_description with a one-shot sentence (left out when a clip is the camera-movement
+    reference, which brings its own cuts); in plain prose both close the text. They are written
+    once and given back exactly (`stripH3Guards`), outside the room the trim takes. And a
+    sheet's description must describe its subject once: Gemma's vision wrote "shown in four
+    poses, against a pale background", and H3 drew the subject twice in a busy shot. The vision
+    instruction now forbids views, poses and background, asks for the size against an adult,
+    and `stripSheetLayout` removes what slips through. A recurring prop with no reference (an
+    egg, a scooter, an airship) is written once in the split's shared Subjects field, or it
+    changes design from shot to shot. (2026-11-26)
 
 ## 8. Front end (for the port in step 4)
 

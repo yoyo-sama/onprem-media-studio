@@ -382,6 +382,25 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     latente refait 22 images que l'assemblage retire, si bien qu'un plan de 30 s a donné 28,5 s
     quand la page annonçait 30,4 s. Une durée montrée à l'utilisateur est celle qu'aura le fichier.
     (2026-11-25)
+60. **Ce qui doit tenir dans chaque clip est écrit par le code dans chaque prompt H3, pas laissé
+    au brief.** Une vidéo de 3 minutes (trois plans-séquences de 60 s, 2026-11-26) a dessiné un
+    personnage deux fois, laissé une troisième main sur le guidon pendant que la conductrice
+    saluait, fait grandir un petit robot jusqu'à la taille d'une jeune fille, et coupé ou fondu
+    à l'intérieur de clips prévus comme un seul plan. Rien de cela n'était dans le brief, et une
+    correction dans un seul pipeline aurait laissé les autres dériver. `capH3Prompt`, par où
+    passe tout prompt H3 (texte, image ou références vers vidéo, plan-séquence, Canvas,
+    assistant), termine maintenant retention_analysis par une ligne d'anatomie et d'échelle
+    (chaque personnage une seule fois, son propre nombre de têtes, bras, mains et jambes, les
+    tailles relatives gardées) et detailed_description par une phrase de plan unique (omise quand
+    un clip sert de référence de mouvement de caméra, qui apporte ses propres coupes) ; en prose
+    simple, les deux terminent le texte. Elles sont écrites une seule fois et rendues à
+    l'identique (`stripH3Guards`), hors de la place que prend le rognage. Et la description d'une
+    planche doit décrire son sujet une seule fois : la vision de Gemma écrivait « shown in four
+    poses, against a pale background », et H3 dessinait le sujet deux fois dans une scène
+    chargée. La consigne de vision interdit maintenant vues, poses et fond, demande la taille
+    comparée à un adulte, et `stripSheetLayout` retire ce qui passe quand même. Un accessoire
+    récurrent sans référence (un œuf, un scooter, un dirigeable) est écrit une fois dans le champ
+    partagé Sujets du découpage, sinon son design change d'un plan à l'autre. (2026-11-26)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

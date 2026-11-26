@@ -424,19 +424,59 @@
     ].join("\n\n");
   }
 
+  // Coherence guards, written by the code at the end of EVERY H3 prompt (text, image or
+  // references to video, a long take's segments, the Canvas, the assistant): a graph
+  // invariant like the alignment sentence, never typed and never sent to Gemma. Rendered
+  // drifts they answer (GB10 2026-11-26, a 3-minute take): a character drawn twice in the
+  // frame, a third hand left on the handlebar when the rider waved, a small robot grown to
+  // a girl's height, an unplanned cut or dissolve inside a clip meant as one shot.
+  const H3_GUARD_ANATOMY = "Anatomy and scale: fully_preserved - each character appears only once in the frame and keeps "
+    + "its own anatomy from the first frame to the last (the same number of heads, arms, hands and legs; a hand that "
+    + "rises leaves its previous place), and characters, animals, vehicles and objects keep their size relative to one "
+    + "another throughout.";
+  const H3_GUARD_SHOT = "The whole clip is one single continuous shot from its first frame to its last: the camera never "
+    + "cuts away and never dissolves to another view.";
+  const H3_GUARD_ANATOMY_PROSE = H3_GUARD_ANATOMY.replace("Anatomy and scale: fully_preserved - each", "Each");
+  // A clip given as the camera-movement reference brings its own cuts: no one-shot rule then.
+  const h3GuardShot = text => !/is the camera-movement and pacing reference/.test(text);
+  // In a six-field block the anatomy line closes retention_analysis and the one-shot sentence
+  // closes detailed_description; in plain prose both close the text. Written once: a prompt
+  // reused from the gallery gives its old guards back first (the exact inverse, the rest of
+  // the text untouched).
+  const H3_RET_KEY = "retention_analysis:\n", H3_BODY_KEY = "\n\ndetailed_description:\n", H3_END_KEY = "\n\noverall_soundscape:";
+  function stripH3Guards(text) {
+    const cut = (t, s, by = "") => t.split(s).join(by);
+    let out = cut(String(text || ""), H3_RET_KEY + H3_GUARD_ANATOMY + H3_BODY_KEY, H3_RET_KEY + "—" + H3_BODY_KEY);
+    out = cut(out, "\n" + H3_GUARD_ANATOMY + H3_BODY_KEY, H3_BODY_KEY);
+    out = cut(out, " " + H3_GUARD_SHOT + H3_END_KEY, H3_END_KEY);
+    for (const g of [H3_GUARD_SHOT, H3_GUARD_ANATOMY_PROSE]) if (out.endsWith("\n\n" + g)) out = out.slice(0, -(g.length + 2));
+    return out;
+  }
+  function withH3Guards(text) {
+    const base = stripH3Guards(text), shot = h3GuardShot(base);
+    const i = base.indexOf(H3_BODY_KEY), j = base.lastIndexOf(H3_END_KEY), r = base.lastIndexOf(H3_RET_KEY, i);
+    if (i < 0 || j < i || r < 0) return [base, H3_GUARD_ANATOMY_PROSE, shot ? H3_GUARD_SHOT : ""].filter(Boolean).join("\n\n");
+    const ret = base.slice(r + H3_RET_KEY.length, i);
+    return base.slice(0, r + H3_RET_KEY.length) + (ret === "—" ? H3_GUARD_ANATOMY : `${ret}\n${H3_GUARD_ANATOMY}`)
+      + base.slice(i, j) + (shot ? " " + H3_GUARD_SHOT : "") + base.slice(j);
+  }
+
   // Hard model limit, trimmed openly (`onWarn(text, params)`, optional): the excess comes
-  // out of the END of detailed_description, never out of the closing fields, and a
-  // <Subject N> token cut in two goes with the cut. (The server refuses a longer prompt
-  // instead of trimming it.)
+  // out of the END of detailed_description, never out of the closing fields nor the
+  // guards, and a <Subject N> token cut in two goes with the cut. (The server refuses a
+  // longer prompt instead of trimming it.) Every H3 prompt goes through here, so this is
+  // where the guards are written.
   function capH3Prompt(text, onWarn) {
-    if (text.length <= H3_PROMPT_CHARS) return text;
+    const base = stripH3Guards(text), room = H3_PROMPT_CHARS - (withH3Guards(base).length - base.length);
+    if (withH3Guards(base).length <= H3_PROMPT_CHARS) return withH3Guards(base);
     if (onWarn) onWarn("H3 prompt of {length} characters, trimmed to {max} (model limit).",
-      { length: text.length, max: H3_PROMPT_CHARS });
-    const over = text.length - H3_PROMPT_CHARS;
-    const key = "detailed_description:\n", i = text.indexOf(key), end = text.lastIndexOf("\n\noverall_soundscape:");
-    if (i >= 0 && end - (i + key.length) > over) return text.slice(0, end - over).replace(/<[A-Za-z]* ?\d*$/, "") + text.slice(end);
+      { length: withH3Guards(base).length, max: H3_PROMPT_CHARS });
+    const over = base.length - room;
+    const key = "detailed_description:\n", i = base.indexOf(key), end = base.lastIndexOf("\n\noverall_soundscape:");
+    if (i >= 0 && end - (i + key.length) > over)
+      return withH3Guards(base.slice(0, end - over).replace(/<[A-Za-z]* ?\d*$/, "") + base.slice(end));
     // Without the Ref2VA structure, or when the body is too short, a plain cut.
-    return text.slice(0, H3_PROMPT_CHARS).replace(/<[A-Za-z]* ?\d*$/, "");
+    return withH3Guards(base.slice(0, room).replace(/<[A-Za-z]* ?\d*$/, ""));
   }
 
   // Duration H3 really renders: 17n+5 frame grid at 24 fps, Python-style modulo
@@ -908,8 +948,9 @@ Rules:
 - "framing": one English sentence of 5 to 20 words, the framing of the whole sequence: shot size, camera height and lens. Never a camera movement: each segment gives its own.
 - "lighting": one English sentence of 8 to 25 words, the light of the whole sequence, the same in every segment. When the scenario has several scenes at different moments or places, only what their light has in common (its quality, the colour grade), never a change of time of day.
 - "soundscape": one English sentence of 8 to 25 words, the natural sounds heard throughout the sequence. When the scenario has several scenes in different places, only what is heard in all of them, or "".
-- "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.${!describe ? "" : `
-- "subjects": one English paragraph of 15 to 60 words, the look of the recurring subjects as the scenario gives it, the same in every segment: for a person, apparent age, face, hair, build and every piece of clothing; for an animal or a thing, its kind, shape, colours and marks. Copy what the scenario says and add nothing it does not say; "" when the scenario describes no subject.`}
+- "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.${!describe ? `
+- "subjects": one English paragraph of 15 to 60 words, the look of the recurring objects, vehicles, animals and minor characters that have no marker below, the same in every segment: for each, its kind, shape, size compared with the main subject, colours and marks. Copy what the scenario says and add nothing it does not say; "" when the scenario has none.` : `
+- "subjects": one English paragraph of 15 to 60 words, the look of the recurring subjects as the scenario gives it, the same in every segment: for a person, apparent age, face, hair, build, height and every piece of clothing; for an animal, a vehicle or a thing, its kind, shape, size compared with the other subjects, colours and marks. Copy what the scenario says and add nothing it does not say; "" when the scenario describes no subject.`}
 - Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement during which the face of the main subject stays in view from the first moment to the last: the camera may come closer to that face, never to an object, the hands or the feet. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
 - Two exceptions. A segment that starts a new shot opens by naming its place, its light and its sounds in a few words. And when the scenario changes a subject's appearance (a coat taken off, bare feet, wet hair), state that change in every segment where it holds.
 - A segment acts within the place of its shot: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
@@ -922,11 +963,25 @@ ${legend}
 - Use ONLY positive phrasing (never "no", "without", "avoid").
 - Plain prose only: no field name, no heading, no numbering, no timestamp, no angle bracket, no square bracket.
 - Never write "masterpiece", "best quality", "8k" or "ultra detailed".
-Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...",${!describe ? "" : ` "subjects": "...",`} "segments": [{"new_shot": false, "text": "..."}, {"new_shot": false, "text": "..."}]} with exactly ${n} segments, in order.`;
+Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "subjects": "...", "segments": [{"new_shot": false, "text": "..."}, {"new_shot": false, "text": "..."}]} with exactly ${n} segments, in order.`;
 
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
-  const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
-  const REF_VISION_SYSTEM = `You are describing a reference image for a video model. Describe ONLY what is visibly present, so the subject stays IDENTICAL across shots. No camera, scene, action or mood wording, no speculation about story. Answer ONLY with JSON with these fields, each a dense ~10-20 word English string: {"subject":"...","appearance":"...","materials":"...","palette":"..."}.`;
+  // A reference is very often a sheet drawing its subject several times. Described as "shown
+  // in four poses, against a pale background", H3 drew the subject twice in a busy shot
+  // (GB10 2026-11-26): the subject is described ONCE, as the thing it is, with its size
+  // against an adult so scale holds across shots, and stripSheetLayout removes what slips.
+  const REF_FIELD_KEYS = ["subject", "appearance", "size", "materials", "palette"];
+  const REF_VISION_SYSTEM = `You are describing a reference image for a video model. The image shows ONE subject (a person, an animal, a creature, a vehicle, a thing or a place); a reference sheet may draw or photograph it several times (views, poses, close-ups). Describe that subject ONCE, as the single thing it is, so it stays IDENTICAL across shots: what it is, how it looks and how big it is. Never mention views, poses, angles, a sheet, a layout, how many times it is shown, or the plain background behind it. No camera, scene, action or mood wording, no speculation about story. Answer ONLY with JSON with these fields, each a dense ~10-20 word English string: {"subject":"...","appearance":"...","size":"its height or size in the world, compared with an adult person, e.g. knee-high to an adult, a head taller than an adult, as long as a bus","materials":"...","palette":"..."}.`;
+  const SHEET_LAYOUT_RES = [
+    /,?\s*\b(?:shown|depicted|drawn|presented|seen|illustrated|rendered|pictured|displayed)\s+(?:in|from|with|across)\s+[^,.;]*?\b(?:views?|poses?|angles?|panels?|positions?)\b(?:\s*\([^)]*\)|\s*:[^.;]*|,?\s*(?:including|such as)\b[^.;]*)?/gi,
+    /,?\s*\b(?:in|from|with|across)\s+(?:multiple|several|many|different|various|two|three|four|five|six)\s+(?:different\s+)?(?:views?|poses?|angles?|panels?|positions?)\b(?:\s*\([^)]*\)|\s*:[^.;]*|,?\s*(?:including|such as)\b[^.;]*)?/gi,
+    /\b(?:an?\s+|the\s+)?(?:character|model|reference|design|turnaround|expression|concept)(?:\s+(?:design|reference|model))?\s+sheets?\s+(?:of|showing|featuring|depicting)\s+/gi,
+    /,?\s*\b(?:set\s+|standing\s+|isolated\s+|placed\s+)?(?:against|on|in front of|over)\s+(?:an?|the)\s+(?:[\w-]+\s+){0,3}?(?:plain|blank|white|off-white|pale|neutral|grey|gray|light|solid|clean|simple|studio|empty|uniform)\b[\w\s-]{0,24}?\b(?:background|backdrop)\b/gi,
+  ];
+  function stripSheetLayout(text) {
+    return SHEET_LAYOUT_RES.reduce((t, re) => t.replace(re, ""), String(text || ""))
+      .replace(/\s+([,.;])/g, "$1").replace(/,\s*([.;])/g, "$1").replace(/\s{2,}/g, " ").replace(/^[\s,]+/, "").trim();
+  }
 
   const CHARACTER_SHEET_SYSTEM = `You are a character designer. From the user's scene, take the SINGLE most prominent character or subject and describe it so it stays IDENTICAL across shots. It can be anything: a human being, an animal, an imaginary creature, a robot or machine of any shape, an alien, a vehicle, a plant or an inanimate object. FIRST set "kind": "human" only for a human being, "other" for everything else. THEN use the field set of that kind, each value a dense ~10-20 word English string, no camera/scene/action wording. Also set "label": a plain 2-to-4-word name for this subject that tells it apart from other subjects of the same scene, e.g. "weary detective", "young farmhand", "adult male lion", "six-legged mining robot". If kind is "human", answer ONLY with JSON {"kind":"human","label":"...","face":"...","hair":"...","outfit":"...","accessories":"...","palette":"..."}. If kind is "other", answer ONLY with JSON {"kind":"other","label":"...","subject":"what it is, in its own terms: type or species, and how many limbs, heads, wheels or parts it has, e.g. adult male African lion, four-legged big cat, or six-legged insect-like mining robot","form":"its silhouette, structure, proportions and natural resting posture","surface":"what its body is made of and how it looks: fur, scales, skin, bark, metal, glass, worn paint","details":"the distinctive parts and marks that identify it","palette":"..."}. When kind is "other", describe it strictly as the thing it is: give it no human face, no human hair, no clothing and no human stance unless the user's scene explicitly says so.`;
   const characterSheetSystem = force => CHARACTER_SHEET_SYSTEM
@@ -1174,7 +1229,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // filtered like everything that ends up in a prompt.
   async function describeRefImage(llm, base64) {
     const out = await llm(REF_VISION_SYSTEM, "Describe this reference image.", [base64]);
-    return stripPromptPadding(REF_FIELD_KEYS.map(k => fieldText(out[k])).filter(Boolean).join(", "));
+    return stripPromptPadding(REF_FIELD_KEYS.map(k => stripSheetLayout(fieldText(out[k]))).filter(Boolean).join(", "));
   }
 
 
@@ -1238,6 +1293,8 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   const NO_MUSIC_RE = /^(none|n\/a|no music|silence)\.?$/i;
   async function composeScenario(llm, text, n, locDesc, max, subjects, scenes = 0) {
     // No subject reference: the subjects' look is asked for, written once in the shared fields.
+    // With references: the recurring props with no reference (an egg, a scooter, an airship
+    // changed design from shot to shot, GB10 2026-11-26), written once the same way.
     const out = await llm(H3_SCENARIO_SYSTEM(n, relaySubjectLegend(locDesc, subjects), scenes, !subjects?.length), text);
     const clean = v => h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(v))));
     // A segment is {"new_shot", "text"}: the flag next to its text (a separate list of cut
@@ -1254,8 +1311,8 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const known = scenes > 1 && segments.length === scenes ? segments.map((_, i) => i) : [];
     const cuts = [...new Set([...list.flatMap((seg, i) => (seg.cut ? [i] : [])), ...listed, ...known])]
       .filter(k => k >= 1 && k < segments.length).sort((a, b) => a - b);
-    // With no reference, the subjects' look is only in the scenario: Gemma writes it once (a
-    // 30 s take from the text lost the outfit and changed jacket at segment 3, GB10 2026-11-25).
+    // The look of what has no reference is only in the scenario: Gemma writes it once (a 30 s
+    // take from the text lost the outfit and changed jacket at segment 3, GB10 2026-11-25).
     return { segments, cuts, look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
                                      music: NO_MUSIC_RE.test(music) ? "" : music, subjects: clean(out.subjects) } };
   }
@@ -1353,7 +1410,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     KEYFRAME_ANCHOR_SOLO, KEYFRAME_ANCHOR_DUAL, compileKeyframePrompt, stripKeyframeAnchor, ensureKeyframeAnchor,
     compileRelayKeyframePrompt, HOLD_MOTION,
     H3_PROMPT_CHARS, h3Subject, h3Picture, H3_TOKEN_STUB, H3_TOKEN_RE, h3TokensOut, h3TokensIn, h3NormalizeTokens,
-    h3AssignSubjects, h3AssignRefs, h3Summary, h3RefBody, buildH3RefPrompt, capH3Prompt, h3VideoFrames, h3RealDuration,
+    h3AssignSubjects, h3AssignRefs, h3Summary, h3RefBody, buildH3RefPrompt, capH3Prompt, withH3Guards, stripH3Guards, H3_GUARD_ANATOMY, H3_GUARD_SHOT, h3VideoFrames, h3RealDuration,
     h3Alignment, stripH3Alignment, h3CutSubjects, h3CutBodyText, buildH3CutPrompt, h3CutBodyOf, restoreCameraClause,
     normalizeShotList, fallbackShots,
     SHEET_CLEAN, SHEET_TEMPLATES, SHEET_SIZE, sheetWords, charsheetPromptFrom, charsheetFromPhotoPrompt, locsheetPromptFrom,
@@ -1361,7 +1418,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     CAMPAIGN_IMAGES, CAMPAIGN_TEASER, campaignPrompt,
     KREA2_ENRICH_SYSTEM, H3_VIDEO_ENRICH_SYSTEM, R2V_BRIEF_ENRICH_SYSTEM, QWEN_EDIT_INSTRUCTION_ENRICH_SYSTEM,
     SHEET_BRIEF_ENRICH_SYSTEM, ENRICH_SYSTEM, QWEN_EDIT_ENRICH_SYSTEM, keyframeModelName, SHEET_DESC_ENRICH_SYSTEM,
-    SHOT_ACTION_ENRICH_SYSTEM, CUT_ENRICH_SYSTEM, H3_SCENARIO_SYSTEM, REF_VISION_SYSTEM,
+    SHOT_ACTION_ENRICH_SYSTEM, CUT_ENRICH_SYSTEM, H3_SCENARIO_SYSTEM, REF_VISION_SYSTEM, REF_FIELD_KEYS, stripSheetLayout,
     isKrea2Workflow, briefEnrichSystem, enrichBrief, ENRICH_INSTRUCTIONS, setInstructionOverrides,
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage,
