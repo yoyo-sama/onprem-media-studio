@@ -533,11 +533,18 @@ What changed, for every H3 video (LESSONS #60):
   background, nor a size (a sheet gives no scale); `stripSheetLayout` removes what slips through.
 - **A continuous join opens on the previous clip.** A segment that continues the previous clip
   in latent space opens its body on that join (`H3_CONTINUES`): same place, framing and light.
-- **Props written once.** With subject references, the split now also writes the recurring
-  objects, vehicles and animals with no reference in the shared Subjects field (with none, the
-  subjects themselves, with their size), sent in every segment's `subject_definitions`. A
-  screenplay is read as written; when it defines no subjects, one Gemma call at import writes
-  its recurring props in that field (`describeScreenplayProps`), the segments untouched.
+- **Props written once, sent where they are named.** The split now also writes the recurring
+  objects, vehicles and animals with no reference in the shared Subjects field (with no
+  reference, the subjects themselves too, with their size, in every segment). A prop is one
+  line `[egg, eggs] A giant white egg…`: it goes into the `subject_definitions` of the segments
+  whose text names it, and only those (`scopeSubjectDefs`; a line with no `[names]`, typed by
+  the user or not, goes everywhere, as written). A screenplay is read as written; one Gemma
+  call at import (`describeScreenplayProps`) writes its props the same way when it defines no
+  subjects, the segments untouched.
+- **A segment that starts elsewhere is a cut.** The same call names the segments, not already
+  a new shot, whose first sentence shows the characters in another place than where the
+  previous one ends: they become a cut (🎞, shown, the user can turn it back) instead of a
+  continuous join that jumped there or cut on its own. A split decides this itself (`new_shot`).
 
 **Bench on the GB10** (`tools/qualify/anime_take/drift_bench.py`, same seed and same request,
 only the prompt changed; cut = scdet score over 0.3):
@@ -585,5 +592,5 @@ staying in the two renders before with the same anatomy line. New: the egg showe
 1 and 2, before the postman brings it in segment 3 (a prop defined for the whole take shows
 where its text does not have it yet), and a cut at 51.0 s, 1.1 s after segment 6's context,
 whose text starts in front of the mountain where segment 5 ended in the dunes. The 10 s jump
-stayed. Open: scope a prop to the segments that name it, and make a segment that starts
-elsewhere a planned cut instead of a continuous join.
+stayed. Hence the two last items of the list above: a prop goes only where its segment names
+it, and a segment that starts elsewhere is a cut (not rendered yet).

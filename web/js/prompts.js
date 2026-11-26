@@ -948,9 +948,9 @@ Rules:
 - "framing": one English sentence of 5 to 20 words, the framing of the whole sequence: shot size, camera height and lens. Never a camera movement: each segment gives its own.
 - "lighting": one English sentence of 8 to 25 words, the light of the whole sequence, the same in every segment. When the scenario has several scenes at different moments or places, only what their light has in common (its quality, the colour grade), never a change of time of day.
 - "soundscape": one English sentence of 8 to 25 words, the natural sounds heard throughout the sequence. When the scenario has several scenes in different places, only what is heard in all of them, or "".
-- "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.${!describe ? `
-- "subjects": one English paragraph of 15 to 60 words, the look of the recurring objects, vehicles, animals and minor characters that have no marker below, the same in every segment: for each, its kind, shape, size compared with the main subject, colours and marks. Copy what the scenario says and add nothing it does not say; "" when the scenario has none.` : `
-- "subjects": one English paragraph of 15 to 60 words, the look of the recurring subjects as the scenario gives it, the same in every segment: for a person, apparent age, face, hair, build, height and every piece of clothing; for an animal, a vehicle or a thing, its kind, shape, size compared with the other subjects, colours and marks. Copy what the scenario says and add nothing it does not say; "" when the scenario describes no subject.`}
+- "music": the score the scenario asks for, in a few English words, or "" when the scenario asks for no music.${!describe ? "" : `
+- "subjects": one English paragraph of 15 to 60 words, the look of the characters that act through the scenario as the scenario gives it, the same in every segment: for a person, apparent age, face, hair, build, height and every piece of clothing; for an animal or a creature that acts, its kind, shape, size compared with the other subjects, colours and marks. Copy what the scenario says and add nothing it does not say; "" when the scenario describes no character.`}
+- "props": the recurring objects, vehicles, animals and minor characters${!describe ? " that have no marker below" : " that are not in \"subjects\""}, each described once so it looks the same wherever it appears: "names", the words the scenario uses for it, singular, e.g. ["hover-scooter", "scooter"]; "look", one English sentence of 10 to 40 words: its kind, shape, size compared with the main subject, colours and marks. Copy what the scenario says and add nothing it does not say; [] when there is none. Name it in every segment where it is in view.
 - Each segment is ONE English paragraph of 20 to 45 words: what happens in that segment, then its own camera motion, one single movement during which the face of the main subject stays in view from the first moment to the last: the camera may come closer to that face, never to an object, the hands or the feet. Never describe the light, the sounds or the appearance of the subjects inside a segment: they are given once.
 - Two exceptions. A segment that starts a new shot opens by naming its place, its light and its sounds in a few words. And when the scenario changes a subject's appearance (a coat taken off, bare feet, wet hair), state that change in every segment where it holds.
 - A segment acts within the place of its shot: it brings into view no new object, wall, building or piece of scenery unless the scenario names it.
@@ -963,7 +963,7 @@ ${legend}
 - Use ONLY positive phrasing (never "no", "without", "avoid").
 - Plain prose only: no field name, no heading, no numbering, no timestamp, no angle bracket, no square bracket.
 - Never write "masterpiece", "best quality", "8k" or "ultra detailed".
-Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...", "subjects": "...", "segments": [{"new_shot": false, "text": "..."}, {"new_shot": false, "text": "..."}]} with exactly ${n} segments, in order.`;
+Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "...", "music": "...",${describe ? ` "subjects": "...",` : ""} "props": [{"names": ["..."], "look": "..."}], "segments": [{"new_shot": false, "text": "..."}, {"new_shot": false, "text": "..."}]} with exactly ${n} segments, in order.`;
 
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
   // A reference is very often a sheet drawing its subject several times. Described as "shown
@@ -1237,6 +1237,30 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
 
   // ── Relay scenario ──────────────────────────────────────────────────────────
 
+  // A recurring prop is written once in the shared Subjects field as "[egg, eggs] A giant white
+  // egg…" and goes only into the segments whose text names it: sent to every segment, the egg
+  // showed in segments that had not brought it in yet (GB10 2026-11-26). A line with no [names]
+  // (the user's own text, a subject's look) goes into every segment, as written.
+  const PROP_LINE_RE = /^\s*\[([^\]]+)\]\s*(.*)$/;
+  const escapeRe = v => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const namedIn = (name, text) => new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(name)}(?:e?s)?(?![\\p{L}\\p{N}])`, "iu").test(text);
+  function scopeSubjectDefs(defs, text) {
+    return String(defs || "").split("\n").flatMap(line => {
+      const m = PROP_LINE_RE.exec(line);
+      if (!m) return [line];
+      return m[1].split(",").map(x => x.trim()).filter(Boolean).some(name => namedIn(name, String(text || ""))) ? [m[2].trim()] : [];
+    }).join("\n").trim();
+  }
+  // Gemma's props, [{names, look}], as the lines above; `ok(line)` may refuse one.
+  function propLines(list, ok = () => true) {
+    return (Array.isArray(list) ? list : []).map(prop => {
+      const names = (Array.isArray(prop?.names) ? prop.names : [prop?.names])
+        .map(x => String(x || "").replace(/[[\],]/g, " ").replace(/\s+/g, " ").trim()).filter(Boolean);
+      const look = h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(prop?.look)))).replace(/\s+/g, " ").trim();
+      return names.length && look ? `[${names.join(", ")}] ${look}` : "";
+    }).filter(line => line && ok(line)).join("\n");
+  }
+
   // Prompt of a Relay segment: the subjects defined once (subject_definitions), the
   // segment's own action, then the look the whole sequence shares (`look`: {camera,
   // lighting, sound, music}, each optional; `camera` is the framing only, the movement
@@ -1249,7 +1273,8 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const body = [h3SceneLead(subs) + sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "",
       styleTextFor(styleId)].filter(Boolean).join(" ");
     return capH3Prompt(`${h3Alignment(!!hasLast, duration)}\n\n` + buildH3RefPrompt({
-      subjects: subs, summary: h3Summary(action), body, sound: lk.sound, music: lk.music, defs: lk.subjects, retention: lk.retention
+      subjects: subs, summary: h3Summary(action), body, sound: lk.sound, music: lk.music, defs: scopeSubjectDefs(lk.subjects, action),
+      retention: lk.retention
     }), onWarn);
   }
 
@@ -1269,7 +1294,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const text = [continues ? H3_CONTINUES : "", sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "", styleTextFor(styleId)]
       .filter(Boolean).join(" ");
     return capH3Prompt(buildH3RefPrompt({ subjects: all, summary: h3Summary(action), body: h3RefBody(all, text),
-      sound: lk.sound, music: lk.music, defs: lk.subjects, retention: lk.retention }), onWarn);
+      sound: lk.sound, music: lk.music, defs: scopeSubjectDefs(lk.subjects, action), retention: lk.retention }), onWarn);
   }
 
   // Prompt of the first segment of a long take with no start image (H3 text to video): the
@@ -1281,7 +1306,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     const body = [sentence(action), sentence(lk.lighting), camera ? sentence(`Framing: ${camera}`) : "", styleTextFor(styleId)]
       .filter(Boolean).join(" ");
     return capH3Prompt(buildH3RefPrompt({ subjects: [], summary: h3Summary(action), body, sound: lk.sound, music: lk.music,
-      defs: lk.subjects, retention: lk.retention, tag: false }), onWarn);
+      defs: scopeSubjectDefs(lk.subjects, action), retention: lk.retention, tag: false }), onWarn);
   }
 
   // Legend of the stand-ins, built from h3CutSubjects, the function that numbers the
@@ -1321,20 +1346,29 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     // The look of what has no reference is only in the scenario: Gemma writes it once (a 30 s
     // take from the text lost the outfit and changed jacket at segment 3, GB10 2026-11-25).
     return { segments, cuts, look: { camera: clean(out.framing), lighting: clean(out.lighting), sound: clean(out.soundscape),
-                                     music: NO_MUSIC_RE.test(music) ? "" : music, subjects: clean(out.subjects) } };
+                                     music: NO_MUSIC_RE.test(music) ? "" : music,
+                                     subjects: [clean(out.subjects), propLines(out.props)].filter(Boolean).join("\n") } };
   }
 
-  // A screenplay is read as written, but a recurring prop it describes only inside segments
-  // (an egg, a scooter, an airship) changed design from shot to shot (GB10 2026-11-26): when
-  // it defines no subjects, Gemma writes the recurring props once, for the shared Subjects
-  // field. The segments are never touched.
-  const SCREENPLAY_PROPS_SYSTEM = `You read a screenplay for the MiniMax H3 video model, made of segments rendered one by one. Find the objects, vehicles, animals and minor characters that appear in more than one segment and are not named by a marker (SUBJECTREF1, SUBJECTREF2…: those already have a reference image). Describe each of them ONCE so it looks the same in every segment: what it is, its shape, its size compared with the characters, its colours and marks. Take every detail the screenplay gives and add nothing it does not give. Write one English paragraph of 15 to 80 words, plain prose, positive phrasing; a marker may appear only to compare a size. Answer ONLY with JSON {"subjects": "..."}, with "" when nothing recurs.`;
-  async function describeScreenplayProps(llm, text) {
-    const out = await llm(SCREENPLAY_PROPS_SYSTEM, h3TokensOut(text));
-    const props = h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(out && out.subjects))));
+  // A screenplay is read as written, but Gemma reads it once for two things it gets wrong on
+  // its own (GB10 2026-11-26). A recurring prop described only inside segments (an egg, a
+  // scooter, an airship) changed design from shot to shot: its look is written once, as the
+  // prop lines above, for the shared Subjects field. And a segment that starts in another place
+  // than where the previous one ends, joined continuously, jumped there or cut on its own: it
+  // becomes a cut. The segments' text is never touched. `segments`: [{prompt, mode}].
+  const SCREENPLAY_PROPS_SYSTEM = `You read a screenplay for the MiniMax H3 video model, made of numbered segments rendered one by one; each one continues the previous one unless it is marked as a new shot. Two tasks.
+1. "props": Find the objects, vehicles, animals and minor characters that appear in more than one segment and are not named by a marker (SUBJECTREF1, SUBJECTREF2…: those already have a reference image). Describe each of them ONCE so it looks the same in every segment: "names", the words the screenplay uses for it, singular, e.g. ["hover-scooter", "scooter"]; "look", one English sentence of 10 to 40 words, plain prose, positive phrasing: what it is, its shape, its size compared with the characters, its colours and marks. Take every detail the screenplay gives and add nothing it does not give; a marker may appear only to compare a size.
+2. "new_place": the numbers of the segments, not marked as a new shot, whose first sentence shows the characters in another place than where the previous segment ends: another room, building, street or landscape, or later in time. A segment that goes on in the same place, or that follows the characters as they move on, is not one.
+Answer ONLY with JSON {"props": [{"names": ["..."], "look": "..."}], "new_place": [3]}, with [] when there is none.`;
+  async function describeScreenplayProps(llm, segments) {
+    const list = (segments || []).map((seg, i) => `Segment ${i + 1}${i > 0 && seg.mode === "cut" ? " (new shot)" : ""}: ${seg.prompt}`).join("\n");
+    const out = await llm(SCREENPLAY_PROPS_SYSTEM, h3TokensOut(list));
     // A marker the screenplay does not cite would define a subject with no picture.
-    const cited = new Set([...String(text).matchAll(H3_TOKEN_RE)].map(m => m[1]));
-    return [...props.matchAll(H3_TOKEN_RE)].every(m => cited.has(m[1])) ? props : "";
+    const cited = new Set([...list.matchAll(H3_TOKEN_RE)].map(m => m[1]));
+    const props = propLines(out?.props, line => [...line.matchAll(H3_TOKEN_RE)].every(m => cited.has(m[1])));
+    const newPlace = [...new Set((Array.isArray(out?.new_place) ? out.new_place : []).map(Number).filter(Number.isInteger).map(k => k - 1))]
+      .filter(k => k >= 1 && k < (segments || []).length && segments[k].mode !== "cut").sort((a, b) => a - b);
+    return { props, newPlace };
   }
 
   // A screenplay written in the H3 layout (a file the user imports, or pasted as the brief):
@@ -1443,7 +1477,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage,
     buildRelaySegmentPrompt, buildRelayCutPrompt, H3_CONTINUES, buildRelayTextPrompt, relaySubjectLegend, composeScenario, parseScreenplay,
-    SCREENPLAY_PROPS_SYSTEM, describeScreenplayProps,
+    SCREENPLAY_PROPS_SYSTEM, describeScreenplayProps, scopeSubjectDefs,
   };
   if (typeof module === "object" && module.exports) module.exports = Prompts;
   else global.Prompts = Prompts;

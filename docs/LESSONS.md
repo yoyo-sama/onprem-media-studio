@@ -365,11 +365,11 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     the split or, for a screenplay that defines no subjects, by one Gemma call at import, or it
     changes design from shot to shot; the chain waits for that call (started meanwhile, the H3
     render stopped Gemma under it and the take went without props). Written once, the egg kept
-    one design over the take, but a prop defined for the whole take also shows where its text
-    does not have it yet. The third hand stayed in two renders with the anatomy line sent and was
+    one design over the take, but a prop defined for the whole take also showed where its text
+    did not have it yet: it now goes only to the segments that name it (`[names]` lines). The third hand stayed in two renders with the anatomy line sent and was
     gone in the third: the line helps, it does not guarantee. And a segment whose text starts
     somewhere other than where the previous clip ends gives a jump or a cut at the join, whatever
-    the guards say. (2026-11-26)
+    the guards say: such a segment is made a planned cut. (2026-11-26)
 
 ## 8. Front end (for the port in step 4)
 

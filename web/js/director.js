@@ -375,18 +375,25 @@ function applyScreenplay(r, play, ends = []) {
   if (off) log("warn", "Relay: {n} segment length(s) brought into H3's 5 to 15 s.", { n: off });
 }
 
-// The recurring props of a screenplay that defines no subjects, written once by Gemma into the
-// shared Subjects field (shown and editable; the segments stay as written). Nothing renders.
-// The chain waits for it (`describingProps`): started meanwhile, it went without them, and
-// its H3 render stopped Gemma under the call (GB10 2026-11-26).
+// Gemma reads a screenplay once (P.describeScreenplayProps): when it defines no subjects, its
+// recurring props are written into the shared Subjects field (shown and editable), each one
+// sent only to the segments that name it; a segment that starts in another place than where
+// the previous one ends becomes a cut (🎞, the user can turn it back). The segments' text stays
+// as written, and nothing renders. The chain waits for it (`describingProps`): started
+// meanwhile, it went without the props, and its H3 render stopped Gemma under the call (GB10
+// 2026-11-26).
 async function defineScreenplayProps(r, play) {
-  if (play.given.includes("subjects") || r.segments.length < 2 || r.look.subjects.trim()) return;
+  if (r.segments.length < 2) return;
+  const wantProps = !play.given.includes("subjects") && !r.look.subjects.trim();
   describingProps = true;
   updateRelayButtons();
   try {
-    log("req", "Relay: {llm} describes the screenplay's recurring objects once…", { llm: LLM });
-    const props = await P.describeScreenplayProps(F.llm, r.scenario);
-    if (props) { r.look.subjects = props; log("ok", "Relay: recurring objects described once in the shared Subjects field."); }
+    log("req", "Relay: {llm} reads the screenplay once (recurring objects, changes of place)…", { llm: LLM });
+    const { props, newPlace } = await P.describeScreenplayProps(F.llm, r.segments);
+    if (wantProps && props) { r.look.subjects = props; log("ok", "Relay: recurring objects described once in the shared Subjects field."); }
+    for (const k of newPlace) Object.assign(r.segments[k], { mode: "cut", scene: true });
+    if (newPlace.length)
+      log("ok", "Relay: {n} segment(s) start in another place than the previous one ends: a cut (🎞) instead of a continuous join.", { n: newPlace.length });
   } catch (err) {
     log("warn", "Recurring objects not described ({error}): the screenplay is used as written.", { error: err.message });
   } finally {

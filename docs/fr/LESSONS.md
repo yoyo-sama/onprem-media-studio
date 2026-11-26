@@ -408,11 +408,12 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     à Gemma à l'import, sinon son design change d'un plan à l'autre ; la chaîne attend cet appel
     (lancée entre-temps, le rendu H3 arrêtait Gemma en plein appel et la prise partait sans
     accessoires). Écrit une fois, l'œuf a gardé un seul design sur la prise, mais un accessoire
-    défini pour toute la prise apparaît aussi là où son texte ne l'a pas encore. La troisième main
+    défini pour toute la prise apparaissait aussi là où son texte ne l'avait pas encore : il ne va
+    plus qu'aux segments qui le nomment (lignes `[noms]`). La troisième main
     est restée sur deux rendus avec la ligne d'anatomie envoyée et a disparu au troisième : la
     ligne aide, elle ne garantit pas. Et un segment dont le texte commence ailleurs que là où finit
-    le clip précédent donne un saut ou une coupe au raccord, quoi que disent les gardes.
-    (2026-11-26)
+    le clip précédent donne un saut ou une coupe au raccord, quoi que disent les gardes : un tel
+    segment devient une coupe prévue. (2026-11-26)
 
 ## 8. Front end (pour le portage de l'étape 4)
 
