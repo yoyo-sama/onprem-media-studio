@@ -10,6 +10,8 @@
 //
 //   node anime_take.js http://localhost:8090/ ./out
 //   ONLY=take1 node anime_take.js http://localhost:8090/ ./out-take1   (one take, not joined)
+//   DRY=1 ONLY=take1 node anime_take.js http://localhost:8090/ ./out-dry  (stops before the chain:
+//   Gemma calls only, no render; writes dry.json with the shared Subjects field and the log)
 "use strict";
 const fs = require("fs"), path = require("path");
 const { chromium } = require("playwright");
@@ -68,6 +70,16 @@ const pending = s => ["queued", "running"].includes(s);
     say(`${take.name}: ${plan} | ${segments.map(s => s.link || "start").join(" | ")}`);
     await shot("2-take");
     takes.push({ ...take, ctx, page, jobs, segments, plan, shot });
+  }
+  if (process.env.DRY) {
+    const dry = [];
+    for (const t of takes) dry.push({ name: t.name, jobs: t.jobs.length, plan: t.plan,
+      subjects: await t.page.$eval('#relayLook textarea[data-look="subjects"]', e => e.value),
+      log: await t.page.$$eval("#events .event", els => els.map(e => e.textContent.trim())) });
+    fs.writeFileSync(path.join(OUT, "dry.json"), JSON.stringify({ takes: dry, errors }, null, 2));
+    say(`dry run: ${dry.map(d => `${d.name} subjects ${d.subjects ? "filled" : "EMPTY"}, ${d.jobs} job(s)`).join("; ")}, ${errors.length} page error(s)`);
+    await browser.close();
+    process.exit(dry.every(d => d.subjects && !d.jobs) ? 0 : 1);
   }
   // Every take is ready: the chains, in order. Nothing above submitted a job.
   for (const take of takes) {
