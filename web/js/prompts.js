@@ -968,10 +968,12 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
   // Reference images described by Gemma's vision: otherwise <Subject N> has no text.
   // A reference is very often a sheet drawing its subject several times. Described as "shown
   // in four poses, against a pale background", H3 drew the subject twice in a busy shot
-  // (GB10 2026-11-26): the subject is described ONCE, as the thing it is, with its size
-  // against an adult so scale holds across shots, and stripSheetLayout removes what slips.
-  const REF_FIELD_KEYS = ["subject", "appearance", "size", "materials", "palette"];
-  const REF_VISION_SYSTEM = `You are describing a reference image for a video model. The image shows ONE subject (a person, an animal, a creature, a vehicle, a thing or a place); a reference sheet may draw or photograph it several times (views, poses, close-ups). Describe that subject ONCE, as the single thing it is, so it stays IDENTICAL across shots: what it is, how it looks and how big it is. Never mention views, poses, angles, a sheet, a layout, how many times it is shown, or the plain background behind it. No camera, scene, action or mood wording, no speculation about story. Answer ONLY with JSON with these fields, each a dense ~10-20 word English string: {"subject":"...","appearance":"its shape, face, hair, build and clothing, naming every distinctive accessory and mark, e.g. a monocle, glasses, a scar, a badge","size":"its height or size in the world, compared with an adult person, e.g. knee-high to an adult, a head taller than an adult, as long as a bus","materials":"...","palette":"..."}.`;
+  // (GB10 2026-11-26): the subject is described ONCE, as the thing it is, with every
+  // distinctive accessory, and stripSheetLayout removes what slips. No size: a sheet drawn
+  // alone gives no scale, and the guess was wrong (a 12-year-old "about four years old", a
+  // small robot "toddler-sized", nearly her height).
+  const REF_FIELD_KEYS = ["subject", "appearance", "materials", "palette"];
+  const REF_VISION_SYSTEM = `You are describing a reference image for a video model. The image shows ONE subject (a person, an animal, a creature, a vehicle, a thing or a place); a reference sheet may draw or photograph it several times (views, poses, close-ups). Describe that subject ONCE, as the single thing it is, so it stays IDENTICAL across shots: what it is and how it looks. Never mention views, poses, angles, a sheet, a layout, how many times it is shown, or the plain background behind it. No camera, scene, action or mood wording, no speculation about story. Answer ONLY with JSON with these fields, each a dense ~10-20 word English string: {"subject":"...","appearance":"its shape, face, hair, build and clothing, naming every distinctive accessory and mark, e.g. a monocle, glasses, a scar, a badge","materials":"...","palette":"..."}.`;
   const SHEET_LAYOUT_RES = [
     /,?\s*\b(?:shown|depicted|drawn|presented|seen|illustrated|rendered|pictured|displayed)\s+(?:in|from|with|across)\s+[^,.;]*?\b(?:views?|poses?|angles?|panels?|positions?)\b(?:\s*\([^)]*\)|\s*:[^.;]*|,?\s*(?:including|such as)\b[^.;]*)?/gi,
     /,?\s*\b(?:in|from|with|across)\s+(?:multiple|several|many|different|various|two|three|four|five|six)\s+(?:different\s+)?(?:views?|poses?|angles?|panels?|positions?)\b(?:\s*\([^)]*\)|\s*:[^.;]*|,?\s*(?:including|such as)\b[^.;]*)?/gi,
@@ -1322,6 +1324,19 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
                                      music: NO_MUSIC_RE.test(music) ? "" : music, subjects: clean(out.subjects) } };
   }
 
+  // A screenplay is read as written, but a recurring prop it describes only inside segments
+  // (an egg, a scooter, an airship) changed design from shot to shot (GB10 2026-11-26): when
+  // it defines no subjects, Gemma writes the recurring props once, for the shared Subjects
+  // field. The segments are never touched.
+  const SCREENPLAY_PROPS_SYSTEM = `You read a screenplay for the MiniMax H3 video model, made of segments rendered one by one. Find the objects, vehicles, animals and minor characters that appear in more than one segment and are not named by a marker (SUBJECTREF1, SUBJECTREF2…: those already have a reference image). Describe each of them ONCE so it looks the same in every segment: what it is, its shape, its size compared with the characters, its colours and marks. Take every detail the screenplay gives and add nothing it does not give. Write one English paragraph of 15 to 80 words, plain prose, positive phrasing; a marker may appear only to compare a size. Answer ONLY with JSON {"subjects": "..."}, with "" when nothing recurs.`;
+  async function describeScreenplayProps(llm, text) {
+    const out = await llm(SCREENPLAY_PROPS_SYSTEM, h3TokensOut(text));
+    const props = h3NormalizeTokens(h3TokensIn(stripPromptPadding(fieldText(out && out.subjects))));
+    // A marker the screenplay does not cite would define a subject with no picture.
+    const cited = new Set([...String(text).matchAll(H3_TOKEN_RE)].map(m => m[1]));
+    return [...props.matchAll(H3_TOKEN_RE)].every(m => cited.has(m[1])) ? props : "";
+  }
+
   // A screenplay written in the H3 layout (a file the user imports, or pasted as the brief):
   // `field:` lines (subject_definitions, summary, retention_analysis, camera_direction,
   // lighting, detailed_description, overall_soundscape, non_diegetic_music), and inside
@@ -1428,6 +1443,7 @@ Answer ONLY with JSON: {"framing": "...", "lighting": "...", "soundscape": "..."
     enrichKeyframeText, enrichSheetText, enrichShotAction, enrichCutText,
     characterSheetFromBrief, locationSheetFromBrief, shotListFromBrief, describeRefImage,
     buildRelaySegmentPrompt, buildRelayCutPrompt, H3_CONTINUES, buildRelayTextPrompt, relaySubjectLegend, composeScenario, parseScreenplay,
+    SCREENPLAY_PROPS_SYSTEM, describeScreenplayProps,
   };
   if (typeof module === "object" && module.exports) module.exports = Prompts;
   else global.Prompts = Prompts;

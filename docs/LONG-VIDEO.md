@@ -529,14 +529,15 @@ What changed, for every H3 video (LESSONS #60):
   `stripH3Guards`, never trimmed.
 - **A reference sheet is described once.** Gemma's vision wrote "shown from four different
   angles", "against a pale off-white background": H3 drew the subject twice. The instruction now
-  asks for the one subject, its size against an adult and every distinctive accessory, never
-  its views, poses or background; `stripSheetLayout` removes what slips through.
+  asks for the one subject and every distinctive accessory, never its views, poses or
+  background, nor a size (a sheet gives no scale); `stripSheetLayout` removes what slips through.
 - **A continuous join opens on the previous clip.** A segment that continues the previous clip
   in latent space opens its body on that join (`H3_CONTINUES`): same place, framing and light.
 - **Props written once.** With subject references, the split now also writes the recurring
   objects, vehicles and animals with no reference in the shared Subjects field (with none, the
   subjects themselves, with their size), sent in every segment's `subject_definitions`. A
-  screenplay is read as written: its `subject_definitions` must name them.
+  screenplay is read as written; when it defines no subjects, one Gemma call at import writes
+  its recurring props in that field (`describeScreenplayProps`), the segments untouched.
 
 **Bench on the GB10** (`tools/qualify/anime_take/drift_bench.py`, same seed and same request,
 only the prompt changed; cut = scdet score over 0.3):
@@ -555,3 +556,16 @@ That is what the join sentence answers (not benched yet). The first description 
 vision instruction dropped the Baron's monocle, and the monocle left the clip after 2.5 s: the
 instruction now names distinctive accessories. The airship stayed a red and white flying boat:
 the bench re-rendered screenplay segments that never defined it.
+
+**Control render, take 1 again** (promaxgb10-95c7 on PR #60 810ae00, `ONLY=take1
+anime_take.js`, same screenplay and sheets, 49 min for 6 × 10 s + stitch; take
+`video-stitch/20261126-102011-job-b16f6d-7.mp4`, 59.92 s, −18.0 LUFS): no cut over 0.3 in the
+six clips, at the joins or inside them (highest 0.25); in the take only the planned cut at
+29.96 s, where last night's take had two more (50.08 and 56.33 s); no ghost dissolve; no
+doubled character in 24 frames; segment 6 is one continuous push-in. Still there: the third
+hand while Riko waves (4.2 to 9 s), with the anatomy line sent; the scooter and the egg changed
+design at the new scene (the screenplay defined no props: hence the import call above); the
+vision's size guess was wrong (Riko "about four years old", Kettle "toddler-sized") and Kettle
+looked taller than Riko in the foreground of segment 6: the size field was dropped. At the
+10 s join the setting jumped from the street to the post office wall with no cut: segment 2's
+text starts in front of the post office, a place the clip before had not reached.

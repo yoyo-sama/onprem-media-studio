@@ -199,7 +199,7 @@ const OUTPUTS = ["She walks toward the door in warm light.", "A man reads a lett
     "R2V_BRIEF_ENRICH_SYSTEM", "QWEN_EDIT_INSTRUCTION_ENRICH_SYSTEM", "SHEET_BRIEF_ENRICH_SYSTEM", "LOC_FIELD_KEYS"])
     same("constants", O[n], P[n], n);
   // REF_VISION_SYSTEM is 2.0's own since 2026-11-26 (one subject described once, with its
-  // size; a sheet's views and background left out): the describeRefImage flow below
+  // accessories; a sheet's views and background left out): the describeRefImage flow below
   // compares what is sent and written back, not the instruction.
   for (const n of ["ENRICH_SYSTEM", "HOLD_MOTION"]) same("constants", S[n], P[n], n);
   same("constants", S.CUT_ENRICH_SYSTEM("minimax_h3"), P.CUT_ENRICH_SYSTEM, "CUT_ENRICH_SYSTEM");

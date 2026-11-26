@@ -356,12 +356,15 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     once and given back exactly (`stripH3Guards`), outside the room the trim takes. And a
     sheet's description must describe its subject once: Gemma's vision wrote "shown in four
     poses, against a pale background", and H3 drew the subject twice in a busy shot. The vision
-    instruction now forbids views, poses and background, asks for the size against an adult and
-    every distinctive accessory (a first version dropped the Baron's monocle), and
-    `stripSheetLayout` removes what slips through: on the GB10, layout words in 0 descriptions
-    out of 9 (8 out of 9 before). A recurring prop with no reference (an egg, a scooter, an
-    airship) is written once in the split's shared Subjects field, or it changes design from
-    shot to shot. (2026-11-26)
+    instruction now forbids views, poses and background and asks for every distinctive accessory
+    (a first version dropped the Baron's monocle), and `stripSheetLayout` removes what slips
+    through: on the GB10, layout words in 0 descriptions out of 9 (8 out of 9 before). It asks
+    for no size: a sheet drawn alone gives no scale, and the guess was wrong (a 12-year-old
+    "about four", a small robot "toddler-sized", nearly her height). A recurring prop with no
+    reference (an egg, a scooter, an airship) is written once in the shared Subjects field, by
+    the split or, for a screenplay that defines no subjects, by one Gemma call at import, or it
+    changes design from shot to shot. What the prompt cannot fix: a third hand stayed on the
+    handlebar while the rider waved, the anatomy line sent and read. (2026-11-26)
 
 ## 8. Front end (for the port in step 4)
 

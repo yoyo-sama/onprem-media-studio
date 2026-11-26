@@ -38,8 +38,8 @@ const FP = {
   H3_VIDEO_ENRICH_SYSTEM: "5d26d56b546c13cc599f7e23ba1792b0322561b4e744064eb3a37452b142b36e",
   R2V_BRIEF_ENRICH_SYSTEM: "d55d0fc3d08606df97bec3600dfce7fed44c93486c9f9ccfc64287667700bdea",
   SHEET_BRIEF_ENRICH_SYSTEM: "a3799383a92581605fcae4da6ffb3b017246e31f622063d0d3d1be00d2b9800a",
-  // 2.0's own since 2026-11-26 (one subject described once, with its size).
-  REF_VISION_SYSTEM: "b26abc86c108a2167a0a4c59279d2bbe5b96f8c45ffb4b390d01a58a61adf0a7",
+  // 2.0's own since 2026-11-26 (one subject described once, with its accessories).
+  REF_VISION_SYSTEM: "84f346e2236a52f88fb3bc5726558ecf7ee82e20fb1c87e537a8a03aa89d2d69",
   CHARACTER_SYSTEM: "4d78da3e105a0d0d31692a5578cfa35ca8982f8db8dab5684715ecbfec20f267",
   "CHARACTER_SYSTEM(forceKind=human)": "59ca22976439b39bdacad85e602757319e1f91d8fee4763dba34448e753c70e5",
 };

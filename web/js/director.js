@@ -121,6 +121,7 @@ export async function startLongTake(seed, { first = null, refs = [], from = null
   };
   if (play) applyScreenplay(s.relay, play, []);
   enterSession(s);
+  if (play) await defineScreenplayProps(s.relay, play);
   if (!first) log("ok", s.refsGiven ? "No first frame: segment 1 is made from the references."
     : "No start image: segment 1 is generated from its text, and its last frame keeps the subject for the next segments.");
   showRelayComposer();
@@ -298,6 +299,7 @@ async function composeRelay(scenes = 0) {
   if (play) {
     r.scenario = text;
     applyScreenplay(r, play, r.segments.map(seg => seg.endImage));
+    await defineScreenplayProps(r, play);
     showRelayComposer();
     renderRelay();
     save();
@@ -370,6 +372,19 @@ function applyScreenplay(r, play, ends = []) {
     log("warn", "Relay: the screenplay has {n} segments, the long take holds {max}: the first {max} were kept.", { n: play.segments.length, max: RELAY_MAX_SEGMENTS });
   const off = list.filter((seg, i) => seg.duration !== r.segments[i].duration).length;
   if (off) log("warn", "Relay: {n} segment length(s) brought into H3's 5 to 15 s.", { n: off });
+}
+
+// The recurring props of a screenplay that defines no subjects, written once by Gemma into the
+// shared Subjects field (shown and editable; the segments stay as written). Nothing renders.
+async function defineScreenplayProps(r, play) {
+  if (play.given.includes("subjects") || r.segments.length < 2 || r.look.subjects.trim()) return;
+  try {
+    log("req", "Relay: {llm} describes the screenplay's recurring objects once…", { llm: LLM });
+    const props = await P.describeScreenplayProps(F.llm, r.scenario);
+    if (props) { r.look.subjects = props; log("ok", "Relay: recurring objects described once in the shared Subjects field."); }
+  } catch (err) {
+    log("warn", "Recurring objects not described ({error}): the screenplay is used as written.", { error: err.message });
+  }
 }
 
 // Composer and shared fields from the session (on open, restore and after a split).

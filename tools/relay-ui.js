@@ -100,6 +100,7 @@ Segment 1 (00:00–00:10) – The deer
 A young deer steps out of the fog.
 Segment 2 (00:10–00:20) – The stream
 The deer walks toward a stream.`;
+const PROPS = "A round orange hover-scooter with one headlight, about as long as SUBJECTREF1 is tall.";
 const SPLIT = {
   framing: "Medium shots at eye level.", lighting: "Soft cool morning light with long shadows.",
   soundscape: "Birdsong, a light breeze and footsteps on gravel.", music: "none",
@@ -188,6 +189,9 @@ const SPLIT = {
       // Vision: the description of a long take's start image.
       if (body.images?.length) return json({ content: JSON.stringify({ sheet: visionSheet, subject: "a woman in a green wool coat", appearance: "auburn bob",
                                                                       materials: "", palette: "" }) });
+      // The recurring props of a screenplay that defines no subjects.
+      if (/Find the objects, vehicles, animals and minor characters/.test(body.system || ""))
+        return json({ content: JSON.stringify({ subjects: PROPS }) });
       return json({ content: JSON.stringify(SPLIT) });
     }
     if (p === "/api/inputs") return json({ ref: `inputs/up-${++n}.png` }, 201);
@@ -732,6 +736,20 @@ const SPLIT = {
   check(chats.length === chatsBefore && dialogs > 0, `the Relay import: ${chats.length - chatsBefore} Gemma call(s), confirmation asked: ${dialogs > 0}`);
   const shotLinks = await page.$$eval("#relayList .relay-seg .seg-link", els => els.map(e => e.hidden ? "-" : e.textContent.trim()));
   check(shotLinks[1] === "🔗 Continuous" && shotLinks[2] === "🎞 New scene (from the references)", `links of a two-shot screenplay: ${JSON.stringify(shotLinks)}`);
+  // A screenplay that defines no subjects: one Gemma call writes its recurring props once in
+  // the shared Subjects field (the scooter changed design from shot to shot, GB10 2026-11-26);
+  // its segments stay as written, and nothing renders.
+  await page.fill('#relayLook textarea[data-look="subjects"]', "");
+  await page.dispatchEvent('#relayLook textarea[data-look="subjects"]', "change");
+  chatsBefore = chats.length; before = jobs.length;
+  const noSubjects = SCREENPLAY.replace(/subject_definitions:[^]*?\n(?=[a-z_]+:)/, "");
+  await page.setInputFiles("#relayImportFile", { name: "props.txt", mimeType: "text/plain", buffer: Buffer.from(noSubjects) });
+  await page.waitForFunction(p => document.querySelector('#relayLook textarea[data-look="subjects"]').value === p, PROPS.replace("SUBJECTREF1", "<Subject 1>"), { timeout: 10000 });
+  const propCards = await page.$$eval("#relayList .relay-seg textarea", els => els.map(e => e.value));
+  check(!/subject_definitions/.test(noSubjects) && chats.length === chatsBefore + 1 && jobs.length === before
+    && /SUBJECTREF1 stands facing the camera/.test(chats[chats.length - 1]?.prompt || "")
+    && propCards[2] === "<Subject 1> looks toward the camera and smiles.",
+    `a screenplay with no subjects: ${chats.length - chatsBefore} Gemma call(s), ${jobs.length - before} job(s), ${JSON.stringify(propCards)}`);
 
   // A new long take holds its screenplay in its card: splitting it loses nothing, so nothing
   // is asked; a card rewritten by hand is asked about before it is replaced.

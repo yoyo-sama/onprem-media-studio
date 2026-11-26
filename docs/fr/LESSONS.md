@@ -397,12 +397,17 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     l'identique (`stripH3Guards`), hors de la place que prend le rognage. Et la description d'une
     planche doit décrire son sujet une seule fois : la vision de Gemma écrivait « shown in four
     poses, against a pale background », et H3 dessinait le sujet deux fois dans une scène
-    chargée. La consigne de vision interdit maintenant vues, poses et fond, demande la taille
-    comparée à un adulte et chaque accessoire distinctif (une première version oubliait le monocle
-    du Baron), et `stripSheetLayout` retire ce qui passe quand même : sur le GB10, des mots de mise
-    en page dans 0 description sur 9 (8 sur 9 avant). Un accessoire récurrent sans référence (un
-    œuf, un scooter, un dirigeable) est écrit une fois dans le champ partagé Sujets du découpage,
-    sinon son design change d'un plan à l'autre. (2026-11-26)
+    chargée. La consigne de vision interdit maintenant vues, poses et fond et demande chaque
+    accessoire distinctif (une première version oubliait le monocle du Baron), et
+    `stripSheetLayout` retire ce qui passe quand même : sur le GB10, des mots de mise en page dans
+    0 description sur 9 (8 sur 9 avant). Elle ne demande pas de taille : une planche dessinée seule
+    ne donne aucune échelle, et l'estimation était fausse (une fille de 12 ans « d'environ quatre
+    ans », un petit robot « de la taille d'un tout-petit », presque sa hauteur). Un accessoire
+    récurrent sans référence (un œuf, un scooter, un dirigeable) est écrit une fois dans le champ
+    partagé Sujets, par le découpage ou, pour un scénario qui ne définit aucun sujet, par un appel
+    à Gemma à l'import, sinon son design change d'un plan à l'autre. Ce que le prompt ne corrige
+    pas : une troisième main est restée sur le guidon pendant que la conductrice saluait, la ligne
+    d'anatomie envoyée et lue. (2026-11-26)
 
 ## 8. Front end (pour le portage de l'étape 4)
 

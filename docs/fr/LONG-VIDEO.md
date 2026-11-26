@@ -572,16 +572,18 @@ graines gardait le double. Ce qui change, pour toute vidéo H3 (LESSONS n°60) :
   deux à la fin. Écrites une seule fois, rendues à l'identique par `stripH3Guards`, jamais rognées.
 - **Une planche de référence est décrite une seule fois.** La vision de Gemma écrivait « shown
   from four different angles », « against a pale off-white background » : H3 dessinait le sujet
-  deux fois. La consigne demande maintenant le sujet unique, sa taille comparée à un adulte et
-  chaque accessoire distinctif, jamais ses vues, poses ou fond ; `stripSheetLayout` retire ce qui
-  passe quand même.
+  deux fois. La consigne demande maintenant le sujet unique et chaque accessoire distinctif,
+  jamais ses vues, poses ou fond, ni une taille (une planche ne donne aucune échelle) ;
+  `stripSheetLayout` retire ce qui passe quand même.
 - **Un raccord continu s'ouvre sur le clip précédent.** Un segment qui continue le clip précédent
   dans l'espace latent ouvre son texte sur ce raccord (`H3_CONTINUES`) : même lieu, même cadrage,
   même lumière.
 - **Les accessoires écrits une fois.** Avec des références de sujets, le découpage écrit aussi
   les objets, véhicules et animaux récurrents sans référence dans le champ partagé Sujets (sans
   référence, les sujets eux-mêmes, avec leur taille), envoyé dans le `subject_definitions` de
-  chaque segment. Un scénario est lu tel qu'écrit : son `subject_definitions` doit les nommer.
+  chaque segment. Un scénario est lu tel qu'écrit ; quand il ne définit aucun sujet, un appel à
+  Gemma à l'import écrit ses accessoires récurrents dans ce champ (`describeScreenplayProps`),
+  sans toucher aux segments.
 
 **Banc sur le GB10** (`tools/qualify/anime_take/drift_bench.py`, même graine et même requête,
 seul le prompt change ; coupe = score scdet au-dessus de 0,3) :
@@ -601,3 +603,17 @@ banc). La première version de la nouvelle consigne de vision a oublié le monoc
 monocle a quitté le clip après 2,5 s : la consigne nomme maintenant les accessoires distinctifs.
 Le dirigeable est resté un bateau volant rouge et blanc : le banc refaisait des segments de
 scénario qui ne le définissaient jamais.
+
+**Rendu de contrôle, prise 1 refaite** (promaxgb10-95c7 sur la PR #60 810ae00, `ONLY=take1
+anime_take.js`, même scénario et mêmes planches, 49 min pour 6 × 10 s + assemblage ; prise
+`video-stitch/20261126-102011-job-b16f6d-7.mp4`, 59,92 s, −18,0 LUFS) : aucune coupe au-dessus
+de 0,3 dans les six clips, ni aux raccords ni à l'intérieur (au plus 0,25) ; dans la prise, seule
+la coupe prévue à 29,96 s, là où la prise de la veille en avait deux de plus (50,08 et 56,33 s) ;
+aucun fondu fantôme ; aucun personnage en double sur 24 images ; le segment 6 est un seul
+travelling avant continu. Restent : la troisième main pendant le salut de Riko (4,2 à 9 s),
+malgré la ligne d'anatomie envoyée ; le scooter et l'œuf changent de design à la nouvelle scène
+(le scénario ne définissait aucun accessoire : d'où l'appel à l'import ci-dessus) ; la taille
+estimée par la vision était fausse (Riko « environ quatre ans », Kettle « un tout-petit ») et
+Kettle paraissait plus grand que Riko au premier plan du segment 6 : le champ de taille est
+retiré. Au raccord de 10 s, le décor saute de la rue au mur de la poste sans coupe : le texte du
+segment 2 commence devant la poste, un lieu que le clip précédent n'avait pas atteint.
