@@ -594,4 +594,21 @@ staying in the two renders before with the same anatomy line. New: the egg showe
 where its text does not have it yet), and a cut at 51.0 s, 1.1 s after segment 6's context,
 whose text starts in front of the mountain where segment 5 ended in the dunes. The 10 s jump
 stayed. Hence the two last items of the list above: a prop goes only where its segment names
-it, and a segment that starts elsewhere is a cut (not rendered yet).
+it, and a segment that starts elsewhere is a cut.
+
+**Check beyond the anime** (promaxgb10-95c7, `control-tests/pr60-global.md`). Take 1 again on
+445eb95 (`video-stitch/20261126-171251-job-d0835e-7.mp4`): the egg only from the postman on,
+one design; two hands while Riko waves; no double; Kettle at or below Riko; the mountain a
+planned cut. The scooter line had reached no prompt (its name was "hover-scooter" in the field,
+the match was whole-name only: a name now matches by its last word too) and the scooter
+changed design; H3 cut on its own at 10.25 s, at a join Gemma judges continuous. Three dry runs
+on 47a4866 gave the same props and the same cuts each time, but the scooter took the teapot
+robot's spout on all three: the check saw bare markers, it now gets the subjects' legend
+(04f1963, dry run only). On 47a4866, the paths with no screenplay: a realistic 30 s long take
+from a plain brief (`closed_page_take.js`, `video-stitch/20261126-174013-job-1f77ee-4.mp4`):
+no cut, the apple only from the segment where she picks it, two hands, the outfit held over
+30 s; single 10 s clips through the form (`single_clips.js`): a Text2Video cyclist waving
+(right hand up, left on the handlebar, no third hand, no cut), Video from references on the
+anime sheet (one Riko, no collage) and on a realistic multi-view sheet (one woman, true to the
+sheet, no view pasted in). Every prompt carried both guards. Single clips came out quiet
+(−33.6 and −49 LUFS, against −18 for a stitched take): not a drift, left for later.

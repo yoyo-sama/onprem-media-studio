@@ -644,4 +644,24 @@ avant que le postier ne l'apporte au segment 3 (un accessoire défini pour toute
 là où son texte ne l'a pas encore), et une coupe à 51,0 s, 1,1 s après le contexte du segment 6,
 dont le texte commence devant la montagne là où le segment 5 finissait dans les dunes. Le saut de
 10 s est resté. D'où les deux derniers points de la liste ci-dessus : un accessoire ne va que
-là où son segment le nomme, et un segment qui commence ailleurs est une coupe (pas encore rendu).
+là où son segment le nomme, et un segment qui commence ailleurs est une coupe.
+
+**Vérification au-delà de l'animé** (promaxgb10-95c7, `control-tests/pr60-global.md`). Prise 1
+refaite sur 445eb95 (`video-stitch/20261126-171251-job-d0835e-7.mp4`) : l'œuf seulement à partir
+du postier, un seul design ; deux mains pendant le salut de Riko ; aucun double ; Kettle à la
+hauteur de Riko ou en dessous ; la montagne en coupe prévue. La ligne du scooter n'avait atteint
+aucun prompt (son nom était « hover-scooter » dans le champ, la recherche portait sur le nom
+entier : un nom se reconnaît maintenant aussi par son dernier mot) et le scooter changeait de
+design ; H3 a coupé de lui-même à 10,25 s, à un raccord que Gemma juge continu. Trois essais à
+blanc sur 47a4866 ont donné les mêmes accessoires et les mêmes coupes à chaque fois, mais le
+scooter prenait le bec du robot-théière dans les trois : la vérification ne voyait que des
+marqueurs nus, elle reçoit maintenant la légende des sujets (04f1963, essai à blanc seulement).
+Sur 47a4866, les chemins sans scénario : un plan-séquence réaliste de 30 s depuis un brief simple
+(`closed_page_take.js`, `video-stitch/20261126-174013-job-1f77ee-4.mp4`) : aucune coupe, la pomme
+seulement à partir du segment où elle la prend, deux mains, la tenue gardée sur 30 s ; des clips
+seuls de 10 s par le formulaire (`single_clips.js`) : une cycliste en Text2Video qui salue (main
+droite levée, gauche sur le guidon, pas de troisième main, aucune coupe), Vidéo à partir de
+références sur la planche animée (une seule Riko, pas de collage) et sur une planche réaliste
+multi-vues (une seule femme, fidèle à la planche, aucune vue collée). Chaque prompt portait les
+deux gardes. Les clips seuls sortent faibles en son (−33,6 et −49 LUFS, contre −18 pour une prise
+assemblée) : ce n'est pas une dérive, laissé pour plus tard.
