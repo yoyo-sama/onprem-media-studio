@@ -10,7 +10,7 @@ Three engines:
   first segment of a long take: `h3_start_frame`) or the clip it continues
   (`continue_from`, the continuous segments of the Relay: `h3_continue`); the
   two passes of the workflow validated on the GB10 in ComfyUI: 8 steps at
-  about 0.3 MP, latent upscale to about 0.9 MP, then 3 refine steps at denoise
+  about 0.6 MP (0.3 in that workflow, raised for faces), latent upscale to about 0.9 MP, then 3 refine steps at denoise
   0.4. `preview` stops after the first pass.
 
 One more GPU job, `video-stitch`, assembles a Relay take: the clips joined by
@@ -55,7 +55,12 @@ REFERENCE_LABELS = {"image": "Picture", "video": "Video", "audio": "Audio"}
 MAX_PIXELS = 768 * 1344       # FastVideo's MiniMax H3 canvas limit
 MULTIPLE = 32
 FINAL_MEGAPIXELS = 0.9        # size of every final clip (validated Ref2VA workflow)
-PASS1_MEGAPIXELS = 0.3        # first Ref2VA pass
+# First Ref2VA pass. The validated workflow ran it at 0.3 MP (736×416): faces of whole bodies were
+# a few dozen pixels there and H3 invented them. On the same seed and sheet, 0.6 MP (1056×608)
+# drew them whole and recognisable for +33 % of time; 0.9 MP gained little more for +80 %
+# (promaxgb10-95c7, 2026-11-27). A bench may ask another size (`pass1_megapixels`, API only).
+PASS1_MEGAPIXELS = 0.6
+PASS1_RANGE = (0.3, 0.9)
 VAE_DOWNSAMPLE = 16
 NO_NEGATIVE = "MiniMax H3 runs without guidance (cfg 1), so a negative prompt is never used."
 
@@ -345,8 +350,11 @@ class H3ReferenceToVideo(Pipeline):
     models = [OMNIREF, UPSCALER]
 
     def validate(self, params, files):
-        out = _common(params, files, {"references", "image", "continue_from", "aspect", "preview"})
+        out = _common(params, files, {"references", "image", "continue_from", "aspect", "preview", "pass1_megapixels"})
         out["references"] = _references(params, files)
+        mp = params.get("pass1_megapixels", PASS1_MEGAPIXELS)
+        if isinstance(mp, bool) or not isinstance(mp, (int, float)) or not PASS1_RANGE[0] <= mp <= PASS1_RANGE[1]:
+            raise ValueError(f"pass1_megapixels must be a number from {PASS1_RANGE[0]} to {PASS1_RANGE[1]}")
         # A start frame is frame 0 of the clip, not a reference: <Picture N> are the references.
         # FastVideo stretches it to the canvas, so the canvas follows it unless an aspect is sent.
         first = None
@@ -365,7 +373,7 @@ class H3ReferenceToVideo(Pipeline):
             width, height = meta["width"], meta["height"]
             g = math.gcd(width, height)
             out["aspect"] = "%d:%d" % (width // g, height // g)
-            out["pass1_width"], out["pass1_height"] = size_for((width, height), PASS1_MEGAPIXELS)
+            out["pass1_width"], out["pass1_height"] = size_for((width, height), mp)
             out["width"], out["height"], out["preview"] = width, height, False
             self._cited(out)
             return out
@@ -380,7 +388,7 @@ class H3ReferenceToVideo(Pipeline):
             if not 1 / 4 <= aspect[0] / aspect[1] <= 4:
                 raise ValueError("MiniMax H3 supports aspect ratios from 1:4 to 4:1")
         out["aspect"] = "%d:%d" % aspect
-        out["pass1_width"], out["pass1_height"] = size_for(aspect, PASS1_MEGAPIXELS)
+        out["pass1_width"], out["pass1_height"] = size_for(aspect, mp)
         out["width"], out["height"], _ = upscale_target(out["pass1_width"], out["pass1_height"])
         out["preview"] = params.get("preview", False)
         if not isinstance(out["preview"], bool):

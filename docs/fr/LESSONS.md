@@ -102,7 +102,7 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     *réellement rendue*. [#20]
 29. **Les checkpoints FL2VA et Ref2VA sont deux modèles différents**, non interchangeables.
 30. **FastH3 OmniRef (validé sur GB10 le 2026-10-28) :** 8 étapes, guidance 1, shift vidéo 12,
-    shift audio 3, attention creuse VSA obligatoire, deux passes (≈0,3 Mpx puis upscale latent à
+    shift audio 3, attention creuse VSA obligatoire, deux passes (≈0,3 Mpx, 0,6 Mpx en 2.0 depuis le n°63, puis upscale latent à
     ≈0,9 Mpx et 3 étapes de raffinement à denoise 0,4), `ref_image_size = max`. Identité 0,838 en
     1280×736, 5 s, 260 s. Pas de LoRA d'accélération (déjà distillé). Les LoRA de style
     s'appliquent en branche exacte ; fusionner une LoRA dans un checkpoint quantifié en détruit
@@ -429,6 +429,33 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     jonction doit tomber là où la même personne reste à l'image, le croisement au milieu d'un
     segment ; et un plan large en pied donne des visages de quelques pixels dans le premier
     passage Ref2VA à 0,3 MP, que H3 invente : plans moyens pour les visages.
+62. **Dans un plan-séquence à plusieurs personnages, les champs communs ne disent rien de qui est
+    à l'image, et chaque segment dit qui et à quelle distance.** La sixième version du défilé
+    (2026-11-27) est la première à suivre son scénario de bout en bout, après cinq qui ne le
+    suivaient pas. Chaque champ commun aux segments (cadrage, lumière, fidélité) entre dans le
+    prompt de chaque segment : « while two models cross » dans le cadrage et « never more than
+    two models » dans la fidélité ont fait dessiner à H3 deux clones de la seule mannequin dont
+    un segment avait la planche. Les champs communs ne donnent plus que la place de la caméra,
+    la lumière et la fidélité ; chaque segment écrit qui est à l'image (« la seule femme sur
+    l'estrade ») et son cadrage moment par moment (de la tête à la taille pendant la pose, de la
+    tête aux genoux en marche, la caméra reculant devant elle, toute l'estrade seulement pendant
+    un croisement), ce qui a aussi donné des visages grands et nets. Les jonctions tombent là où
+    une seule personne reste à l'image sans changer ; entrées et croisements se font dans un
+    segment. Une planche contact toutes les 2 s cachait transformations et clones : une prise se
+    juge sur des images toutes les 0,25 s autour de chaque jonction.
+63. **La première passe Ref2VA tourne à 0,6 Mpx, pas aux 0,3 Mpx du workflow.** Le cadrage seul
+    ne sauvait pas les visages : en plan en pied ils ne faisaient que quelques dizaines de pixels
+    dans la première passe en 736×416, et les 3 étapes d'affinage à denoise 0,4 ne peuvent pas
+    redessiner ce que la passe 1 a inventé. Banc sur la même seed et les mêmes planches (segment 1
+    du défilé, promaxgb10-95c7, 2026-11-27) : 0,3 Mpx 294 s, visages déformés ; 0,45 Mpx 380 s,
+    encore déformés ; 0,6 Mpx (1056×608) 390 s, visages entiers et reconnaissables ; 0,9 Mpx
+    523 s, pas mieux que 0,6 et un clone dessiné. La taille finale reste 1280×736 ;
+    `pass1_megapixels` (par l'API seulement) garde le banc possible. Deux prises de contrôle du
+    défilé entier (4 × 10 s, deux seeds) ont confirmé des visages cohérents dès 50 px, en marche
+    comprise, pour +45 à 57 % de temps (un segment qui continue, avec sa traîne de 22 images,
+    coûte environ +90 % en passe 1) ; des visages de 30 à 40 px en plan très large restent
+    déformés, donc le scénario garde les visages grands. Une prise a eu trois fondus dans un
+    segment, l'autre aucun : la seed, pas la taille de la première passe.
 
 ## 8. Front end (pour le portage de l'étape 4)
 

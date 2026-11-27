@@ -95,7 +95,7 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
 28. **I2VA/FL2VA need a time-alignment sentence** whose end mark is the *rendered* duration. [#20]
 29. **FL2VA and Ref2VA checkpoints are different models** and not interchangeable.
 30. **FastH3 OmniRef (validated on GB10, 2026-10-28):** 8 steps, guidance 1, video shift 12,
-    audio shift 3, VSA sparse attention required, two passes (≈0.3 MP then latent upscale to
+    audio shift 3, VSA sparse attention required, two passes (≈0.3 MP, 0.6 MP in 2.0 since #63, then latent upscale to
     ≈0.9 MP and 3 refine steps at denoise 0.4), `ref_image_size = max`. Identity 0.838 at
     1280×736, 5 s, 260 s. No speed-up LoRA (already distilled). Style LoRAs are applied as an
     exact branch; merging a LoRA into a quantised checkpoint destroys most of it.
@@ -383,6 +383,29 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     person in view into the one asked for, so a join must fall where the same person stays in
     view, the crossing in the middle of a segment; and a wide shot of whole bodies gives faces
     of a few pixels in Ref2VA's 0.3 MP first pass, which H3 invents: medium shots for faces.
+62. **In a take of several characters, the shared fields say nothing about who is in view, and
+    each segment says who and how close.** The runway take's sixth version (2026-11-27) was the
+    first to follow its screenplay end to end, after five that did not. Every field shared by
+    the segments (framing, lighting, retention) goes into every segment's prompt: "while two
+    models cross" in the framing and "never more than two models" in the retention made H3
+    draw two clones of the one model a segment had a sheet for. Shared fields now give the
+    camera's place, the light and the fidelity only; each segment writes who is in view ("the
+    only woman on the runway") and its framing moment by moment (head to waist in the pose,
+    head to knees walking with the camera backing ahead of her, the whole runway only while
+    two cross), which also gave large, sharp faces. Joins fall where one person stays in view
+    and does not change; entrances and crossings happen inside a segment. A contact sheet
+    every 2 s hid morphs and clones: a take is judged on frames every 0.25 s around each join.
+63. **Ref2VA's first pass runs at 0.6 MP, not the workflow's 0.3 MP.** Framing alone did not
+    save faces: in a full-body shot they were a few dozen pixels in the 736×416 first pass and
+    the 3 refine steps at denoise 0.4 cannot redraw what pass 1 invented. A bench on the same
+    seed and sheets (runway take segment 1, promaxgb10-95c7, 2026-11-27): 0.3 MP 294 s, faces
+    deformed; 0.45 MP 380 s, still deformed; 0.6 MP (1056×608) 390 s, faces whole and
+    recognisable; 0.9 MP 523 s, no better than 0.6 and it drew one clone. The final size stays
+    1280×736; `pass1_megapixels` (API only) keeps the bench possible. Two control takes of the
+    whole runway (4 × 10 s, two seeds) confirmed faces of 50 px and more, walking included, and
+    cost +45 to 57 % (a continuing segment, with its 22-frame tail, costs about +90 % in pass 1);
+    faces of 30–40 px in a far wide shot stay deformed, so the screenplay keeps faces large. One
+    take had three dissolves in a segment, the other none: seed, not first-pass size.
 
 ## 8. Front end (for the port in step 4)
 

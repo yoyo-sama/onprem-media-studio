@@ -45,7 +45,7 @@ def test_latent_frames():
 
 
 def test_two_pass_geometry_of_the_validated_workflow():
-    assert h3.size_for((16, 9), h3.PASS1_MEGAPIXELS) == (736, 416)
+    assert h3.size_for((16, 9), 0.3) == (736, 416)
     width, height, scale = h3.upscale_target(736, 416)
     assert (width, height) == (1280, 736)
     assert scale == pytest.approx(1.7557, abs=1e-3)
@@ -200,17 +200,17 @@ def test_r2v_preview_is_the_first_pass_only(client, engines):
     sheet = upload(client, 192, 108)
     job = run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "preview": True})
     (call,) = calls(engines)
-    assert (call["width"], call["height"], call["steps"]) == (736, 416, 8)
+    assert (call["width"], call["height"], call["steps"]) == (1056, 608, 8)
     assert call["latent"] is False and call.get("save", True)
     assert engines["engines"][0].spec.ref2va
-    assert (job["params"]["width"], job["params"]["height"]) == (736, 416)
+    assert (job["params"]["width"], job["params"]["height"]) == (1056, 608)
 
 
 def test_r2v_two_passes(client, engines, capsys):
     sheets = [upload(client, 192, 108, c) for c in ("red", "green")]
     job = run(client, "h3-r2v", {"prompt": "<Subject 1> in <Picture 1> and <Picture 2>", "references": sheets})
     first, second = calls(engines)
-    assert (first["width"], first["height"], first["steps"]) == (736, 416, 8)
+    assert (first["width"], first["height"], first["steps"]) == (1056, 608, 8)
     assert first["latent"] is True and first["save"] is False
     assert [r[0] for r in first["references"]] == ["ref", "ref"]
     assert (second["width"], second["height"]) == (1280, 736)
@@ -218,11 +218,21 @@ def test_r2v_two_passes(client, engines, capsys):
     assert (second["latents"], second["audio_latents"]) == ("latents", "audio")
     assert second["references"] == first["references"] and second["seed"] == first["seed"]
     video, pass1 = engines["refine"][0], engines["refine"][5]
-    assert video == "video-latents" and pass1 == (736, 416)
+    assert video == "video-latents" and pass1 == (1056, 608)
     assert len(job["outputs"]) == 2 and len(engines["engines"]) == 1  # one generator for both passes
     log = capsys.readouterr().out
     assert "render: h3-r2v 1280×736, 124 frames, 2 reference(s) in " in log
     assert all(part in log for part in ("references ", "pass 1 ", "upscale ", "pass 2 and decoding "))
+
+
+def test_r2v_first_pass_size_can_be_asked_for_a_bench(client, engines):
+    sheet = upload(client, 192, 108)
+    run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "pass1_megapixels": 0.6})
+    first, second = calls(engines)
+    assert (first["width"], first["height"]) == h3.size_for((16, 9), 0.6) == (1056, 608)
+    assert (second["width"], second["height"]) == (1280, 736)
+    for bad in (0.2, 1.0, "0.6", True):
+        assert "pass1_megapixels" in rejected(client, "h3-r2v", {"prompt": "p", "references": [sheet], "pass1_megapixels": bad})
 
 
 def test_r2v_start_frame_goes_to_both_passes_and_patches_fastvideo(client, engines, monkeypatch, capsys):
@@ -238,7 +248,7 @@ def test_r2v_start_frame_goes_to_both_passes_and_patches_fastvideo(client, engin
     assert first["pil_image"].size == (1280, 736) and second["pil_image"] is first["pil_image"]
     assert [r[0] for r in first["references"]] == ["ref"]
     assert "1 reference(s), start frame in " in capsys.readouterr().out
-    assert (first["width"], first["height"], second["width"], second["height"]) == (736, 416, 1280, 736)
+    assert (first["width"], first["height"], second["width"], second["height"]) == (1056, 608, 1280, 736)
     portrait = upload(client, 720, 1280)
     run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "image": portrait})
     assert (calls(engines)[-1]["width"], calls(engines)[-1]["height"]) == (736, 1280)  # follows the start frame
@@ -296,7 +306,7 @@ def test_r2v_progress_covers_both_passes(client, engines):
     # Pass 1: 8 steps from 0.1 to 0.5, no decoding (it ends on latents); pass 2: 3 steps
     # from 0.6 to 0.9, then the decoding.
     assert [p for p, _ in seen] == [0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.7, 0.8, 0.9, 0.9]
-    assert seen[7][1] == "Pass 1: 736×416, 124 frames: step 8/8"
+    assert seen[7][1] == "Pass 1: 1056×608, 124 frames: step 8/8"
     assert seen[-1][1] == "Pass 2 at 1280×736: decoding the video"
     engines["progress"].clear()
     run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "preview": True})
