@@ -121,6 +121,7 @@ export async function startLongTake(seed, { first = null, refs = [], from = null
   };
   if (play) applyScreenplay(s.relay, play, []);
   enterSession(s);
+  if (play) await defineScreenplayProps(s.relay, play);
   if (!first) log("ok", s.refsGiven ? "No first frame: segment 1 is made from the references."
     : "No start image: segment 1 is generated from its text, and its last frame keeps the subject for the next segments.");
   showRelayComposer();
@@ -242,6 +243,7 @@ const clock = sec => `${String(Math.floor(sec / 60)).padStart(2, "0")}:${(sec % 
 const textFrame = () => { const s0 = d.relay?.segments[0]; return inChain(s0) && s0.textStart ? { job: s0.job, output: ".png" } : null; };
 const relaySubjects = () => d.chars.map((c, k) => ({ c, ref: (k === 0 && textFrame()) || activeVariant(c)?.ref })).filter(x => x.ref)
   .slice(0, LONG_TAKE_REFS).map(({ c, ref }) => ({ desc: charDesc(c), kind: P.charKindOf(c.fields), role: c.fields.role, ref }));
+let describingProps = false;   // a screenplay's recurring props asked of Gemma (defineScreenplayProps)
 const relayBusy = () => !!d?.relay?.segments.some(seg => seg.status === "pending");
 const relayReady = () => !!d?.relay?.segments.length && d.relay.segments.every(seg => seg.prompt.trim());
 const continuous = seg => seg.mode === "continue";
@@ -264,7 +266,7 @@ const usesFrame = i => {
 const transitionOf = seg => (seg?.transitions?.length ? seg.transitions[Math.min(seg.transitionIdx || 0, seg.transitions.length - 1)] : null);
 
 function updateRelayButtons() {
-  const r = d?.relay, busy = relayBusy();
+  const r = d?.relay, busy = relayBusy() || describingProps;
   $("relayComposeBtn").disabled = !r || busy || !$("relayScenario").value.trim();
   $("relayImportBtn").disabled = !r || busy;
   document.querySelectorAll("#relayLook textarea").forEach(el => { el.disabled = !r || busy; });
@@ -298,6 +300,7 @@ async function composeRelay(scenes = 0) {
   if (play) {
     r.scenario = text;
     applyScreenplay(r, play, r.segments.map(seg => seg.endImage));
+    await defineScreenplayProps(r, play);
     showRelayComposer();
     renderRelay();
     save();
@@ -370,6 +373,33 @@ function applyScreenplay(r, play, ends = []) {
     log("warn", "Relay: the screenplay has {n} segments, the long take holds {max}: the first {max} were kept.", { n: play.segments.length, max: RELAY_MAX_SEGMENTS });
   const off = list.filter((seg, i) => seg.duration !== r.segments[i].duration).length;
   if (off) log("warn", "Relay: {n} segment length(s) brought into H3's 5 to 15 s.", { n: off });
+}
+
+// Gemma reads a screenplay once (P.describeScreenplayProps): when it defines no subjects, its
+// recurring props are written into the shared Subjects field (shown and editable), each one
+// sent only to the segments that name it; a segment that starts in another place than where
+// the previous one ends becomes a cut (🎞, the user can turn it back). The segments' text stays
+// as written, and nothing renders. The chain waits for it (`describingProps`): started
+// meanwhile, it went without the props, and its H3 render stopped Gemma under the call (GB10
+// 2026-11-26).
+async function defineScreenplayProps(r, play) {
+  if (r.segments.length < 2) return;
+  const wantProps = !play.given.includes("subjects") && !r.look.subjects.trim();
+  describingProps = true;
+  updateRelayButtons();
+  try {
+    log("req", "Relay: {llm} reads the screenplay once (recurring objects, changes of place)…", { llm: LLM });
+    const { props, newPlace } = await P.describeScreenplayProps(F.llm, r.segments, P.relaySubjectLegend(locDesc(), relaySubjects()));
+    if (wantProps && props) { r.look.subjects = props; log("ok", "Relay: recurring objects described once in the shared Subjects field."); }
+    for (const k of newPlace) Object.assign(r.segments[k], { mode: "cut", scene: true });
+    if (newPlace.length)
+      log("ok", "Relay: {n} segment(s) start in another place than the previous one ends: a cut (🎞) instead of a continuous join.", { n: newPlace.length });
+  } catch (err) {
+    log("warn", "Recurring objects not described ({error}): the screenplay is used as written.", { error: err.message });
+  } finally {
+    describingProps = false;
+    updateRelayButtons();
+  }
 }
 
 // Composer and shared fields from the session (on open, restore and after a split).
@@ -710,7 +740,7 @@ function segmentJob(s, i) {
     if (!prev) throw noLink();
     const refs = relayRefs(settingSheet());
     log("req", "Relay, segment {n}/{total}: video continuing the previous segment…", { n: i + 1, total });
-    seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style);
+    seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style, true);
     return r2v(refs, { continue_from: prev }, " + continuation");
   }
   // A cut: H3 Ref2VA with no start image and no end image. Its setting is the setting's sheet,
@@ -908,9 +938,9 @@ function refTokens(text, refs) {
   });
 }
 // A Ref2VA segment's prompt, its text and shared fields numbered for the references it sends.
-function relayCutPrompt(seg, look, refs, style) {
+function relayCutPrompt(seg, look, refs, style, continues = false) {
   const lk = Object.fromEntries(Object.entries(look || {}).map(([k, v]) => [k, typeof v === "string" ? refTokens(v, refs) : v]));
-  return P.buildRelayCutPrompt(refTokens(seg.prompt.trim(), refs), lk, refs, style, h3Warn);
+  return P.buildRelayCutPrompt(refTokens(seg.prompt.trim(), refs), lk, refs, style, h3Warn, continues);
 }
 // The references segment 1 sees with a long take's first frame: the subjects the user gave
 // (characters, objects), no setting, and never the frame itself (with a setting alone, the
@@ -957,7 +987,7 @@ function relayFail(err) {
 // come), and "Stop after this segment" takes off the queue what has not started.
 async function runRelay() {
   const r = d?.relay;
-  if (!r || !relayReady() || relayBusy()) return;
+  if (!r || !relayReady() || relayBusy() || describingProps) return;
   const s = d;
   let from = relayResumeFrom();
   if (from >= r.segments.length) {

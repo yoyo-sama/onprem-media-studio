@@ -8,7 +8,8 @@
 // field submits nothing; "Generate the chain" sends one H3 clip per segment, the first from
 // the references, a continuous one continuing the previous clip (continue_from, no start
 // image, no transition frames), each prompt carrying the shared look once and no default
-// light or camera; the take is assembled by video-stitch. A storyboard saved before it was
+// light or camera, and the coherence guards (one exemplar, anatomy, relative size, one shot)
+// once; the take is assembled by video-stitch. A storyboard saved before it was
 // folded into the long take is not offered for resuming. The production board: one
 // tile per segment, its progress from the job events, a click goes to the segment and
 // submits nothing; after a regenerated segment the chain continues from the next one;
@@ -99,6 +100,8 @@ Segment 1 (00:00–00:10) – The deer
 A young deer steps out of the fog.
 Segment 2 (00:10–00:20) – The stream
 The deer walks toward a stream.`;
+let newPlace = [];   // the segments the screenplay check finds starting elsewhere
+const PROPS = "A round orange hover-scooter with one headlight, about as long as SUBJECTREF1 is tall.";
 const SPLIT = {
   framing: "Medium shots at eye level.", lighting: "Soft cool morning light with long shadows.",
   soundscape: "Birdsong, a light breeze and footsteps on gravel.", music: "none",
@@ -138,6 +141,35 @@ const SPLIT = {
     r = await split({ segments: [seg("Port.", false), seg("Port again.", false), seg("Sea.", true), seg("Sea again.", false)] }, 2);
     check(JSON.stringify(r.cuts) === "[2]", `known scenes, several segments each, keep Gemma's flags: ${JSON.stringify(r.cuts)}`);
     check(/never to an object, the hands or the feet/.test(r.system), "the split's framing rule");
+    // With references, the recurring props with none are written once in the shared subjects;
+    // with none, the subjects themselves, with their size.
+    let system = "";
+    const withRefs = await P.composeScenario(async sys => { system = sys; return { props: [{ names: ["egg"], look: "A small white egg." }], segments: ["Port."] }; },
+      "a", 1, "", 15, [{ desc: "a girl" }]);
+    check(withRefs.look.subjects === "[egg] A small white egg.", `the props of a split with references: ${JSON.stringify(withRefs.look)}`);
+    // A prop goes only into the segments that name it; a line with no [names] goes everywhere.
+    const defs = "<Subject 1> is a girl.\n[egg] A giant white egg.\n[hover-scooter, scooter] A round orange hover-scooter.";
+    check(P.scopeSubjectDefs(defs, "She parks her scooter.") === "<Subject 1> is a girl.\nA round orange hover-scooter."
+      && P.scopeSubjectDefs(defs, "Two eggs roll.") === "<Subject 1> is a girl.\nA giant white egg."
+      && P.scopeSubjectDefs(defs, "An eggplant.") === "<Subject 1> is a girl."
+      && P.scopeSubjectDefs("[orange hover-scooter] A scooter.", "The scooter jumps.") === "A scooter.", "a prop only where its segment names it");
+    let propsUser = "";
+    await P.describeScreenplayProps(async (sys, user) => { propsUser = user; return {}; }, [{ prompt: "<Subject 2> puffs steam.", mode: "continue" }],
+      P.relaySubjectLegend("", [{ desc: "a girl" }, { desc: "a teapot robot" }]));
+    check(/^The markers' subjects:\n.*SUBJECTREF2 = the main character, a teapot robot/s.test(propsUser) && /Segment 1: SUBJECTREF2 puffs/.test(propsUser),
+      `the screenplay check knows who the markers are: ${propsUser}`);
+    const scoped = P.buildRelayCutPrompt("<Subject 1> rides away.", { subjects: defs }, [{ kind: "character", desc: "a girl" }], "none");
+    check(!scoped.includes("egg") && !scoped.includes("[egg") && !scoped.includes("[hover") && scoped.includes("<Subject 1> is a girl."), `a segment prompt without the egg: ${scoped}`);
+    await P.composeScenario(async sys => { system = sys; return { segments: ["Port."] }; }, "a", 1, "", 15, [{ desc: "a girl" }]);
+    check(/the recurring objects, vehicles, animals and minor characters that have no marker/.test(system), "the split asks for the props");
+    await P.composeScenario(async sys => { system = sys; return { segments: ["Port."] }; }, "a", 1, "", 15, []);
+    check(/size compared with the other subjects/.test(system), "the split asks for the subjects' size");
+    // The guards: once, given back exactly, in plain prose too; a camera-movement clip keeps its cuts.
+    const plain = "A girl rides a scooter.";
+    const g = P.capH3Prompt(plain);
+    check(g.endsWith(P.H3_GUARD_SHOT) && P.capH3Prompt(g) === g && P.stripH3Guards(g) === plain, `guards in plain prose: ${g}`);
+    const motion = P.buildH3RefPrompt({ subjects: P.h3AssignRefs([{ media: "video", kind: "motion" }]), summary: "x", body: "y" });
+    check(!P.capH3Prompt(motion).includes(P.H3_GUARD_SHOT) && P.capH3Prompt(motion).includes(P.H3_GUARD_ANATOMY), "a motion clip keeps its own cuts");
   }
   const jobs = [], chats = [], done = new Map(), held = [], cancels = [];
   let n = 0, hold = false, sock = null, visionSheet = false;
@@ -171,6 +203,10 @@ const SPLIT = {
       // Vision: the description of a long take's start image.
       if (body.images?.length) return json({ content: JSON.stringify({ sheet: visionSheet, subject: "a woman in a green wool coat", appearance: "auburn bob",
                                                                       materials: "", palette: "" }) });
+      // A screenplay read once: its recurring props, and the segments that start elsewhere
+      // (`newPlace`, set by the test that wants one).
+      if (/Find the objects, vehicles, animals and minor characters/.test(body.system || ""))
+        return json({ content: JSON.stringify({ props: [{ names: ["hover-scooter", "scooter"], look: PROPS }], joins: newPlace.map(k => ({ segment: k, previous_ends_on: "a path", starts_on: "a beach", same_image: false })) }) });
       return json({ content: JSON.stringify(SPLIT) });
     }
     if (p === "/api/inputs") return json({ ref: `inputs/up-${++n}.png` }, 201);
@@ -251,7 +287,8 @@ const SPLIT = {
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .relay-seg textarea")].map(a => a.value.trim()).filter(Boolean).length === 3);
   check(jobs.length === 0, `the split or a shared field submitted ${jobs.length} job(s)`);
   check(chats.length === 1 && /exactly 3 segments/.test(chats[0].system), "the split did not ask Gemma for 3 segments");
-  check(!/"subjects"/.test(chats[0].system), "with the subjects' sheets, the split asks for their look");
+  check(!/the look of the recurring subjects as the scenario gives it/.test(chats[0].system) && /that have no marker below/.test(chats[0].system),
+    "with the subjects' sheets, the split asks for their look, or not for the props");
   const look = await page.$$eval("#relayLook textarea", els => Object.fromEntries(els.map(e => [e.dataset.look, e.value])));
   check(look.lighting === "Warm candle light.", `the user's lighting was overwritten: "${look.lighting}"`);
   check(await page.$eval("#relayLook", el => el.open), "the shared fields the split filled are folded");
@@ -315,6 +352,12 @@ const SPLIT = {
     check(pr.includes("Warm candle light.") && pr.includes(`Framing: ${SPLIT.framing}`), `segment ${i + 1} prompt lacks the shared look`);
     check(pr.includes(`overall_soundscape:\n${SPLIT.soundscape}`) && pr.includes("non_diegetic_music:\nNone."), `segment ${i + 1} sound fields`);
     check(pr.split("Warm candle light.").length === 2, `segment ${i + 1} repeats the lighting`);
+    // The coherence guards every H3 prompt carries, written once by the code (GB10 2026-11-26).
+    const P = require(path.join(__dirname, "..", "web", "js", "prompts.js"));
+    check(pr.split(P.H3_GUARD_ANATOMY).length === 2 && /retention_analysis:\n[^]*\nAnatomy and scale: fully_preserved - [^]*\n\ndetailed_description:/.test(pr)
+      && pr.split(P.H3_GUARD_SHOT).length === 2 && pr.includes(` ${P.H3_GUARD_SHOT}\n\noverall_soundscape:`), `segment ${i + 1} coherence guards: ${pr}`);
+    // A segment continuing the previous clip opens on that join; the first one does not.
+    check(pr.includes(P.H3_CONTINUES) === (i > 0), `segment ${i + 1} join sentence: ${pr}`);
   }
   // A continuous segment takes no frame of the one before: no transition image to choose.
   check(await page.$$eval("#relayList .relay-thumb", els => els.length) === 0, "transition images offered before continuous segments");
@@ -645,7 +688,9 @@ const SPLIT = {
   await openTake();
   await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 3);
-  check(jobs.length === before && chats.length === chatsBefore, `opening an imported screenplay: ${jobs.length - before} job(s), ${chats.length - chatsBefore} Gemma call(s)`);
+  await page.waitForSelector("#relayRunBtn:not([disabled])", { timeout: 10000 });
+  // One Gemma call reads it (props, changes of place); its subjects are given, so the field stays.
+  check(jobs.length === before && chats.length === chatsBefore + 1, `opening an imported screenplay: ${jobs.length - before} job(s), ${chats.length - chatsBefore} Gemma call(s)`);
   const cards = await page.$$eval("#relayList .relay-seg textarea", els => els.map(e => e.value));
   check(cards[0] === "<Subject 1> stands facing the camera. She blinks naturally and slowly begins walking. Photorealistic garden, gentle camera movement."
     && cards[2] === "<Subject 1> looks toward the camera and smiles.", `imported segments: ${JSON.stringify(cards)}`);
@@ -699,15 +744,37 @@ const SPLIT = {
     && same(lt[1]?.params.continue_from, outOf(lt[0])),
     `described scene, segment 1 does not start on its picture: ${JSON.stringify(lt.map(j => ({ ...j.params, prompt: undefined })))}`);
 
-  // The Relay's own import splits the file as written, without Gemma; a later [Shot N] opens a
-  // new scene, as a split's does.
+  // The Relay's own import splits the file as written, with no Gemma split (one call reads it
+  // for props and changes of place; segment 3, already a new shot, is left as it is); a later
+  // [Shot N] opens a new scene, as a split's does.
   chatsBefore = chats.length;
   const twoShots = SCREENPLAY.replace("Segment 3 (", "[Shot 2] A beach at sunset, warm light.\nSegment 3 (");
   await page.setInputFiles("#relayImportFile", { name: "garden.txt", mimeType: "text/plain", buffer: Buffer.from(twoShots) });
   await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 3);
-  check(chats.length === chatsBefore && dialogs > 0, `the Relay import: ${chats.length - chatsBefore} Gemma call(s), confirmation asked: ${dialogs > 0}`);
+  await page.waitForFunction(() => !document.querySelector("#relayRunBtn").disabled || document.querySelector("#relayRunBtn").hidden, null, { timeout: 10000 }).catch(() => {});
+  check(chats.length === chatsBefore + 1 && /\(new shot\)/.test(chats[chats.length - 1]?.prompt || "") && dialogs > 0,
+    `the Relay import: ${chats.length - chatsBefore} Gemma call(s), confirmation asked: ${dialogs > 0}`);
   const shotLinks = await page.$$eval("#relayList .relay-seg .seg-link", els => els.map(e => e.hidden ? "-" : e.textContent.trim()));
   check(shotLinks[1] === "🔗 Continuous" && shotLinks[2] === "🎞 New scene (from the references)", `links of a two-shot screenplay: ${JSON.stringify(shotLinks)}`);
+  // A screenplay that defines no subjects: one Gemma call writes its recurring props once in
+  // the shared Subjects field (the scooter changed design from shot to shot, GB10 2026-11-26);
+  // its segments stay as written, and nothing renders.
+  await page.fill('#relayLook textarea[data-look="subjects"]', "");
+  await page.dispatchEvent('#relayLook textarea[data-look="subjects"]', "change");
+  chatsBefore = chats.length; before = jobs.length; newPlace = [3];
+  const noSubjects = SCREENPLAY.replace(/subject_definitions:[^]*?\n(?=[a-z_]+:)/, "");
+  await page.setInputFiles("#relayImportFile", { name: "props.txt", mimeType: "text/plain", buffer: Buffer.from(noSubjects) });
+  await page.waitForFunction(p => document.querySelector('#relayLook textarea[data-look="subjects"]').value === p,
+    "[hover-scooter, scooter] " + PROPS.replace("SUBJECTREF1", "<Subject 1>"), { timeout: 10000 });
+  const propCards = await page.$$eval("#relayList .relay-seg textarea", els => els.map(e => e.value));
+  check(!/subject_definitions/.test(noSubjects) && chats.length === chatsBefore + 1 && jobs.length === before
+    && /SUBJECTREF1 stands facing the camera/.test(chats[chats.length - 1]?.prompt || "")
+    && propCards[2] === "<Subject 1> looks toward the camera and smiles.",
+    `a screenplay with no subjects: ${chats.length - chatsBefore} Gemma call(s), ${jobs.length - before} job(s), ${JSON.stringify(propCards)}`);
+  // Segment 3 starts in another place than segment 2 ends: a cut, not a continuous join.
+  const placeLinks = await page.$$eval("#relayList .relay-seg .seg-link", els => els.map(e => e.hidden ? "-" : e.textContent.trim()));
+  check(placeLinks[1] === "🔗 Continuous" && placeLinks[2] === "🎞 New scene (from the references)"
+    && /Segment 3: SUBJECTREF1 looks toward/.test(chats[chats.length - 1]?.prompt || ""), `a segment that starts elsewhere: ${JSON.stringify(placeLinks)}`);
 
   // A new long take holds its screenplay in its card: splitting it loses nothing, so nothing
   // is asked; a card rewritten by hand is asked about before it is replaced.
@@ -923,7 +990,8 @@ const SPLIT = {
   await page.waitForFunction(n => document.querySelectorAll("#jobList .job").length > 0, before);
   await page.waitForTimeout(300);
   const i2v = jobs.slice(before).find(j => j.pipeline === "h3-i2v");
-  check(i2v && i2v.params.duration === 10 && i2v.params.prompt.split(ALIGN).length === 2 && i2v.params.prompt.endsWith("She smiles."),
+  check(i2v && i2v.params.duration === 10 && i2v.params.prompt.split(ALIGN).length === 2
+    && require(path.join(__dirname, "..", "web", "js", "prompts.js")).stripH3Guards(i2v.params.prompt).endsWith("She smiles."),
     `alignment sentence in Image2Video: ${JSON.stringify(i2v?.params.prompt)}`);
   if (SHOTS) {
     await page.selectOption("#langSelect", "fr");

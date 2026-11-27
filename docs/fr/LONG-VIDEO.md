@@ -550,3 +550,118 @@ Rendu de nouveau sur 928b7fc (même brief, page fermée pendant le segment 1) : 
 260 images, plan-séquence de 29,96 s (719 images), −18,1 LUFS, sans silence ; la même femme rousse
 en veste en jean sur pull vert sur toutes les images, le marché gardé, aucun saut aux raccords ; la
 page rouverte est revenue d'elle-même sur le plan-séquence, sans mettre de job en file.
+
+## Dérives d'une vidéo de 3 minutes (2026-11-26)
+
+Un animé original de 3 minutes (trois plans-séquences de 60 s à partir de scénarios, puis
+`video-concat`, sur promaxgb10-95c7) a gardé le style 2D et les trois personnages, mais a montré
+des dérives que le brief ne demandait pas : un personnage dessiné deux fois dans une scène
+chargée, une troisième main restée sur le guidon pendant que la conductrice saluait, un petit
+robot devenu aussi grand qu'une jeune fille, des coupes franches et un fondu fantôme dans des
+raccords marqués continus, et des accessoires (un œuf, un scooter, un dirigeable) dont le design
+changeait d'un plan à l'autre. Elles viennent du prompt, pas de la graine : refaire avec d'autres
+graines gardait le double. Ce qui change, pour toute vidéo H3 (LESSONS n°60) :
+
+- **Des garde-fous de cohérence dans chaque prompt H3.** `capH3Prompt`, la seule fonction par où
+  passe tout prompt H3 (Text2Video, Image2Video, Vidéo à partir de références, chaque segment de
+  plan-séquence, le Canvas, les cartes de l'assistant, le teaser de campagne), termine
+  `retention_analysis` par une ligne d'anatomie et d'échelle (chaque personnage une seule fois
+  dans l'image, son propre nombre de têtes, bras, mains et jambes, une main qui se lève quittant
+  sa place, les tailles relatives gardées) et `detailed_description` par une phrase de plan unique
+  (aucune quand un clip sert de référence de mouvement de caméra) ; la prose simple reçoit les
+  deux à la fin. Écrites une seule fois, rendues à l'identique par `stripH3Guards`, jamais rognées.
+- **Une planche de référence est décrite une seule fois.** La vision de Gemma écrivait « shown
+  from four different angles », « against a pale off-white background » : H3 dessinait le sujet
+  deux fois. La consigne demande maintenant le sujet unique et chaque accessoire distinctif,
+  jamais ses vues, poses ou fond, ni une taille (une planche ne donne aucune échelle) ;
+  `stripSheetLayout` retire ce qui passe quand même.
+- **Un raccord continu s'ouvre sur le clip précédent.** Un segment qui continue le clip précédent
+  dans l'espace latent ouvre son texte sur ce raccord (`H3_CONTINUES`) : même lieu, même cadrage,
+  même lumière.
+- **Les accessoires écrits une fois, envoyés là où ils sont nommés.** Le découpage écrit aussi
+  les objets, véhicules et animaux récurrents sans référence dans le champ partagé Sujets (sans
+  référence, aussi les sujets eux-mêmes, avec leur taille, dans chaque segment). Un accessoire
+  est une ligne `[egg, eggs] A giant white egg…` : elle va dans le `subject_definitions` des
+  segments dont le texte le nomme (en entier ou par son dernier mot : « hover-scooter » par
+  « scooter »), et de ceux-là seulement (`scopeSubjectDefs` ; une ligne sans
+  `[noms]`, tapée par l'utilisateur ou non, va partout, telle qu'écrite). Un scénario est lu tel
+  qu'écrit ; un appel à Gemma à l'import (`describeScreenplayProps`) écrit ses accessoires de la
+  même façon quand il ne définit aucun sujet, sans toucher aux segments.
+- **Un segment qui commence ailleurs est une coupe.** Le même appel dit, raccord par raccord, ce
+  que montre la dernière image du segment précédent, ce que montre la première image du suivant,
+  et si l'une peut être l'autre (une simple liste de numéros revenait différente à chaque appel).
+  Un segment dont la première image n'a jamais été atteinte par le précédent devient une coupe (🎞, affichée, l'utilisateur peut la
+  remettre en raccord) au lieu d'un raccord continu qui sautait ou coupait de lui-même. Un
+  découpage le décide lui-même (`new_shot`).
+
+**Banc sur le GB10** (`tools/qualify/anime_take/drift_bench.py`, même graine et même requête,
+seul le prompt change ; coupe = score scdet au-dessus de 0,3) :
+
+| Cas | Avant | Après |
+|---|---|---|
+| Descriptions de planche avec des mots de mise en page (3 planches × 3 essais) | 8 sur 9 | 0 sur 9 |
+| Éclosion de l'œuf (job-28 → 36) : Riko par image, 9 images | 2 Riko dans 7 images, une coupe à 1,75 s | 1 Riko dans les 9, aucune coupe |
+| Arrivée à la montagne (job-9 → 37) | coupes à 1,0 s et 7,25 s | coupe à 1,0 s seulement, un travelling avant continu |
+| La griffe (job-13 → 38) | coupe à 1,42 s | pareil |
+| Saut vers l'échelle (job-16 → 39) | coupe à 1,0 s | pareil |
+
+La phrase de plan unique a supprimé la coupe à l'intérieur du clip ; la coupe juste après la
+seconde de contexte est restée : le texte du segment commençait dans un autre cadrage ou un autre
+lieu que la fin du clip précédent. C'est ce que vise la phrase de raccord (pas encore passée au
+banc). La première version de la nouvelle consigne de vision a oublié le monocle du Baron, et le
+monocle a quitté le clip après 2,5 s : la consigne nomme maintenant les accessoires distinctifs.
+Le dirigeable est resté un bateau volant rouge et blanc : le banc refaisait des segments de
+scénario qui ne le définissaient jamais.
+
+**Rendu de contrôle, prise 1 refaite** (promaxgb10-95c7 sur la PR #60 810ae00, `ONLY=take1
+anime_take.js`, même scénario et mêmes planches, 49 min pour 6 × 10 s + assemblage ; prise
+`video-stitch/20261126-102011-job-b16f6d-7.mp4`, 59,92 s, −18,0 LUFS) : aucune coupe au-dessus
+de 0,3 dans les six clips, ni aux raccords ni à l'intérieur (au plus 0,25) ; dans la prise, seule
+la coupe prévue à 29,96 s, là où la prise de la veille en avait deux de plus (50,08 et 56,33 s) ;
+aucun fondu fantôme ; aucun personnage en double sur 24 images ; le segment 6 est un seul
+travelling avant continu. Restent : la troisième main pendant le salut de Riko (4,2 à 9 s),
+malgré la ligne d'anatomie envoyée ; le scooter et l'œuf changent de design à la nouvelle scène
+(le scénario ne définissait aucun accessoire : d'où l'appel à l'import ci-dessus) ; la taille
+estimée par la vision était fausse (Riko « environ quatre ans », Kettle « un tout-petit ») et
+Kettle paraissait plus grand que Riko au premier plan du segment 6 : le champ de taille est
+retiré. Au raccord de 10 s, le décor saute de la rue au mur de la poste sans coupe : le texte du
+segment 2 commence devant la poste, un lieu que le clip précédent n'avait pas atteint.
+
+**Deuxième et troisième rendus de contrôle** (même commande). Sur 64ce08a (prise
+`video-stitch/20261126-115117-job-75fbd6-7.mp4`), l'appel des accessoires n'a jamais atteint la
+prise : la chaîne avait été lancée pendant qu'il tournait, et le rendu H3 a arrêté Gemma en
+plein appel. La chaîne l'attend maintenant (d95540b) ; un essai à blanc (`DRY=1`, arrêt avant
+la chaîne) a montré l'appel remplissant le champ Sujets par « a small round orange hover-scooter
+with one headlight and stubby fins, and a giant white egg with big orange spots that is as tall
+as `<Subject 1>` ». Sur 32f0435 (prise `video-stitch/20261126-144119-job-7cc67e-7.mp4`,
+59,92 s, −18,1 LUFS, 50 min), avec cette définition dans les six prompts : l'œuf a gardé un seul
+design sur la prise (il devenait beige à taches brunes à la nouvelle scène avant) ; le scooter
+est resté orange et rond mais a encore pris trois formes ; Kettle est resté à la hauteur de Riko
+ou en dessous, segment 6 compris ; aucun personnage en double ; la troisième main a disparu
+(2,5 à 9 s, vérifié sur des agrandissements à 2,5, 4, 6 et 8 s), après être restée dans les deux
+rendus précédents avec la même ligne d'anatomie. Nouveau : l'œuf apparaît aux segments 1 et 2,
+avant que le postier ne l'apporte au segment 3 (un accessoire défini pour toute la prise apparaît
+là où son texte ne l'a pas encore), et une coupe à 51,0 s, 1,1 s après le contexte du segment 6,
+dont le texte commence devant la montagne là où le segment 5 finissait dans les dunes. Le saut de
+10 s est resté. D'où les deux derniers points de la liste ci-dessus : un accessoire ne va que
+là où son segment le nomme, et un segment qui commence ailleurs est une coupe.
+
+**Vérification au-delà de l'animé** (promaxgb10-95c7, `control-tests/pr60-global.md`). Prise 1
+refaite sur 445eb95 (`video-stitch/20261126-171251-job-d0835e-7.mp4`) : l'œuf seulement à partir
+du postier, un seul design ; deux mains pendant le salut de Riko ; aucun double ; Kettle à la
+hauteur de Riko ou en dessous ; la montagne en coupe prévue. La ligne du scooter n'avait atteint
+aucun prompt (son nom était « hover-scooter » dans le champ, la recherche portait sur le nom
+entier : un nom se reconnaît maintenant aussi par son dernier mot) et le scooter changeait de
+design ; H3 a coupé de lui-même à 10,25 s, à un raccord que Gemma juge continu. Trois essais à
+blanc sur 47a4866 ont donné les mêmes accessoires et les mêmes coupes à chaque fois, mais le
+scooter prenait le bec du robot-théière dans les trois : la vérification ne voyait que des
+marqueurs nus, elle reçoit maintenant la légende des sujets (04f1963, essai à blanc seulement).
+Sur 47a4866, les chemins sans scénario : un plan-séquence réaliste de 30 s depuis un brief simple
+(`closed_page_take.js`, `video-stitch/20261126-174013-job-1f77ee-4.mp4`) : aucune coupe, la pomme
+seulement à partir du segment où elle la prend, deux mains, la tenue gardée sur 30 s ; des clips
+seuls de 10 s par le formulaire (`single_clips.js`) : une cycliste en Text2Video qui salue (main
+droite levée, gauche sur le guidon, pas de troisième main, aucune coupe), Vidéo à partir de
+références sur la planche animée (une seule Riko, pas de collage) et sur une planche réaliste
+multi-vues (une seule femme, fidèle à la planche, aucune vue collée). Chaque prompt portait les
+deux gardes. Les clips seuls sortent faibles en son (−33,6 et −49 LUFS, contre −18 pour une prise
+assemblée) : ce n'est pas une dérive, laissé pour plus tard.

@@ -30,14 +30,16 @@ const WEB = path.join(__dirname, "..", "web");
 const only = process.argv[2] ? new RegExp(process.argv[2]) : null;
 const sha = s => crypto.createHash("sha256").update(s).digest("hex");
 
-// sha256 of each instruction, as sent by 1.4 (tools/prompt-systems.js there, bloc FP).
+// sha256 of each instruction, as sent by 1.4 (tools/prompt-systems.js there, bloc FP), save
+// where marked as 2.0's own.
 const FP = {
   ENRICH_SYSTEM: "c6bf68a3bc8a77ed5897c84d0406e3a8d9f2944541b29f6f11b767cefb6d8192",
   KREA2_ENRICH_SYSTEM: "d7d318d81bb5dc492570e8b93fc7bb2baed372d9865e374ed82a54a6a9ebaec5",
   H3_VIDEO_ENRICH_SYSTEM: "5d26d56b546c13cc599f7e23ba1792b0322561b4e744064eb3a37452b142b36e",
   R2V_BRIEF_ENRICH_SYSTEM: "d55d0fc3d08606df97bec3600dfce7fed44c93486c9f9ccfc64287667700bdea",
   SHEET_BRIEF_ENRICH_SYSTEM: "a3799383a92581605fcae4da6ffb3b017246e31f622063d0d3d1be00d2b9800a",
-  REF_VISION_SYSTEM: "14c68fdba3150548308d4ee260f24c1c1b4fc6e236463a971a731d9d0f030b95",
+  // 2.0's own since 2026-11-26 (one subject described once, with its accessories).
+  REF_VISION_SYSTEM: "84f346e2236a52f88fb3bc5726558ecf7ee82e20fb1c87e537a8a03aa89d2d69",
   CHARACTER_SYSTEM: "4d78da3e105a0d0d31692a5578cfa35ca8982f8db8dab5684715ecbfec20f267",
   "CHARACTER_SYSTEM(forceKind=human)": "59ca22976439b39bdacad85e602757319e1f91d8fee4763dba34448e753c70e5",
 };

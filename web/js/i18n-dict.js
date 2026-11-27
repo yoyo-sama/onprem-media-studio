@@ -3407,6 +3407,26 @@ export const DICT = {
     es: "Relay, segmento {n}/{total}: vídeo a partir del texto…",
     de: "Relay, Segment {n}/{total}: Video aus dem Text…",
   },
+  "Relay: {llm} reads the screenplay once (recurring objects, changes of place)…": {
+    fr: "Relay : {llm} lit le scénario une fois (objets récurrents, changements de lieu)…",
+    es: "Relay: {llm} lee el guion una vez (objetos recurrentes, cambios de lugar)…",
+    de: "Relay: {llm} liest das Drehbuch einmal (wiederkehrende Objekte, Ortswechsel)…",
+  },
+  "Relay: {n} segment(s) start in another place than the previous one ends: a cut (🎞) instead of a continuous join.": {
+    fr: "Relay : {n} segment(s) commence(nt) dans un autre lieu que la fin du précédent : une coupe (🎞) au lieu d'un raccord continu.",
+    es: "Relay: {n} segmento(s) empieza(n) en otro lugar que el final del anterior: un corte (🎞) en lugar de una unión continua.",
+    de: "Relay: {n} Segment(e) beginnt/beginnen an einem anderen Ort, als das vorige endet: ein Schnitt (🎞) statt eines durchgehenden Übergangs.",
+  },
+  "Relay: recurring objects described once in the shared Subjects field.": {
+    fr: "Relay : objets récurrents décrits une fois dans le champ commun Sujets.",
+    es: "Relay: objetos recurrentes descritos una vez en el campo común Sujetos.",
+    de: "Relay: Wiederkehrende Objekte einmal im gemeinsamen Feld Motive beschrieben.",
+  },
+  "Recurring objects not described ({error}): the screenplay is used as written.": {
+    fr: "Objets récurrents non décrits ({error}) : le scénario est utilisé tel qu'il est écrit.",
+    es: "Objetos recurrentes no descritos ({error}): el guion se usa tal como está escrito.",
+    de: "Wiederkehrende Objekte nicht beschrieben ({error}): Das Drehbuch wird so verwendet, wie es geschrieben ist.",
+  },
   "Relay: screenplay read as written: {n} segment(s), {fields} shared field(s).": {
     fr: "Relay : scénario lu tel qu'il est écrit : {n} segment(s), {fields} champ(s) commun(s).",
     es: "Relay: guion leído tal como está escrito: {n} segmento(s), {fields} campo(s) común(es).",

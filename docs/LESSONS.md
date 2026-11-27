@@ -343,6 +343,33 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     (page closed) held, and showed what a length must count: a latent continuation redoes 22
     frames the take drops, so a 30 s plan made 28.5 s while the page said 30.4 s. A length shown
     to the user is the one the file will have. (2026-11-25)
+60. **What must hold in every clip is written by the code into every H3 prompt, not left to
+    the brief.** A 3-minute take (three 60 s long takes, 2026-11-26) drew a character twice,
+    left a third hand on the handlebar while the rider waved, grew a small robot to a girl's
+    height, and cut or dissolved inside clips meant as one shot. None of it was in the brief,
+    and a fix in one pipeline would have left the others drifting. `capH3Prompt`, which every
+    H3 prompt goes through (text, image or references to video, long take, Canvas, assistant),
+    now closes retention_analysis with an anatomy and scale line (each character once, its own
+    number of heads, arms, hands and legs, sizes relative to one another kept) and
+    detailed_description with a one-shot sentence (left out when a clip is the camera-movement
+    reference, which brings its own cuts); in plain prose both close the text. They are written
+    once and given back exactly (`stripH3Guards`), outside the room the trim takes. And a
+    sheet's description must describe its subject once: Gemma's vision wrote "shown in four
+    poses, against a pale background", and H3 drew the subject twice in a busy shot. The vision
+    instruction now forbids views, poses and background and asks for every distinctive accessory
+    (a first version dropped the Baron's monocle), and `stripSheetLayout` removes what slips
+    through: on the GB10, layout words in 0 descriptions out of 9 (8 out of 9 before). It asks
+    for no size: a sheet drawn alone gives no scale, and the guess was wrong (a 12-year-old
+    "about four", a small robot "toddler-sized", nearly her height). A recurring prop with no
+    reference (an egg, a scooter, an airship) is written once in the shared Subjects field, by
+    the split or, for a screenplay that defines no subjects, by one Gemma call at import, or it
+    changes design from shot to shot; the chain waits for that call (started meanwhile, the H3
+    render stopped Gemma under it and the take went without props). Written once, the egg kept
+    one design over the take, but a prop defined for the whole take also showed where its text
+    did not have it yet: it now goes only to the segments that name it (`[names]` lines). The third hand stayed in two renders with the anatomy line sent and was
+    gone in the third: the line helps, it does not guarantee. And a segment whose text starts
+    somewhere other than where the previous clip ends gives a jump or a cut at the join, whatever
+    the guards say: such a segment is made a planned cut. (2026-11-26)
 
 ## 8. Front end (for the port in step 4)
 

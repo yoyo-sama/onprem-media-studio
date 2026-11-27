@@ -508,3 +508,107 @@ Rendered again on 928b7fc (same brief, page closed during segment 1): clips of 2
 frames, take 29.96 s (719 frames), −18.1 LUFS, no silence; the same red-haired woman in the denim
 jacket over the green sweater in every frame, the market kept, no jump at the joins; the reopened
 page went back to the take by itself, with no job queued.
+
+## Drifts of a 3-minute take (2026-11-26)
+
+A 3-minute original anime (three 60 s long takes from screenplays, then `video-concat`, on
+promaxgb10-95c7) kept the 2D style and the three characters, but showed drifts the brief never
+asked for: a character drawn twice in a busy shot, a third hand left on the handlebar while the
+rider waved, a small robot grown to a girl's height, hard cuts and a ghost dissolve inside links
+marked continuous, and props (an egg, a scooter, an airship) whose design changed from shot to
+shot. They come from the prompt, not from the seed: re-rendering with new seeds kept the double.
+What changed, for every H3 video (LESSONS #60):
+
+- **Coherence guards in every H3 prompt.** `capH3Prompt`, the one function every H3 prompt goes
+  through (Text2Video, Image2Video, Video from references, every long take segment, the Canvas,
+  the assistant's cards, the campaign teaser), closes `retention_analysis` with an anatomy and
+  scale line (each character once in the frame, its own number of heads, arms, hands and legs, a
+  hand that rises leaving its place, sizes relative to one another kept) and
+  `detailed_description` with a one-shot sentence (none when a clip is the camera-movement
+  reference); plain prose gets both at its end. Written once, given back exactly by
+  `stripH3Guards`, never trimmed.
+- **A reference sheet is described once.** Gemma's vision wrote "shown from four different
+  angles", "against a pale off-white background": H3 drew the subject twice. The instruction now
+  asks for the one subject and every distinctive accessory, never its views, poses or
+  background, nor a size (a sheet gives no scale); `stripSheetLayout` removes what slips through.
+- **A continuous join opens on the previous clip.** A segment that continues the previous clip
+  in latent space opens its body on that join (`H3_CONTINUES`): same place, framing and light.
+- **Props written once, sent where they are named.** The split now also writes the recurring
+  objects, vehicles and animals with no reference in the shared Subjects field (with no
+  reference, the subjects themselves too, with their size, in every segment). A prop is one
+  line `[egg, eggs] A giant white egg…`: it goes into the `subject_definitions` of the segments
+  whose text names it (whole or by its last word: "hover-scooter" by "scooter"), and only those (`scopeSubjectDefs`; a line with no `[names]`, typed by
+  the user or not, goes everywhere, as written). A screenplay is read as written; one Gemma
+  call at import (`describeScreenplayProps`) writes its props the same way when it defines no
+  subjects, the segments untouched.
+- **A segment that starts elsewhere is a cut.** The same call says, join by join, what the last
+  image of the previous segment shows, what the first image of the next one shows, and whether
+  the one can be the other (a bare list of segment numbers came back different on every call).
+  A segment whose first image the previous one never reached becomes a cut (🎞, shown, the user can turn it back) instead of a
+  continuous join that jumped there or cut on its own. A split decides this itself (`new_shot`).
+
+**Bench on the GB10** (`tools/qualify/anime_take/drift_bench.py`, same seed and same request,
+only the prompt changed; cut = scdet score over 0.3):
+
+| Case | Before | After |
+|---|---|---|
+| Sheet descriptions with layout words (3 sheets × 3 runs) | 8 of 9 | 0 of 9 |
+| Egg hatch (job-28 → 36): Riko per frame, 9 frames | 2 Riko in 7 frames, a cut at 1.75 s | 1 Riko in all 9, no cut |
+| Arrival at the mountain (job-9 → 37) | cuts at 1.0 s and 7.25 s | cut at 1.0 s only, one continuous push-in |
+| The claw (job-13 → 38) | cut at 1.42 s | same |
+| Jump to the ladder (job-16 → 39) | cut at 1.0 s | same |
+
+The one-shot sentence removed the cut inside the clip; the cut right after the ~1 s of context
+stayed: the segment's text started in another framing or place than the previous clip's end.
+That is what the join sentence answers (not benched yet). The first description of the new
+vision instruction dropped the Baron's monocle, and the monocle left the clip after 2.5 s: the
+instruction now names distinctive accessories. The airship stayed a red and white flying boat:
+the bench re-rendered screenplay segments that never defined it.
+
+**Control render, take 1 again** (promaxgb10-95c7 on PR #60 810ae00, `ONLY=take1
+anime_take.js`, same screenplay and sheets, 49 min for 6 × 10 s + stitch; take
+`video-stitch/20261126-102011-job-b16f6d-7.mp4`, 59.92 s, −18.0 LUFS): no cut over 0.3 in the
+six clips, at the joins or inside them (highest 0.25); in the take only the planned cut at
+29.96 s, where last night's take had two more (50.08 and 56.33 s); no ghost dissolve; no
+doubled character in 24 frames; segment 6 is one continuous push-in. Still there: the third
+hand while Riko waves (4.2 to 9 s), with the anatomy line sent; the scooter and the egg changed
+design at the new scene (the screenplay defined no props: hence the import call above); the
+vision's size guess was wrong (Riko "about four years old", Kettle "toddler-sized") and Kettle
+looked taller than Riko in the foreground of segment 6: the size field was dropped. At the
+10 s join the setting jumped from the street to the post office wall with no cut: segment 2's
+text starts in front of the post office, a place the clip before had not reached.
+
+**Second and third control renders** (same command). On 64ce08a (take
+`video-stitch/20261126-115117-job-75fbd6-7.mp4`) the props call never reached the take: the
+chain had been started while it ran, and the H3 render stopped Gemma under it. The chain now
+waits for it (d95540b); a dry run (`DRY=1`, stops before the chain) showed the call filling
+the Subjects field with "a small round orange hover-scooter with one headlight and stubby fins,
+and a giant white egg with big orange spots that is as tall as `<Subject 1>`". On 32f0435
+(take `video-stitch/20261126-144119-job-7cc67e-7.mp4`, 59.92 s, −18.1 LUFS, 50 min), with
+that definition in all six prompts: the egg kept one design over the take (it turned beige
+with brown spots at the new scene before); the scooter stayed orange and round but still took
+three shapes; Kettle stayed at or below Riko's height, segment 6 included; no doubled
+character; the third hand was gone (2.5 to 9 s, checked on crops at 2.5, 4, 6 and 8 s), after
+staying in the two renders before with the same anatomy line. New: the egg showed in segments
+1 and 2, before the postman brings it in segment 3 (a prop defined for the whole take shows
+where its text does not have it yet), and a cut at 51.0 s, 1.1 s after segment 6's context,
+whose text starts in front of the mountain where segment 5 ended in the dunes. The 10 s jump
+stayed. Hence the two last items of the list above: a prop goes only where its segment names
+it, and a segment that starts elsewhere is a cut.
+
+**Check beyond the anime** (promaxgb10-95c7, `control-tests/pr60-global.md`). Take 1 again on
+445eb95 (`video-stitch/20261126-171251-job-d0835e-7.mp4`): the egg only from the postman on,
+one design; two hands while Riko waves; no double; Kettle at or below Riko; the mountain a
+planned cut. The scooter line had reached no prompt (its name was "hover-scooter" in the field,
+the match was whole-name only: a name now matches by its last word too) and the scooter
+changed design; H3 cut on its own at 10.25 s, at a join Gemma judges continuous. Three dry runs
+on 47a4866 gave the same props and the same cuts each time, but the scooter took the teapot
+robot's spout on all three: the check saw bare markers, it now gets the subjects' legend
+(04f1963, dry run only). On 47a4866, the paths with no screenplay: a realistic 30 s long take
+from a plain brief (`closed_page_take.js`, `video-stitch/20261126-174013-job-1f77ee-4.mp4`):
+no cut, the apple only from the segment where she picks it, two hands, the outfit held over
+30 s; single 10 s clips through the form (`single_clips.js`): a Text2Video cyclist waving
+(right hand up, left on the handlebar, no third hand, no cut), Video from references on the
+anime sheet (one Riko, no collage) and on a realistic multi-view sheet (one woman, true to the
+sheet, no view pasted in). Every prompt carried both guards. Single clips came out quiet
+(−33.6 and −49 LUFS, against −18 for a stitched take): not a drift, left for later.
