@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Making-of de l'animé</title>
+<style>
+:root {
+  --bg: #fbfaf7; --surface: #ffffff; --ink: #1d1b18; --muted: #6b665e; --line: #e6e1d8;
+  --accent: #d9481f; --accent-soft: #fbe6dd; --teal: #1f7a7a; --teal-soft: #dcefee;
+  --ok: #2f7d32; --bad: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161513; --surface: #1f1d1a; --ink: #f1ede6; --muted: #a8a196; --line: #34302a;
+    --accent: #ff7a4d; --accent-soft: #3a2219; --teal: #5cc2c0; --teal-soft: #17302f;
+    --ok: #7bc47f; --bad: #ff8a80;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161513; --surface: #1f1d1a; --ink: #f1ede6; --muted: #a8a196; --line: #34302a;
+  --accent: #ff7a4d; --accent-soft: #3a2219; --teal: #5cc2c0; --teal-soft: #17302f;
+  --ok: #7bc47f; --bad: #ff8a80;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 32px 16px 80px; }
+h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 24px; margin: 56px 0 12px; }
+h3 { font-size: 17px; margin: 0 0 6px; }
+p { margin: 0 0 12px; }
+.lead { color: var(--muted); font-size: 18px; max-width: 720px; }
+.step-num { display: inline-block; min-width: 28px; height: 28px; border-radius: 14px; background: var(--accent);
+  color: #fff; text-align: center; font-weight: 700; font-size: 15px; line-height: 28px; margin-right: 8px; }
+video, img { max-width: 100%; display: block; border-radius: 10px; }
+.film { margin: 24px 0 8px; background: #000; border-radius: 12px; overflow: hidden; }
+.film video { width: 100%; border-radius: 0; }
+.caption { color: var(--muted); font-size: 14px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 24px 0; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.stat b { display: block; font-size: 24px; line-height: 1.2; }
+.stat span { color: var(--muted); font-size: 14px; }
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 16px 0; }
+.flow div { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--teal);
+  border-radius: 10px; padding: 12px; font-size: 14px; }
+.flow div b { display: block; font-size: 15px; margin-bottom: 4px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 16px 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.card img { margin-bottom: 10px; }
+.grid18 { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 16px 0; }
+.grid18 figure { margin: 0; }
+.grid18 figcaption { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+.take-label { grid-column: 1 / -1; font-weight: 700; margin-top: 8px; color: var(--teal); }
+pre { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+  overflow-x: auto; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.92em; }
+.note { background: var(--accent-soft); border-left: 4px solid var(--accent); border-radius: 8px; padding: 12px 14px; margin: 16px 0; }
+.drift { margin: 20px 0; }
+.drift img { border: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 12px 0; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+.tbl { overflow-x: auto; }
+ul { padding-left: 20px; margin: 0 0 12px; }
+li { margin-bottom: 6px; }
+footer { margin-top: 56px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Un animé de 3 minutes, fait en local</h1>
+<p class="lead">Une histoire originale dans l'esprit des animés japonais des années 1990 : Riko la petite coursière, Kettle son robot-théière et le Baron Moustachu, pirate du ciel. Tout a été calculé sur le GB10 promaxgb10-95c7 avec OnPrem Media Studio : Krea 2 pour les planches, Gemma 4 pour lire les planches, MiniMax H3 pour la vidéo et le son.</p>
+
+<div class="film">
+  <video controls preload="metadata" poster="film/poster.jpg" src="film/film-360p.mp4"></video>
+</div>
+<p class="caption">Le film final (179,75 s), réduit en 640×360 pour cette page. L'original faisait 123 Mo.</p>
+
+<div class="stats">
+  <div class="stat"><b>3 min</b><span>3 prises de 60 s, jointes</span></div>
+  <div class="stat"><b>18</b><span>segments de 10 s rendus par H3</span></div>
+  <div class="stat"><b>≈ 8 min</b><span>de calcul par segment de 10 s (500 s en moyenne)</span></div>
+  <div class="stat"><b>2 h 41</b><span>pour le premier rendu complet</span></div>
+  <div class="stat"><b>3 h 35</b><span>de calcul au total, corrections comprises</span></div>
+  <div class="stat"><b>−18 LUFS</b><span>niveau sonore égalisé aux raccords</span></div>
+</div>
+
+<h2>La chaîne, en un coup d'œil</h2>
+<div class="flow">
+  <div><b>1. Histoire</b>Trois personnages originaux et un récit en trois actes de 60 s.</div>
+  <div><b>2. Planches</b>Krea 2 Turbo + LoRA « retroanime » : une planche par personnage.</div>
+  <div><b>3. Scénarios</b>Un scénario par prise au format H3 : 6 segments de 10 s, deux plans.</div>
+  <div><b>4. Plan-séquence</b>Le Studio lit chaque scénario tel quel, les planches en Références.</div>
+  <div><b>5. Rendu H3</b>Chaque segment en « référence vers vidéo », enchaîné au précédent dans l'espace latent.</div>
+  <div><b>6. Assemblage</b>Chaque prise assemblée à −18 LUFS, puis les trois prises jointes.</div>
+</div>
+<p>Une seule limite a imposé ce découpage : un plan-séquence du Studio tient au plus 10 segments (150 s). Trois minutes font donc trois prises de 60 s, jointes à la fin par un montage simple.</p>
+
+<h2><span class="step-num">1</span>Les personnages</h2>
+<p>Le style vise l'esprit des animés de 1990 (traits noirs nets, aplats de couleur, ombres franches, personnages ronds et expressifs), sans reprendre aucun personnage existant. Riko est une coursière de 12 ans en combinaison rouge et casque d'aviateur. Kettle est un petit robot en forme de théière bleue, avec un bec et un couvercle. Le Baron Moustachu est un pirate du ciel maigre et pompeux, avec une moustache démesurée et un monocle.</p>
+
+<h2><span class="step-num">2</span>Les planches de personnages</h2>
+<div class="cards">
+  <div class="card"><img src="sheets/riko.jpg" alt="Planche de Riko : quatre vues en pied et un gros plan du visage"><h3>Riko</h3><p class="caption">La coursière, sujet principal de toutes les prises.</p></div>
+  <div class="card"><img src="sheets/kettle.jpg" alt="Planche de Kettle : robot-théière bleu vu de face, de trois quarts, de profil et de dos"><h3>Kettle</h3><p class="caption">Le robot-théière, à hauteur de genou de Riko.</p></div>
+  <div class="card"><img src="sheets/baron.jpg" alt="Planche du Baron Moustachu : pirate maigre en redingote violette"><h3>Baron Moustachu</h3><p class="caption">Le pirate du ciel, présent dans les prises 2 et 3.</p></div>
+</div>
+<ul>
+  <li><b>Moteur :</b> Krea 2 Turbo, en 1920×1088, avec la LoRA <code>retroanime.safetensors</code> à 0,8.</li>
+  <li><b>Prompt :</b> un prompt écrit à la main en trois parties : le style (animé télé des années 1990), le personnage (description complète), la mise en page (quatre vues en pied et un gros plan sur fond blanc cassé, sans texte).</li>
+  <li><b>Choix :</b> deux candidates par personnage, la meilleure retenue à l'œil. Calcul : 463 s pour les six images.</li>
+  <li><b>Pourquoi pas le bouton « planche depuis le brief » :</b> il impose un rendu photo réaliste, inutilisable pour un dessin animé.</li>
+</ul>
+
+<h2><span class="step-num">3</span>Les scénarios</h2>
+<p>Chaque prise est un scénario écrit directement dans la grammaire de MiniMax H3, que le Studio lit tel quel, sans découpage par Gemma : un résumé, un style de caméra commun, une lumière, ce qui doit rester identique, puis les plans et leurs segments de 10 s. Les personnages y sont désignés par leur repère, <code>&lt;Subject 1&gt;</code> pour Riko, <code>&lt;Subject 2&gt;</code> pour Kettle et <code>&lt;Subject 3&gt;</code> pour le Baron, jamais par leur nom.</p>
+<pre>summary: A cheerful courier girl and her teapot robot pick up a giant spotted egg
+in a desert village and race it across the dunes toward a mountain of giant mushrooms.
+camera_direction: Hand-drawn 1990s Japanese TV anime, flat cel shading, bold clean black
+outlines, bright saturated colors, simple painted backgrounds, lively cartoon timing…
+detailed_description:
+[Shot 1] A sunny desert village of round white dome houses with blue doors…
+Segment 1 (00:00.000–00:10.000) – Arrival
+&lt;Subject 1&gt; zooms down the dusty main street on a small round orange hover-scooter…
+Segment 2 (00:10.000–00:20.000) – The post office
+…
+[Shot 2] Open desert of orange sand dunes and tall rock pillars…
+Segment 4 (00:30.000–00:40.000) – Across the dunes</pre>
+<p class="caption">Début du scénario de la prise 1. Un <code>[Shot N]</code> ouvre un nouveau plan : son premier segment part sur une coupe franche, rendue depuis les planches. Les autres segments continuent le précédent.</p>
+
+<h2><span class="step-num">4</span>Le rendu dans le Studio</h2>
+<p>Pour que le test soit honnête, un script Playwright (<code>tools/qualify/anime_take/anime_take.js</code>) a piloté le vrai Studio comme un utilisateur, sans raccourci par l'API :</p>
+<ul>
+  <li>carte « Vidéo narrative (plan-séquence) », les planches déposées dans Références (rôle personnage), le scénario collé comme brief ;</li>
+  <li>« Générer » ouvre le plan-séquence : Gemma décrit chaque planche une fois, le scénario est lu tel qu'écrit ;</li>
+  <li>les trois prises sont préparées avant tout rendu, pour qu'aucun appel à Gemma ne tourne à côté d'un rendu H3 ;</li>
+  <li>« Générer la chaîne » sur chaque prise : le serveur tient seul les trois chaînes, même la page fermée ;</li>
+  <li>pour chaque segment : H3 en « référence vers vidéo » avec les planches, et la suite du segment précédent dans l'espace latent (raccord sans coupe) ;</li>
+  <li>chaque prise est assemblée en une seule vidéo à −18 LUFS, puis les trois prises sont jointes avec un fondu audio de 25 ms aux raccords.</li>
+</ul>
+<div class="tbl"><table>
+  <tr><th>Étape</th><th>Calcul</th></tr>
+  <tr><td>Planches (6 images, 3 retenues)</td><td>463 s</td></tr>
+  <tr><td>Premier rendu : 18 segments, 3 assemblages, 1 montage</td><td>9 639 s (2 h 41)</td></tr>
+  <tr><td>Corrections de la prise 3, jusqu'au film final</td><td>2 986 s (≈ 50 min)</td></tr>
+  <tr><td>Un segment H3 de 10 s avec 2 ou 3 planches</td><td>≈ 500 s en moyenne</td></tr>
+  <tr><td><b>Total</b></td><td><b>12 886 s (3 h 35)</b></td></tr>
+</table></div>
+
+<h2>Le film en 18 images</h2>
+<p class="caption">Une image au milieu de chaque segment de 10 s.</p>
+<div class="grid18">
+  <div class="take-label">Prise 1 : l'œuf du désert</div>
+  <figure><img src="frames/seg01-005s.jpg" alt="Riko et Kettle sur le scooter dans le village"><figcaption>0:05 · Arrivée au village</figcaption></figure>
+  <figure><img src="frames/seg02-015s.jpg" alt="Devant la poste"><figcaption>0:15 · La poste</figcaption></figure>
+  <figure><img src="frames/seg03-025s.jpg" alt="L'œuf géant"><figcaption>0:25 · L'œuf géant</figcaption></figure>
+  <figure><img src="frames/seg04-035s.jpg" alt="À travers les dunes"><figcaption>0:35 · À travers les dunes</figcaption></figure>
+  <figure><img src="frames/seg05-045s.jpg" alt="Le saut de dune"><figcaption>0:45 · Le saut</figcaption></figure>
+  <figure><img src="frames/seg06-055s.jpg" alt="La montagne aux champignons"><figcaption>0:55 · La montagne aux champignons</figcaption></figure>
+  <div class="take-label">Prise 2 : le pirate du ciel</div>
+  <figure><img src="frames/seg07-065s.jpg" alt="Une ombre passe"><figcaption>1:05 · L'ombre</figcaption></figure>
+  <figure><img src="frames/seg08-075s.jpg" alt="Le dirigeable du Baron"><figcaption>1:15 · Le dirigeable</figcaption></figure>
+  <figure><img src="frames/seg09-085s.jpg" alt="La pince attrape l'œuf"><figcaption>1:25 · La pince</figcaption></figure>
+  <figure><img src="frames/seg10-095s.jpg" alt="La poursuite"><figcaption>1:35 · La poursuite</figcaption></figure>
+  <figure><img src="frames/seg11-105s.jpg" alt="Le turbo à vapeur"><figcaption>1:45 · Turbo à vapeur</figcaption></figure>
+  <figure><img src="frames/seg12-115s.jpg" alt="Le bond vers l'échelle"><figcaption>1:55 · Le bond</figcaption></figure>
+  <div class="take-label">Prise 3 : l'éclosion</div>
+  <figure><img src="frames/seg13-125s.jpg" alt="À bord du dirigeable"><figcaption>2:05 · À bord</figcaption></figure>
+  <figure><img src="frames/seg14-135s.jpg" alt="La lutte pour l'œuf"><figcaption>2:15 · Lutte pour l'œuf</figcaption></figure>
+  <figure><img src="frames/seg15-145s.jpg" alt="L'œuf éclot"><figcaption>2:25 · L'éclosion</figcaption></figure>
+  <figure><img src="frames/seg16-155s.jpg" alt="L'éternuement de feu"><figcaption>2:35 · L'éternuement</figcaption></figure>
+  <figure><img src="frames/seg17-165s.jpg" alt="Atterrissage au coucher du soleil"><figcaption>2:45 · Atterrissage</figcaption></figure>
+  <figure><img src="frames/seg18-175s.jpg" alt="Fin heureuse près de la maison champignon"><figcaption>2:55 · Fin heureuse</figcaption></figure>
+</div>
+
+<h2><span class="step-num">5</span>Les corrections du film</h2>
+<p>Le premier rendu tenait le style 2D et l'identité des trois personnages de bout en bout. La prise 3 avait trois défauts : un fondu fantôme, une éclosion ratée et Riko dessinée deux fois. Trois segments ont été refaits avec de nouvelles graines (<code>regen.py</code>), puis la prise et le film réassemblés. Riko restait en double : la description des planches par Gemma disait « montrée en quatre poses ». Avec la description « une seule personne, jamais deux fois à l'image », le segment refait n'avait plus qu'une Riko : c'est le film ci-dessus.</p>
+
+<h2>Ce que ce film a fait corriger pour toutes les vidéos</h2>
+<p>Les dérives du film venaient des prompts, pas du hasard. Elles sont corrigées dans le Studio pour toute vidéo H3 (PR #60, fusionnée le 27/11), puis vérifiées sur la prise 1 refaite et sur des vidéos réalistes.</p>
+
+<div class="drift"><img src="drifts/1-doubled-riko.jpg" alt="Avant : Riko apparaît deux fois. Après : une seule Riko"><p class="caption"><b>Personnage en double.</b> À gauche, la description de la planche parlait de « quatre poses » ; à droite, le sujet est décrit une seule fois, avec ses accessoires.</p></div>
+<div class="drift"><img src="drifts/2-third-hand.jpg" alt="Avant : une troisième main reste sur le guidon. Après : deux mains"><p class="caption"><b>Troisième main.</b> Pendant que Riko salue, une main restait sur le guidon. Chaque prompt H3 porte maintenant une ligne d'anatomie et d'échelle (un seul exemplaire de chaque personnage, son nombre de mains, des tailles relatives gardées).</p></div>
+<div class="drift"><img src="drifts/3-egg-too-early.jpg" alt="Avant : l'œuf est déjà là au segment 1. Après : il n'y est pas"><p class="caption"><b>Objet trop tôt.</b> L'œuf défini pour toute la prise apparaissait avant que le postier ne l'apporte. Un objet récurrent n'est maintenant envoyé qu'aux segments qui le nomment.</p></div>
+
+<div class="tbl"><table>
+  <tr><th>Dérive vue dans le film</th><th>Correction, valable pour toutes les vidéos H3</th></tr>
+  <tr><td>Personnage dessiné deux fois</td><td>Une planche est décrite comme un seul sujet, jamais ses vues ou ses poses.</td></tr>
+  <tr><td>Troisième main, robot qui grandit</td><td>Ligne d'anatomie et d'échelle dans chaque prompt H3.</td></tr>
+  <tr><td>Coupes et fondus dans un plan voulu continu</td><td>Phrase « un seul plan continu » dans chaque prompt, et phrase de raccord sur les segments enchaînés.</td></tr>
+  <tr><td>Scooter, œuf et dirigeable qui changent de design</td><td>Objets récurrents décrits une fois par Gemma, puis envoyés aux seuls segments qui les nomment.</td></tr>
+  <tr><td>Segment qui commence ailleurs : saut de décor</td><td>Gemma compare la dernière image d'un segment et la première du suivant ; s'il faut changer de lieu, le raccord devient une coupe franche.</td></tr>
+</table></div>
+<div class="note">Restent hors de portée du prompt : une coupe que H3 fait parfois de lui-même à un raccord continu, et le choix des coupes par Gemma qui varie encore un peu d'un appel à l'autre. Une coupe se remet en raccord d'un clic sur la carte du segment.</div>
+
+<h2>Pour le refaire</h2>
+<p>Les scripts sont dans le dépôt, sous <code>tools/qualify/anime_take/</code> : <code>sheets.py</code> (les planches), <code>take1.txt</code> à <code>take3.txt</code> (les scénarios), <code>anime_take.js</code> (les trois prises dans le vrai Studio, puis le montage ; <code>ONLY=take1</code> pour une seule prise, <code>DRY=1</code> pour s'arrêter avant le rendu) et <code>regen.py</code> (refaire des segments avec d'autres graines). Dans l'interface, le même résultat s'obtient à la main : carte « Vidéo narrative », planches dans Références, scénario au format H3 collé comme brief, « Générer », puis « Générer la chaîne ».</p>
+
+<footer>OnPrem Media Studio · GB10 promaxgb10-95c7 · 25–27 novembre 2026. Les rendus de test ont été supprimés après ce document ; seule cette copie réduite du film reste.</footer>
+</main>
+</body>
+</html>
