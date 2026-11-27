@@ -401,7 +401,11 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     seed and sheets (runway take segment 1, promaxgb10-95c7, 2026-11-27): 0.3 MP 294 s, faces
     deformed; 0.45 MP 380 s, still deformed; 0.6 MP (1056×608) 390 s, faces whole and
     recognisable; 0.9 MP 523 s, no better than 0.6 and it drew one clone. The final size stays
-    1280×736; `pass1_megapixels` (API only) keeps the bench possible.
+    1280×736; `pass1_megapixels` (API only) keeps the bench possible. Two control takes of the
+    whole runway (4 × 10 s, two seeds) confirmed faces of 50 px and more, walking included, and
+    cost +45 to 57 % (a continuing segment, with its 22-frame tail, costs about +90 % in pass 1);
+    faces of 30–40 px in a far wide shot stay deformed, so the screenplay keeps faces large. One
+    take had three dissolves in a segment, the other none: seed, not first-pass size.
 
 ## 8. Front end (for the port in step 4)
 

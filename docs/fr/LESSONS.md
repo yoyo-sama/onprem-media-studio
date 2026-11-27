@@ -450,7 +450,12 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     du défilé, promaxgb10-95c7, 2026-11-27) : 0,3 Mpx 294 s, visages déformés ; 0,45 Mpx 380 s,
     encore déformés ; 0,6 Mpx (1056×608) 390 s, visages entiers et reconnaissables ; 0,9 Mpx
     523 s, pas mieux que 0,6 et un clone dessiné. La taille finale reste 1280×736 ;
-    `pass1_megapixels` (par l'API seulement) garde le banc possible.
+    `pass1_megapixels` (par l'API seulement) garde le banc possible. Deux prises de contrôle du
+    défilé entier (4 × 10 s, deux seeds) ont confirmé des visages cohérents dès 50 px, en marche
+    comprise, pour +45 à 57 % de temps (un segment qui continue, avec sa traîne de 22 images,
+    coûte environ +90 % en passe 1) ; des visages de 30 à 40 px en plan très large restent
+    déformés, donc le scénario garde les visages grands. Une prise a eu trois fondus dans un
+    segment, l'autre aucun : la seed, pas la taille de la première passe.
 
 ## 8. Front end (pour le portage de l'étape 4)
 
