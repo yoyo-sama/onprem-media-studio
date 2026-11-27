@@ -383,6 +383,18 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     person in view into the one asked for, so a join must fall where the same person stays in
     view, the crossing in the middle of a segment; and a wide shot of whole bodies gives faces
     of a few pixels in Ref2VA's 0.3 MP first pass, which H3 invents: medium shots for faces.
+62. **In a take of several characters, the shared fields say nothing about who is in view, and
+    each segment says who and how close.** The runway take's sixth version (2026-11-27) was the
+    first to follow its screenplay end to end, after five that did not. Every field shared by
+    the segments (framing, lighting, retention) goes into every segment's prompt: "while two
+    models cross" in the framing and "never more than two models" in the retention made H3
+    draw two clones of the one model a segment had a sheet for. Shared fields now give the
+    camera's place, the light and the fidelity only; each segment writes who is in view ("the
+    only woman on the runway") and its framing moment by moment (head to waist in the pose,
+    head to knees walking with the camera backing ahead of her, the whole runway only while
+    two cross), which also gave large, sharp faces. Joins fall where one person stays in view
+    and does not change; entrances and crossings happen inside a segment. A contact sheet
+    every 2 s hid morphs and clones: a take is judged on frames every 0.25 s around each join.
 
 ## 8. Front end (for the port in step 4)
 

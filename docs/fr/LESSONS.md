@@ -429,6 +429,20 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     jonction doit tomber là où la même personne reste à l'image, le croisement au milieu d'un
     segment ; et un plan large en pied donne des visages de quelques pixels dans le premier
     passage Ref2VA à 0,3 MP, que H3 invente : plans moyens pour les visages.
+62. **Dans un plan-séquence à plusieurs personnages, les champs communs ne disent rien de qui est
+    à l'image, et chaque segment dit qui et à quelle distance.** La sixième version du défilé
+    (2026-11-27) est la première à suivre son scénario de bout en bout, après cinq qui ne le
+    suivaient pas. Chaque champ commun aux segments (cadrage, lumière, fidélité) entre dans le
+    prompt de chaque segment : « while two models cross » dans le cadrage et « never more than
+    two models » dans la fidélité ont fait dessiner à H3 deux clones de la seule mannequin dont
+    un segment avait la planche. Les champs communs ne donnent plus que la place de la caméra,
+    la lumière et la fidélité ; chaque segment écrit qui est à l'image (« la seule femme sur
+    l'estrade ») et son cadrage moment par moment (de la tête à la taille pendant la pose, de la
+    tête aux genoux en marche, la caméra reculant devant elle, toute l'estrade seulement pendant
+    un croisement), ce qui a aussi donné des visages grands et nets. Les jonctions tombent là où
+    une seule personne reste à l'image sans changer ; entrées et croisements se font dans un
+    segment. Une planche contact toutes les 2 s cachait transformations et clones : une prise se
+    juge sur des images toutes les 0,25 s autour de chaque jonction.
 
 ## 8. Front end (pour le portage de l'étape 4)
 
