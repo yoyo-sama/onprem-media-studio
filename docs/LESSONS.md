@@ -370,6 +370,19 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     gone in the third: the line helps, it does not guarantee. And a segment whose text starts
     somewhere other than where the previous clip ends gives a jump or a cut at the join, whatever
     the guards say: such a segment is made a planned cut. (2026-11-26)
+61. **A segment sends the sheets of the characters it names, not every sheet of the take.** A
+    40 s runway show (2026-11-27, four model sheets, two models per segment crossing on the
+    runway) sent all four sheets to every segment: H3 walked out the models the text left
+    backstage, up to three on the runway at once, and once a stranger. H3 brings every
+    character sheet it is given into the shot. A segment that names characters by
+    `<Subject N>` now sends only their sheets, renumbered (`segmentRefs`, then `refTokens`);
+    objects and the setting always go, since a split often leaves them uncited (the racket of
+    "she plays tennis"); a segment that names no character sends them all. The same take
+    taught two things about the text: an identity change asked at a latent join (the next
+    model arriving in the first second of a continuing segment) is resolved by morphing the
+    person in view into the one asked for, so a join must fall where the same person stays in
+    view, the crossing in the middle of a segment; and a wide shot of whole bodies gives faces
+    of a few pixels in Ref2VA's 0.3 MP first pass, which H3 invents: medium shots for faces.
 
 ## 8. Front end (for the port in step 4)
 
