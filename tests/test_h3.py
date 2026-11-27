@@ -225,6 +225,16 @@ def test_r2v_two_passes(client, engines, capsys):
     assert all(part in log for part in ("references ", "pass 1 ", "upscale ", "pass 2 and decoding "))
 
 
+def test_r2v_first_pass_size_can_be_asked_for_a_bench(client, engines):
+    sheet = upload(client, 192, 108)
+    run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "pass1_megapixels": 0.6})
+    first, second = calls(engines)
+    assert (first["width"], first["height"]) == h3.size_for((16, 9), 0.6) == (1056, 608)
+    assert (second["width"], second["height"]) == (1280, 736)
+    for bad in (0.2, 1.0, "0.6", True):
+        assert "pass1_megapixels" in rejected(client, "h3-r2v", {"prompt": "p", "references": [sheet], "pass1_megapixels": bad})
+
+
 def test_r2v_start_frame_goes_to_both_passes_and_patches_fastvideo(client, engines, monkeypatch, capsys):
     """A Relay continuous segment: the references AND the previous clip's last frame. The
     start frame is not a reference (<Picture 1> is the sheet) and reaches both passes."""
