@@ -3,8 +3,8 @@
 French version: [fr/HANDOVER.md](fr/HANDOVER.md).
 
 This page lets someone (a person or an AI model) pick up the development of OnPrem Media Studio
-with no earlier context. It is a snapshot of **2026-11-23, `main` at `756bc78`** (PR #56, the
-last merged; no pull request open). It summarises and points to the reference documents; when
+with no earlier context. It is a snapshot of **2026-11-25, `main` after PR #58** (`9ff92e0`, then
+the previous refresh of this page, PR #57). It summarises and points to the reference documents; when
 they disagree with this page, the code and the reference documents win. Read next, in this
 order: [AGENTS.md](../AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [LESSONS.md](LESSONS.md),
 [adr/0001-inference-stack.md](adr/0001-inference-stack.md), then the page of the part you work
@@ -114,7 +114,9 @@ images, 3 clips, 3 sounds, each with a role; the six-field Ref2VA prompt built b
 `buildH3RefPrompt`, the same as the assistant's `reference_video` card), and two pipelines owned
 by their goal card (no Pipeline menu shown): the **long take** (card "Narrative video") and the
 **full campaign**. The gallery offers "→ First frame" and "→ Reference" on images where the form
-takes them.
+takes them. Text2Video, Image2Video and Video from references longer than one H3 clip (15 s, up
+to 150 s) open a long take of that length; a length out of range is refused, never brought into
+range.
 
 **The long take** ([LONG-VIDEO.md](LONG-VIDEO.md), `web/js/director.js`), the result of the
 2026-11-14 → 22 work:
@@ -128,8 +130,14 @@ takes them.
 2. Gemma's split (`H3_SCENARIO_SYSTEM`) turns it into segment cards `{"new_shot", "text"}`; a new
    shot becomes a 🎞 cut. When the scene count is known (paragraphs, file), the code sets the
    cuts. Shared Lighting and Soundscape are left empty when there are several scenes; the camera
-   keeps the main subject's face in frame.
-3. One click runs the chain. **Segment 1**: no image and no reference → `h3-t2v`; references
+   keeps the main subject's face in frame. With no subject reference, the split also writes the
+   subjects' look once (shared Subjects field), sent in every segment.
+3. One click queues the whole chain on the server: every segment and the `video-stitch`, a job
+   taking the output to come of the one before it (`{"job", "output"}` parameters, PR #58). The
+   page only follows the jobs, so the take finishes with the page closed, and a page reopened on
+   a chain with jobs left goes back to it. A card's length is what it adds to the take: a latent
+   continuation asks H3 for the 22 frames it redoes on top (30 s plans and renders 29.96 s).
+   **Segment 1**: no image and no reference → `h3-t2v`; references
    only → `h3-r2v`; a first frame alone, with a setting only, or a described scene → `h3-i2v`
    on it; a first frame **and** subject references → `h3-r2v` with `image` (the picture held
    still about 0.9 s, then moving) and the characters and objects only. **Continuous segments**
@@ -194,7 +202,7 @@ one to another.**
 | Machine | User | Role |
 |---|---|---|
 | `gb10-demo` | `spark` | First 2.0 test machine (qualifications of 2026-10-30, Upscale ×2). Was short on disk on 2026-10-30. Not used since mid-November. |
-| `promaxgb10-95c7` | `spark` | The owner's machine running the Docker install (repo `/home/spark/onprem-media-studio`, container `studio`). Every render since 2026-11-07. **Runs `main` 756bc78**, rebuilt on 2026-11-22 21:39 UTC after PR #56 (queue empty, health OK). Reached through Remote Control, which the owner turns on from Claude Desktop. Holds `control-tests/` (the PR #55/#56 control renders, reports `inspection-*.md`): delete only on the owner's word. Also holds ~200 GB of another tool's ComfyUI models in `~/.zcode`: not ours, leave them. |
+| `promaxgb10-95c7` | `spark` | The owner's machine running the Docker install (repo `/home/spark/onprem-media-studio`, container `studio`). Every render since 2026-11-07. **Runs `main` 9ff92e0**, rebuilt on 2026-11-25 22:42 UTC after PR #58 (queue empty, health OK). Reached through Remote Control, which the owner turns on from Claude Desktop. Holds `control-tests/` (the PR #55/#56/#58 control renders, reports `inspection*.md`): delete only on the owner's word. Also holds ~200 GB of another tool's ComfyUI models in `~/.zcode`: not ours, leave them. |
 | `promaxgb10-6c5f` | `sparks` | Hosts **1.4** (ComfyUI, `comfyui-nvidia`, open-webui, spark-control-center). Not a 2.0 test machine. |
 
 Working on promaxgb10-95c7:
@@ -321,6 +329,8 @@ The owner's standing rules are in [AGENTS.md](../AGENTS.md); the 58 technical le
 | #53 | 2026-11-21 | "Video from references" form replaces "Consistent character + setting" (one click, one job) |
 | #54, #55 | 2026-11-21 | Assistant long-take card in prose with a total length; split segments flagged `new_shot`, face kept in frame, no setting reference across scenes, card references filled by the app |
 | #56 | 2026-11-22 | Long take segment 1 on a first frame sees the subject references (`h3-r2v` + start picture held 22 frames); dropped references renumbered in prompts |
+| #57 | 2026-11-25 | This handover refreshed to `main` 756bc78 |
+| #58 | 2026-11-25 | Long take chain queued whole on the server (finishes with the page closed); over 15 s, Text2Video, Image2Video and Video from references become a long take; latent overlap counted in lengths; subjects' look from the split with no reference; alignment sentence once in Image2Video. Two closed-page control renders on 95c7 |
 
 ## 10. Open items
 
