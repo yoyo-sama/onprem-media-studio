@@ -673,6 +673,34 @@ const SPLIT = {
     && same(lt[1]?.params.continue_from, outOf(lt[0])),
     `long take with a setting reference: ${JSON.stringify(lt.map(j => [j.pipeline, j.params.references]))}`);
 
+  // ── Long take whose segments name their subjects: each sends only their sheets ──
+  // H3 brings every sheet it is given into the shot: a runway show sent its four models to each
+  // segment and the ones left backstage walked out at once (GB10 2026-11-27).
+  await page.click("#studioExitBtn");
+  await page.evaluate(() => { localStorage.removeItem("studioProject"); });
+  await page.reload({ waitUntil: "load" });
+  await page.click('.usecase[data-pipeline="sequence"]');
+  await page.setInputFiles("#refImagesInput", ["a", "b", "c"].map(n => ({ name: `${n}.png`, mimeType: "image/png", buffer: Buffer.from(PNG, "base64") })));
+  await page.waitForFunction(() => document.querySelectorAll("#refSubjects .rs-role").length === 3);
+  await page.fill("#brief", ["detailed_description:", "[Shot 1] A white runway between two rows of seats.",
+    "Segment 1 (00:00.000–00:10.000) – First", "<Subject 1> walks back as <Subject 2> walks down; they cross.",
+    "Segment 2 (00:10.000–00:20.000) – Second", "<Subject 2> walks back as <Subject 3> walks down; they cross."].join("\n"));
+  await openTake();
+  await page.waitForSelector("#studioRelay:not([hidden])", { timeout: 10000 });
+  await page.waitForFunction(() => document.querySelectorAll("#relayList .relay-seg").length === 2);
+  await page.waitForSelector("#relayRunBtn:not([disabled])", { timeout: 10000 });
+  before = jobs.length;
+  await page.click("#relayRunBtn");
+  await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
+  await assembled(before);
+  lt = jobs.slice(before).filter(j => j.pipeline === "h3-r2v");
+  const upRefs = lt.map(j => j.params.references || []), cast = [...new Set(upRefs.flat())];
+  check(lt.length === 2 && upRefs.every(r => r.length === 2) && cast.length === 3
+    && same(upRefs[0][1], upRefs[1][0]) && same(lt[1]?.params.continue_from, outOf(lt[0])),
+    `segments naming their subjects, references: ${JSON.stringify(upRefs)}`);
+  check(/<Subject 1> walks back as <Subject 2> walks down/.test(lt[1]?.params.prompt || "") && !/<Subject 3>|<Picture 3>/.test(lt[1]?.params.prompt || ""),
+    `segment 2 renumbers the sheets it sends: ${lt[1]?.params.prompt}`);
+
   // ── Long take with no start image, from an imported screenplay file ──
   // The file goes into the brief (no job, no Gemma); the long take opens on its three
   // segments and shared fields as written; segment 1 is H3 text to video, the next ones
@@ -872,7 +900,9 @@ const SPLIT = {
   await page.waitForFunction(() => [...document.querySelectorAll("#relayList .seg-status")].every(e => e.textContent === "Ready"), null, { timeout: 10000 });
   await assembled(before);
   const scenes = jobs.slice(before).filter(j => j.pipeline === "h3-r2v");
-  check(scenes.length === 3 && scenes.every(j => j.params.references?.length === 2 && !/is in <Subject|is the location/.test(j.params.prompt || "")),
+  // A segment sends only the characters it names: the second one only where it is cited.
+  check(scenes.length === 3 && same(scenes.map(j => j.params.references?.length), [1, 1, 2])
+    && scenes.every(j => !/is in <Subject|is the location/.test(j.params.prompt || "")),
     `a take of several scenes sends a setting: ${JSON.stringify(scenes.map(j => j.params.references))}`);
   const rest = scenes[2]?.params.prompt || "";
   check(!/<Subject 3>/.test(rest) && /<Subject 1> rests in (?!<Subject)\S/.test(rest) && /looks at <Subject 2>/.test(rest),

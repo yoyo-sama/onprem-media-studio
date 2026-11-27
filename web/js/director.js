@@ -738,7 +738,7 @@ function segmentJob(s, i) {
   if (latentLink(i)) {
     const prev = clipOf(before);
     if (!prev) throw noLink();
-    const refs = relayRefs(settingSheet());
+    const refs = segmentRefs(seg, settingSheet());
     log("req", "Relay, segment {n}/{total}: video continuing the previous segment…", { n: i + 1, total });
     seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style, true);
     return r2v(refs, { continue_from: prev }, " + continuation");
@@ -752,7 +752,7 @@ function segmentJob(s, i) {
   // first frame but references starts the same way.
   if ((i > 0 && !continuous(seg)) || (i === 0 && !s.startImage && s.refsGiven)) {
     const frame = i > 0 && !seg.scene && !settingSheet() ? frameOf(before) : null;
-    const refs = relayRefs(settingSheet() || (frame ? { ref: frame, desc: "" } : null));
+    const refs = segmentRefs(seg, settingSheet() || (frame ? { ref: frame, desc: "" } : null));
     log("req", "Relay, segment {n}/{total}: video from the references (cut)…", { n: i + 1, total });
     seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style);
     return r2v(refs, { aspect: s.ratio }, "");
@@ -784,7 +784,7 @@ function segmentJob(s, i) {
   // With none, or in a described scene (that frame is the place, and the segments after it
   // see it as the location), segment 1 stays i2v on its frame.
   const firstFrame = i === 0, place = firstFrame && describedScene();
-  const refs = last ? [] : firstFrame ? firstFrameRefs(s) : relayRefs(settingSheet());
+  const refs = last ? [] : firstFrame ? firstFrameRefs(s) : segmentRefs(seg, settingSheet());
   if (refs.length) {
     seg.prompt_used = relayCutPrompt(seg, r.look, refs, s.style);
     return r2v(refs, { image: start }, " + start");
@@ -922,6 +922,17 @@ function relayRefs(setting) {
   if (!d.relay.segments.some(seg => seg.scene)) return all;
   const kept = all.filter(x => x.kind !== "environment");
   return kept.length ? kept : all;
+}
+// A segment that names characters (<Subject N>) sends only the sheets of those characters,
+// with every object and setting: H3 brings every character sheet it is given into the shot (a
+// runway show sent its four models to each segment, and the ones its text left backstage
+// walked out at once, GB10 2026-11-27). Objects stay: a split often leaves them uncited (the
+// racket of "she plays tennis"). A segment that names no character sends them all.
+function segmentRefs(seg, setting) {
+  const refs = relayRefs(setting);
+  const cited = new Set([...String(seg.prompt || "").matchAll(new RegExp(P.H3_TOKEN_RE.source, "gi"))].map(m => Number(m[1])));
+  const person = x => x.kind === "character";
+  return refs.some(x => person(x) && cited.has(x.n)) ? refs.filter(x => !person(x) || cited.has(x.n)) : refs;
 }
 // The split numbered every subject of the take (<Subject N>, its legend). A segment sent fewer
 // references (no setting in a take of several scenes, none on a first frame) renumbers the ones

@@ -414,6 +414,21 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     ligne aide, elle ne garantit pas. Et un segment dont le texte commence ailleurs que là où finit
     le clip précédent donne un saut ou une coupe au raccord, quoi que disent les gardes : un tel
     segment devient une coupe prévue. (2026-11-26)
+61. **Un segment envoie les planches des personnages qu'il nomme, pas toutes celles du
+    plan-séquence.** Un défilé de 40 s (2026-11-27, quatre planches de mannequins, deux
+    mannequins par segment qui se croisent sur l'estrade) envoyait les quatre planches à chaque
+    segment : H3 faisait sortir les mannequins que le texte laissait en coulisses, jusqu'à trois
+    sur l'estrade en même temps, et une fois une inconnue. H3 met dans le plan toute planche de
+    personnage qu'il reçoit. Un segment qui nomme des personnages par `<Subject N>` n'envoie
+    plus que leurs planches, renumérotées (`segmentRefs`, puis `refTokens`) ; objets et lieu
+    partent toujours, car un découpage les laisse souvent sans numéro (la raquette de « elle
+    joue au tennis ») ; un segment qui ne nomme aucun personnage les envoie toutes. Le même
+    plan-séquence a appris deux choses sur le texte : un changement d'identité demandé à une
+    jonction latente (la mannequin suivante qui arrive dans la première seconde d'un segment
+    continu) se résout en transformant la personne à l'image en celle demandée, donc une
+    jonction doit tomber là où la même personne reste à l'image, le croisement au milieu d'un
+    segment ; et un plan large en pied donne des visages de quelques pixels dans le premier
+    passage Ref2VA à 0,3 MP, que H3 invente : plans moyens pour les visages.
 
 ## 8. Front end (pour le portage de l'étape 4)
 

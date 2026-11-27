@@ -247,7 +247,8 @@ in its own field, both optional:
   cap of 3 came from the director's two subjects per shot image), each with its role:
   character, setting or object. Who or what must stay the same; never shown as a frame. With no
   first frame, segment 1 is `h3-r2v` made from them. A setting reference is the location of
-  every segment. Each reference makes every segment's render a little longer.
+  every segment. A segment that names characters (`<Subject N>`) sends only their sheets, with
+  the objects and the setting (LESSONS #61). Each reference makes every segment's render a little longer.
 - **Neither**: segment 1 is H3 text to video, as before.
 
 End images left the form: each segment card takes its own (🎯 End image). The sheet-or-photo

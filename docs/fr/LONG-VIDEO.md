@@ -265,7 +265,9 @@ demande maintenant chaque sorte d'image dans son propre champ, toutes deux facul
   directement ; le plafond de 3 venait des deux sujets par image de plan du réalisateur), chacune
   avec son rôle : personnage, lieu ou objet. Qui ou quoi doit rester identique ; jamais montrée
   comme une image du film. Sans première image, le segment 1 est un `h3-r2v` fait à partir
-  d'elles. Une référence de lieu est le décor de chaque segment. Chaque référence allonge un peu
+  d'elles. Une référence de lieu est le décor de chaque segment. Un segment qui nomme des
+  personnages (`<Subject N>`) n'envoie que leurs planches, avec les objets et le lieu (LESSONS
+  n° 61). Chaque référence allonge un peu
   le rendu de chaque segment.
 - **Ni l'une ni l'autre** : le segment 1 naît du texte avec H3, comme avant.
 
