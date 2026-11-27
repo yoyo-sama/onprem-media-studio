@@ -102,7 +102,7 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     *réellement rendue*. [#20]
 29. **Les checkpoints FL2VA et Ref2VA sont deux modèles différents**, non interchangeables.
 30. **FastH3 OmniRef (validé sur GB10 le 2026-10-28) :** 8 étapes, guidance 1, shift vidéo 12,
-    shift audio 3, attention creuse VSA obligatoire, deux passes (≈0,3 Mpx puis upscale latent à
+    shift audio 3, attention creuse VSA obligatoire, deux passes (≈0,3 Mpx, 0,6 Mpx en 2.0 depuis le n°63, puis upscale latent à
     ≈0,9 Mpx et 3 étapes de raffinement à denoise 0,4), `ref_image_size = max`. Identité 0,838 en
     1280×736, 5 s, 260 s. Pas de LoRA d'accélération (déjà distillé). Les LoRA de style
     s'appliquent en branche exacte ; fusionner une LoRA dans un checkpoint quantifié en détruit
@@ -443,6 +443,14 @@ Version anglaise (de référence) : [../LESSONS.md](../LESSONS.md).
     une seule personne reste à l'image sans changer ; entrées et croisements se font dans un
     segment. Une planche contact toutes les 2 s cachait transformations et clones : une prise se
     juge sur des images toutes les 0,25 s autour de chaque jonction.
+63. **La première passe Ref2VA tourne à 0,6 Mpx, pas aux 0,3 Mpx du workflow.** Le cadrage seul
+    ne sauvait pas les visages : en plan en pied ils ne faisaient que quelques dizaines de pixels
+    dans la première passe en 736×416, et les 3 étapes d'affinage à denoise 0,4 ne peuvent pas
+    redessiner ce que la passe 1 a inventé. Banc sur la même seed et les mêmes planches (segment 1
+    du défilé, promaxgb10-95c7, 2026-11-27) : 0,3 Mpx 294 s, visages déformés ; 0,45 Mpx 380 s,
+    encore déformés ; 0,6 Mpx (1056×608) 390 s, visages entiers et reconnaissables ; 0,9 Mpx
+    523 s, pas mieux que 0,6 et un clone dessiné. La taille finale reste 1280×736 ;
+    `pass1_megapixels` (par l'API seulement) garde le banc possible.
 
 ## 8. Front end (pour le portage de l'étape 4)
 

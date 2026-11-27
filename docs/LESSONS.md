@@ -95,7 +95,7 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
 28. **I2VA/FL2VA need a time-alignment sentence** whose end mark is the *rendered* duration. [#20]
 29. **FL2VA and Ref2VA checkpoints are different models** and not interchangeable.
 30. **FastH3 OmniRef (validated on GB10, 2026-10-28):** 8 steps, guidance 1, video shift 12,
-    audio shift 3, VSA sparse attention required, two passes (≈0.3 MP then latent upscale to
+    audio shift 3, VSA sparse attention required, two passes (≈0.3 MP, 0.6 MP in 2.0 since #63, then latent upscale to
     ≈0.9 MP and 3 refine steps at denoise 0.4), `ref_image_size = max`. Identity 0.838 at
     1280×736, 5 s, 260 s. No speed-up LoRA (already distilled). Style LoRAs are applied as an
     exact branch; merging a LoRA into a quantised checkpoint destroys most of it.
@@ -395,6 +395,13 @@ French version: [fr/LESSONS.md](fr/LESSONS.md).
     two cross), which also gave large, sharp faces. Joins fall where one person stays in view
     and does not change; entrances and crossings happen inside a segment. A contact sheet
     every 2 s hid morphs and clones: a take is judged on frames every 0.25 s around each join.
+63. **Ref2VA's first pass runs at 0.6 MP, not the workflow's 0.3 MP.** Framing alone did not
+    save faces: in a full-body shot they were a few dozen pixels in the 736×416 first pass and
+    the 3 refine steps at denoise 0.4 cannot redraw what pass 1 invented. A bench on the same
+    seed and sheets (runway take segment 1, promaxgb10-95c7, 2026-11-27): 0.3 MP 294 s, faces
+    deformed; 0.45 MP 380 s, still deformed; 0.6 MP (1056×608) 390 s, faces whole and
+    recognisable; 0.9 MP 523 s, no better than 0.6 and it drew one clone. The final size stays
+    1280×736; `pass1_megapixels` (API only) keeps the bench possible.
 
 ## 8. Front end (for the port in step 4)
 

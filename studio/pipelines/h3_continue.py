@@ -160,7 +160,7 @@ def install() -> None:
         patch = h3_dit_patch_size(fastvideo_args)
         frames, height, width = old.num_video_latent_frames, old.latent_height, old.latent_width
         k = int(video.shape[2])
-        if tuple(video.shape[3:]) != (height, width):     # the first pass runs at about 0.3 MP
+        if tuple(video.shape[3:]) != (height, width):     # the first pass runs at about 0.6 MP
             video = F.interpolate(video[0].permute(1, 0, 2, 3), size=(height, width), mode="bilinear",
                                   align_corners=False, antialias=True).permute(1, 0, 2, 3)[None]
         device = batch.latents.device

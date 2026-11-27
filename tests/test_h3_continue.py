@@ -92,7 +92,7 @@ def test_a_continuing_clip_takes_the_size_of_the_clip_it_continues(client, engin
     job = run(client, "h3-r2v", {"prompt": "<Picture 1>", "references": [sheet], "continue_from": prev, "seed": 7})
     first, second = calls(engines)
     assert installs == [1] and tails == [(("tail of", "prev.mp4"), 7)]
-    assert (first["width"], first["height"], second["width"], second["height"]) == (416, 736, 736, 1280)
+    assert (first["width"], first["height"], second["width"], second["height"]) == (608, 1056, 736, 1280)
     assert first["pil_image"] is None and second["pil_image"] is None
     assert engines["refine"][-1] == (736, 1280)  # the upscaler aims at the previous clip's size
     assert first.get("keep") is None and callable(second["keep"])  # the final pass keeps its latents
